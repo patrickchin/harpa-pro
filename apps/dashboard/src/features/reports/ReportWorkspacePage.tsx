@@ -1,8 +1,21 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { projects, reports } from '@harpa/api-contract';
+import {
+  Check,
+  Download,
+  Eye,
+  EyeOff,
+  Link as LinkIcon,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 
 import { Modal } from '@/components/modal';
+import { Badge, Button } from '@/components/ui';
+import { cn } from '@/lib/cn';
 
 import { ReportConflictError, errorMessage, type ReportsApi } from './api';
 import { filenameForReport } from './format';
@@ -19,7 +32,6 @@ import {
   type SaveStateEvent,
 } from './save-state';
 import { SourceNotesPanel } from './SourceNotesPanel';
-import './reports.css';
 
 interface StoredDraft {
   body: reports.ReportBody;
@@ -78,13 +90,9 @@ function defaultDownload(url: string, filename: string) {
 
 function ReportBadge({ report }: { report: reports.Report }) {
   return (
-    <span
-      className={`reports-badge ${
-        report.status === 'finalized' ? 'reports-badge--finalized' : 'reports-badge--draft'
-      }`}
-    >
+    <Badge tone={report.status === 'finalized' ? 'success' : 'info'}>
       {report.status === 'finalized' ? 'Finalized' : 'Draft'}
-    </span>
+    </Badge>
   );
 }
 
@@ -101,6 +109,7 @@ function ConfirmationDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const copy = {
     overwrite: {
       title: 'Replace the newer server copy?',
@@ -132,35 +141,33 @@ function ConfirmationDialog({
     <Modal
       ariaDescribedBy="report-confirmation-description"
       ariaLabelledBy="report-confirmation-title"
-      backdropClassName="reports-dialog-backdrop"
       closeOnEscape={!isPending}
-      dialogClassName="reports-dialog"
+      initialFocusRef={cancelButtonRef}
       onClose={onCancel}
       role="alertdialog"
     >
-      <h2 id="report-confirmation-title">{copy.title}</h2>
-      <p id="report-confirmation-description">{copy.body}</p>
-      <div className="reports-dialog__actions">
-        <button
-          type="button"
-          className="reports-button reports-button--secondary"
+      <h2 className="text-title-sm font-bold tracking-tight" id="report-confirmation-title">
+        {copy.title}
+      </h2>
+      <p className="mt-3 text-body text-muted-foreground" id="report-confirmation-description">
+        {copy.body}
+      </p>
+      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button
+          ref={cancelButtonRef}
+          variant="secondary"
           onClick={onCancel}
           disabled={isPending}
         >
           Cancel
-        </button>
-        <button
-          type="button"
-          className={
-            copy.danger
-              ? 'reports-button reports-button--danger-solid'
-              : 'reports-button reports-button--primary'
-          }
+        </Button>
+        <Button
+          variant={copy.danger ? 'danger-solid' : 'primary'}
           onClick={onConfirm}
           disabled={isPending}
         >
           {copy.confirm}
-        </button>
+        </Button>
       </div>
     </Modal>
   );
@@ -548,24 +555,33 @@ export function ReportWorkspacePage({
 
   if (reportQuery.error) {
     return (
-      <section className="reports-workspace reports-empty-state">
-        <h1>Couldn&apos;t load Site Visit #{reportNumber}</h1>
-        <p>{errorMessage(reportQuery.error)}</p>
-        <button
-          type="button"
-          className="reports-button reports-button--secondary"
-          onClick={() => void reportQuery.refetch()}
-        >
-          Retry report
-        </button>
+      <section
+        className="grid min-h-72 min-w-0 place-items-center rounded-card-ui border border-border bg-card p-8 text-center shadow-raised-ui"
+        data-testid="report-workspace"
+      >
+        <div className="max-w-reading space-y-4">
+          <h1 className="text-title font-bold tracking-tight">
+            Couldn&apos;t load Site Visit #{reportNumber}
+          </h1>
+          <p className="text-muted-foreground">{errorMessage(reportQuery.error)}</p>
+          <Button variant="secondary" onClick={() => void reportQuery.refetch()}>
+            Retry report
+          </Button>
+        </div>
       </section>
     );
   }
 
   if (reportQuery.isLoading || !report || !localBody || !saveState) {
     return (
-      <section className="reports-workspace reports-loading" aria-busy="true">
-        <p role="status">Loading report workspace…</p>
+      <section
+        className="grid min-h-72 min-w-0 place-items-center text-muted-foreground"
+        data-testid="report-workspace"
+        aria-busy="true"
+      >
+        <p className="font-medium" role="status">
+          Loading report workspace…
+        </p>
       </section>
     );
   }
@@ -584,30 +600,44 @@ export function ReportWorkspacePage({
   const previewBody = deferredBody ?? localBody;
 
   return (
-    <section className="reports-workspace" aria-labelledby="report-title">
-      <header className="reports-workspace-header">
-        <div className="reports-workspace-header__context">
-          <span>Site Visit #{report.number}</span>
-          <ReportBadge report={report} />
-          {report.needsRegeneration ? (
-            <span className="reports-badge reports-badge--attention">Needs update</span>
-          ) : null}
-          {report.status === 'draft' ? (
-            <span
-              className={`reports-save-status reports-save-status--${saveState.status}`}
-              role="status"
-            >
-              {saveStateText(saveState)}
-            </span>
-          ) : null}
+    <section
+      className="min-w-0 space-y-5 text-foreground"
+      data-testid="report-workspace"
+      aria-labelledby="report-title"
+    >
+      <header className="grid min-w-0 gap-4 border-b border-border pb-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-meta font-bold">
+            <span>Site Visit #{report.number}</span>
+            <ReportBadge report={report} />
+            {report.needsRegeneration ? <Badge tone="warning">Needs update</Badge> : null}
+            {report.status === 'draft' ? (
+              <span
+                className={cn(
+                  'border-l border-border pl-3 text-meta font-medium text-muted-foreground',
+                  saveState.status === 'failed' || saveState.status === 'conflict'
+                    ? 'text-danger-text'
+                    : null,
+                )}
+                role="status"
+              >
+                {saveStateText(saveState)}
+              </span>
+            ) : null}
+          </div>
+          <h1
+            className="mt-2 max-w-content break-words text-title font-bold tracking-tight"
+            id="report-title"
+          >
+            {displayReportTitle(localBody)}
+          </h1>
         </div>
-        <h1 id="report-title">{displayReportTitle(localBody)}</h1>
-        <div className="reports-workspace-header__actions">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
           {report.status === 'draft' && canWrite ? (
             <>
-              <button
-                type="button"
-                className="reports-button reports-button--secondary"
+              <Button
+                className="w-full sm:w-auto"
+                variant="secondary"
                 onClick={() => generateMutation.mutate()}
                 disabled={
                   saveState.status !== 'saved' ||
@@ -615,91 +645,109 @@ export function ReportWorkspacePage({
                   finalizeMutation.isPending
                 }
               >
+                <RefreshCw aria-hidden="true" className="size-4" />
                 {generateMutation.isPending
                   ? 'Updating report…'
                   : report.body || report.generatedAt
                     ? 'Update report'
                     : 'Generate report'}
-              </button>
+              </Button>
               {role === 'owner' ? (
-                <button
-                  type="button"
-                  className="reports-button reports-button--primary"
+                <Button
+                  className="w-full sm:w-auto"
                   disabled={!finalizeEnabled}
                   onClick={() => setConfirmation('finalize')}
                 >
+                  <Check aria-hidden="true" className="size-4" />
                   Finalize
-                </button>
+                </Button>
               ) : null}
               {saveState.status === 'failed' ? (
-                <button
-                  type="button"
-                  className="reports-button reports-button--secondary"
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="secondary"
                   onClick={() => void save()}
                 >
+                  <RefreshCw aria-hidden="true" className="size-4" />
                   Retry save
-                </button>
+                </Button>
               ) : null}
-              <button
-                type="button"
-                className="reports-button reports-button--quiet reports-button--danger"
+              <Button
+                className="w-full sm:w-auto"
+                variant="destructive"
                 onClick={() => setConfirmation('delete')}
               >
+                <Trash2 aria-hidden="true" className="size-4" />
                 Delete report
-              </button>
+              </Button>
             </>
           ) : null}
           {report.status === 'finalized' ? (
             <>
-              <button
-                type="button"
-                className="reports-button reports-button--primary"
+              <Button
+                className="w-full sm:w-auto"
                 onClick={() => pdfMutation.mutate()}
                 disabled={pdfMutation.isPending}
               >
+                <Download aria-hidden="true" className="size-4" />
                 {pdfMutation.isPending ? 'Preparing PDF…' : 'Download PDF'}
-              </button>
-              <button
-                type="button"
-                className="reports-button reports-button--secondary"
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                variant="secondary"
                 onClick={() => void copyLink()}
               >
+                <LinkIcon aria-hidden="true" className="size-4" />
                 Copy link
-              </button>
+              </Button>
               {canWrite ? (
                 <>
-                  <button
-                    type="button"
-                    className="reports-button reports-button--secondary"
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="secondary"
                     onClick={() => setConfirmation('reopen')}
                   >
+                    <RotateCcw aria-hidden="true" className="size-4" />
                     Reopen as draft
-                  </button>
-                  <button
-                    type="button"
-                    className="reports-button reports-button--quiet reports-button--danger"
+                  </Button>
+                  <Button
+                    className="w-full sm:w-auto"
+                    variant="destructive"
                     onClick={() => setConfirmation('delete')}
                   >
+                    <Trash2 aria-hidden="true" className="size-4" />
                     Delete report
-                  </button>
+                  </Button>
                 </>
               ) : null}
             </>
           ) : null}
-          <button
-            type="button"
-            className="reports-button reports-button--quiet reports-preview-toggle"
+          <Button
+            className="w-full sm:w-auto xl:hidden"
+            variant="quiet"
             aria-pressed={previewVisible}
             onClick={() => setPreviewVisible((visible) => !visible)}
           >
+            {previewVisible ? (
+              <EyeOff aria-hidden="true" className="size-4" />
+            ) : (
+              <Eye aria-hidden="true" className="size-4" />
+            )}
             {previewVisible ? 'Hide preview' : 'Show preview'}
-          </button>
+          </Button>
         </div>
-        {copyStatus ? <p role="status">{copyStatus}</p> : null}
+        {copyStatus ? (
+          <p className="text-meta font-medium text-muted-foreground lg:col-span-2" role="status">
+            {copyStatus}
+          </p>
+        ) : null}
       </header>
 
       {malformedBody ? (
-        <div className="reports-inline-error" role="alert">
+        <div
+          className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-danger-text"
+          role="alert"
+        >
           This report body was malformed. A safe empty body is shown so the original payload is
           never edited accidentally.
         </div>
@@ -707,92 +755,91 @@ export function ReportWorkspacePage({
 
       {conflictReport ? (
         <section
-          className="reports-conflict"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-card-ui border border-danger-border bg-danger-soft px-4 py-4 text-danger-text lg:gap-x-8"
           role="alert"
           aria-labelledby="report-conflict-heading"
         >
-          <div>
-            <h2 id="report-conflict-heading">This report changed on another device</h2>
-            <p>
+          <div className="min-w-0 max-w-reading">
+            <h2 className="text-title-sm font-bold tracking-tight" id="report-conflict-heading">
+              This report changed on another device
+            </h2>
+            <p className="mt-1">
               Your browser draft is preserved. Reload the newer report or explicitly overwrite it
               with your draft.
             </p>
           </div>
-          <div className="reports-row-actions">
-            <button
-              type="button"
-              className="reports-button reports-button--secondary"
-              onClick={reloadLatest}
-            >
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
+            <Button variant="secondary" onClick={reloadLatest}>
               Reload latest
-            </button>
-            <button
-              type="button"
-              className="reports-button reports-button--danger-solid"
-              onClick={() => setConfirmation('overwrite')}
-            >
+            </Button>
+            <Button variant="danger-solid" onClick={() => setConfirmation('overwrite')}>
               Overwrite with my draft
-            </button>
+            </Button>
           </div>
         </section>
       ) : null}
 
       {actionError && !conflictReport ? (
-        <p className="reports-inline-error" role="alert">
+        <p
+          className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-danger-text"
+          role="alert"
+        >
           {errorMessage(actionError)}
         </p>
       ) : null}
 
       {report.status === 'finalized' ? (
-        <>
-          <div className="reports-tabs" role="tablist" aria-label="Report surfaces">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={finalizedTab === 'report'}
-              onClick={() => setFinalizedTab('report')}
-            >
+        <TabGroup
+          selectedIndex={finalizedTab === 'report' ? 0 : 1}
+          onChange={(index) => setFinalizedTab(index === 0 ? 'report' : 'review')}
+        >
+          <TabList
+            className="grid w-full grid-cols-2 gap-1 rounded-card-ui border border-border bg-card p-1 shadow-raised-ui sm:w-fit"
+            aria-label="Report surfaces"
+          >
+            <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-bold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">
               Report
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={finalizedTab === 'review'}
-              onClick={() => setFinalizedTab('review')}
-            >
+            </Tab>
+            <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-bold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">
               Review
-            </button>
-          </div>
-          {finalizedTab === 'report' ? (
-            <div className="reports-finalized-grid">
-              <ReportPreview body={previewBody} />
-              <SourceNotesPanel
-                api={api}
-                notes={notesQuery.data?.items ?? []}
-                isLoading={notesQuery.isLoading}
-                error={notesQuery.error ?? null}
-                onRetry={() => void notesQuery.refetch()}
+            </Tab>
+          </TabList>
+          <TabPanels className="mt-4 min-w-0">
+            <TabPanel className="min-w-0 focus:outline-none">
+              <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
+                <ReportPreview body={previewBody} />
+                <SourceNotesPanel
+                  api={api}
+                  notes={notesQuery.data?.items ?? []}
+                  isLoading={notesQuery.isLoading}
+                  error={notesQuery.error ?? null}
+                  onRetry={() => void notesQuery.refetch()}
+                />
+              </div>
+            </TabPanel>
+            <TabPanel className="min-w-0 focus:outline-none">
+              <ReportReview
+                comments={commentsQuery.data?.items ?? []}
+                isLoading={commentsQuery.isLoading}
+                error={commentsQuery.error ?? null}
+                isSubmitting={commentMutation.isPending}
+                onRetry={() => void commentsQuery.refetch()}
+                onAddComment={async (body) => {
+                  await commentMutation.mutateAsync(body);
+                }}
               />
-            </div>
-          ) : (
-            <ReportReview
-              comments={commentsQuery.data?.items ?? []}
-              isLoading={commentsQuery.isLoading}
-              error={commentsQuery.error ?? null}
-              isSubmitting={commentMutation.isPending}
-              onRetry={() => void commentsQuery.refetch()}
-              onAddComment={async (body) => {
-                await commentMutation.mutateAsync(body);
-              }}
-            />
-          )}
-        </>
+            </TabPanel>
+          </TabPanels>
+        </TabGroup>
       ) : canWrite ? (
         <>
-          <div className="reports-draft-grid">
+          <div
+            className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(20rem,1fr)]"
+            data-testid="report-draft-layout"
+          >
             <ReportBodyEditor body={localBody} onChange={changeBody} />
             {previewVisible ? (
-              <div className="reports-preview-column">
+              <div className="min-w-0 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-auto">
                 <ReportPreview body={previewBody} />
               </div>
             ) : null}
@@ -806,9 +853,11 @@ export function ReportWorkspacePage({
           />
         </>
       ) : (
-        <div className="reports-finalized-grid">
-          <div>
-            <p className="reports-readonly-notice">You have read-only access to this draft.</p>
+        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
+          <div className="min-w-0 space-y-4">
+            <p className="rounded-card-ui border border-info-border bg-info-soft px-4 py-3 text-info-text">
+              You have read-only access to this draft.
+            </p>
             <ReportPreview body={previewBody} />
           </div>
           <SourceNotesPanel

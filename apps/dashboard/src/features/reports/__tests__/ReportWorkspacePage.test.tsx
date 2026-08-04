@@ -181,8 +181,8 @@ describe('ReportWorkspacePage draft editing', () => {
     );
 
     await click(button(rendered.container, 'Overwrite with my draft'));
-    expect(rendered.container.textContent).toContain('Replace the newer server copy?');
-    await click(button(rendered.container, 'Confirm overwrite'));
+    expect(document.body.textContent).toContain('Replace the newer server copy?');
+    await click(button(document, 'Confirm overwrite'));
     await flush();
 
     expect(updateReport).toHaveBeenCalledTimes(2);
@@ -217,8 +217,8 @@ describe('ReportWorkspacePage draft editing', () => {
     });
 
     await click(button(rendered.container, 'Finalize'));
-    expect(rendered.container.textContent).toContain('Finalize Site Visit #7?');
-    await click(button(rendered.container, 'Confirm finalize'));
+    expect(document.body.textContent).toContain('Finalize Site Visit #7?');
+    await click(button(document, 'Confirm finalize'));
     await flush();
 
     expect(finalizeReport).toHaveBeenCalledWith('highland-tower', 7, {
@@ -408,10 +408,10 @@ describe('ReportWorkspacePage finalized report', () => {
     });
 
     await click(button(rendered.container, 'Reopen as draft'));
-    expect(rendered.container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       'Review will be unavailable until this report is finalized again.',
     );
-    await click(button(rendered.container, 'Confirm reopen'));
+    await click(button(document, 'Confirm reopen'));
     await flush();
 
     expect(reopenReport).toHaveBeenCalledWith('highland-tower', 7, {
@@ -437,8 +437,8 @@ describe('ReportWorkspacePage finalized report', () => {
     });
 
     await click(button(rendered.container, 'Delete report'));
-    expect(rendered.container.textContent).toContain('Delete Site Visit #7?');
-    await click(button(rendered.container, 'Confirm delete'));
+    expect(document.body.textContent).toContain('Delete Site Visit #7?');
+    await click(button(document, 'Confirm delete'));
     await flush();
 
     expect(deleteReport).toHaveBeenCalledWith('highland-tower', 7);
@@ -476,8 +476,9 @@ describe('ReportWorkspacePage finalized report', () => {
     expect(rendered.container.querySelector('[aria-selected="true"]')?.textContent).toBe('Report');
 
     const reportTab = button(rendered.container, 'Report');
-    reportTab.focus();
+    await act(async () => reportTab.focus());
     await keydown(reportTab, 'ArrowRight');
+    await flush();
     expect(rendered.container.querySelector('[aria-selected="true"]')?.textContent).toBe('Review');
 
     await click(button(rendered.container, 'Download PDF'));
@@ -485,11 +486,11 @@ describe('ReportWorkspacePage finalized report', () => {
     expect(anchorClick).toHaveBeenCalledTimes(1);
 
     const reopenTrigger = button(rendered.container, 'Reopen as draft');
-    reopenTrigger.focus();
+    await act(async () => reopenTrigger.focus());
     await click(reopenTrigger);
-    expect(button(rendered.container, 'Cancel')).toHaveFocus();
+    expect(button(document, 'Cancel')).toHaveFocus();
     await keydown(document, 'Escape');
-    expect(rendered.container.textContent).not.toContain(
+    expect(document.body.textContent).not.toContain(
       'Review will be unavailable until this report is finalized again.',
     );
     expect(reopenTrigger).toHaveFocus();

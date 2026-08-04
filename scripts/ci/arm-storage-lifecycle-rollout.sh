@@ -12,6 +12,7 @@ ATTEMPTS="${STORAGE_LIFECYCLE_ARM_ATTEMPTS:-3}"
 EXEC_TIMEOUT_SECONDS="${STORAGE_LIFECYCLE_ARM_TIMEOUT_SECONDS:-120}"
 RETRY_DELAY_SECONDS="${STORAGE_LIFECYCLE_ARM_RETRY_DELAY_SECONDS:-5}"
 ARM_COMMAND='env STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases'
+ARM_CONFIRMATION_MARKER='[storage-lifecycle] lease enforcement armed for '
 
 if [[ ! "$ATTEMPTS" =~ ^[1-9][0-9]*$ || "$ATTEMPTS" -gt 10 ]]; then
   echo "STORAGE_LIFECYCLE_ARM_ATTEMPTS must be an integer from 1 to 10" >&2
@@ -98,7 +99,7 @@ for ((attempt = 1; attempt <= ATTEMPTS; attempt++)); do
   echo "::endgroup::"
 
   if [[ "$EXEC_STATUS" -eq 0 &&
-        "$EXEC_OUTPUT" == *"[storage-lifecycle] lease enforcement armed for "* ]]; then
+        "$EXEC_OUTPUT" == *"$ARM_CONFIRMATION_MARKER"* ]]; then
     echo "storage-lifecycle arming confirmed: app=$APP_NAME machine=$WORKER_ID attempt=$attempt"
     exit 0
   fi

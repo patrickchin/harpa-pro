@@ -11,6 +11,7 @@ import { getAdminPool } from '../../db/admin-client.js';
 import { getPool, rawDb, resetPool } from '../../db/client.js';
 import { withAnonConnection, withScopedConnection } from '../../db/scope.js';
 import { newId } from '../../lib/ids.js';
+import { getPgError } from '../../lib/pg-error.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { hashAdminPassword } from '../../services/admin-auth.js';
 import { makeSessionId, makeUserId } from '../factories/index.js';
@@ -135,19 +136,26 @@ describe('scope: admin auth routes', () => {
   });
 
   it('keeps the admin schema unreadable to anonymous DB scope', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(sql`SELECT * FROM admin.identities`);
-      }),
-    ).rejects.toThrow(/permission denied|relation .* does not exist/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(sql`SELECT * FROM admin.identities`);
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(
+      /permission denied|relation .* does not exist/i,
+    );
   });
 
   it('keeps the admin schema unreadable to app-user DB scope', async () => {
-    await expect(
-      withScopedConnection({ sub: regularId, sid: regularSessionId }, async (db) => {
+    const error = await withScopedConnection(
+      { sub: regularId, sid: regularSessionId },
+      async (db) => {
         await db.execute(sql`SELECT * FROM admin.identities`);
-      }),
-    ).rejects.toThrow(/permission denied|relation .* does not exist/i);
+      },
+    ).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(
+      /permission denied|relation .* does not exist/i,
+    );
   });
 
   it('negative control: the application database has no admin schema tables', async () => {

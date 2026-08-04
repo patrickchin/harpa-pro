@@ -17,7 +17,9 @@ lib/api/
   errors.ts            # ApiError + classify(error)
   invalidation.ts      # cross-resource invalidation rules + helpers
   optimistic.ts        # case-by-case optimistic wrappers (notes CRUD today)
-  query-client.ts      # singleton QueryClient + persister + resetQueryCache
+  query-client.ts      # per-scope QueryClient factory + active registry
+  session-query-provider.tsx
+                       # auth gate + user-scoped persister selection
   query-persister.ts   # MMKV-backed persister + dehydrate allowlist
   prefetch.ts          # onPressIn prefetch helpers (list → detail)
   initial-data.ts      # seed detail screens from list-cache rows
@@ -120,16 +122,21 @@ and the `(app)` layout redirects to `(auth)/sign-in/email`.
 ## Perceived-speed: persistence, prefetch, initialData
 
 Three orthogonal layers on top of the generated hooks make the app
-feel instant. They all use the same singleton `QueryClient` in
+feel instant. Each settled auth scope gets a fresh `QueryClient` from
 `lib/api/query-client.ts`.
 
 ### 1. Persistent cache (MMKV)
 
-`PersistQueryClientProvider` in `app/_layout.tsx` mirrors the cache
-to MMKV via `query-persister.ts`. So cold start renders the
-last-seen UI immediately, then revalidates in the background.
+`SessionQueryProvider` in `app/_layout.tsx` waits for better-auth to
+resolve a stable user id, then mounts `PersistQueryClientProvider`
+with that user's MMKV namespace. A cold start can therefore render
+that user's last-seen UI immediately, then revalidate in the
+background, without hydrating data before the principal is known.
 
-- **Storage:** `react-native-mmkv` (id `rq-cache`, key `rq-cache-v1`).
+- **Storage:** `react-native-mmkv` (id `rq-cache`, key
+  `rq-cache-v2:<encoded-user-id>`). The former unscoped
+  `rq-cache-v1` snapshot is discarded because its owner cannot be
+  established safely.
 - **`maxAge`:** 24h. Older blobs are dropped on restore.
 - **`buster`:** `Constants.expoConfig?.version` — bump the app
   version (`app.config.ts`) to invalidate all persisted caches on
@@ -141,10 +148,12 @@ last-seen UI immediately, then revalidates in the background.
   deliberately excluded (changes too often). Pages containing
   optimistic `not_opt…` ids are also skipped so we don't restore
   pending state across launches.
-- **Auth boundary:** `resetQueryCache()` is `await`-ed inside
-  `signOut` and fire-and-forget'd from the 401 handler. Both clear
-  the in-memory cache *and* the persisted blob — without this the
-  next signed-in user would see the previous user's data.
+- **Auth boundary:** while auth is loading or the user id changes,
+  descendants are withheld and a fresh in-memory `QueryClient` is
+  mounted for the new scope. An old asynchronous restore can therefore
+  mutate only an unreachable old client. Resolving to unauthenticated,
+  explicit `signOut`, and the 401 handler also clear every persisted
+  user snapshot; teardown clears the currently registered client.
 
 ### 2. Prefetch on press intent
 

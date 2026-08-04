@@ -91,5 +91,5 @@ describe('preview email OTP diagnostics', () => {
     expect(output).toContain('email_otp_preview');
     expect(output).toContain('example.com');
     expect(output).toContain('sign-in');
-  });
+  }, 30_000);
 });

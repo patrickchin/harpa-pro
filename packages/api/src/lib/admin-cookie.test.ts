@@ -4,21 +4,23 @@ import type { AppEnv } from '../app.js';
 
 const originalEnv = { ...process.env };
 const SAME_SITE_ORIGIN = 'https://admin.harpapro.com';
-const PARTITIONED_ORIGIN = 'https://dev.harpa-pro.pages.dev';
+const DEVELOPMENT_ORIGIN = 'https://dev.harpa-pro-admin.pages.dev';
+const PREVIEW_ORIGIN = 'https://pr-42.harpa-pro-admin.pages.dev';
+const PUBLIC_PAGES_ORIGIN = 'https://dev.harpa-pro.pages.dev';
 
 beforeEach(() => {
   process.env = {
     ...originalEnv,
     NODE_ENV: 'production',
-    HARPAPRO_PR_BUILD: '0',
+    HARPAPRO_PR_BUILD: '1',
     EMAIL_OTP_LIVE: '1',
     MIGRATIONS_REQUIRED_HEAD: '0000_test.sql',
     ADMIN_MIGRATIONS_REQUIRED_HEAD: '0002_admin_rate_limit_buckets.sql',
     DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
     ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
     BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
-    BETTER_AUTH_URL: 'https://harpa-pro-api-dev.fly.dev',
-    ADMIN_CORS_ORIGINS: `${SAME_SITE_ORIGIN},${PARTITIONED_ORIGIN}`,
+    BETTER_AUTH_URL: 'https://harpa-pro-api-pr-42.fly.dev',
+    ADMIN_CORS_ORIGINS: PREVIEW_ORIGIN,
     AI_FIXTURE_MODE: 'live',
     AI_LIVE: '1',
     OPENAI_API_KEY: 'test-openai-key',
@@ -83,17 +85,28 @@ describe('deployed admin session cookie policy', () => {
     expect(clearHeader).not.toContain('Partitioned');
   });
 
-  it('uses a partitioned cross-site cookie for the stable development Pages origin', async () => {
-    const setHeader = await cookieHeader(PARTITIONED_ORIGIN, 'set');
-    const clearHeader = await cookieHeader(PARTITIONED_ORIGIN, 'clear');
+  it.each([DEVELOPMENT_ORIGIN, PREVIEW_ORIGIN])(
+    'uses a partitioned cross-site cookie for the trusted admin Pages origin %s',
+    async (origin) => {
+      const setHeader = await cookieHeader(origin, 'set');
+      const clearHeader = await cookieHeader(origin, 'clear');
+
+      expectSharedDeployedAttributes(setHeader);
+      expect(setHeader).toContain('SameSite=None');
+      expect(setHeader).toContain('Partitioned');
+
+      expectSharedDeployedAttributes(clearHeader);
+      expect(clearHeader).toContain('Max-Age=0');
+      expect(clearHeader).toContain('SameSite=None');
+      expect(clearHeader).toContain('Partitioned');
+    },
+  );
+
+  it('does not issue a cross-site cookie for the public Pages project', async () => {
+    const setHeader = await cookieHeader(PUBLIC_PAGES_ORIGIN, 'set');
 
     expectSharedDeployedAttributes(setHeader);
-    expect(setHeader).toContain('SameSite=None');
-    expect(setHeader).toContain('Partitioned');
-
-    expectSharedDeployedAttributes(clearHeader);
-    expect(clearHeader).toContain('Max-Age=0');
-    expect(clearHeader).toContain('SameSite=None');
-    expect(clearHeader).toContain('Partitioned');
+    expect(setHeader).toContain('SameSite=Strict');
+    expect(setHeader).not.toContain('Partitioned');
   });
 });

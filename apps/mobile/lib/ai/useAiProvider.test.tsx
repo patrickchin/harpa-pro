@@ -116,6 +116,7 @@ describe('useAiProvider', () => {
         model: 'gpt-4.1',
       });
     });
+    await flush();
 
     const patchCall = mockFetch.mock.calls.find(
       (c) => c[1]?.method === 'PATCH',

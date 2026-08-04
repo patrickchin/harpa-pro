@@ -180,27 +180,53 @@ Active today:
 | `unit.yml`                    | every push                | `pnpm test` green                                                                                      |
 | `api-integration.yml`         | every push                | Combined API unit + Testcontainers suite green at ≥ 90% line coverage                                  |
 | `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
-| `pr-preview.yml`              | PR open / push            | Neon branch lifecycle for previews                                                                     |
-| `site-prod.yml`               | push to `main`            | Deploy the public site to Cloudflare Pages prod                                                        |
-| `site-preview.yml`            | PR to `dev` or `main`     | Test and deploy a per-PR public-site preview                                                           |
-| `dashboard-preview.yml`       | PR to `dev` or `main`     | Test and deploy a unique office-dashboard preview                                                      |
-| `dashboard-dev.yml`           | push to `dev`             | Deploy dashboard to the Pages dev branch                                                               |
-| `dashboard-prod.yml`          | push to `main`            | Deploy dashboard to `app.harpapro.com`                                                                 |
 | `dependency-review.yml`       | every PR                  | Reject newly introduced high or critical dependency vulnerabilities                                   |
+| `pr-preview.yml`              | PR open / push            | Credential-free path and migration guards; human-owned preview lifecycle                               |
+| `mobile-ota-pr.yml`           | mobile-relevant PR        | Publish an OTA preview for a human-owned same-repository PR                                            |
+| `site-preview.yml`            | PR to `dev` or `main`     | Verify the public site and publish a human-owned Pages preview                                         |
+| `site-dev.yml`                | push to `dev`             | Deploy the public site to the Pages `dev` branch                                                       |
+| `site-prod.yml`               | push to `main`            | Deploy the public site to the Pages production branch                                                  |
+| `admin-preview.yml`           | admin-relevant PR         | Verify the admin site and publish a human-owned Pages preview                                          |
+| `admin-dev.yml`               | push to `dev`             | Deploy and verify the standalone admin site's Pages `dev` branch                                      |
+| `admin-prod.yml`              | push to `main`            | Deploy and verify the standalone admin site's Pages production branch                                 |
+| `dashboard-preview.yml`       | PR to `dev` or `main`     | Verify the dashboard and publish a human-owned preview against the PR or dev API                       |
+| `dashboard-dev.yml`           | push to `dev`             | Deploy the dashboard to the Pages `dev` branch after the API check                                    |
+| `dashboard-prod.yml`          | push to `main`            | Deploy the dashboard to the Pages production branch after the API check                               |
 
 ### Dependency security automation
 
 GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
 the repository's default branch, `main`. It checks the root pnpm workspace
 and GitHub Actions weekly. Routine version-update pull requests target
-`dev`; minor and patch updates are grouped by risk, while major updates
-remain separate for focused review.
+`dev`. Compatibility-coupled Better Auth, React, Astro/Vite, Drizzle, AWS SDK,
+and TypeScript-ESLint packages update as coordinated stacks. The broad
+production/development groups accept patches only, so unrelated minor updates
+remain focused. Expo and React Native packages are ignored here: Expo Doctor
+and `expo install` own that native compatibility graph as a staged SDK
+migration.
 
 Dependabot security updates are enabled separately under **Settings → Code
 security and analysis**. They are advisory-driven rather than scheduled and
 always target the default branch, `main`; the `target-branch: dev`
 customizations apply only to routine version updates. The configuration does
 not become active until it reaches `main`.
+
+Dependabot pull requests run with reduced credentials. Credential-free tests,
+lint, typechecking, browser checks, builds, path detection, and migration-name
+guards must keep running. Jobs that deploy Cloudflare/Fly/Neon previews,
+publish EAS updates, delete preview infrastructure, or comment on a pull
+request require both a same-repository head and a non-Dependabot PR author:
+`github.event.pull_request.user.login != 'dependabot[bot]'`. Use the PR author,
+not `github.actor`, because a maintainer rerun changes the actor without
+changing who controls the branch. Never expose these credentials as
+Dependabot secrets and never switch to `pull_request_target` to recover them.
+
+Security updates still arrive directly against `main`. `main-gate` rejects a
+Dependabot-authored promotion before the live-dev journey steps can receive a
+test-account password, with an instruction to recreate the coordinated fix as
+a human-owned PR against `dev`. The ordinary read-only CI and dependency review
+still report on the bot PR; production promotion continues through the normal
+`dev` to `main` path.
 
 The `dependency-review` workflow uses GitHub's dependency graph to reject
 pull requests that introduce high or critical vulnerabilities. Once this

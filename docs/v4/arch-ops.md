@@ -12,16 +12,15 @@
     Sleeps when idle (`min_machines_running = 0`) to save cost.
   - `harpa-pro-api-pr-<n>` (per-PR preview) at
     `https://harpa-pro-api-pr-<n>.fly.dev` — created by
-    `.github/workflows/pr-preview.yml` (job `fly-preview`) only when
-    the PR changes API inputs (`packages/api`, `packages/api-contract`,
-    `packages/ai-fixtures`, lockfile, or TS config), destroyed on PR
+    `.github/workflows/pr-preview.yml` (job `fly-preview`) when the PR
+    changes API inputs or the admin browser app, destroyed on PR
     close (job `fly-destroy`). Config:
     [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
     Single shared-cpu-1x machine, `min_machines_running = 0`,
     `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
     The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
-    branch; frontend-only PR bundles point at the shared dev API
-    instead. Mobile dev/preview builds can flip to a preview URL via
+    branch. Admin previews use the matching Fly app so their exact browser
+    origin can be allowlisted. Mobile dev/preview builds can flip to a preview URL via
     `setApiBaseUrlOverride`.
 - **Databases**: two independent Neon projects:
   - the application project uses long-lived `main` (production) and `dev`
@@ -39,12 +38,22 @@
   - Production branch `main` → `https://harpapro.com` (and
     `harpa-pro.pages.dev`).
   - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
-  - `https://admin.harpapro.com` serves the same production static build and
-    redirects its root to `/admin/activity`. Data requests still require the
-    dedicated API admin session.
+  - The public artifact contains no admin route or admin-auth client.
   - After cutover, the standalone hostname `docs.harpapro.com` redirects to
     the canonical `/docs` routes through Cloudflare zone rules. See
     [the Cloudflare Pages runbook](../marketing/deploy-cloudflare-pages.md).
+- **Admin site**: Astro app `apps/admin` on the independent Cloudflare Pages
+  project `harpa-pro-admin`.
+  - Production branch `main` → `https://admin.harpapro.com` (and
+    `harpa-pro-admin.pages.dev`).
+  - Dev branch `dev` → `https://dev.harpa-pro-admin.pages.dev`.
+  - PR branch `pr-<n>` →
+    `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
+    `harpa-pro-api-pr-<n>` Fly app.
+  - The root is the only browser route and renders the activity console.
+    Unknown browser paths return a static 404. `/admin/activity` remains an
+    API resource path. Data requests require the dedicated API admin session.
+    See [Separate admin site](design-separate-admin-site.md).
 - **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
   Pages project `harpa-pro-dashboard`.
   - Production branch `main` → `https://app.harpapro.com` (and
@@ -431,7 +440,7 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 **inside the deploy job** before `flyctl deploy`. Pattern:
 
 ```yaml
-- uses: dopplerhq/cli-action@v3
+- uses: dopplerhq/cli-action@v4
 - name: Sync Fly secrets from Doppler
   env:
     DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }} # or _PRD
@@ -439,12 +448,18 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
   run: |
     {
       doppler secrets download --no-file --format env \
-        | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=)'
+        | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=|BETTER_AUTH_URL=)'
       echo "ADMIN_DATABASE_URL=$ADMIN_DATABASE_URL"
+      echo "BETTER_AUTH_URL=<canonical-environment-api-url>"
     } | flyctl secrets import --stage --app <app>
 - name: Deploy
   run: flyctl deploy ...
 ```
+
+Deployment workflows use action releases that run on Node 24. Cloudflare
+deployments use `cloudflare/wrangler-action@v4` with Wrangler CLI pinned to
+`3.114.17`; upgrading the action runtime must not silently introduce the
+separate Wrangler 4 migration.
 
 `--stage` defers activation; the subsequent `flyctl deploy` flips the
 secrets on — so code + secrets ship in a single transaction. To rotate
@@ -465,12 +480,19 @@ Before that import, the workflow resolves the environment's direct
   `harpa_admin_owner`; and
 - the resolved URI is masked and staged as `ADMIN_DATABASE_URL`.
 
-The Doppler filter deliberately excludes both `ADMIN_DATABASE_URL` and
-`ADMIN_CORS_ORIGINS`. This prevents a stale Doppler value from overriding
-the exact Neon branch URI or the non-secret exact-origin setting in Fly TOML.
-It also excludes Doppler metadata, Neon control-plane values, Cloudflare
-tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only flags.
-Before importing, the workflow removes any legacy
+The Doppler filter deliberately excludes `ADMIN_DATABASE_URL`,
+`ADMIN_CORS_ORIGINS`, and `BETTER_AUTH_URL`. This prevents stale Doppler
+values from overriding the exact Neon branch URI, the non-secret exact-origin
+setting in Fly TOML, or the API's public auth base URL. The workflows append
+the canonical `BETTER_AUTH_URL` themselves:
+
+- dev: `https://harpa-pro-api-dev.fly.dev`;
+- production: `https://api.harpapro.com`.
+
+The API fails boot when a non-preview deployment uses any other auth base URL.
+The filter also excludes Doppler metadata, Neon control-plane values,
+Cloudflare tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only
+flags. Before importing, the workflow removes any legacy
 `ADMIN_CORS_ORIGINS` Fly secret so the checked-in Fly TOML value cannot remain
 shadowed.
 
@@ -527,27 +549,31 @@ connection and `admin._migrations` head and fails the deployment workflow
 without coupling Fly routing to admin availability.
 
 ```
-PR open / push (same-repo only, forks skipped)
-  ↳ Backend preview (API-changing PRs only):
-    ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
-    ↳ Admin Neon branch pr-<n> from admin dev
-    ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-      ↳ release_command applies app migrations, then admin migrations
-      ↳ /readyz verified
-      ↳ /admin/readyz verified separately
-      ↳ sticky PR comment with preview URL
-  ↳ public-site preview deploy to CF Pages (site-preview.yml)
-  ↳ dashboard preview deploy to its own CF Pages project
-    (dashboard-preview.yml)
-  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
-    ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
-      when the PR changes API inputs
-    ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
-    ↳ branch is last-write-wins; engineers select older PR bundles
-      via the dev-client launcher (Updates → development → pick)
+PR open / push
+  ↳ Credential-free tests, builds, path checks, and migration guards
+  ↳ Human-owned same-repository PRs only:
+    ↳ Backend preview (API or admin-site changes only):
+      ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
+      ↳ Admin Neon branch pr-<n> from admin dev
+      ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
+        ↳ release_command applies app migrations, then admin migrations
+        ↳ /readyz verified
+        ↳ /admin/readyz verified separately
+        ↳ sticky PR comment with preview URL
+    ↳ public-site preview deploy to CF Pages (site-preview.yml)
+    ↳ admin-site preview deploy to its own CF Pages project
+      (admin-preview.yml)
+    ↳ dashboard preview deploy to its own CF Pages project
+      (dashboard-preview.yml)
+    ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
+      ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
+        when the PR changes API inputs
+      ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
+      ↳ branch is last-write-wins; engineers select older PR bundles
+        via the dev-client launcher (Updates → development → pick)
   ↳ EAS preview build (manual trigger — planned)
 
-PR close
+Human-owned same-repository PR close
   ↳ Fly app harpa-pro-api-pr-<n> destroyed (pr-preview.yml: fly-destroy)
   ↳ Application and admin Neon branches pr-<n> deleted
 
@@ -558,6 +584,7 @@ Push to dev
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
     ↳ /readyz and /admin/readyz verified independently
   ↳ public-site deploy to CF Pages dev branch (site-dev.yml)
+  ↳ admin-site deploy to CF Pages dev branch (admin-dev.yml)
   ↳ dashboard deploy to CF Pages dev branch (dashboard-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
     ↳ mobile-only change: publish directly
@@ -576,6 +603,7 @@ Push to main (production)
     ↳ release_command applies app migrations, then admin migrations
     ↳ /readyz and /admin/readyz verified independently
   ↳ public-site deploy to CF Pages production (site-prod.yml)
+  ↳ admin-site deploy to CF Pages production branch (admin-prod.yml)
   ↳ dashboard deploy to app.harpapro.com (dashboard-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
@@ -687,7 +715,7 @@ flyctl secrets set --app harpa-pro-api-dev \
   OPENAI_API_KEY=sk-... GROQ_API_KEY=gsk-... # AI providers
 ```
 
-`ADMIN_CORS_ORIGINS=https://dev.harpa-pro.pages.dev` is non-secret Fly
+`ADMIN_CORS_ORIGINS=https://dev.harpa-pro-admin.pages.dev` is non-secret Fly
 configuration in `infra/fly/fly.dev.toml`, not a Doppler value.
 
 After bootstrap, every push to `dev` reuses both Neon `dev` branches and the

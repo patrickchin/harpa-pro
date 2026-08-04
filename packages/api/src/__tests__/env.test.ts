@@ -74,6 +74,8 @@ function setValidProductionEnv(): void {
     DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
     ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
     BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
+    BETTER_AUTH_URL: 'https://api.harpapro.com',
+    ADMIN_CORS_ORIGINS: 'https://admin.harpapro.com',
     AI_FIXTURE_MODE: 'live',
     AI_LIVE: '1',
     OPENAI_API_KEY: 'test-openai-key',
@@ -108,6 +110,8 @@ describe('env: email OTP transport', () => {
     process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
     process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
     process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
+    process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-pr-42.fly.dev';
+    process.env.ADMIN_CORS_ORIGINS = 'https://pr-42.harpa-pro-admin.pages.dev';
 
     const mod = await freshImportEnv();
     expect(mod.env.EMAIL_OTP_LIVE).toBe('0');
@@ -194,6 +198,8 @@ describe('env: production services fail closed', () => {
       ADMIN_MIGRATIONS_REQUIRED_HEAD: '0001_admin_auth.sql',
       ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
       BETTER_AUTH_SECRET: 'test-only-preview-auth-secret-over-32-chars',
+      BETTER_AUTH_URL: 'https://harpa-pro-api-pr-42.fly.dev',
+      ADMIN_CORS_ORIGINS: 'https://pr-42.harpa-pro-admin.pages.dev',
       AI_FIXTURE_MODE: 'replay',
       AI_LIVE: '0',
       R2_FIXTURE_MODE: 'replay',
@@ -308,41 +314,91 @@ describe('env: Postgres connection URLs', () => {
 });
 
 describe('env: admin browser origins', () => {
+  const productionAdminOrigin = 'https://admin.harpapro.com';
+  const developmentAdminOrigin = 'https://dev.harpa-pro-admin.pages.dev';
+  const previewAdminOrigin = 'https://pr-42.harpa-pro-admin.pages.dev';
+
+  it('defaults local admin browser access to the standalone admin app', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('http://localhost:3102');
+  });
+
   it('accepts the dedicated production admin origin for the production API', async () => {
     setValidProductionEnv();
     process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
-    process.env.ADMIN_CORS_ORIGINS = 'https://admin.harpapro.com';
+    process.env.ADMIN_CORS_ORIGINS = productionAdminOrigin;
 
     const mod = await freshImportEnv();
 
-    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('https://admin.harpapro.com');
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe(productionAdminOrigin);
   });
 
-  it('accepts only the stable Pages origin for the development API', async () => {
+  it('accepts the stable admin Pages origin for the development API', async () => {
     setValidProductionEnv();
     process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-dev.fly.dev';
-    process.env.ADMIN_CORS_ORIGINS = 'https://dev.harpa-pro.pages.dev';
+    process.env.ADMIN_CORS_ORIGINS = developmentAdminOrigin;
 
     const mod = await freshImportEnv();
 
-    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('https://dev.harpa-pro.pages.dev');
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe(developmentAdminOrigin);
   });
 
-  it('rejects a Pages origin for the production API', async () => {
+  it('accepts the matching admin Pages origin for a PR preview API', async () => {
     setValidProductionEnv();
-    process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
-    process.env.ADMIN_CORS_ORIGINS = 'https://dev.harpa-pro.pages.dev';
+    process.env.HARPAPRO_PR_BUILD = '1';
+    process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-pr-42.fly.dev';
+    process.env.ADMIN_CORS_ORIGINS = previewAdminOrigin;
 
-    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CORS_ORIGINS|Pages/);
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe(previewAdminOrigin);
   });
 
-  it('rejects arbitrary Pages preview origins for the development API', async () => {
+  it('rejects an unrecognized deployed Better Auth URL', async () => {
     setValidProductionEnv();
-    process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-dev.fly.dev';
-    process.env.ADMIN_CORS_ORIGINS = 'https://random-preview.harpa-pro.pages.dev';
+    process.env.BETTER_AUTH_URL = 'https://unexpected-api.example.com';
+    process.env.ADMIN_CORS_ORIGINS = productionAdminOrigin;
 
-    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CORS_ORIGINS|Pages/);
+    await expect(freshImportEnv()).rejects.toThrow(/BETTER_AUTH_URL|deployed API URL/);
   });
+
+  it.each([
+    ['production API', 'https://api.harpapro.com', '0', developmentAdminOrigin],
+    ['production API public host', 'https://api.harpapro.com', '0', 'https://harpapro.com'],
+    ['production API public www host', 'https://api.harpapro.com', '0', 'https://www.harpapro.com'],
+    [
+      'development API legacy public Pages host',
+      'https://harpa-pro-api-dev.fly.dev',
+      '0',
+      'https://dev.harpa-pro.pages.dev',
+    ],
+    ['development API preview host', 'https://harpa-pro-api-dev.fly.dev', '0', previewAdminOrigin],
+    [
+      'PR preview with another PR number',
+      'https://harpa-pro-api-pr-42.fly.dev',
+      '1',
+      'https://pr-41.harpa-pro-admin.pages.dev',
+    ],
+    [
+      'PR preview on the public Pages project',
+      'https://harpa-pro-api-pr-42.fly.dev',
+      '1',
+      'https://pr-42.harpa-pro.pages.dev',
+    ],
+  ] as const)(
+    'rejects an admin origin outside the dedicated surface for the %s',
+    async (_case, betterAuthUrl, prBuild, adminOrigin) => {
+      setValidProductionEnv();
+      process.env.HARPAPRO_PR_BUILD = prBuild;
+      process.env.BETTER_AUTH_URL = betterAuthUrl;
+      process.env.ADMIN_CORS_ORIGINS = adminOrigin;
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CORS_ORIGINS|admin origin/);
+    },
+  );
 });
 
 describe('env: test account access', () => {

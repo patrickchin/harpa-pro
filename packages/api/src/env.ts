@@ -6,6 +6,12 @@ import { z } from 'zod';
 import { isPostgresConnectionUrl, isSamePostgresEndpoint } from './db/admin-isolation.js';
 
 const DEV_BETTER_AUTH_SECRET = 'dev-only-secret-do-not-use-in-prod';
+const PRODUCTION_API_URL = 'https://api.harpapro.com';
+const DEVELOPMENT_API_URL = 'https://harpa-pro-api-dev.fly.dev';
+const PRODUCTION_ADMIN_ORIGIN = 'https://admin.harpapro.com';
+const DEVELOPMENT_ADMIN_ORIGIN = 'https://dev.harpa-pro-admin.pages.dev';
+const PREVIEW_API_URL = /^https:\/\/harpa-pro-api-pr-([1-9][0-9]*)\.fly\.dev$/;
+const PREVIEW_ADMIN_ORIGIN = /^https:\/\/pr-[1-9][0-9]*\.harpa-pro-admin\.pages\.dev$/;
 
 const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional());
 const postgresConnectionUrl = z
@@ -42,6 +48,21 @@ function splitCsv(value: string): string[] {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+export function isCrossSiteAdminOrigin(origin: string): boolean {
+  return origin === DEVELOPMENT_ADMIN_ORIGIN || PREVIEW_ADMIN_ORIGIN.test(origin);
+}
+
+function expectedDeployedAdminOrigin(betterAuthUrl: string, isPrPreview: boolean): string | null {
+  if (isPrPreview) {
+    const preview = PREVIEW_API_URL.exec(betterAuthUrl);
+    return preview ? `https://pr-${preview[1]}.harpa-pro-admin.pages.dev` : null;
+  }
+
+  if (betterAuthUrl === DEVELOPMENT_API_URL) return DEVELOPMENT_ADMIN_ORIGIN;
+  if (betterAuthUrl === PRODUCTION_API_URL) return PRODUCTION_ADMIN_ORIGIN;
+  return null;
 }
 
 const Env = z
@@ -187,7 +208,7 @@ const Env = z
     ADMIN_CORS_ORIGINS: exactHttpOrigins.default(
       process.env.NODE_ENV === 'production'
         ? 'https://admin.harpapro.com'
-        : 'http://localhost:3002',
+        : 'http://localhost:3102',
     ),
     /**
      * Filename of the last migration this image expects to find applied in
@@ -312,24 +333,27 @@ const Env = z
       });
     }
 
-    if (isLiveDeployment) {
-      const isDevelopmentApi = new URL(e.BETTER_AUTH_URL).hostname === 'harpa-pro-api-dev.fly.dev';
-      const adminOriginsAreSafe = splitCsv(e.ADMIN_CORS_ORIGINS).every(
-        (origin) =>
-          origin.startsWith('https://') &&
-          !origin.includes('localhost') &&
-          (!origin.endsWith('.pages.dev') ||
-            (isDevelopmentApi && origin === 'https://dev.harpa-pro.pages.dev')),
-      );
-      if (!adminOriginsAreSafe) {
+    if (isProduction) {
+      const expectedAdminOrigin = expectedDeployedAdminOrigin(e.BETTER_AUTH_URL, isPrPreview);
+      const adminOrigins = splitCsv(e.ADMIN_CORS_ORIGINS);
+      if (expectedAdminOrigin === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['BETTER_AUTH_URL'],
+          message: isPrPreview
+            ? 'PR preview BETTER_AUTH_URL must identify its canonical Fly preview URL'
+            : `deployed BETTER_AUTH_URL must be ${PRODUCTION_API_URL} or ${DEVELOPMENT_API_URL}`,
+        });
+      } else if (adminOrigins.length !== 1 || adminOrigins[0] !== expectedAdminOrigin) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['ADMIN_CORS_ORIGINS'],
-          message:
-            'deployed admin origins must use HTTPS; only the development API may trust the stable development Pages origin',
+          message: `deployed API must trust only its dedicated admin origin: ${expectedAdminOrigin}`,
         });
       }
+    }
 
+    if (isLiveDeployment) {
       const requirements = [
         ['AI_FIXTURE_MODE', e.AI_FIXTURE_MODE, 'live'],
         ['AI_LIVE', e.AI_LIVE, '1'],

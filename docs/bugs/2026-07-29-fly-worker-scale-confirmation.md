@@ -46,6 +46,14 @@ the same full repository and deployment tag. The fail-closed guard again kept
 arming and journeys blocked, but its raw-string image comparison was stricter
 than Fly's equivalent image representations.
 
+**Follow-up after production promotion #225.** Production run `30620907618`
+deployed exact SHA `e40b2388`, completed both migrations, and verified a
+healthy active/standby worker pair. The final remote arming command then failed
+because `flyctl ssh console --command` treated the leading
+`STORAGE_LEASE_ROLLOUT_GRACE_SEC=330` assignment as the executable name.
+Prefix remote assignments with the real `env` executable so Fly runs the
+arming command with the intended environment.
+
 **Fix.** Remove broad worker scaling from dev and production. The required
 order is deploy, narrow topology repair, read-only started-worker verification,
 then monotonic arming. Repair is a no-op only for the exact healthy pair: one
@@ -78,7 +86,8 @@ transitional topologies fail closed.
 **Test.** `storage-lifecycle-deploy-policy.test.sh` forbids explicit
 `storage-worker` scale commands under the Fly and workflow deployment
 surfaces, then executes the production deploy through its fake `flyctl` and
-asserts the deploy-to-repair-to-verify-to-arm order.
+asserts the deploy-to-repair-to-verify-to-arm order, including the `env`
+executable required for remote variable assignments.
 `repair-storage-worker-topology.test.sh` covers the exact healthy no-op,
 singleton active and singleton standby recovery, zero/ambiguous/transitional
 inventories, stale or incomplete release identity, exact-candidate proofs

@@ -12,7 +12,6 @@
     "lint": "eslint . --ext .ts,.tsx,.astro --max-warnings=0",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:admin": "playwright test --config playwright.admin.config.ts",
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
@@ -22,7 +21,6 @@
     "@harpa/api-contract": "workspace:*",
     "@marsidev/react-turnstile": "^1.5.2",
     "@tailwindcss/vite": "^4.0.0",
-    "@tanstack/react-table": "^8.21.3",
     "astro": "^5.1.1",
     "lucide-static": "^0.469.0",
     "react": "^18.3.1",
@@ -44,6 +42,6 @@
     "jsdom": "^25.0.1",
     "typescript": "^5.6.2",
     "typescript-eslint": "^8.59.3",
-    "vitest": "^2.1.8"
+    "vitest": "^3.2.7"
   }
 }

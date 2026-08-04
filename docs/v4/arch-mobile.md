@@ -214,10 +214,16 @@ Token getter wiring (security review §B / §I):
 Sign-out:
 
 - Best-effort `POST /api/auth/sign-out`, then clear SecureStore + state +
-  `queryClient.clear()`. The active upload queue is aborted and cleared
-  before the network call. Network failure on the POST does **not**
-  stop either local clear (we'd otherwise leak session data into a
-  multi-user device).
+  the in-memory and persisted query caches. The active upload queue is
+  aborted and cleared before the network call. Network failure on the
+  POST does **not** stop either local clear (we'd otherwise leak session
+  data into a multi-user device).
+
+`SessionQueryProvider` sits below auth and withholds the rest of the
+app until a stable user id is available. Persisted query snapshots are
+keyed by user id; passive session loss and direct account switches mount
+a fresh client before descendants can render. A delayed restore from the
+old scope cannot reach the new account's client.
 
 What we deliberately do **not** have:
 

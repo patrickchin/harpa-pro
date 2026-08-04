@@ -1,8 +1,9 @@
 # Fly.io app config for @harpa/api (per-PR preview).
 # Deployed by the `fly-preview` job in pr-preview.yml on every push to a PR
-# that touches API code. App name is per-PR (`harpa-pro-api-pr-<n>`) and is
-# passed via `flyctl deploy --app <name>`, so this config intentionally omits
-# `app =`. Destroyed on PR close by the `fly-destroy` job.
+# that touches API code or the standalone admin site. App name is per-PR
+# (`harpa-pro-api-pr-<n>`) and is passed via `flyctl deploy --app <name>`, so
+# this config intentionally omits `app =`. Destroyed on PR close by the
+# `fly-destroy` job.
 #
 # Trade-offs vs fly.dev.toml:
 #   - `auto_stop_machines = "stop"` (not "suspend"): preview machines may
@@ -33,10 +34,8 @@ primary_region = "fra"
   PORT = "8787"
   HARPAPRO_PR_BUILD = "1"
   EMAIL_OTP_LIVE = "0"
-  # Hosted PR site origins are dynamic and cannot satisfy the exact-origin
-  # cookie policy. Browser admin auth is intentionally disabled in hosted
-  # previews; the two-database Playwright flow is the preview gate.
-  ADMIN_CORS_ORIGINS = "https://admin-preview.invalid"
+  # ADMIN_CORS_ORIGINS is staged by pr-preview.yml because the exact allowed
+  # origin is keyed to the PR number and cannot be interpolated in this file.
 
 [http_service]
   internal_port = 8787

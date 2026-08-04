@@ -12,6 +12,8 @@ const KEYS = [
   'DATABASE_URL',
   'ADMIN_DATABASE_URL',
   'BETTER_AUTH_SECRET',
+  'BETTER_AUTH_URL',
+  'ADMIN_CORS_ORIGINS',
   'AI_FIXTURE_MODE',
   'AI_LIVE',
   'OPENAI_API_KEY',
@@ -60,6 +62,8 @@ function setLiveDeploymentEnv(): void {
     DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
     ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
     BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
+    BETTER_AUTH_URL: 'https://harpa-pro-api-dev.fly.dev',
+    ADMIN_CORS_ORIGINS: 'https://dev.harpa-pro-admin.pages.dev',
     AI_FIXTURE_MODE: 'live',
     AI_LIVE: '1',
     OPENAI_API_KEY: 'test-openai-key',
@@ -99,6 +103,8 @@ describe('app boot: no module-load side effects', () => {
       process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
       process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
       process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
+      process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-pr-42.fly.dev';
+      process.env.ADMIN_CORS_ORIGINS = 'https://pr-42.harpa-pro-admin.pages.dev';
 
       vi.resetModules();
       const mod = await import('../app.js');
@@ -115,6 +121,8 @@ describe('app boot: no module-load side effects', () => {
     process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
     process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
     process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
+    process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-pr-42.fly.dev';
+    process.env.ADMIN_CORS_ORIGINS = 'https://pr-42.harpa-pro-admin.pages.dev';
 
     vi.resetModules();
     const { createApp } = await import('../app.js');

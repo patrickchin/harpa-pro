@@ -7,8 +7,15 @@ import { authenticateAdmin, hashAdminPassword, setAdminPassword } from '../servi
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
-const ADMIN_ORIGIN = 'http://localhost:3002';
-const DASHBOARD_ORIGIN = 'https://app.harpapro.com';
+const ADMIN_ORIGIN = 'http://localhost:3102';
+const UNTRUSTED_ADMIN_ORIGINS = [
+  'https://app.harpapro.com',
+  'https://admin.harpapro.com.evil.example',
+  'https://evil.example.com',
+  'https://harpapro.com',
+  'https://www.harpapro.com',
+  'https://dev.harpa-pro.pages.dev',
+] as const;
 const ADMIN_EMAIL = 'browser-admin@harpapro.com';
 const ADMIN_PASSWORD = 'correct horse battery staple admin password';
 
@@ -86,23 +93,16 @@ describe('dedicated admin browser authentication', () => {
     expect(appAuthPreflight.headers.get('access-control-allow-origin')).toBeNull();
     expect(appAuthPreflight.headers.get('access-control-allow-credentials')).toBeNull();
 
-    const dashboardRejected = await app.request('/admin/auth/login', {
-      method: 'OPTIONS',
-      headers: {
-        origin: DASHBOARD_ORIGIN,
-        'access-control-request-method': 'POST',
-      },
-    });
-    expect(dashboardRejected.headers.get('access-control-allow-origin')).toBeNull();
-
-    const rejected = await app.request('/admin/auth/login', {
-      method: 'OPTIONS',
-      headers: {
-        origin: 'https://evil.example.com',
-        'access-control-request-method': 'POST',
-      },
-    });
-    expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+    for (const origin of UNTRUSTED_ADMIN_ORIGINS) {
+      const rejected = await app.request('/admin/auth/login', {
+        method: 'OPTIONS',
+        headers: {
+          origin,
+          'access-control-request-method': 'POST',
+        },
+      });
+      expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+    }
   });
 
   it('rejects oversized login bodies before rate limiting or authentication', async () => {
@@ -268,14 +268,14 @@ describe('dedicated admin browser authentication', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
     });
-    const untrusted = await login(
-      ADMIN_EMAIL,
-      ADMIN_PASSWORD,
-      'https://admin.harpapro.com.evil.example',
+    const untrusted = await Promise.all(
+      UNTRUSTED_ADMIN_ORIGINS.map((origin) => login(ADMIN_EMAIL, ADMIN_PASSWORD, origin)),
     );
 
     expect(missing.status).toBe(403);
-    expect(untrusted.status).toBe(403);
+    expect(untrusted.map((response) => response.status)).toEqual(
+      UNTRUSTED_ADMIN_ORIGINS.map(() => 403),
+    );
   });
 
   it('revokes the server session on logout and clears the cookie', async () => {

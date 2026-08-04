@@ -125,7 +125,7 @@ export function MembersPageView({
   }
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-col gap-8">
       <PageHeader
         eyebrow="Project team"
         title="Members"
@@ -146,7 +146,7 @@ export function MembersPageView({
 
       {error && !addOpen && !removeTarget ? (
         <p
-          className="mb-4 rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-sm font-semibold text-danger-text"
+          className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-sm font-semibold text-danger-text"
           role="alert"
         >
           {error}

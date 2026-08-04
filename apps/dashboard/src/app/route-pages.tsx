@@ -1,7 +1,14 @@
 import type { projects } from '@harpa/api-contract';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, LoaderCircle } from 'lucide-react';
-import { Link, Outlet, useNavigate, useOutletContext, useParams } from 'react-router';
+import {
+  Link,
+  Outlet,
+  useNavigate,
+  useOutletContext,
+  useParams,
+  useSearchParams,
+} from 'react-router';
 
 import { DashboardShell } from '@/components/layout';
 import { buttonStyles, Button, Card } from '@/components/ui';
@@ -59,7 +66,7 @@ function LoadFailure({
 
 function AuthCanvas({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-screen justify-center bg-background px-6 py-10 sm:items-center">
+    <main className="flex min-h-screen justify-center bg-background px-5 py-10 sm:items-center">
       {children}
     </main>
   );
@@ -345,7 +352,9 @@ export function ProjectReportWorkspaceRoute(): React.JSX.Element {
   const project = useCurrentProject();
   const navigate = useNavigate();
   const { number } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const reportNumber = Number(number);
+  const initialFinalizedTab = searchParams.get('tab') === 'review' ? 'review' : 'report';
 
   if (!Number.isInteger(reportNumber) || reportNumber < 1) {
     return (
@@ -364,6 +373,13 @@ export function ProjectReportWorkspaceRoute(): React.JSX.Element {
       projectSlug={project.id}
       reportNumber={reportNumber}
       role={project.myRole}
+      initialFinalizedTab={initialFinalizedTab}
+      onFinalizedTabChange={(tab) => {
+        const next = new URLSearchParams(searchParams);
+        if (tab === 'review') next.set('tab', 'review');
+        else next.delete('tab');
+        setSearchParams(next, { replace: true });
+      }}
     />
   );
 }

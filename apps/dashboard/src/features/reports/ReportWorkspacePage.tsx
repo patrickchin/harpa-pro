@@ -40,7 +40,7 @@ interface StoredDraft {
 }
 
 type Confirmation = 'overwrite' | 'finalize' | 'reopen' | 'delete' | null;
-type FinalizedTab = 'report' | 'review';
+export type FinalizedTab = 'report' | 'review';
 
 export function reportDraftStorageKey(projectSlug: string, reportNumber: number): string {
   return `harpa:dashboard:report-draft:${projectSlug}:${reportNumber}`;
@@ -180,6 +180,8 @@ export interface ReportWorkspacePageProps {
   role: projects.ProjectRole;
   autosaveDelayMs?: number;
   draftPersistenceDelayMs?: number;
+  initialFinalizedTab?: FinalizedTab;
+  onFinalizedTabChange?: (tab: FinalizedTab) => void;
   onDownloadPdf?: (url: string, filename: string) => void;
   onDeleted?: () => void;
 }
@@ -191,6 +193,8 @@ export function ReportWorkspacePage({
   role,
   autosaveDelayMs = 700,
   draftPersistenceDelayMs = 250,
+  initialFinalizedTab = 'report',
+  onFinalizedTabChange,
   onDownloadPdf = defaultDownload,
   onDeleted,
 }: ReportWorkspacePageProps) {
@@ -209,7 +213,7 @@ export function ReportWorkspacePage({
   const saveStateRef = useRef<SaveState | null>(null);
   const [conflictReport, setConflictReport] = useState<reports.Report | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
-  const [finalizedTab, setFinalizedTab] = useState<FinalizedTab>('report');
+  const [finalizedTab, setFinalizedTab] = useState<FinalizedTab>(initialFinalizedTab);
   const [previewVisible, setPreviewVisible] = useState(true);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const initializedReportId = useRef<string | null>(null);
@@ -272,7 +276,7 @@ export function ReportWorkspacePage({
     const coerced = coerceReportBody(report.body, report.visitDate);
     const stored = readStoredDraft(storageKey);
     setMalformedBody(coerced.malformed);
-    setFinalizedTab('report');
+    setFinalizedTab(report.status === 'finalized' ? initialFinalizedTab : 'report');
 
     if (stored && report.status === 'draft' && canWrite) {
       setKnownBody(stored.body);
@@ -295,7 +299,11 @@ export function ReportWorkspacePage({
     setKnownBody(coerced.body);
     setConflictReport(null);
     setKnownSaveState(initialSaveState(report.updatedAt));
-  }, [canWrite, report, setKnownBody, setKnownSaveState, storageKey]);
+  }, [canWrite, initialFinalizedTab, report, setKnownBody, setKnownSaveState, storageKey]);
+
+  useEffect(() => {
+    if (report?.status === 'finalized') setFinalizedTab(initialFinalizedTab);
+  }, [initialFinalizedTab, report?.status]);
 
   const preserveDraft = useCallback(() => {
     const body = localBodyRef.current;
@@ -402,7 +410,7 @@ export function ReportWorkspacePage({
       void save();
     }, autosaveDelayMs);
     return () => window.clearTimeout(timer);
-  }, [autosaveDelayMs, conflictReport, localBody, save, saveState?.status]);
+  }, [autosaveDelayMs, conflictReport, localBody, save, saveState?.status, saveState?.updatedAt]);
 
   useEffect(() => {
     if (
@@ -637,7 +645,7 @@ export function ReportWorkspacePage({
             <>
               <Button
                 className="w-full sm:w-auto"
-                variant="secondary"
+                variant="hero"
                 onClick={() => generateMutation.mutate()}
                 disabled={
                   saveState.status !== 'saved' ||
@@ -791,10 +799,14 @@ export function ReportWorkspacePage({
       {report.status === 'finalized' ? (
         <TabGroup
           selectedIndex={finalizedTab === 'report' ? 0 : 1}
-          onChange={(index) => setFinalizedTab(index === 0 ? 'report' : 'review')}
+          onChange={(index) => {
+            const tab = index === 0 ? 'report' : 'review';
+            setFinalizedTab(tab);
+            onFinalizedTabChange?.(tab);
+          }}
         >
           <TabList
-            className="grid w-full grid-cols-2 gap-1 rounded-card-ui border border-border bg-card p-1 shadow-raised-ui sm:w-fit"
+            className="grid w-full grid-cols-2 gap-1 rounded-card-ui border border-border bg-surface-muted p-1 sm:w-fit"
             aria-label="Report surfaces"
           >
             <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-bold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">

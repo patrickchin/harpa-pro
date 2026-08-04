@@ -9,7 +9,7 @@ export function TableShell({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-card-ui border border-border bg-card shadow-raised-ui',
+        'overflow-x-auto rounded-card-ui border border-border bg-card shadow-raised-ui',
         className,
       )}
       {...props}

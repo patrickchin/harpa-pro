@@ -24,11 +24,13 @@ export function PageHeader({
           </p>
         ) : null}
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h1 className="min-w-0 text-title font-bold text-foreground">{title}</h1>
+          <h1 className="min-w-0 break-words text-title font-bold text-foreground [overflow-wrap:anywhere]">
+            {title}
+          </h1>
           {context}
         </div>
         {description ? (
-          <p className="mt-1 text-body text-muted-foreground">{description}</p>
+          <p className="mt-1 break-words text-body text-muted-foreground">{description}</p>
         ) : null}
       </div>
       {action ? (

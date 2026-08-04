@@ -94,7 +94,7 @@ export function DashboardShell({
       </a>
       <aside
         aria-label="Dashboard navigation"
-        className="sticky top-0 z-40 border-b border-border bg-card lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[17rem] lg:flex-col lg:border-r lg:border-b-0 lg:bg-surface-emphasis"
+        className="sticky top-0 z-40 border-b border-border bg-card lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[var(--sidebar-width)] lg:flex-col lg:border-r lg:border-b-0 lg:bg-surface-emphasis"
       >
         <div className="flex min-w-0 flex-wrap items-center gap-3 px-5 py-3 lg:flex-1 lg:flex-nowrap lg:flex-col lg:items-stretch lg:gap-0 lg:p-5">
           <Link
@@ -212,7 +212,11 @@ export function DashboardShell({
           </Menu>
         </div>
       </aside>
-      <main id="dashboard-content" className="min-h-screen lg:ml-[17rem]" tabIndex={-1}>
+      <main
+        id="dashboard-content"
+        className="min-h-screen lg:ml-[var(--sidebar-width)]"
+        tabIndex={-1}
+      >
         <div className="mx-auto w-full max-w-app px-5 py-5 pb-8 sm:px-6 sm:py-6 xl:px-8">
           {children}
         </div>

@@ -96,13 +96,25 @@ requests satisfy that invariant.
 
 ## Dashboard boundary
 
-The dashboard application is still isolated in its feature pull request. It
-must use a Git-integrated Pages project with automatic production builds
-disabled and preview builds restricted to `pr-*`. If its existing project is a
-Direct Upload project, create a replacement Git-integrated project instead of
-attempting an unsupported in-place conversion. Production is enabled only
-after `apps/dashboard` reaches `main`; a failed build of an absent application
-is not used as a rollout mechanism.
+The dashboard application is still isolated in
+[draft PR #211](https://github.com/patrickchin/harpa-pro/pull/211). The
+`harpa-pro-dashboard` project remains Git-integrated, but both automatic
+production and preview branch deployments are disabled while `apps/dashboard`
+is absent from `dev`. An absent application must not attach failed dashboard
+builds to unrelated `dev` or `pr-*` refs.
+
+Preview deployments are re-enabled only as part of a refreshed dashboard pull
+request. Initially allow only that pull request's exact generated
+`pr-<number>` ref, require its deployment marker and dashboard checks to match
+the immutable pull request head SHA, then merge through `dev`. After the
+application is present on `dev`, preview branch control may expand to `dev` and
+`pr-*`. Automatic production deployments remain disabled until
+`apps/dashboard` reaches `main` through the protected promotion workflow.
+
+If the existing project is a Direct Upload project, create a replacement
+Git-integrated project instead of attempting an unsupported in-place
+conversion. A failed build of an absent application is not used as a rollout
+mechanism.
 
 ## Verification and rollback
 

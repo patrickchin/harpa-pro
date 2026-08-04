@@ -25,9 +25,9 @@
  * See docs/superpowers/specs/2026-06-02-migrate-auth-to-better-auth-design.md
  * §Test-account smoke-test path.
  */
-import { sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { auth } from '../src/auth/auth.js';
-import { rawDb } from '../src/db/client.js';
+import { rawDb, schema } from '../src/db/client.js';
 import { env } from '../src/env.js';
 
 type SeedGroup = {
@@ -43,17 +43,22 @@ async function ensureCredentialAccount(
   passwordHash: string,
 ): Promise<'created' | 'updated'> {
   const db = rawDb();
-  const updated = await db.execute(sql`
-    UPDATE public."account"
-    SET
-      account_id = ${userId},
-      password = ${passwordHash},
-      updated_at = now()
-    WHERE user_id = ${userId}
-      AND provider_id = 'credential'
-  `);
+  const updated = await db
+    .update(schema.accounts)
+    .set({
+      accountId: userId,
+      password: passwordHash,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.accounts.userId, userId),
+        eq(schema.accounts.providerId, 'credential'),
+      ),
+    )
+    .returning({ id: schema.accounts.id });
 
-  if ((updated.rowCount ?? 0) > 0) {
+  if (updated.length > 0) {
     return 'updated';
   }
 

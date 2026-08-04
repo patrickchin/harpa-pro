@@ -30,8 +30,8 @@ describe('site smoke', () => {
       tailwindcss: '^4.3.3',
     });
     expect(pkg.devDependencies).toMatchObject({
-      '@types/react': '^19.2.0',
-      '@types/react-dom': '^19.2.0',
+      '@types/react': '^19.2.14',
+      '@types/react-dom': '~19.2.3',
       vite: '6.4.3',
     });
   });

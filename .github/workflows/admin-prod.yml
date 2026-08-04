@@ -1,8 +1,7 @@
 name: admin-prod
 
-# Deploy the standalone admin console to the production branch of its own
-# Cloudflare Pages project. Verify the Pages host first; map and cut over
-# admin.harpapro.com separately only after the production artifact exists.
+# Cloudflare Git publishes main. Verify the exact commit on the Pages hostname
+# and the canonical admin custom domain.
 
 on:
   push:
@@ -10,7 +9,8 @@ on:
     paths:
       - 'apps/admin/**'
       - 'packages/api-contract/**'
-      - '.github/actions/setup-monorepo/**'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
       - '.github/workflows/admin-prod.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -23,110 +23,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prod:
+  verify:
     if: github.event_name == 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
-      deployments: write
+    strategy:
+      fail-fast: false
+      matrix:
+        origin:
+          - https://harpa-pro-admin.pages.dev
+          - https://admin.harpapro.com
     steps:
       - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup-monorepo
-
-      - name: Build admin site
-        env:
-          PUBLIC_API_BASE_URL: https://api.harpapro.com
-        run: pnpm --filter @harpa/admin build
-
-      - name: Verify admin API URL is inlined
-        env:
-          EXPECTED_API_ORIGIN: https://api.harpapro.com
-        run: |
-          grep -R -Fq --include='*.js' "$EXPECTED_API_ORIGIN" apps/admin/dist
-          if grep -R -Fq --include='*.js' 'http://localhost:8787' apps/admin/dist; then
-            echo "::error::admin production artifact still points at the local E2E API" >&2
-            exit 1
-          fi
-
-      - name: Deploy admin site to Cloudflare Pages (production)
-        uses: cloudflare/wrangler-action@v4
-        with:
-          wranglerVersion: '3.114.17'
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: >-
-            pages deploy apps/admin/dist
-            --project-name=harpa-pro-admin
-            --branch=main
-            --commit-dirty=true
-
-      - name: Verify stable admin Pages host
-        shell: bash
-        env:
-          ADMIN_ORIGIN: https://harpa-pro-admin.pages.dev
-        run: |
-          set -euo pipefail
-
-          retry() {
-            local description="$1"
-            shift
-            local deadline=$((SECONDS + 180))
-            while true; do
-              if "$@"; then
-                return 0
-              fi
-              if (( SECONDS >= deadline )); then
-                break
-              fi
-              sleep 5
-            done
-            echo "::error::$description" >&2
-            return 1
-          }
-
-          verify_root() {
-            local remote_html
-            if ! remote_html="$(mktemp)"; then
-              return 1
-            fi
-            if ! curl --fail --silent --show-error \
-              --connect-timeout 10 --max-time 30 \
-              --output "$remote_html" \
-              "${ADMIN_ORIGIN}/"; then
-              rm -f -- "$remote_html"
-              return 1
-            fi
-            if ! grep -Fq '<title>Business activity — Harpa Pro Admin</title>' "$remote_html"; then
-              echo "Stable admin root returned unexpected HTML" >&2
-              rm -f -- "$remote_html"
-              return 1
-            fi
-            if ! cmp -s apps/admin/dist/index.html "$remote_html"; then
-              echo "Stable admin root does not match the deployed artifact" >&2
-              rm -f -- "$remote_html"
-              return 1
-            fi
-            rm -f -- "$remote_html"
-          }
-
-          verify_missing_route() {
-            local status
-            if ! status="$(
-              curl --silent --show-error \
-                --connect-timeout 10 --max-time 30 \
-                --output /dev/null \
-                --write-out '%{http_code}' \
-                "${ADMIN_ORIGIN}/__missing_admin_route__"
-            )"; then
-              return 1
-            fi
-            if [[ "$status" == "404" ]]; then
-              return 0
-            fi
-            echo "Unexpected missing-route status: $status" >&2
-            return 1
-          }
-
-          retry "Stable admin root did not serve the deployed console" verify_root
-          retry "Stable admin host did not return 404 for an unknown route" verify_missing_route
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "${{ matrix.origin }}"
+          --commit "${{ github.sha }}"
+          --branch main
+          --title 'Business activity — Harpa Pro Admin'
+          --missing-route /__missing_admin_route__

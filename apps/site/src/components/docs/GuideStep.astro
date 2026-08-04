@@ -1,6 +1,6 @@
 ---
 import type { DocsScreenshotId } from "../../lib/docs";
-import PhoneFrame from "./PhoneFrame.astro";
+import GuideStepMedia from "./GuideStepMedia.astro";
 
 type WithScreenshot = {
   screenshot: DocsScreenshotId;
@@ -18,9 +18,10 @@ type Props = {
 } & (WithScreenshot | WithoutScreenshot);
 
 const { number, title, screenshot, screenshotAlt } = Astro.props;
+const hasMedia = Boolean(screenshot && screenshotAlt);
 ---
 
-<section class="docs-step">
+<section class:list={["docs-step", { "docs-step--with-media": hasMedia }]}>
   <div class="docs-step-copy">
     <header>
       <span aria-hidden="true">{number}</span>
@@ -30,7 +31,11 @@ const { number, title, screenshot, screenshotAlt } = Astro.props;
   </div>
   {
     screenshot && screenshotAlt && (
-      <PhoneFrame screenshot={screenshot} alt={screenshotAlt} compact />
+      <GuideStepMedia
+        screenshot={screenshot}
+        alt={screenshotAlt}
+        stepTitle={title}
+      />
     )
   }
 </section>

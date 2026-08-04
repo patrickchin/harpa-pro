@@ -1,0 +1,75 @@
+---
+import { Image } from "astro:assets";
+
+import type { DocsScreenshotId } from "../../lib/docs";
+import { docsScreenshot } from "../../lib/docs-screenshots";
+
+interface MontageStage {
+  label: string;
+  description: string;
+  screenshot: DocsScreenshotId;
+  alt: string;
+  href: string;
+}
+
+const stages: MontageStage[] = [
+  {
+    label: "Capture updates",
+    description: "Text, photos, and voice",
+    screenshot: "voice-recording",
+    alt: "Harpa Pro draft with site notes and voice recording controls",
+    href: "/docs/guides/capture-notes-voice",
+  },
+  {
+    label: "Review the report",
+    description: "Check issues and actions",
+    screenshot: "final-report-issues",
+    alt: "Harpa Pro report showing prioritized site issues and next actions",
+    href: "/docs/guides/generate-ai-report",
+  },
+  {
+    label: "Share a PDF",
+    description: "Preview and send the record",
+    screenshot: "pdf-preview",
+    alt: "Harpa Pro PDF preview showing a finalized daily site report",
+    href: "/docs/guides/export-share-pdf",
+  },
+];
+---
+
+<ol class="docs-montage" aria-label="Harpa Pro workflow">
+  {
+    stages.map((stage, index) => {
+      const { image, focus } = docsScreenshot(stage.screenshot);
+
+      return (
+        <li>
+          <a class="docs-montage-card" href={stage.href}>
+            <div
+              class="docs-montage-visual"
+              style={`--docs-screenshot-focus: ${focus}`}
+            >
+              <Image
+                src={image}
+                alt={stage.alt}
+                widths={[320, 480, 640]}
+                sizes="(min-width: 40rem) 30vw, 42vw"
+                format="webp"
+                quality={82}
+                loading={index === 0 ? "eager" : "lazy"}
+                decoding="async"
+              />
+            </div>
+            <div class="docs-montage-copy">
+              <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <strong>{stage.label}</strong>
+                <small>{stage.description}</small>
+              </div>
+            </div>
+          </a>
+        </li>
+      );
+    })
+  }
+</ol>

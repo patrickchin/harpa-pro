@@ -37,6 +37,9 @@ admin database and credentials remain unchanged.
 ## Routes
 
 - `https://admin.harpapro.com/` renders the activity console directly.
+- `https://admin.harpapro.com/operations` renders the read-only service
+  monitoring page described in
+  [design-admin-service-monitoring.md](design-admin-service-monitoring.md).
 - `https://harpapro.com/admin/activity` and
   `https://www.harpapro.com/admin/activity` return the public site's normal 404.
 - Unknown admin-host paths return a static 404 instead of the console shell.
@@ -100,8 +103,9 @@ Automated checks must prove:
 
 1. `apps/site` has no `/admin` source route and its built artifact has no
    `dist/admin` path.
-2. `apps/admin` renders the console only at `/`, publishes a real static 404
-   rather than an SPA fallback, and blocks search discovery.
+2. `apps/admin` renders activity at `/` and operations at `/operations`,
+   publishes a real static 404 rather than an SPA fallback, and blocks search
+   discovery.
 3. Public and admin workflows use different workspace filters, output
    directories, and Pages project names.
 4. Unit tests retain activity filtering, refresh markers, text export, sign-in,

@@ -41,19 +41,7 @@ export function ReportReview({
   };
 
   return (
-    <section
-      className="mx-auto grid max-w-[52rem] gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
-      aria-labelledby={`${id}-heading`}
-    >
-      <header className="grid gap-2">
-        <p className="text-label font-bold tracking-label text-accent-ink uppercase">
-          Append-only discussion
-        </p>
-        <h2 className="text-title-sm font-bold" id={`${id}-heading`}>
-          Review
-        </h2>
-      </header>
-
+    <section className="mx-auto grid max-w-[52rem] gap-4" aria-label="Review discussion">
       {isLoading ? (
         <p className="text-muted-foreground" role="status">
           Loading review comments…
@@ -71,16 +59,16 @@ export function ReportReview({
           ) : null}
         </div>
       ) : comments.length === 0 ? (
-        <p className="px-4 py-8 text-center text-muted-foreground">
+        <p className="px-4 py-6 text-center text-muted-foreground">
           No review comments yet. Add the first comment about this finalized report.
         </p>
       ) : (
         <ol className="grid list-none gap-3 p-0">
           {comments.map((comment) => (
             <li key={comment.id}>
-              <article className="grid gap-2 rounded-card-ui border border-border bg-surface-emphasis p-3">
+              <article className="grid gap-2 rounded-card-ui border border-border bg-card p-3">
                 <header className="flex flex-wrap items-start justify-between gap-2">
-                  <strong>{comment.authorDisplayName}</strong>
+                  <strong className="font-semibold">{comment.authorDisplayName}</strong>
                   <time
                     className="whitespace-nowrap text-meta text-muted-foreground"
                     dateTime={comment.createdAt}
@@ -95,7 +83,7 @@ export function ReportReview({
         </ol>
       )}
 
-      <form className="grid gap-3 border-t border-border pt-5" onSubmit={submit}>
+      <form className="grid gap-3" onSubmit={submit}>
         <Field htmlFor={`${id}-comment`} label="Add a comment">
           <Textarea
             id={`${id}-comment`}

@@ -78,6 +78,25 @@ describe('ReportsListPage', () => {
 
     expect(rendered.container.querySelector('table')).not.toBeNull();
     expect(
+      rendered.container.querySelector('section[aria-labelledby="reports-heading"]'),
+    ).toHaveClass('space-y-6');
+    expect(rendered.container.querySelector('#reports-heading')).toHaveClass('text-title-sm');
+    expect(rendered.container.querySelector('#reports-heading')).not.toHaveClass('text-title');
+    expect(field(rendered.container, 'Status')).toHaveClass(
+      'font-normal',
+      'tracking-normal',
+      'normal-case',
+    );
+    const reportTitleButtons = [
+      ...rendered.container.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label^="Open Site Visit"]',
+      ),
+    ];
+    expect(reportTitleButtons.length).toBeGreaterThan(0);
+    for (const button of reportTitleButtons) {
+      expect(button).toHaveClass('text-foreground');
+    }
+    expect(
       [...rendered.container.querySelectorAll('th')].map((cell) => cell.textContent?.trim()),
     ).toEqual([
       'Site visit',

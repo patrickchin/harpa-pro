@@ -31,13 +31,13 @@ interface ProjectsPageViewProps {
 }
 
 const projectLinkClassName =
-  'font-bold text-foreground underline decoration-transparent decoration-2 transition-colors hover:text-accent-ink hover:decoration-current';
+  'text-foreground underline decoration-transparent decoration-2 transition-colors hover:text-accent-ink hover:decoration-current';
 
 function ProjectRows({ projects }: { projects: projectContract.Project[] }) {
   return projects.map((project) => (
     <tr className="transition-colors hover:bg-surface-emphasis" key={project.id}>
       <th className={tableCellClassName} scope="row">
-        <Link className={projectLinkClassName} to={`/projects/${project.id}`}>
+        <Link className={`${projectLinkClassName} font-semibold`} to={`/projects/${project.id}`}>
           {project.name}
         </Link>
       </th>
@@ -66,7 +66,7 @@ function ProjectCards({ projects }: { projects: projectContract.Project[] }) {
             key={project.id}
           >
             <div className="flex min-w-0 items-start justify-between gap-3">
-              <h2 className="min-w-0 text-title-sm font-bold">
+              <h2 className="min-w-0 text-title-sm">
                 <Link
                   className={`${projectLinkClassName} break-words`}
                   to={`/projects/${project.id}`}
@@ -80,19 +80,19 @@ function ProjectCards({ projects }: { projects: projectContract.Project[] }) {
             </div>
             <dl className="mt-4 grid gap-3 text-meta sm:grid-cols-2">
               <div className="min-w-0 border-t border-border pt-3">
-                <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                <dt className="text-label text-muted-foreground uppercase">
                   Client
                 </dt>
                 <dd className="mt-1 break-words">{project.clientName ?? 'Not provided'}</dd>
               </div>
               <div className="min-w-0 border-t border-border pt-3">
-                <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                <dt className="text-label text-muted-foreground uppercase">
                   Address
                 </dt>
                 <dd className="mt-1 break-words">{project.address ?? 'Not provided'}</dd>
               </div>
               <div className="min-w-0 border-t border-border pt-3 sm:col-span-2">
-                <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                <dt className="text-label text-muted-foreground uppercase">
                   Last updated
                 </dt>
                 <dd className="mt-1">
@@ -146,7 +146,7 @@ export function ProjectsPageView({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         eyebrow="Workspace"
         title="Projects"
@@ -161,7 +161,7 @@ export function ProjectsPageView({
       {isLoading ? (
         <section
           aria-busy="true"
-          className="flex min-h-60 items-center justify-center gap-3 rounded-card-ui border border-border bg-card p-8 text-center shadow-raised-ui"
+          className="flex min-h-44 items-center justify-center gap-3 rounded-card-ui border border-border bg-card p-5 text-center shadow-raised-ui"
         >
           <LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-hidden="true" />
           <p className="text-muted-foreground">Loading projects…</p>
@@ -213,10 +213,10 @@ export function ProjectsPageView({
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-label font-bold tracking-label text-muted-foreground uppercase">
+              <p className="text-label text-muted-foreground uppercase">
                 Create
               </p>
-              <h2 className="mt-1 text-title-sm font-bold" id="new-project-title">
+              <h2 className="mt-1 text-title-sm" id="new-project-title">
                 New project
               </h2>
             </div>
@@ -229,7 +229,7 @@ export function ProjectsPageView({
               <X className="size-5" aria-hidden="true" />
             </Button>
           </div>
-          <form className="mt-5 grid gap-5" onSubmit={createProject}>
+          <form className="mt-5 grid gap-4" onSubmit={createProject}>
             <Field label="Project name">
               <Input name="name" ref={projectNameRef} />
             </Field>

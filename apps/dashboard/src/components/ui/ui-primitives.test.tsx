@@ -30,7 +30,9 @@ describe('dashboard UI primitives', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toHaveClass(
       'min-h-11',
       'bg-primary',
+      'font-semibold',
     );
+    expect(screen.getByRole('button', { name: 'Save changes' })).not.toHaveClass('font-bold');
     expect(screen.getByRole('button', { name: 'Generate report' })).toHaveClass('bg-accent');
     expect(screen.getByRole('button', { name: 'Delete project' })).toHaveClass(
       'border-danger-border',
@@ -48,10 +50,16 @@ describe('dashboard UI primitives', () => {
       </Card>,
     );
 
-    expect(screen.getByText('Project name')).toHaveClass('text-label');
+    expect(screen.getByText('Project name')).toHaveClass('text-label', 'text-muted-foreground');
+    expect(screen.getByText('Project name').parentElement).not.toHaveClass('font-bold');
+    expect(screen.getByText('Project name').parentElement).not.toHaveClass('uppercase');
+    expect(screen.getByText('Project name').parentElement).not.toHaveClass('tracking-label');
     expect(screen.getByRole('textbox', { name: /project name/i })).toHaveClass(
+      'font-normal',
       'min-h-11',
+      'normal-case',
       'rounded-control-ui',
+      'tracking-normal',
     );
     expect(screen.getByText('Owner')).toHaveClass('bg-warning-soft');
     expect(screen.getByText('Owner').closest('div')).toHaveClass(

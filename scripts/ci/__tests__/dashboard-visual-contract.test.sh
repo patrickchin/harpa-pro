@@ -86,6 +86,9 @@ expect_contains "$dashboard_package" '"tailwindcss"'
 expect_contains "$dashboard_css" '@import "@harpa/design-tokens/tokens.css";'
 expect_contains "$dashboard_css" '@import "tailwindcss";'
 expect_contains "$dashboard_css" '@theme inline'
+expect_contains "$dashboard_css" '--text-title-sm--font-weight: 700;'
+expect_contains "$dashboard_css" '--text-label--letter-spacing: var(--letter-spacing-label);'
+expect_contains "$dashboard_css" '--text-label--font-weight: 700;'
 expect_contains "$dashboard_vite" "import tailwindcss from '@tailwindcss/vite';"
 expect_contains "$dashboard_vite" 'plugins: [react(), tailwindcss()]'
 expect_contains "$dashboard_main" "import '@/globals.css';"
@@ -103,9 +106,23 @@ if rg -n --glob '*.tsx' \
   fail 'legacy dashboard visual classes remain in React components'
 fi
 
+if rg -n --glob '*.tsx' --glob '!**/*.test.tsx' 'font-extrabold' \
+  "$repo_root/apps/dashboard/src" >/dev/null; then
+  fail 'dashboard production UI must not exceed the mobile 700 weight ceiling'
+fi
+
 # Prevent dashboard-local design-system forks from returning.
 expect_not_contains "$dashboard_css" '--paper:'
 expect_not_contains "$dashboard_css" '--ink:'
+expect_not_contains "$dashboard_css" '.skip-link'
+
+dashboard_css_files="$(find "$repo_root/apps/dashboard/src" -type f -name '*.css' -print)"
+[[ "$dashboard_css_files" == "$dashboard_css" ]] ||
+  fail 'globals.css must be the only authored dashboard CSS file'
+
+if rg -n --glob '*.tsx' '<style|style\s*=' "$repo_root/apps/dashboard/src" >/dev/null; then
+  fail 'dashboard React components must use Tailwind utilities instead of authored CSS'
+fi
 
 # Token-only changes must rebuild every dashboard deployment target.
 for workflow in "${deploy_workflows[@]}"; do

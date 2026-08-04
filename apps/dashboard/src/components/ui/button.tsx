@@ -20,7 +20,8 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary:
     'border-border bg-card text-foreground shadow-raised-ui hover:bg-surface-emphasis active:bg-surface-muted',
   outline: 'border-border bg-transparent text-foreground hover:bg-surface-muted',
-  quiet: 'border-transparent bg-transparent text-foreground hover:bg-surface-muted',
+  quiet:
+    'border-transparent bg-transparent text-muted-foreground hover:bg-surface-muted hover:text-foreground',
   destructive:
     'border-danger-border bg-danger-soft text-danger-text hover:bg-danger-soft/70 active:bg-danger-soft/55',
   'danger-solid':
@@ -44,7 +45,7 @@ export function buttonStyles({
   variant?: ButtonVariant;
 } = {}): string {
   return cn(
-    'inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control-ui border font-bold leading-none no-underline transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+    'inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control-ui border font-semibold leading-none no-underline transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
     variantClasses[variant],
     sizeClasses[size],
     className,

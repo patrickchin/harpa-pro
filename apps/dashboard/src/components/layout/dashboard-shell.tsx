@@ -57,7 +57,7 @@ function RailLink({
       aria-label={ariaLabel}
       className={({ isActive }) =>
         cn(
-          'flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-card-ui px-1 py-1.5 text-label font-bold no-underline transition-colors sm:flex-row sm:gap-2 sm:px-3 sm:py-2 sm:text-sm lg:justify-start',
+          'flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-card-ui px-1 py-1.5 text-xs font-semibold tracking-normal no-underline transition-colors sm:flex-row sm:gap-2 sm:px-3 sm:py-2 sm:text-sm lg:justify-start',
           isActive
             ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
@@ -89,7 +89,10 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen">
-      <a className="skip-link" href="#dashboard-content">
+      <a
+        className="fixed top-3 left-3 z-[100] min-h-11 -translate-y-[180%] rounded-control-ui bg-primary px-4 py-3 text-primary-foreground transition-transform focus:translate-y-0"
+        href="#dashboard-content"
+      >
         Skip to content
       </a>
       <aside
@@ -99,7 +102,7 @@ export function DashboardShell({
         <div className="flex min-w-0 flex-wrap items-center gap-3 px-5 py-3 lg:flex-1 lg:flex-nowrap lg:flex-col lg:items-stretch lg:gap-0 lg:p-5">
           <Link
             aria-label="Harpa Pro"
-            className="flex shrink-0 items-center gap-3 font-bold text-foreground no-underline"
+            className="flex shrink-0 items-center gap-3 font-semibold text-foreground no-underline"
             to="/projects"
           >
             <BrandMark className="size-10" decorative />
@@ -108,7 +111,7 @@ export function DashboardShell({
 
           {project ? (
             <div className="min-w-0 flex-1 lg:mt-8 lg:flex-none">
-              <span className="hidden text-label font-bold tracking-label text-muted-foreground uppercase lg:block">
+              <span className="hidden text-label text-muted-foreground uppercase lg:block">
                 Current project
               </span>
               <Link
@@ -116,7 +119,7 @@ export function DashboardShell({
                 to="/projects"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-bold">{project.name}</span>
+                  <span className="block truncate text-sm font-semibold">{project.name}</span>
                   <small className="hidden text-meta text-muted-foreground lg:block">
                     {roleLabel(project.role)} · Switch project
                   </small>
@@ -128,7 +131,7 @@ export function DashboardShell({
               </Link>
             </div>
           ) : (
-            <div className="hidden text-label font-bold tracking-label text-muted-foreground uppercase lg:mt-8 lg:block">
+            <div className="hidden text-label text-muted-foreground uppercase lg:mt-8 lg:block">
               Your workspace
             </div>
           )}
@@ -164,12 +167,14 @@ export function DashboardShell({
             >
               <span
                 aria-hidden="true"
-                className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-label font-bold"
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-sm font-bold tracking-normal"
               >
                 {initials}
               </span>
               <span className="hidden min-w-0 flex-1 flex-col lg:flex">
-                <strong className="truncate text-sm">{user.displayName ?? user.email}</strong>
+                <strong className="truncate text-sm font-semibold">
+                  {user.displayName ?? user.email}
+                </strong>
                 <small className="text-meta text-muted-foreground">
                   {project ? roleLabel(project.role) : 'Account'}
                 </small>
@@ -185,7 +190,7 @@ export function DashboardShell({
               className="absolute top-[calc(100%+0.75rem)] right-0 z-50 w-64 origin-top-right rounded-panel-ui border border-border bg-popover p-3 text-popover-foreground shadow-floating-ui transition duration-100 ease-out focus:outline-none data-closed:scale-95 data-closed:opacity-0 lg:top-auto lg:right-0 lg:bottom-[calc(100%+0.75rem)] lg:origin-bottom-right"
             >
               <div className="min-w-0 border-b border-border px-2 pb-3">
-                <strong className="block truncate text-sm">
+                <strong className="block truncate text-sm font-semibold">
                   {user.displayName ?? 'Harpa Pro member'}
                 </strong>
                 <span className="mt-1 block break-words text-meta text-muted-foreground">

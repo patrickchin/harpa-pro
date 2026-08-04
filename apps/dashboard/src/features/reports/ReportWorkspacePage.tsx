@@ -146,19 +146,14 @@ function ConfirmationDialog({
       onClose={onCancel}
       role="alertdialog"
     >
-      <h2 className="text-title-sm font-bold tracking-tight" id="report-confirmation-title">
+      <h2 className="text-title-sm" id="report-confirmation-title">
         {copy.title}
       </h2>
       <p className="mt-3 text-body text-muted-foreground" id="report-confirmation-description">
         {copy.body}
       </p>
       <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button
-          ref={cancelButtonRef}
-          variant="secondary"
-          onClick={onCancel}
-          disabled={isPending}
-        >
+        <Button ref={cancelButtonRef} variant="secondary" onClick={onCancel} disabled={isPending}>
           Cancel
         </Button>
         <Button
@@ -566,13 +561,11 @@ export function ReportWorkspacePage({
   if (reportQuery.error) {
     return (
       <section
-        className="grid min-h-72 min-w-0 place-items-center rounded-card-ui border border-border bg-card p-8 text-center shadow-raised-ui"
+        className="grid min-h-72 min-w-0 place-items-center rounded-card-ui border border-border bg-card p-5 text-center shadow-raised-ui"
         data-testid="report-workspace"
       >
         <div className="max-w-reading space-y-4">
-          <h1 className="text-title font-bold tracking-tight">
-            Couldn&apos;t load Site Visit #{reportNumber}
-          </h1>
+          <h1 className="text-title-sm">Couldn&apos;t load Site Visit #{reportNumber}</h1>
           <p className="text-muted-foreground">{errorMessage(reportQuery.error)}</p>
           <Button variant="secondary" onClick={() => void reportQuery.refetch()}>
             Retry report
@@ -589,9 +582,7 @@ export function ReportWorkspacePage({
         data-testid="report-workspace"
         aria-busy="true"
       >
-        <p className="font-medium" role="status">
-          Loading report workspace…
-        </p>
+        <p role="status">Loading report workspace…</p>
       </section>
     );
   }
@@ -611,20 +602,20 @@ export function ReportWorkspacePage({
 
   return (
     <section
-      className="min-w-0 space-y-5 text-foreground"
+      className="min-w-0 space-y-6 text-foreground"
       data-testid="report-workspace"
       aria-labelledby="report-title"
     >
-      <header className="grid min-w-0 gap-4 border-b border-border pb-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+      <header className="grid min-w-0 gap-3 border-b border-border pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-meta font-bold">
+          <div className="flex flex-wrap items-center gap-2 text-meta font-semibold">
             <span>Site Visit #{report.number}</span>
             <ReportBadge report={report} />
             {report.needsRegeneration ? <Badge tone="warning">Needs update</Badge> : null}
             {report.status === 'draft' ? (
               <span
                 className={cn(
-                  'border-l border-border pl-3 text-meta font-medium text-muted-foreground',
+                  'border-l border-border pl-3 text-meta font-normal text-muted-foreground',
                   saveState.status === 'failed' || saveState.status === 'conflict'
                     ? 'text-danger-text'
                     : null,
@@ -635,10 +626,7 @@ export function ReportWorkspacePage({
               </span>
             ) : null}
           </div>
-          <h1
-            className="mt-2 max-w-content break-words text-title font-bold tracking-tight"
-            id="report-title"
-          >
+          <h1 className="mt-2 max-w-content break-words text-title-sm" id="report-title">
             {displayReportTitle(localBody)}
           </h1>
         </div>
@@ -747,7 +735,7 @@ export function ReportWorkspacePage({
           </Button>
         </div>
         {copyStatus ? (
-          <p className="text-meta font-medium text-muted-foreground lg:col-span-2" role="status">
+          <p className="text-meta text-muted-foreground lg:col-span-2" role="status">
             {copyStatus}
           </p>
         ) : null}
@@ -770,7 +758,7 @@ export function ReportWorkspacePage({
           aria-labelledby="report-conflict-heading"
         >
           <div className="min-w-0 max-w-reading">
-            <h2 className="text-title-sm font-bold tracking-tight" id="report-conflict-heading">
+            <h2 className="text-title-sm" id="report-conflict-heading">
               This report changed on another device
             </h2>
             <p className="mt-1">
@@ -811,16 +799,16 @@ export function ReportWorkspacePage({
             className="grid w-full grid-cols-2 gap-1 rounded-card-ui border border-border bg-surface-muted p-1 sm:w-fit"
             aria-label="Report surfaces"
           >
-            <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-bold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">
+            <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">
               Report
             </Tab>
-            <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-bold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">
+            <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">
               Review
             </Tab>
           </TabList>
-          <TabPanels className="mt-4 min-w-0">
+          <TabPanels className="mt-3 min-w-0">
             <TabPanel className="min-w-0 focus:outline-none">
-              <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
+              <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
                 <ReportPreview body={previewBody} />
                 <SourceNotesPanel
                   api={api}
@@ -848,12 +836,12 @@ export function ReportWorkspacePage({
       ) : canWrite ? (
         <>
           <div
-            className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(20rem,1fr)]"
+            className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(20rem,1fr)]"
             data-testid="report-draft-layout"
           >
             <ReportBodyEditor body={localBody} onChange={changeBody} />
             {previewVisible ? (
-              <div className="min-w-0 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-auto">
+              <div className="min-w-0 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-auto">
                 <ReportPreview body={previewBody} />
               </div>
             ) : null}
@@ -867,8 +855,8 @@ export function ReportWorkspacePage({
           />
         </>
       ) : (
-        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
-          <div className="min-w-0 space-y-4">
+        <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
+          <div className="min-w-0 space-y-3">
             <p className="rounded-card-ui border border-info-border bg-info-soft px-4 py-3 text-info-text">
               You have read-only access to this draft.
             </p>

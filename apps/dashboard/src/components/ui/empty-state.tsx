@@ -21,12 +21,12 @@ export function EmptyState({
   return (
     <Card
       className={cn(
-        'grid min-h-60 place-items-center content-center gap-3 p-8 text-center',
+        'grid min-h-44 place-items-center content-center gap-3 p-5 text-center',
         className,
       )}
     >
       <BrandMark className="mb-1 size-12" decorative />
-      <h2 className="text-title-sm font-bold">{title}</h2>
+      <h2 className="text-title-sm">{title}</h2>
       <p className="max-w-lg text-muted-foreground">{description}</p>
       {action}
     </Card>

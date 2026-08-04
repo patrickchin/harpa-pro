@@ -97,18 +97,23 @@ define another button, field, card, badge, dialog, or typography system.
 ### Page rhythm
 
 - Small viewport gutter: 20 px (`px-5`).
-- Default page stack: 32 px between major sections, 16 px within sections, and
-  12 px between related controls or rows.
-- Page titles use the mobile title scale; auth statements use the display scale;
-  card headings use the title-small scale.
+- Default page stack: 24 px between major sections, 16 px within sections, and
+  12 px between related controls or rows. Reserve 32 px for independent desktop
+  regions rather than ordinary route rhythm.
+- Ordinary page titles use the mobile title-small scale; object-detail titles
+  may use the title scale; auth statements use the display scale.
 - Long project and report titles wrap. Action groups wrap beneath the title
   before they compress controls.
 
 ### Components
 
 - Controls have a 44 px minimum target, 6 px radius, and visible focus ring.
-- Cards use 8 px radius, one-pixel border, 12/16/20 px padding, and the mobile
-  raised shadow.
+- Form labels are sentence-case label text in muted ink. Values stay regular
+  weight and never inherit label uppercase or tracking.
+- Buttons, tabs, navigation, and member names use semibold rather than bold or
+  extrabold.
+- Cards use 8 px radius, one-pixel border, 16 px default padding, and the mobile
+  raised shadow. Use 12 or 20 px only where the content density warrants it.
 - Routine primary actions are navy. Orange is reserved for one dominant
   act-here action per view, such as generating or updating a report.
 - Report and review tabs use the mobile segmented-control treatment: bordered

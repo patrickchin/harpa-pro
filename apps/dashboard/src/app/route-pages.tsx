@@ -54,10 +54,10 @@ function LoadFailure({
   return (
     <Card className="max-w-content p-5" role="alert">
       <AlertTriangle aria-hidden="true" className="mb-3 size-6 text-danger-text" />
-      <p className="mb-2 text-label font-bold tracking-label text-danger-text uppercase">
+      <p className="mb-2 text-label text-danger-text uppercase">
         Couldn’t load
       </p>
-      <h1 className="text-title font-bold text-foreground">{title}</h1>
+      <h1 className="text-title text-foreground">{title}</h1>
       <p className="mt-2 text-body text-muted-foreground">{queryErrorMessage(error)}</p>
       <Button className="mt-5" onClick={onRetry} type="button" variant="secondary">
         Try again
@@ -394,8 +394,8 @@ export function ProjectReportWorkspaceRoute(): React.JSX.Element {
 export function NotFoundRoute(): React.JSX.Element {
   return (
     <main className="grid min-h-screen place-content-center place-items-center px-5 py-10 text-center">
-      <p className="mb-2 text-label font-bold tracking-label text-accent-ink uppercase">404</p>
-      <h1 className="text-title font-bold text-foreground">That page isn’t here</h1>
+      <p className="mb-2 text-label text-accent-ink uppercase">404</p>
+      <h1 className="text-title text-foreground">That page isn’t here</h1>
       <p className="mt-2 max-w-reading text-body text-muted-foreground">
         The link may be old, or you may no longer have project access.
       </p>

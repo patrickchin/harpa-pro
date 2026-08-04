@@ -12,7 +12,12 @@ describe('PageHeader', () => {
       />,
     );
 
-    expect(screen.getByRole('heading')).toHaveClass('break-words', '[overflow-wrap:anywhere]');
+    expect(screen.getByRole('heading')).toHaveClass(
+      'break-words',
+      'text-title-sm',
+      '[overflow-wrap:anywhere]',
+    );
+    expect(screen.getByRole('heading')).not.toHaveClass('text-title');
     expect(screen.getByText(/long project description/)).toHaveClass('break-words');
   });
 });

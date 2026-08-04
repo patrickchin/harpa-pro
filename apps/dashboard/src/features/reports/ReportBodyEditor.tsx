@@ -8,6 +8,7 @@ import { dateInputValue, isoDateFromInput, updateReportBody } from './report-bod
 const editorSectionClassName =
   'grid scroll-mt-4 gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui';
 const sectionHeadingClassName = 'flex flex-wrap items-start justify-between gap-3';
+const sectionTitleClassName = 'text-label text-foreground';
 const fieldGridClassName = 'grid gap-3 sm:grid-cols-2';
 const repeatableCardClassName =
   'grid gap-3 rounded-card-ui border border-border bg-surface-emphasis p-3';
@@ -78,7 +79,7 @@ function RowHeader({
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <h4 className="text-body font-bold">{title}</h4>
+      <h4 className="text-body font-semibold">{title}</h4>
       <Button
         type="button"
         size="small"
@@ -118,7 +119,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           ['other-sections', 'Other sections'],
         ].map(([target, label]) => (
           <a
-            className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control-ui px-3 text-meta font-bold text-foreground no-underline hover:bg-card"
+            className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control-ui px-3 text-meta font-semibold text-foreground no-underline hover:bg-card"
             key={target}
             href={`#${rootId}-${target}`}
           >
@@ -133,7 +134,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           id={`${rootId}-overview`}
           aria-labelledby={`${rootId}-overview-heading`}
         >
-          <h3 className="text-title-sm font-bold" id={`${rootId}-overview-heading`}>
+          <h3 className={sectionTitleClassName} id={`${rootId}-overview-heading`}>
             Overview
           </h3>
           <Field
@@ -179,7 +180,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           aria-labelledby={`${rootId}-weather-heading`}
         >
           <div className={sectionHeadingClassName}>
-            <h3 className="text-title-sm font-bold" id={`${rootId}-weather-heading`}>
+            <h3 className={sectionTitleClassName} id={`${rootId}-weather-heading`}>
               Weather
             </h3>
             {body.weather ? (
@@ -255,7 +256,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           aria-labelledby={`${rootId}-workers-heading`}
         >
           <div className={sectionHeadingClassName}>
-            <h3 className="text-title-sm font-bold" id={`${rootId}-workers-heading`}>
+            <h3 className={sectionTitleClassName} id={`${rootId}-workers-heading`}>
               Workers
             </h3>
             <Button
@@ -349,7 +350,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           aria-labelledby={`${rootId}-materials-heading`}
         >
           <div className={sectionHeadingClassName}>
-            <h3 className="text-title-sm font-bold" id={`${rootId}-materials-heading`}>
+            <h3 className={sectionTitleClassName} id={`${rootId}-materials-heading`}>
               Materials
             </h3>
             <Button
@@ -428,7 +429,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           aria-labelledby={`${rootId}-issues-heading`}
         >
           <div className={sectionHeadingClassName}>
-            <h3 className="text-title-sm font-bold" id={`${rootId}-issues-heading`}>
+            <h3 className={sectionTitleClassName} id={`${rootId}-issues-heading`}>
               Issues
             </h3>
             <Button
@@ -503,7 +504,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           aria-labelledby={`${rootId}-next-steps-heading`}
         >
           <div className={sectionHeadingClassName}>
-            <h3 className="text-title-sm font-bold" id={`${rootId}-next-steps-heading`}>
+            <h3 className={sectionTitleClassName} id={`${rootId}-next-steps-heading`}>
               Next steps
             </h3>
             <Button
@@ -563,7 +564,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           aria-labelledby={`${rootId}-other-sections-heading`}
         >
           <div className={sectionHeadingClassName}>
-            <h3 className="text-title-sm font-bold" id={`${rootId}-other-sections-heading`}>
+            <h3 className={sectionTitleClassName} id={`${rootId}-other-sections-heading`}>
               Other sections
             </h3>
             <Button

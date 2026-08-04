@@ -19,5 +19,5 @@ export function TableShell({
 
 export const tableClassName = 'w-full border-collapse text-left';
 export const tableHeadClassName =
-  'bg-surface-muted px-4 py-3 text-label font-bold tracking-label text-muted-foreground uppercase';
+  'bg-surface-muted px-4 py-3 text-label text-muted-foreground uppercase';
 export const tableCellClassName = 'border-b border-border px-4 py-3 align-middle text-meta';

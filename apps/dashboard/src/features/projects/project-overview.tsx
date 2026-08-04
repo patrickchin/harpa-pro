@@ -24,11 +24,11 @@ interface ProjectOverviewProps {
   createReportError?: string | null;
 }
 
-const eyebrowClassName = 'text-label font-bold tracking-label text-muted-foreground uppercase';
+const eyebrowClassName = 'text-label text-muted-foreground uppercase';
 const sectionLinkClassName =
-  'inline-flex min-h-11 items-center font-bold text-foreground underline decoration-transparent decoration-2 transition-colors hover:text-accent-ink hover:decoration-current';
+  'inline-flex min-h-11 items-center font-semibold text-foreground underline decoration-transparent decoration-2 transition-colors hover:text-accent-ink hover:decoration-current';
 const reportLinkClassName =
-  'font-bold text-foreground underline decoration-transparent decoration-2 transition-colors hover:text-accent-ink hover:decoration-current';
+  'font-semibold text-foreground underline decoration-transparent decoration-2 transition-colors hover:text-accent-ink hover:decoration-current';
 
 function RecentReportTable({
   projectId,
@@ -113,7 +113,7 @@ function RecentReportCards({
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className={eyebrowClassName}>Site visit #{report.number}</p>
-                <h3 className="mt-1 break-words text-title-sm font-bold">
+                <h3 className="mt-1 break-words text-title-sm">
                   <Link
                     className={reportLinkClassName}
                     to={`/projects/${projectId}/reports/${report.number}`}
@@ -163,7 +163,7 @@ export function ProjectOverview({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         eyebrow="Project overview"
         title={project.name}
@@ -192,9 +192,9 @@ export function ProjectOverview({
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Report summary">
-        <article className="flex min-h-44 flex-col rounded-card-ui border border-border bg-card p-5 shadow-raised-ui">
+        <article className="flex min-h-32 flex-col rounded-card-ui border border-border bg-card p-4 shadow-raised-ui">
           <span className={eyebrowClassName}>Total reports</span>
-          <strong className="mt-3 text-metric font-bold" data-stat-value>
+          <strong className="mt-2 text-metric" data-stat-value>
             {stats.totalReports}
           </strong>
           <Link
@@ -204,9 +204,9 @@ export function ProjectOverview({
             View reports
           </Link>
         </article>
-        <article className="flex min-h-44 flex-col rounded-card-ui border border-border bg-card p-5 shadow-raised-ui">
+        <article className="flex min-h-32 flex-col rounded-card-ui border border-border bg-card p-4 shadow-raised-ui">
           <span className={eyebrowClassName}>Drafts</span>
-          <strong className="mt-3 text-metric font-bold" data-stat-value>
+          <strong className="mt-2 text-metric" data-stat-value>
             {stats.drafts}
           </strong>
           <Link
@@ -216,9 +216,9 @@ export function ProjectOverview({
             Continue work
           </Link>
         </article>
-        <article className="flex min-h-44 flex-col rounded-card-ui border border-border bg-surface-muted p-5 shadow-raised-ui sm:col-span-2 xl:col-span-1">
+        <article className="flex min-h-32 flex-col rounded-card-ui border border-border bg-surface-muted p-4 shadow-raised-ui sm:col-span-2 xl:col-span-1">
           <span className={eyebrowClassName}>Latest report</span>
-          <strong className="mt-3 text-title-sm font-bold" data-stat-value>
+          <strong className="mt-2 text-title-sm" data-stat-value>
             {stats.lastReportAt ? formatDate(stats.lastReportAt) : 'None yet'}
           </strong>
           <span className="mt-auto pt-3 text-meta text-muted-foreground">
@@ -234,7 +234,7 @@ export function ProjectOverview({
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className={eyebrowClassName}>Activity</p>
-            <h2 className="mt-1 text-title-sm font-bold" id="recent-reports-heading">
+            <h2 className="mt-1 text-title-sm" id="recent-reports-heading">
               Recent reports
             </h2>
           </div>
@@ -263,7 +263,7 @@ export function ProjectOverview({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className={eyebrowClassName}>Team</p>
-              <h2 className="mt-1 text-title-sm font-bold">Project members</h2>
+              <h2 className="mt-1 text-title-sm">Project members</h2>
             </div>
             <Link className={sectionLinkClassName} to={`/projects/${project.id}/members`}>
               View all members
@@ -283,7 +283,7 @@ export function ProjectOverview({
                     {(member.displayName ?? member.email)[0]?.toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-body font-bold">
+                    <strong className="block truncate text-body font-semibold">
                       {member.displayName ?? 'Unnamed Harpa Pro member'}
                     </strong>
                     <small className="block truncate text-meta text-muted-foreground">
@@ -303,7 +303,7 @@ export function ProjectOverview({
 
         <section className="flex min-w-0 flex-col rounded-card-ui border border-warning-border bg-warning-soft p-5 shadow-raised-ui">
           <p className={`${eyebrowClassName} text-warning-text`}>Next step</p>
-          <h2 className="mt-2 text-title-sm font-bold text-warning-text">
+          <h2 className="mt-2 text-title-sm text-warning-text">
             {stats.drafts ? 'Drafts need attention' : 'Project is current'}
           </h2>
           <p className="mt-2 text-meta text-warning-text">

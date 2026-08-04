@@ -145,7 +145,7 @@ function ReportTable({
         <tbody>
           {isLoading ? (
             <tr>
-              <td className={`${tableCellClassName} p-8 text-center`} colSpan={7}>
+              <td className={`${tableCellClassName} p-6 text-center`} colSpan={7}>
                 <p role="status">Loading reports…</p>
               </td>
             </tr>
@@ -165,8 +165,8 @@ function ReportTable({
             </tr>
           ) : items.length === 0 ? (
             <tr>
-              <td className={`${tableCellClassName} p-8 text-center`} colSpan={7}>
-                <h2 className="text-title-sm font-bold">No reports found</h2>
+              <td className={`${tableCellClassName} p-6 text-center`} colSpan={7}>
+                <h2 className="text-title-sm">No reports found</h2>
                 <p className="mt-2 text-muted-foreground">
                   {status === 'all'
                     ? 'This project has no reports yet.'
@@ -181,7 +181,7 @@ function ReportTable({
                 <td className={tableCellClassName}>
                   <Button
                     aria-label={`Open Site Visit #${report.number}: ${displayReportTitle(report.body)}`}
-                    className="min-h-11 max-w-72 justify-start px-0 text-left underline decoration-accent decoration-2 underline-offset-4"
+                    className="min-h-11 max-w-72 justify-start px-0 text-left text-foreground underline decoration-accent decoration-2 underline-offset-4"
                     onClick={() => onOpen(report.number)}
                     variant="quiet"
                   >
@@ -222,15 +222,15 @@ function ReportCards({ canWrite, items, onDelete, onOpen }: ReportCollectionProp
     <ul aria-label="Reports" className="grid gap-3 lg:hidden">
       {items.map((report) => (
         <li key={report.id}>
-          <Card className="space-y-4 p-4">
+          <Card className="space-y-3 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                <p className="text-label text-muted-foreground uppercase">
                   Site visit #{report.number}
                 </p>
                 <Button
                   aria-label={`Open Site Visit #${report.number}: ${displayReportTitle(report.body)}`}
-                  className="mt-1 min-h-11 max-w-full justify-start p-0 text-left text-title-sm underline decoration-accent decoration-2 underline-offset-4"
+                  className="mt-1 min-h-11 max-w-full justify-start p-0 text-left text-lg text-foreground underline decoration-accent decoration-2 underline-offset-4"
                   onClick={() => onOpen(report.number)}
                   variant="quiet"
                 >
@@ -244,23 +244,17 @@ function ReportCards({ canWrite, items, onDelete, onOpen }: ReportCollectionProp
 
             <dl className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
               <div>
-                <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
-                  Visit date
-                </dt>
+                <dt className="text-label text-muted-foreground uppercase">Visit date</dt>
                 <dd className="mt-1 text-meta">
                   {formatDate(report.body?.meta.visitDate ?? report.visitDate)}
                 </dd>
               </div>
               <div>
-                <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
-                  Last updated
-                </dt>
+                <dt className="text-label text-muted-foreground uppercase">Last updated</dt>
                 <dd className="mt-1 text-meta">{formatDateTime(report.updatedAt)}</dd>
               </div>
               <div>
-                <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
-                  Attention
-                </dt>
+                <dt className="text-label text-muted-foreground uppercase">Attention</dt>
                 <dd className="mt-1 text-meta">
                   <AttentionStatus report={report} />
                 </dd>
@@ -339,16 +333,14 @@ export function ReportsListPage({ api, projectSlug, role, onOpenReport }: Report
   };
 
   return (
-    <section className="min-w-0 space-y-5 text-foreground" aria-labelledby="reports-heading">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="min-w-0 space-y-6 text-foreground" aria-labelledby="reports-heading">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="mb-2 text-label font-bold tracking-label text-accent-ink uppercase">
-            Project workspace
-          </p>
-          <h1 className="text-title font-bold" id="reports-heading">
+          <p className="mb-1 text-label text-accent-ink uppercase">Project workspace</p>
+          <h1 className="text-title-sm" id="reports-heading">
             Reports
           </h1>
-          <p className="mt-2 max-w-reading text-muted-foreground">
+          <p className="mt-1 max-w-reading text-muted-foreground">
             Open drafts, review finalized reports, and track source updates.
           </p>
         </div>
@@ -482,11 +474,12 @@ export function ReportsListPage({ api, projectSlug, role, onOpenReport }: Report
           role="alertdialog"
         >
           <div className="space-y-3">
-            <h2 className="text-title-sm font-bold" id="delete-report-title">
+            <h2 className="text-title-sm" id="delete-report-title">
               Delete Site Visit #{deleteTarget.number}?
             </h2>
             <p className="text-muted-foreground" id="delete-report-description">
-              This permanently removes <strong>{displayReportTitle(deleteTarget.body)}</strong> and
+              This permanently removes{' '}
+              <strong className="font-semibold">{displayReportTitle(deleteTarget.body)}</strong> and
               its attached report records.
             </p>
             {deleteMutation.error ? (

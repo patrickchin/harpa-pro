@@ -14,7 +14,7 @@ afterEach(async () => {
 });
 
 describe('ReportBodyEditor', () => {
-  it('uses the shared Tailwind editing surfaces without legacy report CSS hooks', async () => {
+  it('uses compact section headers, semibold navigation, and regular form values', async () => {
     const rendered = await render(
       <ReportBodyEditor body={reportBodyFixture} onChange={() => undefined} />,
     );
@@ -25,7 +25,25 @@ describe('ReportBodyEditor', () => {
 
     expect(editor).toHaveClass('grid', 'gap-4');
     expect(sectionNavigation).toHaveClass('overflow-x-auto', 'bg-surface-muted');
-    expect(field(rendered.container, 'Report title')).toHaveClass('min-h-11');
+    const sectionLinks = [...sectionNavigation!.querySelectorAll('a')];
+    sectionLinks.forEach((link) => {
+      expect(link).toHaveClass('font-semibold');
+      expect(link).not.toHaveClass('font-bold');
+    });
+    const sectionHeadings = [
+      ...rendered.container.querySelectorAll('section > h3, section > div > h3'),
+    ];
+    expect(sectionHeadings.length).toBeGreaterThan(0);
+    sectionHeadings.forEach((heading) => {
+      expect(heading).toHaveClass('text-label');
+      expect(heading).not.toHaveClass('text-title-sm', 'font-bold', 'tracking-label');
+    });
+    expect(field(rendered.container, 'Report title')).toHaveClass(
+      'min-h-11',
+      'font-normal',
+      'tracking-normal',
+      'normal-case',
+    );
     expect(button(rendered.container, 'Add worker')).toHaveClass('bg-card');
     expect(
       Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>

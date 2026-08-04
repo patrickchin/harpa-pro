@@ -45,7 +45,7 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Badge tone="info">{note.kind}</Badge>
-          {note.title ? <h4 className="mt-2 font-bold">{note.title}</h4> : null}
+          {note.title ? <h4 className="mt-2 font-semibold">{note.title}</h4> : null}
         </div>
         <time
           className="whitespace-nowrap text-meta text-muted-foreground"
@@ -57,7 +57,7 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
       <p className="whitespace-pre-wrap">{noteText}</p>
       {note.summary && note.transcript ? (
         <details className="rounded-control-ui border border-border bg-card p-3">
-          <summary className="cursor-pointer font-bold">Transcript</summary>
+          <summary className="cursor-pointer font-semibold">Transcript</summary>
           <p className="mt-3 whitespace-pre-wrap text-muted-foreground">{note.transcript}</p>
         </details>
       ) : null}
@@ -74,7 +74,7 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
         </div>
       ) : null}
       {note.kind === 'document' && note.fileId ? (
-        <p className="text-meta font-medium text-muted-foreground">Attached document</p>
+        <p className="text-meta text-muted-foreground">Attached document</p>
       ) : null}
     </article>
   );
@@ -97,18 +97,13 @@ export function SourceNotesPanel({
 }: SourceNotesPanelProps) {
   return (
     <aside
-      className="grid min-w-0 gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
+      className="grid min-w-0 gap-3 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
       aria-labelledby="source-notes-heading"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-label font-bold tracking-label text-accent-ink uppercase">
-            Read-only evidence
-          </p>
-          <h2 className="mt-2 text-title-sm font-bold" id="source-notes-heading">
-            Source notes
-          </h2>
-        </div>
+        <h2 className="text-label" id="source-notes-heading">
+          Source notes
+        </h2>
         <Badge>Read only</Badge>
       </div>
       {isLoading ? (

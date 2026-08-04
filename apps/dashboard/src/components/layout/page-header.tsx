@@ -16,15 +16,15 @@ export function PageHeader({
   action,
 }: PageHeaderProps): React.JSX.Element {
   return (
-    <header className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <header className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-reading min-w-0">
         {eyebrow ? (
-          <p className="mb-2 text-label font-bold tracking-label text-accent-ink uppercase">
+          <p className="mb-1 text-label text-accent-ink uppercase">
             {eyebrow}
           </p>
         ) : null}
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h1 className="min-w-0 break-words text-title font-bold text-foreground [overflow-wrap:anywhere]">
+          <h1 className="min-w-0 break-words text-title-sm text-foreground [overflow-wrap:anywhere]">
             {title}
           </h1>
           {context}

@@ -6,6 +6,7 @@ import { formatDate } from './format';
 import { displayReportTitle } from './report-body';
 
 const previewSectionClassName = 'grid gap-3 border-t border-border pt-4';
+const previewSectionHeadingClassName = 'text-label text-foreground';
 const previewListClassName = 'grid gap-3';
 const previewItemClassName = 'rounded-card-ui bg-surface-emphasis p-3';
 
@@ -15,9 +16,7 @@ function Value({ label, children }: { label: string; children: React.ReactNode }
   }
   return (
     <div className="min-w-0">
-      <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
-        {label}
-      </dt>
+      <dt className="text-label text-muted-foreground uppercase">{label}</dt>
       <dd className="mt-1 break-words">{children}</dd>
     </div>
   );
@@ -39,28 +38,26 @@ function AttachmentReference({ attachments }: { attachments?: reports.ReportAtta
 export function ReportPreview({ body }: { body: reports.ReportBody }) {
   return (
     <article
-      className="grid gap-5 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
+      className="grid gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
       data-testid="report-preview"
       aria-label="Live report preview"
     >
       <header className="grid gap-2">
-        <p className="text-label font-bold tracking-label text-accent-ink uppercase">
-          Live preview
-        </p>
-        <h2 className="break-words text-title-sm font-bold">{displayReportTitle(body)}</h2>
+        <p className="text-label text-accent-ink uppercase">Live preview</p>
+        <h2 className="break-words text-title-sm">{displayReportTitle(body)}</h2>
         <p className="text-muted-foreground">{formatDate(body.meta.visitDate)}</p>
       </header>
 
       {body.meta.summary ? (
         <section className={previewSectionClassName}>
-          <h3 className="text-title-sm font-bold">Summary</h3>
+          <h3 className={previewSectionHeadingClassName}>Summary</h3>
           <p className="whitespace-pre-wrap">{body.meta.summary}</p>
         </section>
       ) : null}
 
       {body.weather ? (
         <section className={previewSectionClassName}>
-          <h3 className="text-title-sm font-bold">Weather</h3>
+          <h3 className={previewSectionHeadingClassName}>Weather</h3>
           <dl className="grid gap-3 sm:grid-cols-2">
             <Value label="Condition">{body.weather.condition}</Value>
             <Value label="Temperature">{body.weather.temperature}</Value>
@@ -72,11 +69,11 @@ export function ReportPreview({ body }: { body: reports.ReportBody }) {
 
       {body.workers.length > 0 ? (
         <section className={previewSectionClassName}>
-          <h3 className="text-title-sm font-bold">Workers</h3>
+          <h3 className={previewSectionHeadingClassName}>Workers</h3>
           <div className={previewListClassName}>
             {body.workers.map((worker, index) => (
               <div className={previewItemClassName} key={`worker-${index}`}>
-                <h4 className="font-bold">{worker.role || `Worker ${index + 1}`}</h4>
+                <h4 className="font-semibold">{worker.role || `Worker ${index + 1}`}</h4>
                 <p>
                   {[worker.count, worker.hours ? `${worker.hours} hours` : null]
                     .filter(Boolean)
@@ -91,11 +88,11 @@ export function ReportPreview({ body }: { body: reports.ReportBody }) {
 
       {body.materials.length > 0 ? (
         <section className={previewSectionClassName}>
-          <h3 className="text-title-sm font-bold">Materials</h3>
+          <h3 className={previewSectionHeadingClassName}>Materials</h3>
           <div className={previewListClassName}>
             {body.materials.map((material, index) => (
               <div className={previewItemClassName} key={`material-${index}`}>
-                <h4 className="font-bold">{material.name || `Material ${index + 1}`}</h4>
+                <h4 className="font-semibold">{material.name || `Material ${index + 1}`}</h4>
                 <p>
                   {[
                     [material.quantity, material.unit].filter(Boolean).join(' '),
@@ -116,20 +113,20 @@ export function ReportPreview({ body }: { body: reports.ReportBody }) {
 
       {body.issues.length > 0 ? (
         <section className={previewSectionClassName}>
-          <h3 className="text-title-sm font-bold">Issues</h3>
+          <h3 className={previewSectionHeadingClassName}>Issues</h3>
           <div className={previewListClassName}>
             {body.issues.map((issue, index) => (
               <div className={previewItemClassName} key={`issue-${index}`}>
                 <Badge className="mb-2" tone="warning">
                   {issue.severity || 'Severity not set'}
                 </Badge>
-                <h4 className="font-bold">{issue.title || `Issue ${index + 1}`}</h4>
+                <h4 className="font-semibold">{issue.title || `Issue ${index + 1}`}</h4>
                 {issue.description ? (
                   <p className="mt-2 whitespace-pre-wrap">{issue.description}</p>
                 ) : null}
                 {issue.action ? (
                   <p className="mt-2 whitespace-pre-wrap">
-                    <strong>Required action:</strong> {issue.action}
+                    <span className="font-semibold">Required action:</span> {issue.action}
                   </p>
                 ) : null}
                 <AttachmentReference attachments={issue.attachments} />
@@ -141,7 +138,7 @@ export function ReportPreview({ body }: { body: reports.ReportBody }) {
 
       {body.nextSteps.length > 0 ? (
         <section className={previewSectionClassName}>
-          <h3 className="text-title-sm font-bold">Next steps</h3>
+          <h3 className={previewSectionHeadingClassName}>Next steps</h3>
           <ol className="grid list-decimal gap-2 pl-5">
             {body.nextSteps.map((step, index) => (
               <li key={`step-${index}`}>{step || 'Next step not entered'}</li>
@@ -152,7 +149,7 @@ export function ReportPreview({ body }: { body: reports.ReportBody }) {
 
       {body.summarySections.map((section, index) => (
         <section className={previewSectionClassName} key={`section-${index}`}>
-          <h3 className="text-title-sm font-bold">
+          <h3 className={previewSectionHeadingClassName}>
             {section.title || `Other section ${index + 1}`}
           </h3>
           <p className="whitespace-pre-wrap">{section.body}</p>

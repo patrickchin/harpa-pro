@@ -10,10 +10,10 @@ import {
 import { cn } from '@/lib/cn';
 
 export const controlClassName =
-  'min-h-11 w-full rounded-control-ui border border-input bg-card px-4 py-2.5 text-body text-foreground shadow-raised-ui placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted-disabled disabled:shadow-none';
+  'min-h-11 w-full rounded-control-ui border border-input bg-card px-4 py-2.5 text-body font-normal tracking-normal text-foreground normal-case shadow-raised-ui placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted-disabled disabled:shadow-none';
 
 export const labelClassName =
-  'flex flex-col gap-2 text-label font-bold leading-label tracking-label text-foreground uppercase';
+  'flex flex-col gap-2 text-foreground';
 
 interface FieldProps extends LabelHTMLAttributes<HTMLLabelElement> {
   children: ReactNode;
@@ -32,7 +32,7 @@ export function Field({
 }: FieldProps): React.JSX.Element {
   return (
     <label className={cn(labelClassName, className)} {...props}>
-      <span className="text-label">
+      <span className="text-label text-muted-foreground">
         {label}
         {optional ? (
           <span className="ml-1 text-meta font-medium normal-case tracking-normal text-muted-foreground">

@@ -39,6 +39,12 @@ describe('SourceNotesPanel', () => {
       'bg-card',
       'shadow-raised-ui',
     );
+    expect(rendered.container.querySelector('#source-notes-heading')).toHaveClass('text-label');
+    expect(rendered.container.querySelector('#source-notes-heading')).not.toHaveClass(
+      'text-title-sm',
+      'font-bold',
+      'tracking-label',
+    );
     expect(rendered.container.textContent).toContain('Read only');
     expect(rendered.container.querySelector('.bg-surface-muted')).toHaveTextContent('Read only');
     expect(

@@ -26,9 +26,15 @@ test.describe('mobile typography parity', () => {
     await expect(projectsHeading).toHaveCSS('font-size', '20px');
     await expect(projectsHeading).toHaveCSS('line-height', '26px');
     await expect(projectsHeading).toHaveCSS('font-weight', '700');
-    await expect(
-      page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Projects' }),
-    ).toHaveCSS('font-weight', '600');
+    await expect(page.locator('ul[aria-label="Projects"] h2 a').first()).toHaveCSS(
+      'font-weight',
+      '700',
+    );
+    const projectsNavigationLink = page
+      .getByRole('navigation', { name: 'Primary' })
+      .getByRole('link', { name: 'Projects' });
+    await expect(projectsNavigationLink).toHaveCSS('font-weight', '600');
+    await expect(projectsNavigationLink).toHaveCSS('letter-spacing', 'normal');
 
     await page.goto('/projects/prj_01234567/members');
     const desktopMembers = page.getByTestId('members-desktop-table');
@@ -38,10 +44,7 @@ test.describe('mobile typography parity', () => {
     );
     await page.getByRole('button', { name: 'Add member' }).click();
     const addMemberDialog = page.getByRole('dialog', { name: 'Add member' });
-    await expect(addMemberDialog.getByRole('heading', { name: 'Add member' })).toHaveCSS(
-      'font-weight',
-      '700',
-    );
+    await expect(addMemberDialog.locator('#add-member-title')).toHaveCSS('font-weight', '700');
     await expect(addMemberDialog.getByRole('textbox', { name: 'Email address' })).toHaveCSS(
       'font-weight',
       '400',

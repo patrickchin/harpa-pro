@@ -44,7 +44,7 @@ function MemberAvatar({ member }: { member: ProjectMember }): React.JSX.Element 
   return (
     <span
       aria-hidden="true"
-      className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-extrabold text-primary-foreground"
+      className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
     >
       {memberName(member)[0]?.toUpperCase()}
     </span>
@@ -125,7 +125,7 @@ export function MembersPageView({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         eyebrow="Project team"
         title="Members"
@@ -146,7 +146,7 @@ export function MembersPageView({
 
       {error && !addOpen && !removeTarget ? (
         <p
-          className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-sm font-semibold text-danger-text"
+          className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger-text"
           role="alert"
         >
           {error}
@@ -154,12 +154,12 @@ export function MembersPageView({
       ) : null}
 
       {isLoading ? (
-        <Card className="flex min-h-40 items-center justify-center gap-3 p-5" aria-busy="true">
+        <Card className="flex min-h-40 items-center justify-center gap-3 p-4" aria-busy="true">
           <span
             className="size-5 animate-spin rounded-full border-2 border-primary/20 border-t-primary"
             aria-hidden="true"
           />
-          <p className="text-sm font-semibold text-muted-foreground">Loading members…</p>
+          <p className="text-sm font-normal text-muted-foreground">Loading members…</p>
         </Card>
       ) : (
         <>
@@ -197,12 +197,12 @@ export function MembersPageView({
                       <th className={tableCellClassName} scope="row">
                         <span className="flex min-w-0 items-center gap-3 text-left">
                           <MemberAvatar member={member} />
-                          <span className="min-w-0 font-bold text-foreground">
+                          <span className="min-w-0 font-semibold text-foreground">
                             <span className="block truncate">
                               {member.displayName ?? 'Unnamed member'}
                             </span>
                             {isCurrentUser ? (
-                              <span className="mt-1 block text-label font-bold tracking-label text-accent-ink uppercase">
+                              <span className="mt-1 block text-label text-accent-ink uppercase">
                                 You
                               </span>
                             ) : null}
@@ -211,7 +211,7 @@ export function MembersPageView({
                       </th>
                       <td className={tableCellClassName}>
                         <a
-                          className="font-medium text-muted-foreground hover:text-foreground"
+                          className="font-normal text-muted-foreground hover:text-foreground"
                           href={`mailto:${member.email}`}
                         >
                           {member.email}
@@ -253,7 +253,7 @@ export function MembersPageView({
                               Remove
                             </Button>
                             {isLastOwner ? (
-                              <span className="text-label font-medium text-muted-foreground">
+                              <span className="text-xs text-muted-foreground">
                                 Add another owner first.
                               </span>
                             ) : null}
@@ -288,7 +288,7 @@ export function MembersPageView({
                     <MemberAvatar member={member} />
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <h2 className="min-w-0 truncate text-base font-extrabold text-foreground">
+                        <h2 className="min-w-0 truncate text-base font-semibold text-foreground">
                           {member.displayName ?? 'Unnamed member'}
                         </h2>
                         {isCurrentUser ? (
@@ -298,7 +298,7 @@ export function MembersPageView({
                         ) : null}
                       </div>
                       <a
-                        className="mt-1 block truncate text-sm font-medium text-muted-foreground hover:text-foreground"
+                        className="mt-1 block truncate text-sm font-normal text-muted-foreground hover:text-foreground"
                         href={`mailto:${member.email}`}
                       >
                         {member.email}
@@ -307,27 +307,27 @@ export function MembersPageView({
                     {!canManage ? <MemberRoleBadge role={member.role} /> : null}
                   </div>
 
-                  <dl className="mt-4 grid grid-cols-2 gap-3 rounded-control-ui bg-surface-muted p-3">
+                  <dl className="mt-3 grid grid-cols-2 gap-3 rounded-control-ui bg-surface-muted p-3">
                     <div>
-                      <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                      <dt className="text-label text-muted-foreground uppercase">
                         Role
                       </dt>
-                      <dd className="mt-1 text-sm font-bold text-foreground">
+                      <dd className="mt-1 text-sm font-normal text-foreground">
                         {formatRole(member.role)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                      <dt className="text-label text-muted-foreground uppercase">
                         Joined
                       </dt>
-                      <dd className="mt-1 text-sm font-bold text-foreground">
+                      <dd className="mt-1 text-sm font-normal text-foreground">
                         {formatDate(member.joinedAt)}
                       </dd>
                     </div>
                   </dl>
 
                   {canManage ? (
-                    <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                       <Field label={`Role for ${displayName}`}>
                         <Select
                           aria-label={`Change role for ${displayName}`}
@@ -355,7 +355,7 @@ export function MembersPageView({
                         Remove
                       </Button>
                       {isLastOwner ? (
-                        <p className="text-label font-medium text-muted-foreground sm:col-span-2">
+                        <p className="text-xs text-muted-foreground sm:col-span-2">
                           Add another owner first.
                         </p>
                       ) : null}
@@ -376,12 +376,12 @@ export function MembersPageView({
           initialFocusRef={addEmailRef}
           onClose={() => setAddOpen(false)}
         >
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-label font-bold tracking-label text-muted-foreground uppercase">
+              <p className="text-label text-muted-foreground uppercase">
                 Project access
               </p>
-              <h2 className="mt-1 text-title-sm font-extrabold text-foreground" id="add-member-title">
+              <h2 className="mt-1 text-title-sm text-foreground" id="add-member-title">
                 Add member
               </h2>
             </div>
@@ -395,13 +395,13 @@ export function MembersPageView({
             </Button>
           </div>
           <p
-            className="mt-4 rounded-control-ui border border-info-border bg-info-soft p-3 text-sm font-medium text-info-text"
+            className="mt-3 rounded-control-ui border border-info-border bg-info-soft p-3 text-sm font-normal text-info-text"
             id="add-member-description"
           >
             The person must already have a Harpa Pro account. This adds them immediately; it does
             not send an invitation.
           </p>
-          <form className="mt-5 flex flex-col gap-4" onSubmit={addMember}>
+          <form className="mt-4 flex flex-col gap-3" onSubmit={addMember}>
             <Field label="Email address">
               <Input name="email" ref={addEmailRef} type="email" />
             </Field>
@@ -414,26 +414,26 @@ export function MembersPageView({
             </Field>
             <dl className="grid gap-2">
               <div className="rounded-control-ui bg-surface-muted p-3">
-                <dt className="text-sm font-extrabold text-foreground">Owner</dt>
+                <dt className="text-sm font-semibold text-foreground">Owner</dt>
                 <dd className="mt-1 text-sm text-muted-foreground">
                   Manage people, project details, and reports.
                 </dd>
               </div>
               <div className="rounded-control-ui bg-surface-muted p-3">
-                <dt className="text-sm font-extrabold text-foreground">Editor</dt>
+                <dt className="text-sm font-semibold text-foreground">Editor</dt>
                 <dd className="mt-1 text-sm text-muted-foreground">
                   Create and edit reports and project details.
                 </dd>
               </div>
               <div className="rounded-control-ui bg-surface-muted p-3">
-                <dt className="text-sm font-extrabold text-foreground">Viewer</dt>
+                <dt className="text-sm font-semibold text-foreground">Viewer</dt>
                 <dd className="mt-1 text-sm text-muted-foreground">
                   Read project information and finalized reviews.
                 </dd>
               </div>
             </dl>
             {error ? (
-              <p className="text-sm font-semibold text-danger-text" role="alert">
+              <p className="text-sm font-medium text-danger-text" role="alert">
                 {error}
               </p>
             ) : null}
@@ -457,11 +457,11 @@ export function MembersPageView({
           initialFocusRef={removeCancelRef}
           onClose={() => setRemoveTarget(null)}
         >
-          <p className="text-label font-bold tracking-label text-danger-text uppercase">
+          <p className="text-label text-danger-text uppercase">
             Remove access
           </p>
           <h2
-            className="mt-1 text-title-sm font-extrabold text-foreground"
+            className="mt-1 text-title-sm text-foreground"
             id="remove-member-title"
           >
             Remove {memberName(removeTarget)}
@@ -470,11 +470,11 @@ export function MembersPageView({
             They will no longer be able to open this project or its reports.
           </p>
           {error ? (
-            <p className="mt-4 text-sm font-semibold text-danger-text" role="alert">
+            <p className="mt-3 text-sm font-medium text-danger-text" role="alert">
               {error}
             </p>
           ) : null}
-          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button
               onClick={() => setRemoveTarget(null)}
               ref={removeCancelRef}

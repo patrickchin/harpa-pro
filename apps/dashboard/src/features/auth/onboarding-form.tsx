@@ -45,7 +45,7 @@ export function OnboardingForm({ email, onSubmit }: OnboardingFormProps): React.
       <div className="flex items-center gap-3">
         <BrandMark className="size-12 rounded-card-ui" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-display font-bold text-foreground">Welcome</h1>
+          <h1 className="text-display text-foreground">Welcome</h1>
           <p className="mt-1 text-body text-muted-foreground">
             Finish your account details so reports and projects are labeled correctly from day one.
           </p>
@@ -53,7 +53,7 @@ export function OnboardingForm({ email, onSubmit }: OnboardingFormProps): React.
       </div>
 
       <p className="mt-8 text-sm text-muted-foreground">
-        Signed in as <strong className="text-foreground">{email}</strong>
+        Signed in as <strong className="font-semibold text-foreground">{email}</strong>
       </p>
       <form className="mt-4 flex flex-col gap-4" onSubmit={submit} noValidate>
         <Field label="Full name">

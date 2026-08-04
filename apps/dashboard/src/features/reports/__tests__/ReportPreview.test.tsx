@@ -13,12 +13,24 @@ afterEach(async () => {
 });
 
 describe('ReportPreview', () => {
-  it('uses mobile-aligned cards and status treatments without legacy report CSS hooks', async () => {
+  it('uses compact mobile section headers and semibold row names', async () => {
     const rendered = await render(<ReportPreview body={reportBodyFixture} />);
     cleanups.push(rendered.cleanup);
 
     const preview = rendered.container.querySelector('[data-testid="report-preview"]');
-    expect(preview).toHaveClass('rounded-card-ui', 'bg-card', 'shadow-raised-ui');
+    expect(preview).toHaveClass('gap-4', 'rounded-card-ui', 'bg-card', 'shadow-raised-ui');
+    const sectionHeadings = [...rendered.container.querySelectorAll('section > h3')];
+    expect(sectionHeadings.length).toBeGreaterThan(0);
+    sectionHeadings.forEach((heading) => {
+      expect(heading).toHaveClass('text-label');
+      expect(heading).not.toHaveClass('text-title-sm', 'font-bold', 'tracking-label');
+    });
+    const rowHeadings = [...rendered.container.querySelectorAll('section h4')];
+    expect(rowHeadings.length).toBeGreaterThan(0);
+    rowHeadings.forEach((heading) => {
+      expect(heading).toHaveClass('font-semibold');
+      expect(heading).not.toHaveClass('font-bold');
+    });
     expect(rendered.container.querySelector('.bg-warning-soft')).toHaveTextContent('medium');
     expect(
       Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>

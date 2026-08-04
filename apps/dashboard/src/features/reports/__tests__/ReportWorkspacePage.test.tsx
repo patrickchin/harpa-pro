@@ -55,8 +55,10 @@ describe('ReportWorkspacePage draft editing', () => {
     const draftLayout = rendered.container.querySelector('[data-testid="report-draft-layout"]');
 
     expect(workspace).not.toBeNull();
-    expect(workspace?.className).toContain('min-w-0');
+    expect(workspace).toHaveClass('min-w-0', 'space-y-6');
     expect(workspace?.className).not.toContain('reports-workspace');
+    expect(rendered.container.querySelector('#report-title')).toHaveClass('text-title-sm');
+    expect(rendered.container.querySelector('#report-title')).not.toHaveClass('text-title');
     expect(draftLayout?.className).toContain('grid');
     expect(draftLayout?.className).toContain('xl:grid-cols-[minmax(0,1.8fr)_minmax(20rem,1fr)]');
   });
@@ -405,6 +407,11 @@ describe('ReportWorkspacePage finalized report', () => {
     });
 
     expect(rendered.container.querySelector('[aria-selected="true"]')).toHaveTextContent('Review');
+    const tabs = [...rendered.container.querySelectorAll('[role="tab"]')];
+    tabs.forEach((tab) => {
+      expect(tab).toHaveClass('font-semibold');
+      expect(tab).not.toHaveClass('font-bold');
+    });
   });
 
   it('defaults to Report, downloads a PDF, and keeps Review comments append-only', async () => {
@@ -539,9 +546,7 @@ describe('ReportWorkspacePage finalized report', () => {
       role: 'editor',
     });
 
-    expect(rendered.container.querySelector('[role="tablist"]')).toHaveClass(
-      'bg-surface-muted',
-    );
+    expect(rendered.container.querySelector('[role="tablist"]')).toHaveClass('bg-surface-muted');
 
     await click(button(rendered.container, 'Copy link'));
     await flush();

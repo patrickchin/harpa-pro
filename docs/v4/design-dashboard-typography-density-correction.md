@@ -78,7 +78,7 @@ This correction does not change `apps/site`.
   label tracking.
 - Computed button, tab, navigation, and member-name weight is 600.
 - Ordinary page headings compute to 20/26 px at 700.
-- No `font-extrabold` remains in `apps/dashboard/src`.
+- No `font-extrabold` class is applied by production dashboard components.
 - Report preview section headings follow the compact mobile section-header
   hierarchy rather than repeating 20 px bold headings.
 - Auth, projects, members, reports, and review surfaces pass the Playwright

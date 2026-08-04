@@ -41,8 +41,8 @@ function AuthBrand({ eyebrow }: { eyebrow: string }): React.JSX.Element {
     <div className="flex items-center gap-3">
       <BrandMark className="size-12 rounded-card-ui" />
       <div className="min-w-0 flex-1">
-        <p className="text-label font-bold tracking-label text-accent-ink uppercase">{eyebrow}</p>
-        <p className="text-display font-bold text-foreground">Harpa Pro</p>
+        <p className="text-label text-accent-ink uppercase">{eyebrow}</p>
+        <p className="text-display text-foreground">Harpa Pro</p>
       </div>
     </div>
   );
@@ -152,9 +152,9 @@ export function SignInForm({
         <AuthBrand eyebrow="Secure sign in" />
         <div className="mt-8">
           <KeyRound aria-hidden="true" className="mb-3 size-6 text-accent" />
-          <h1 className="text-title font-bold text-foreground">Enter your password</h1>
+          <h1 className="text-title text-foreground">Enter your password</h1>
           <p className="mt-2 text-body text-muted-foreground">
-            Sign in as <strong className="text-foreground">{email}</strong>.
+            Sign in as <strong className="font-semibold text-foreground">{email}</strong>.
           </p>
         </div>
         <form className="mt-6 flex flex-col gap-4" onSubmit={submitPassword} noValidate>
@@ -214,9 +214,10 @@ export function SignInForm({
         <AuthBrand eyebrow="Secure sign in" />
         <div className="mt-8">
           <MailCheck aria-hidden="true" className="mb-3 size-6 text-accent" />
-          <h1 className="text-title font-bold text-foreground">Check your email</h1>
+          <h1 className="text-title text-foreground">Check your email</h1>
           <p className="mt-2 text-body text-muted-foreground">
-            Enter the six-digit code sent to <strong className="text-foreground">{email}</strong>.
+            Enter the six-digit code sent to{' '}
+            <strong className="font-semibold text-foreground">{email}</strong>.
           </p>
         </div>
         <form className="mt-6 flex flex-col gap-4" onSubmit={verifyCode} noValidate>
@@ -259,7 +260,7 @@ export function SignInForm({
     <section className="w-full max-w-sm">
       <AuthBrand eyebrow="Office dashboard" />
       <div className="mt-8">
-        <h1 className="text-title font-bold text-foreground">Welcome to Harpa Pro</h1>
+        <h1 className="text-title text-foreground">Welcome to Harpa Pro</h1>
         <p className="mt-2 text-body text-muted-foreground">
           Sign in with your work email. Most accounts receive a six-digit code—no password
           required.

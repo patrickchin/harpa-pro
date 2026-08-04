@@ -30,10 +30,10 @@ createRoot(root).render(
           role="alert"
         >
           <BrandMark className="mb-5 size-12" />
-          <p className="mb-2 text-label font-bold tracking-label text-danger-text uppercase">
+          <p className="mb-2 text-label text-danger-text uppercase">
             Dashboard error
           </p>
-          <h1 className="text-title font-bold text-foreground">
+          <h1 className="text-title text-foreground">
             Harpa Pro couldn&apos;t open this page
           </h1>
           <p className="mt-2 max-w-reading text-body text-muted-foreground">

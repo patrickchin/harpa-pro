@@ -12,18 +12,24 @@ afterEach(async () => {
 });
 
 describe('ReportReview', () => {
-  it('uses the shared Tailwind card, field, and button language', async () => {
+  it('keeps the review pane flat while comments retain bordered cards', async () => {
     const rendered = await render(
       <ReportReview comments={[commentFixture]} onAddComment={async () => undefined} />,
     );
     cleanups.push(rendered.cleanup);
 
-    expect(rendered.container.querySelector('section')).toHaveClass(
-      'rounded-card-ui',
-      'bg-card',
-      'shadow-raised-ui',
+    const pane = rendered.container.querySelector('section');
+    expect(pane).not.toHaveClass('rounded-card-ui', 'border', 'bg-card', 'shadow-raised-ui');
+    const comment = rendered.container.querySelector('article');
+    expect(comment).toHaveClass('rounded-card-ui', 'border', 'bg-card');
+    expect(comment?.querySelector('strong')).toHaveClass('font-semibold');
+    expect(rendered.container.querySelector('form')).not.toHaveClass('border-t');
+    expect(field(rendered.container, 'Add a comment')).toHaveClass(
+      'min-h-28',
+      'font-normal',
+      'tracking-normal',
+      'normal-case',
     );
-    expect(field(rendered.container, 'Add a comment')).toHaveClass('min-h-28');
     expect(button(rendered.container, 'Add comment')).toHaveClass('bg-primary');
     expect(
       Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>

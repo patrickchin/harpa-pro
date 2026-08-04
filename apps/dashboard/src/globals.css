@@ -46,12 +46,16 @@
   --font-app: var(--font-sans);
   --text-display: var(--font-size-display);
   --text-display--line-height: var(--line-height-display);
+  --text-display--font-weight: 700;
   --text-title: var(--font-size-title);
   --text-title--line-height: var(--line-height-title);
+  --text-title--font-weight: 700;
   --text-title-sm: var(--font-size-title-sm);
   --text-title-sm--line-height: var(--line-height-title-sm);
+  --text-title-sm--font-weight: 700;
   --text-metric: var(--font-size-metric);
   --text-metric--line-height: var(--line-height-metric);
+  --text-metric--font-weight: 700;
   --text-body-lg: var(--font-size-body-lg);
   --text-body-lg--line-height: var(--line-height-body-lg);
   --text-body: var(--font-size-body);
@@ -60,6 +64,8 @@
   --text-meta--line-height: var(--line-height-meta);
   --text-label: var(--font-size-label);
   --text-label--line-height: var(--line-height-label);
+  --text-label--letter-spacing: var(--letter-spacing-label);
+  --text-label--font-weight: 700;
   --tracking-label: var(--letter-spacing-label);
 
   --radius-control-ui: var(--radius-control);
@@ -114,24 +120,6 @@
     outline: var(--focus-outline);
     outline-offset: 3px;
   }
-}
-
-.skip-link {
-  position: fixed;
-  z-index: 100;
-  top: 0.75rem;
-  left: 0.75rem;
-  min-height: var(--control-height);
-  padding: var(--space-3) var(--space-4);
-  color: var(--primary-foreground);
-  background: var(--primary);
-  border-radius: var(--radius-control);
-  transform: translateY(-180%);
-  transition: transform 120ms ease;
-}
-
-.skip-link:focus {
-  transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {

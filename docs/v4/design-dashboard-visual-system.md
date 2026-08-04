@@ -60,8 +60,8 @@ system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
 | Token | Size / line height | Weight | Typical use |
 | --- | --- | --- | --- |
 | Display | 34 / 40 px | 700 | auth statement |
-| Title | 26 / 32 px | 700 | page heading |
-| Title small | 20 / 26 px | 700 | card or section heading |
+| Title | 26 / 32 px | 700 | object-detail heading |
+| Title small | 20 / 26 px | 700 | ordinary route or card heading |
 | Metric | 32 / 36 px | 700 | project statistics |
 | Body large | 18 / 26 px | 400 | short introduction |
 | Body | 16 / 24 px | 400 | default copy and form values |
@@ -81,7 +81,8 @@ work.
 - control minimum height: 44 px; prominent control: 52 px;
 - card padding: 12, 16, or 20 px;
 - list/card gap: 12 px; section-internal gap: 16 px;
-- major section separation: 32 or 48 px;
+- ordinary major section separation: 24 px;
+- 32 or 48 px separation only between genuinely independent desktop regions;
 - icon/avatar tile: 40 × 40 px;
 - sidebar: 268 px;
 - application content maximum: 1380 px;
@@ -105,7 +106,11 @@ Depth communicates layering, not decoration.
 - Controls keep a 44 px minimum target and 6 px radius.
 - Primary controls use navy; one dominant action may use orange.
 - Secondary controls use white or muted fill with a visible border.
-- Labels use the label token.
+- Form labels use the label token in muted ink and sentence case. Uppercase is
+  reserved for eyebrows, table headings, and compact status metadata.
+- Form values remain regular weight; label typography must not inherit into
+  inputs, textareas, or selects.
+- Buttons use semibold labels, matching the mobile primitive.
 - Focus is visible and offset from the control edge.
 - Editor text stays at 16/24 px for comfortable keyboard editing.
 

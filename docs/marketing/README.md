@@ -19,7 +19,7 @@ The signed-in product (when it exists) will live separately at
 `apps/web` on `app.harpapro.com`. They will not share a framework or a
 deploy.
 
-Astro 5 static site with two React islands (waitlist form + voice
+Astro 7 static site with two React islands (waitlist form + voice
 demo), deployed to Cloudflare Pages. Waitlist signups post directly
 to `api.harpapro.com` (CORS) → `POST /waitlist` (new Hono route),
 storing data in a new `waitlist_signups` table in Neon with
@@ -46,7 +46,8 @@ Analytics: Cloudflare Web Analytics (cookieless) only at launch.
 
 | Concern | Choice | Rationale |
 |---|---|---|
-| Framework | **Astro 5** | Mostly-static content; ships zero JS by default; React islands for interactivity. |
+| Framework | **Astro 7** | Mostly-static content; ships zero JS by default; React islands for interactivity. |
+| Build runtime | Node 22.12+ and Vite 8 | Supported runtime and bundler line for Astro 7. |
 | Styling | Tailwind v4 | Same as Lovable scaffold; copy classes across. |
 | Interactive bits | React 19 inside Astro islands (`client:visible`) | Voice demo + waitlist form. |
 | UI primitives | shadcn/ui (only in islands) | Vendor only what we use: Button, Input, Form, Dialog, Toast. |

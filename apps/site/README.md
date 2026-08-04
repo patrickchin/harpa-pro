@@ -1,6 +1,6 @@
 # @harpa/site
 
-Astro 5 + Tailwind v4 public site for `harpapro.com`, including marketing,
+Astro 7 + Tailwind v4 public site for `harpapro.com`, including marketing,
 legal, roadmap, and product-guide routes.
 
 See [`docs/marketing/`](../../docs/marketing/) for the full plan
@@ -17,7 +17,7 @@ pnpm --filter @harpa/site test:e2e
 
 ## Stack
 
-- Astro 5 (static output, no SSR adapter)
+- Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)
 - Tailwind v4 via `@tailwindcss/vite`
 - React 19 islands (added in M1/M2)
 - MDX content collections (added in M0.4)

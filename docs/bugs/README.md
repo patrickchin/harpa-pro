@@ -327,7 +327,9 @@ Mitigation: declare the root-selected React runtime directly in every web
 workspace, align its React types, and pin the Astro-compatible Vite major in
 both workspaces. Keep `tailwindcss` and `@tailwindcss/vite` on the same patch
 line. Workspace smoke tests must parse the manifests and fail when those
-compatibility pins drift.
+compatibility pins drift. If hoisted build code resolves a transitive package
+through the workspace root, declare that implementation directly in the
+affected workspace rather than relying on the hoister's choice.
 
 ## Bugs
 
@@ -335,6 +337,7 @@ compatibility pins drift.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-04** *(R16)* — Astro 7 static builds loaded hoisted CommonJS `cookie@0.7.2` instead of Astro's nested ESM `cookie@2.0.1`, so prerendering failed on a missing named export. Fix: pin `cookie@2.0.1` directly in both web workspaces and assert the build graph. [detail](2026-08-04-astro-cookie-hoist-build.md)
 - **2026-08-04** — The PR-time Android smoke first opened its Metro link without a native readiness boundary; the follow-up then exposed `Quickstep isn't responding` intercepting Maestro over a ready Dev Launcher. Fix: recover through the semantic `Wait` action, strictly reassert `Development Build`, and use a bounded post-link wait that can observe a later Quickstep dialog before server/app assertions. [detail](2026-08-04-expo-dev-launcher-readiness-race.md)
 - **2026-08-04** *(R14)* — Dependabot PRs entered combined preview/deploy, OTA, and production-journey jobs, so GitHub's withheld secrets made useful verification red while same-repo checks still treated bot-controlled branches as publishable. Fix: split read-only verification, gate every privileged job by immutable PR author, and route direct security updates through human-owned `dev` PRs. [detail](2026-08-04-dependabot-privileged-pr-jobs.md)
 - **2026-08-04** *(R16)* — The site and admin manifests declared React 18 while the root override installed React 19.2.0, and both consumed Vite only as an auto-installed peer. Dependency updates could therefore resolve a different peer graph than the manifests described. Fix: align React runtime and types, pin Vite 6.4.3 directly, and keep Tailwind core/plugin patches paired in both workspaces. [detail](2026-08-04-web-peer-graph-drift.md)

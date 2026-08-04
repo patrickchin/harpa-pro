@@ -5,6 +5,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 DEPLOY_SCRIPT="$REPO_ROOT/infra/fly/deploy.sh"
 ARM_SCRIPT="$REPO_ROOT/scripts/ci/arm-storage-lifecycle-rollout.sh"
+ARM_ROLLOUT_SOURCE="$REPO_ROOT/packages/api/scripts/arm-storage-lifecycle-rollout.ts"
 DEV_WORKFLOW="$REPO_ROOT/.github/workflows/api-dev.yml"
 PROD_WORKFLOW="$REPO_ROOT/.github/workflows/api-prod.yml"
 TMP="$(mktemp -d)"
@@ -44,6 +45,18 @@ SH
 chmod +x "$TMP/bin/flyctl"
 
 echo "storage-lifecycle deploy policy"
+
+ARM_CONFIRMATION_MARKER='[storage-lifecycle] lease enforcement armed for '
+if ! grep -Fq "$ARM_CONFIRMATION_MARKER" "$ARM_ROLLOUT_SOURCE"; then
+  echo "  FAIL - application arming command does not emit the deploy confirmation marker"
+  exit 1
+fi
+if ! grep -Fq "ARM_CONFIRMATION_MARKER='$ARM_CONFIRMATION_MARKER'" "$ARM_SCRIPT" ||
+   ! grep -Fq '"$EXEC_OUTPUT" == *"$ARM_CONFIRMATION_MARKER"*' "$ARM_SCRIPT"; then
+  echo "  FAIL - deploy helper does not use its pinned application confirmation marker"
+  exit 1
+fi
+echo "  ok   - application and deploy helper share the confirmation marker contract"
 
 mapfile -t WORKER_SCALE_COMMANDS < <(
   grep -RFnH \

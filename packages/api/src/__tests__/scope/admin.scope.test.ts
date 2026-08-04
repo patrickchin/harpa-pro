@@ -15,6 +15,7 @@ import { sql } from 'drizzle-orm';
 import { startPg, seedAuthUsers, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withAnonConnection, withScopedConnection } from '../../db/scope.js';
+import { getPgError } from '../../lib/pg-error.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool, rawDb } from '../../db/client.js';
 import { makeUserId, makeSessionId } from '../factories/index.js';
@@ -82,19 +83,22 @@ describe('scope: /admin/waitlist.csv', () => {
   });
 
   it('app.waitlist_signups stays unreadable to anon DB scope', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(sql`SELECT email FROM app.waitlist_signups`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(sql`SELECT email FROM app.waitlist_signups`);
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('app.waitlist_signups stays unreadable to a regular-user DB scope', async () => {
-    await expect(
-      withScopedConnection({ sub: regularId, sid: regularSid }, async (db) => {
+    const error = await withScopedConnection(
+      { sub: regularId, sid: regularSid },
+      async (db) => {
         await db.execute(sql`SELECT email FROM app.waitlist_signups`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+      },
+    ).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('negative control — same SELECT without any scope (superuser) sees rows', async () => {

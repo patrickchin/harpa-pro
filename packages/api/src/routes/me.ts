@@ -16,6 +16,7 @@ import {
 } from '../services/account-deletion.js';
 import { drainStorageDeleteJobs } from '../services/storage-delete-jobs.js';
 import { captureApiException } from '../telemetry/sentry.js';
+import { getPgError } from '../lib/pg-error.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -122,14 +123,13 @@ meRoutes.openapi(
     try {
       await db((d) => deleteCurrentAccount(d));
     } catch (err) {
-      if ((err as { code?: string })?.code === 'P0002') {
+      const pgError = getPgError(err);
+      if (pgError?.code === 'P0002') {
         throw new HTTPException(404, { message: 'User not found.' });
       }
       if (
-        (err as { code?: string; message?: string })?.code === '55000' &&
-        /file_upload_lease_rollout_pending/.test(
-          (err as { message?: string }).message ?? '',
-        )
+        pgError?.code === '55000' &&
+        /file_upload_lease_rollout_pending/.test(pgError.message ?? '')
       ) {
         throw new HTTPException(503, {
           message: 'Account deletion is temporarily unavailable.',

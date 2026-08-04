@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { rawDb, getPool, resetPool } from '../db/client.js';
 import { withScopedConnection } from '../db/scope.js';
+import { getPgError } from '../lib/pg-error.js';
 import { recordActivityEvent } from '../services/activity-events.js';
 import { makeNoteId, makeProjectId, makeSessionId, makeUserId } from './factories/index.js';
 import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
@@ -90,18 +91,22 @@ describe('activity event storage', () => {
       });
     });
 
-    await expect(
-      withScopedConnection({ sub: actorUserId, sid: actorSessionId }, async (db) => {
+    const error = await withScopedConnection(
+      { sub: actorUserId, sid: actorSessionId },
+      async (db) => {
         await db.execute(sql`SELECT id FROM app.activity_events`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+      },
+    ).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('rejects a scoped insert attributed to another user', async () => {
     const projectId = 'prj_23456789';
 
-    await expect(
-      withScopedConnection({ sub: actorUserId, sid: actorSessionId }, async (db) => {
+    const error = await withScopedConnection(
+      { sub: actorUserId, sid: actorSessionId },
+      async (db) => {
         await recordActivityEvent(db, {
           eventType: 'project.created',
           actorUserId: otherUserId,
@@ -111,8 +116,10 @@ describe('activity event storage', () => {
           dedupeKey: `project.created:${projectId}`,
           metadata: {},
         });
-      }),
-    ).rejects.toThrow(/row-level security|permission denied/i);
+      },
+    ).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/row-level security|permission denied/i);
   });
 
   it('rejects metadata outside the event-specific schema', async () => {

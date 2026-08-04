@@ -77,14 +77,15 @@ if [[ -n "$missing_route" ]]; then
 fi
 
 if [[ -n "$redirect_path" ]]; then
+  expected_redirect="$origin$redirect_suffix"
   read -r status location < <(
     curl --silent --show-error --output /dev/null \
       --connect-timeout 10 --max-time 30 --max-redirs 0 \
       --write-out '%{http_code} %{redirect_url}\n' \
       "$origin$redirect_path"
   )
-  [[ "$status" == 301 && "$location" == *"$redirect_suffix" ]] || {
-    echo "ERROR: unexpected redirect: status=$status location=$location" >&2
+  [[ "$status" == 301 && "$location" == "$expected_redirect" ]] || {
+    echo "ERROR: unexpected redirect: status=$status location=$location expected=$expected_redirect" >&2
     exit 1
   }
 fi

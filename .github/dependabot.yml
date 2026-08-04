@@ -15,16 +15,100 @@ updates:
     commit-message:
       prefix: 'chore(deps)'
     groups:
-      production-minor-patch:
+      # Keep compatibility-coupled packages in reviewed stacks. These groups
+      # must stay before the broad patch groups below because Dependabot assigns
+      # a dependency to the first matching group.
+      better-auth-stack:
+        patterns:
+          - 'better-auth'
+          - '@better-auth/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      react-stack:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - 'react-test-renderer'
+          - '@types/react'
+          - '@types/react-dom'
+          - '@types/react-test-renderer'
+        update-types:
+          - 'minor'
+          - 'patch'
+      astro-stack:
+        patterns:
+          - 'astro'
+          - '@astrojs/*'
+          - 'vite'
+          - '@tailwindcss/vite'
+        update-types:
+          - 'minor'
+          - 'patch'
+      drizzle-stack:
+        patterns:
+          - 'drizzle-*'
+        update-types:
+          - 'patch'
+      aws-sdk-stack:
+        patterns:
+          - '@aws-sdk/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      typescript-eslint-stack:
+        patterns:
+          - '@typescript-eslint/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      production-patches:
+        patterns:
+          - '*'
         dependency-type: 'production'
         update-types:
-          - 'minor'
           - 'patch'
-      development-minor-patch:
+      development-patches:
+        patterns:
+          - '*'
         dependency-type: 'development'
         update-types:
-          - 'minor'
           - 'patch'
+    ignore:
+      # Expo Doctor / `expo install` owns this native compatibility graph.
+      # Upgrade it as one staged, human-reviewed SDK migration.
+      # Because this update entry targets `dev`, none of its options apply to
+      # default-branch security updates.
+      - dependency-name: 'expo*'
+      - dependency-name: '@expo/*'
+      - dependency-name: 'react-native*'
+      - dependency-name: '@react-native/*'
+
+      # Compatibility-stack majors need their own migration plans.
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-test-renderer'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/react*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'astro'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@astrojs/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'vite'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@tailwindcss/vite'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'drizzle-*'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-major'
+      - dependency-name: 'better-auth'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@better-auth/*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: 'github-actions'
     directory: '/'

@@ -110,11 +110,11 @@ require_fixed_count ".github/dependabot.yml" \
   "interval: 'weekly'" 2 \
   "dependency update checks use a controlled weekly cadence"
 require_fixed ".github/dependabot.yml" \
-  "production-minor-patch:" \
-  "production minor and patch updates are grouped"
+  "production-patches:" \
+  "unrelated production updates are grouped only at patch level"
 require_fixed ".github/dependabot.yml" \
-  "development-minor-patch:" \
-  "development minor and patch updates are grouped"
+  "development-patches:" \
+  "unrelated development updates are grouped only at patch level"
 forbid_fixed ".github/dependabot.yml" \
   "include: 'scope'" \
   "explicit conventional prefixes are not given a duplicate dependency scope"

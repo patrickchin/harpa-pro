@@ -1,8 +1,9 @@
 name: admin-preview
 
-# Build, browser-test, and deploy the standalone admin console for a pull
-# request. The PR number is the single identifier shared by the Pages branch,
-# Fly app, and both Neon branches, so browser auth can use an exact origin.
+# Build and browser-test the standalone admin console for every pull request.
+# Human-owned same-repository PRs also deploy it. The PR number is the single
+# identifier shared by the Pages branch, Fly app, and both Neon branches, so
+# browser auth can use an exact origin.
 
 on:
   pull_request:
@@ -29,16 +30,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      deployments: write
     env:
-      ADMIN_BRANCH: pr-${{ github.event.pull_request.number }}
-      ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
       API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
       - uses: actions/checkout@v4
@@ -84,6 +80,41 @@ jobs:
             echo "::error::admin preview artifact still points at the local E2E API" >&2
             exit 1
           fi
+
+      - name: Upload verified admin build
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-preview-dist
+          path: apps/admin/dist
+          retention-days: 1
+
+  deploy:
+    needs: verify
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    env:
+      ADMIN_BRANCH: pr-${{ github.event.pull_request.number }}
+      ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      # Wrangler Action infers pnpm from the root lockfile and invokes the
+      # checked-in Wrangler dependency. Keep the package manager and install
+      # available after splitting deployment out of the verification job.
+      - uses: ./.github/actions/setup-monorepo
+
+      - name: Download verified admin build
+        uses: actions/download-artifact@v4
+        with:
+          name: admin-preview-dist
+          path: apps/admin/dist
 
       - name: Deploy admin preview to Cloudflare Pages
         id: deploy

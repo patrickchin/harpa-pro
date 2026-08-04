@@ -15,7 +15,7 @@ request previews, the stable `dev` deployment, and production.
 
 | Source | Workflow | Cloudflare target |
 | --- | --- | --- |
-| Pull request to `dev` or `main` | `site-preview.yml` | Unique preview branch |
+| Human-owned same-repository pull request to `dev` or `main` | `site-preview.yml` | Unique preview branch |
 | Push to `dev` | `site-dev.yml` | `dev.harpa-pro.pages.dev` |
 | Push to `main` | `site-prod.yml` | `harpapro.com` and `harpa-pro.pages.dev` |
 
@@ -35,8 +35,11 @@ rename the Cloudflare project.
    Actions secrets for `patrickchin/harpa-pro`.
 
 Astro inlines `PUBLIC_API_BASE_URL` and `PUBLIC_TURNSTILE_SITE_KEY` during the
-build. The workflows set them on the build step; Pages dashboard variables do
-not change a pre-built upload.
+build. The credential-free verification job uses Cloudflare's checked-in public
+test key so fork and Dependabot builds can run without secrets. The
+author-gated deployment job rebuilds with the real public site key immediately
+before upload, then repeats Playwright and Lighthouse against those exact
+bytes. Pages dashboard variables do not change a pre-built upload.
 
 ## Local commands
 

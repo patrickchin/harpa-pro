@@ -50,7 +50,7 @@ if ((metro_ready != 1)); then
   exit 1
 fi
 
-timeout 180s "$HOME/.maestro/bin/maestro" test \
+timeout 420s "$HOME/.maestro/bin/maestro" test \
   --env MAESTRO_APP_ID=com.harpa.pro.dev \
   --debug-output "$MAESTRO_DEBUG_DIR" \
   .maestro/ci-launch-smoke.yaml

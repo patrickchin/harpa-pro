@@ -28,7 +28,19 @@ test("presents two core workflows and concise supporting tasks", async ({
   await expect(page.locator(".docs-everyday-grid > *")).toHaveCount(5);
   await expect(page.locator(".docs-setup-links li")).toHaveCount(2);
   await expect(page.locator(".docs-guide-grid")).toHaveCount(0);
-  await expect(page.locator(".docs-montage-card")).toHaveCount(3);
+  const montageCards = page.locator(".docs-montage-card");
+  await expect(montageCards).toHaveCount(3);
+  const montageDestinations = [
+    "/docs/guides/capture-notes-voice",
+    "/docs/guides/generate-ai-report",
+    "/docs/guides/export-share-pdf",
+  ];
+  for (let index = 0; index < montageDestinations.length; index += 1) {
+    await expect(montageCards.nth(index)).toHaveAttribute(
+      "href",
+      montageDestinations[index],
+    );
+  }
   await expect(page.locator(".docs-phone-frame")).toHaveCount(0);
 });
 test("searches guides locally and stays quiet before a query", async ({

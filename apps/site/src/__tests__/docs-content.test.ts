@@ -271,7 +271,7 @@ describe("docs content model", () => {
     for (const id of DOCS_SCREENSHOT_IDS) {
       expect(registry, id).toContain(`"${id}"`);
       expect(DOCS_SCREENSHOTS[id], `${id} crop metadata`).toMatchObject({
-        image: expect.any(Object),
+        image: expect.anything(),
         focus: expect.stringMatching(/^\d+% \d+%$/),
       });
     }

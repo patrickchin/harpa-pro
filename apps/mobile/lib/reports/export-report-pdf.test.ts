@@ -16,6 +16,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 
 const {
   fileContents,
+  moveBarrier,
   openUrlMock,
   platformMock,
   printToFileAsyncMock,
@@ -24,6 +25,7 @@ const {
   joinUriParts,
 } = vi.hoisted(() => ({
   fileContents: new Map<string, string | Uint8Array>(),
+  moveBarrier: { wait: Promise.resolve() as Promise<void> },
   openUrlMock: vi.fn(),
   platformMock: { OS: 'ios' as 'ios' | 'android' | 'web' },
   printToFileAsyncMock: vi.fn(),
@@ -60,7 +62,8 @@ vi.mock('expo-file-system', () => {
       return fileContents.has(this.uri);
     }
 
-    move(destination: { uri: string }) {
+    async move(destination: { uri: string }) {
+      await moveBarrier.wait;
       const stored = fileContents.get(this.uri);
       if (stored !== undefined) {
         fileContents.set(destination.uri, stored);
@@ -159,6 +162,7 @@ function normalizeFileUri(uri: string): string {
 describe('saveReportPdf', () => {
   beforeEach(() => {
     fileContents.clear();
+    moveBarrier.wait = Promise.resolve();
     platformMock.OS = 'ios';
     printToFileAsyncMock.mockReset();
   });
@@ -217,6 +221,34 @@ describe('saveReportPdf', () => {
     });
 
     expect(printToFileAsyncMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for the asynchronous SDK 56 move before completing the save', async () => {
+    let releaseMove: (() => void) | undefined;
+    moveBarrier.wait = new Promise<void>((resolve) => {
+      releaseMove = resolve;
+    });
+    printToFileAsyncMock.mockImplementation(async () => {
+      const tempUri = 'file:///tmp/generated-report.pdf';
+      fileContents.set(tempUri, new Uint8Array([1, 2, 3, 4]));
+      return { uri: tempUri };
+    });
+
+    let settled = false;
+    const savePromise = saveReportPdf(makeReport('Daily Progress'), {
+      siteName: 'Riverside Tower',
+    }).then((result) => {
+      settled = true;
+      return result;
+    });
+
+    await vi.waitFor(() => expect(printToFileAsyncMock).toHaveBeenCalledOnce());
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    releaseMove?.();
+    await savePromise;
+    expect(settled).toBe(true);
   });
 
   it('refuses to save on web', async () => {

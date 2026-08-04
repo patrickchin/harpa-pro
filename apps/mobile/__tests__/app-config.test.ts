@@ -23,4 +23,30 @@ describe('app config', () => {
       },
     ]);
   });
+
+  it('pins the SDK 56 minimum iOS deployment target in generated projects', () => {
+    const buildPropertiesPlugin = config.plugins?.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties',
+    );
+
+    expect(buildPropertiesPlugin).toEqual([
+      'expo-build-properties',
+      { ios: { deploymentTarget: '16.4' } },
+    ]);
+  });
+
+  it('preserves the branded splash screen through the SDK 56 config plugin', () => {
+    const splashPlugin = config.plugins?.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-splash-screen',
+    );
+
+    expect(splashPlugin).toEqual([
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        resizeMode: 'contain',
+        backgroundColor: '#e55d22',
+      },
+    ]);
+  });
 });

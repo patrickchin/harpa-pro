@@ -54,14 +54,14 @@
     },
     "overrides": {
       "@types/react": "^19.2.0",
-      "react": "19.2.0",
-      "react-dom": "19.2.0",
-      "react-test-renderer": "19.2.0"
+      "react": "19.2.3",
+      "react-dom": "19.2.3",
+      "react-test-renderer": "19.2.3"
     }
   },
   "dependencies": {
-    "expo": "~55.0.0",
-    "react": "19.2.0",
-    "react-native": "0.83.6"
+    "expo": "~56.0.18",
+    "react": "19.2.3",
+    "react-native": "0.85.3"
   }
 }

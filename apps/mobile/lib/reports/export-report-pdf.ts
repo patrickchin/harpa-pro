@@ -252,7 +252,7 @@ export async function saveReportPdf(
       pdfFile.delete();
     }
 
-    tempPdfFile.move(pdfFile);
+    await tempPdfFile.move(pdfFile);
     movedToDestination = true;
 
     if (htmlFile.exists) {

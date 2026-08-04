@@ -65,11 +65,6 @@ const config: ExpoConfig = {
   scheme: 'harpa',
   userInterfaceStyle: 'light',
   icon: './assets/icon.png',
-  splash: {
-    image: './assets/splash-icon.png',
-    resizeMode: 'contain',
-    backgroundColor: '#e55d22',
-  },
   ios: {
     bundleIdentifier: BUNDLE_ID,
     // Initial App Store submission is iPhone-only. Re-enable after reviewed
@@ -120,6 +115,15 @@ const config: ExpoConfig = {
   web: { favicon: './assets/favicon.png' },
   plugins: [
     'expo-router',
+    ['expo-build-properties', { ios: { deploymentTarget: '16.4' } }],
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        resizeMode: 'contain',
+        backgroundColor: '#e55d22',
+      },
+    ],
     // Permanently hide the floating gear-icon dev-menu button on all builds.
     // Requires a native rebuild to take effect. Resolves FAB-overlap issues in
     // E2E tests and avoids Maestro workarounds. (expo-dev-launcher ≥55.0.30)

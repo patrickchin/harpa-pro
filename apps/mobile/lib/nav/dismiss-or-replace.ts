@@ -17,9 +17,9 @@
  * frame doesn't exist Expo Router throws — we catch and fall back to
  * `replace` so the user still lands on the right screen.
  */
-import type { Router, Href } from 'expo-router';
+import type { Href, ImperativeRouter } from 'expo-router';
 
-export function dismissOrReplaceTo(router: Router, href: Href): void {
+export function dismissOrReplaceTo(router: ImperativeRouter, href: Href): void {
   try {
     router.dismissTo(href);
   } catch {

@@ -23,6 +23,7 @@ const STRIP_LOCAL_NETWORK_PHASE_NAME =
 
 const POD_DEPLOYMENT_POST_INSTALL_MARKER =
   '# harpa: bump pod deployment targets';
+const IOS_DEPLOYMENT_TARGET = '16.4';
 
 function withStripLocalNetworkAlwaysOutOfDate(config) {
   return withXcodeProject(config, (cfg) => {
@@ -62,7 +63,7 @@ function withPodDeploymentTargetBump(config) {
       const minTarget =
         cfg.ios?.deploymentTarget ||
         cfg.ios?.minimumOSVersion ||
-        '15.1';
+        IOS_DEPLOYMENT_TARGET;
 
       const snippet = [
         '',

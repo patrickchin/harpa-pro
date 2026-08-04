@@ -9,10 +9,10 @@
  * See pitfall 13.
  */
 import { describe, it, expect, vi } from 'vitest';
-import type { Router } from 'expo-router';
+import type { ImperativeRouter } from 'expo-router';
 import { dismissOrReplaceTo } from './dismiss-or-replace';
 
-function makeRouter(overrides: Partial<Router> = {}): Router {
+function makeRouter(overrides: Partial<ImperativeRouter> = {}): ImperativeRouter {
   return {
     push: vi.fn(),
     replace: vi.fn(),
@@ -27,7 +27,7 @@ function makeRouter(overrides: Partial<Router> = {}): Router {
     prefetch: vi.fn(),
     reload: vi.fn(),
     ...overrides,
-  } as unknown as Router;
+  } as unknown as ImperativeRouter;
 }
 
 describe('dismissOrReplaceTo', () => {

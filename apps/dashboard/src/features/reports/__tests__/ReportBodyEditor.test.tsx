@@ -14,6 +14,28 @@ afterEach(async () => {
 });
 
 describe('ReportBodyEditor', () => {
+  it('uses the shared Tailwind editing surfaces without legacy report CSS hooks', async () => {
+    const rendered = await render(
+      <ReportBodyEditor body={reportBodyFixture} onChange={() => undefined} />,
+    );
+    cleanups.push(rendered.cleanup);
+
+    const editor = rendered.container.querySelector('[aria-label="Structured report editor"]');
+    const sectionNavigation = rendered.container.querySelector(
+      'nav[aria-label="Report sections"]',
+    );
+
+    expect(editor).toHaveClass('grid', 'gap-4');
+    expect(sectionNavigation).toHaveClass('overflow-x-auto', 'bg-surface-muted');
+    expect(field(rendered.container, 'Report title')).toHaveClass('min-h-11');
+    expect(button(rendered.container, 'Add worker')).toHaveClass('bg-card');
+    expect(
+      Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>
+        element.className.split(/\s+/),
+      ),
+    ).not.toEqual(expect.arrayContaining([expect.stringMatching(/^reports-/)]));
+  });
+
   it('edits the canonical body and supports repeatable keyboard-friendly rows', async () => {
     let current = structuredClone(reportBodyFixture);
 

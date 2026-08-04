@@ -12,6 +12,26 @@ afterEach(async () => {
 });
 
 describe('ReportReview', () => {
+  it('uses the shared Tailwind card, field, and button language', async () => {
+    const rendered = await render(
+      <ReportReview comments={[commentFixture]} onAddComment={async () => undefined} />,
+    );
+    cleanups.push(rendered.cleanup);
+
+    expect(rendered.container.querySelector('section')).toHaveClass(
+      'rounded-card-ui',
+      'bg-card',
+      'shadow-raised-ui',
+    );
+    expect(field(rendered.container, 'Add a comment')).toHaveClass('min-h-28');
+    expect(button(rendered.container, 'Add comment')).toHaveClass('bg-primary');
+    expect(
+      Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>
+        element.className.split(/\s+/),
+      ),
+    ).not.toEqual(expect.arrayContaining([expect.stringMatching(/^reports-/)]));
+  });
+
   it('renders loading, empty, and retryable error states', async () => {
     const retry = vi.fn();
     const loading = await render(

@@ -13,6 +13,21 @@ afterEach(async () => {
 });
 
 describe('ReportPreview', () => {
+  it('uses mobile-aligned cards and status treatments without legacy report CSS hooks', async () => {
+    const rendered = await render(<ReportPreview body={reportBodyFixture} />);
+    cleanups.push(rendered.cleanup);
+
+    const preview = rendered.container.querySelector('[data-testid="report-preview"]');
+    expect(preview).toHaveClass('rounded-card-ui', 'bg-card', 'shadow-raised-ui');
+    expect(rendered.container.textContent).toContain('High');
+    expect(rendered.container.querySelector('.bg-warning-soft')).toHaveTextContent('High');
+    expect(
+      Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>
+        element.className.split(/\s+/),
+      ),
+    ).not.toEqual(expect.arrayContaining([expect.stringMatching(/^reports-/)]));
+  });
+
   it('renders a safe untitled report for an empty canonical body', async () => {
     const rendered = await render(<ReportPreview body={createEmptyReportBody()} />);
     cleanups.push(rendered.cleanup);

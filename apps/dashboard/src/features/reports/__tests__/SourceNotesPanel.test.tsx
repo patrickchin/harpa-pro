@@ -28,6 +28,26 @@ function wrap(children: ReactNode) {
 }
 
 describe('SourceNotesPanel', () => {
+  it('uses the shared Tailwind evidence card and read-only badge treatment', async () => {
+    const rendered = await render(
+      wrap(<SourceNotesPanel api={fakeReportsApi()} notes={[noteFixtures[0]!]} />),
+    );
+    cleanups.push(rendered.cleanup);
+
+    expect(rendered.container.querySelector('aside')).toHaveClass(
+      'rounded-card-ui',
+      'bg-card',
+      'shadow-raised-ui',
+    );
+    expect(rendered.container.textContent).toContain('Read only');
+    expect(rendered.container.querySelector('.bg-surface-muted')).toHaveTextContent('Read only');
+    expect(
+      Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>
+        element.className.split(/\s+/),
+      ),
+    ).not.toEqual(expect.arrayContaining([expect.stringMatching(/^reports-/)]));
+  });
+
   it('renders stable loading, empty, and retryable error states', async () => {
     const retry = vi.fn();
     const loading = await render(

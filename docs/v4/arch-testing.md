@@ -109,7 +109,15 @@ Each AI-touching route has a test that:
   real emulator, then run the bounded
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
   ceiling, emulator boot has a 300-second ceiling, and the Maestro
-  command has a 180-second ceiling.
+  command has a 420-second ceiling.
+- After clearing app state, the flow waits up to 30 seconds for either
+  the Expo Dev Launcher home screen or Android's known Quickstep ANR
+  dialog. It chooses the dialog's semantic `Wait` action conditionally,
+  then requires the `Development Build` heading within 30 seconds before
+  opening the Metro deep link. It performs the same conditional recovery
+  once after `openLink`: a 90-second union wait observes Quickstep,
+  the Metro server row, or app UI before conditional recovery, server
+  selection, and app assertions.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild
@@ -129,8 +137,19 @@ Each AI-touching route has a test that:
 - `apps/site/tests/docs.spec.ts` covers local search, empty results, guide
   traversal, responsive navigation, internal links, assets, duplicate ids,
   and the branded 404 against the production static build.
-- `site-preview.yml` also verifies one checked-in legacy redirect after the
-  build is deployed to Cloudflare Pages.
+- `site-preview.yml` also waits for the native Cloudflare Git deployment's
+  exact-SHA marker and verifies one checked-in legacy redirect.
+
+### Dashboard (Playwright)
+
+- `test:e2e` keeps broad mock-backed browser coverage.
+- `test:e2e:live` runs one serial Chromium journey against the stable
+  `pr-<n>.harpa-pro-dashboard.pages.dev` alias and its isolated API.
+- The workflow first verifies the Fly API at GitHub's synthetic merge SHA.
+- It then verifies the Pages marker at the pull request head SHA and checks SPA
+  routing before the live journey starts.
+- The live lane uses public password-account email identities from the Pages
+  build. It loads the password from Doppler only after deployment.
 
 ## Test the default wiring
 
@@ -142,7 +161,7 @@ trivial to swap collaborators for fakes. They also make it trivial
 to never actually run the route through its **default** wiring —
 the wiring that `docker compose up`, `:mock` builds, and PR
 previews depend on. When 100% of a route's tests inject a stub,
-the stub *is* the spec; the factory is untested.
+the stub _is_ the spec; the factory is untested.
 
 The rule, applied to every route that constructs a collaborator
 via a `createXClient()` factory:
@@ -180,18 +199,19 @@ Active today:
 | `unit.yml`                    | every push                | `pnpm test` green                                                                                      |
 | `api-integration.yml`         | every push                | Combined API unit + Testcontainers suite green at ≥ 90% line coverage                                  |
 | `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
-| `dependency-review.yml`       | every PR                  | Reject newly introduced high or critical dependency vulnerabilities                                   |
-| `pr-preview.yml`              | PR open / push            | Credential-free path and migration guards; human-owned preview lifecycle                               |
-| `mobile-ota-pr.yml`           | mobile-relevant PR        | Publish an OTA preview for a human-owned same-repository PR                                            |
-| `site-preview.yml`            | PR to `dev` or `main`     | Verify the public site and publish a human-owned Pages preview                                         |
-| `site-dev.yml`                | push to `dev`             | Deploy the public site to the Pages `dev` branch                                                       |
-| `site-prod.yml`               | push to `main`            | Deploy the public site to the Pages production branch                                                  |
-| `admin-preview.yml`           | admin-relevant PR         | Verify the admin site and publish a human-owned Pages preview                                          |
-| `admin-dev.yml`               | push to `dev`             | Deploy and verify the standalone admin site's Pages `dev` branch                                      |
-| `admin-prod.yml`              | push to `main`            | Deploy and verify the standalone admin site's Pages production branch                                 |
-| `dashboard-preview.yml`       | PR to `dev` or `main`     | Verify the dashboard and publish a human-owned preview against the PR or dev API                       |
-| `dashboard-dev.yml`           | push to `dev`             | Deploy the dashboard to the Pages `dev` branch after the API check                                    |
-| `dashboard-prod.yml`          | push to `main`            | Deploy the dashboard to the Pages production branch after the API check                               |
+| `dependency-review.yml`       | every PR                  | Reject newly introduced high or critical dependency vulnerabilities                                    |
+| `pr-preview.yml`              | PR open / push            | Credential-free path/migration guards; human-owned PR preview lifecycle                                |
+| `pages-preview-ref.yml`       | human-owned same-repo PR  | Mirror/delete the exact `pr-N` Git ref without checking out PR code                                    |
+| `mobile-ota-pr.yml`           | mobile-relevant PR        | Human-owned same-repo PR OTA publication                                                               |
+| `admin-preview.yml`           | admin-relevant PR         | Credential-free checks plus exact-SHA native Pages preview verification                                |
+| `admin-dev.yml`               | push to `dev`             | Verify the exact SHA and routes on the native admin `dev` deployment                                   |
+| `admin-prod.yml`              | push to `main`            | Verify the exact SHA and routes on both native admin production hostnames                              |
+| `site-preview.yml`            | PR to `dev` or `main`     | Credential-free checks plus exact-SHA native Pages preview verification                                |
+| `site-dev.yml`                | push to `dev`             | Verify the exact SHA on the native public-site `dev` deployment                                        |
+| `site-prod.yml`               | push to `main`            | Verify the exact SHA on every native public-site production hostname                                   |
+| `dashboard-preview.yml`       | PR to `dev` or `main`     | Verify exact head-SHA Git preview, SPA routing, and live browser checks on the stable alias            |
+| `dashboard-dev.yml`           | push to `dev`             | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment                           |
+| `dashboard-prod.yml`          | push to `main`            | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
 
 ### Dependency security automation
 

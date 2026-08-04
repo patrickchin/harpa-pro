@@ -26,6 +26,11 @@ describe('SignInForm', () => {
     expect(onSendCode).toHaveBeenCalledWith('manager@example.com');
     expect(screen.getByRole('heading', { name: 'Check your email' })).toBeVisible();
     expect(screen.getByText('manager@example.com')).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Six-digit code' })).toHaveClass(
+      'font-normal',
+      'tracking-normal',
+    );
+    expect(screen.getByRole('textbox', { name: 'Six-digit code' })).not.toHaveClass('font-bold');
 
     await user.type(screen.getByRole('textbox', { name: 'Six-digit code' }), '123456');
     await user.click(screen.getByRole('button', { name: 'Verify code' }));
@@ -40,11 +45,7 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     const onSendCode = vi.fn().mockResolvedValue(undefined);
     render(
-      <SignInForm
-        onSendCode={onSendCode}
-        onSignInWithPassword={vi.fn()}
-        onVerifyCode={vi.fn()}
-      />,
+      <SignInForm onSendCode={onSendCode} onSignInWithPassword={vi.fn()} onVerifyCode={vi.fn()} />,
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'not-an-email');
@@ -58,11 +59,7 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     const onSendCode = vi.fn().mockRejectedValue(new Error('Email delivery is unavailable.'));
     render(
-      <SignInForm
-        onSendCode={onSendCode}
-        onSignInWithPassword={vi.fn()}
-        onVerifyCode={vi.fn()}
-      />,
+      <SignInForm onSendCode={onSendCode} onSignInWithPassword={vi.fn()} onVerifyCode={vi.fn()} />,
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'manager@example.com');
@@ -84,10 +81,7 @@ describe('SignInForm', () => {
       />,
     );
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Email address' }),
-      ' DEMO2@HARPAPRO.COM ',
-    );
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), ' DEMO2@HARPAPRO.COM ');
     await user.click(screen.getByRole('button', { name: 'Send code' }));
 
     expect(onSendCode).not.toHaveBeenCalled();
@@ -137,11 +131,7 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     const onSendCode = vi.fn().mockResolvedValue(undefined);
     render(
-      <SignInForm
-        onSendCode={onSendCode}
-        onSignInWithPassword={vi.fn()}
-        onVerifyCode={vi.fn()}
-      />,
+      <SignInForm onSendCode={onSendCode} onSignInWithPassword={vi.fn()} onVerifyCode={vi.fn()} />,
     );
 
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'demo@harpapro.com');

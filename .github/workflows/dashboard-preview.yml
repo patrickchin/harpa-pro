@@ -1,9 +1,7 @@
 name: dashboard-preview
 
-# Test and deploy the office dashboard to a unique Cloudflare Pages preview.
-# Every dashboard preview uses the matching isolated Fly/Neon PR backend so
-# live browser journeys never mutate the shared dev environment. Forks are
-# skipped because deployment and test credentials are unavailable.
+# Test the office dashboard on every PR. Cloudflare Git publishes the mirrored
+# pr-N head while the Fly preview runs GitHub's synthetic merge commit.
 
 on:
   pull_request:
@@ -18,15 +16,19 @@ on:
       - '.github/actions/changed-paths/**'
       - '.github/actions/setup-monorepo/**'
       - '.github/workflows/dashboard-*.yml'
+      - '.github/workflows/pages-preview-ref.yml'
       - '.github/workflows/pr-preview.yml'
       - 'infra/fly/fly.preview.toml'
-      - 'scripts/ci/ensure-dashboard-pages-project.sh'
-      - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/build-cloudflare-pages.sh'
       - 'scripts/ci/verify-api-release.sh'
+      - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - 'scripts/ci/__tests__/cloudflare-pages-build.test.sh'
+      - 'scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh'
       - 'scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh'
       - 'scripts/ci/__tests__/dashboard-pages-policy.test.sh'
-      - 'scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh'
       - 'scripts/ci/__tests__/verify-dashboard-pages.test.sh'
+      - 'scripts/ci/__tests__/verify-pages-deployment.test.sh'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -38,50 +40,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.user.login != 'dependabot[bot]'
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      deployments: write
+    env:
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/setup-monorepo
 
-      - name: Select preview API
-        id: api
-        shell: bash
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          base_url="https://harpa-pro-api-pr-${PR_NUMBER}.fly.dev"
-          echo "base-url=$base_url" >> "$GITHUB_OUTPUT"
-          echo "VITE_API_BASE_URL=$base_url" >> "$GITHUB_ENV"
-
       - name: Test dashboard deployment policy
         run: |
+          bash scripts/ci/__tests__/cloudflare-pages-build.test.sh
+          bash scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh
           bash scripts/ci/__tests__/dashboard-pages-policy.test.sh
           bash scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh
-          bash scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh
+          bash scripts/ci/__tests__/verify-pages-deployment.test.sh
           bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
-
-      - name: Validate dashboard live identities
-        shell: bash
-        env:
-          DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
-          DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
-        run: |
-          if [[ -z "$DASHBOARD_LIVE_OWNER_EMAIL" || -z "$DASHBOARD_LIVE_EDITOR_EMAIL" ]]; then
-            echo "::error::TEST_ACCOUNT_EMAIL_DEV and TEST_ACCOUNT_EMAIL2_DEV must match the Doppler test-account allowlist"
-            exit 1
-          fi
 
       - name: Test dashboard
         run: pnpm --filter @harpa/dashboard test
@@ -100,7 +77,7 @@ jobs:
 
       - name: Build dashboard
         env:
-          VITE_API_BASE_URL: ${{ steps.api.outputs.base-url }}
+          VITE_API_BASE_URL: ${{ env.API_PREVIEW_ORIGIN }}
           VITE_PASSWORD_ACCOUNT_EMAILS: '${{ vars.TEST_ACCOUNT_EMAIL_DEV }},${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}'
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}
           VITE_SENTRY_ENVIRONMENT: preview
@@ -116,51 +93,68 @@ jobs:
             exit 1
           fi
 
+  deployment:
+    needs: verify
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      DASHBOARD_BRANCH: pr-${{ github.event.pull_request.number }}
+      DASHBOARD_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-monorepo
+
       - name: Verify compatible preview API
         env:
-          API_HEALTH_URL: ${{ steps.api.outputs.base-url }}/healthz
-          API_READY_URL: ${{ steps.api.outputs.base-url }}/readyz
-          # This preview is rebuilt for every dashboard PR, so an ancestor is
-          # never sufficient: browser and API must share the exact merge SHA.
+          API_HEALTH_URL: ${{ env.API_PREVIEW_ORIGIN }}/healthz
+          API_READY_URL: ${{ env.API_PREVIEW_ORIGIN }}/readyz
           API_PATH_PATTERN: '.*'
-          # pr-preview.yml and this workflow both test GitHub's synthetic
-          # pull-request merge ref, so compatibility must use github.sha.
+          # pr-preview checks out GitHub's synthetic merge ref.
           EXPECTED_GIT_COMMIT: ${{ github.sha }}
           API_RELEASE_ATTEMPTS: 60
           API_RELEASE_SLEEP: 10
         run: bash scripts/ci/verify-api-release.sh
 
-      - name: Ensure dashboard Cloudflare Pages project
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bash scripts/ci/ensure-dashboard-pages-project.sh
-
-      - name: Deploy dashboard preview to Cloudflare Pages
-        id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          packageManager: pnpm
-          command: >-
-            pages deploy apps/dashboard/dist
-            --project-name=harpa-pro-dashboard
-            --branch=pr-${{ github.event.pull_request.number }}
-            --commit-hash=${{ github.sha }}
-            --commit-dirty=true
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "$DASHBOARD_PREVIEW_ORIGIN"
+          --commit "${{ github.event.pull_request.head.sha }}"
+          --branch "$DASHBOARD_BRANCH"
+          --title 'Harpa Pro Dashboard'
 
       - name: Verify deployed dashboard SPA
-        if: steps.deploy.outputs.deployment-url
         env:
-          DASHBOARD_URL: ${{ steps.deploy.outputs.deployment-url }}
+          DASHBOARD_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
         run: bash scripts/ci/verify-dashboard-pages.sh
+
+      - name: Install deployed-journey browser
+        run: pnpm --filter @harpa/dashboard exec playwright install --with-deps chromium
+
+      - name: Validate dashboard live identities
+        shell: bash
+        env:
+          DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
+        run: |
+          if [[ -z "$DASHBOARD_LIVE_OWNER_EMAIL" || -z "$DASHBOARD_LIVE_EDITOR_EMAIL" ]]; then
+            echo "::error::TEST_ACCOUNT_EMAIL_DEV and TEST_ACCOUNT_EMAIL2_DEV must match the Doppler test-account allowlist"
+            exit 1
+          fi
 
       - uses: dopplerhq/cli-action@v4
 
       - name: Load dashboard live credentials
-        if: steps.deploy.outputs.deployment-url
         shell: bash
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
@@ -175,18 +169,17 @@ jobs:
           echo "DASHBOARD_LIVE_PASSWORD=$dashboard_live_password" >> "$GITHUB_ENV"
 
       - name: Test deployed dashboard live journeys
-        if: steps.deploy.outputs.deployment-url
         shell: bash
         env:
-          DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}
-          DASHBOARD_LIVE_API_URL: ${{ steps.api.outputs.base-url }}
+          DASHBOARD_LIVE_BASE_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
+          DASHBOARD_LIVE_API_URL: ${{ env.API_PREVIEW_ORIGIN }}
           DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
           DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
           DASHBOARD_LIVE_RUN_ID: pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: pnpm --filter @harpa/dashboard test:e2e:live
 
       - name: Upload live journey failure screenshots
-        if: failure() && steps.deploy.outputs.deployment-url
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: dashboard-live-e2e-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
@@ -194,21 +187,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Comment dashboard preview URLs on PR
-        if: steps.deploy.outputs.deployment-url
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Comment dashboard preview URL on PR
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: dashboard-preview
           message: |
             ### Office dashboard preview
 
-            - **Test URL (this commit):** ${{ steps.deploy.outputs.deployment-url }}
-            - **PR alias (latest push):** ${{ steps.deploy.outputs.pages-deployment-alias-url }}
-            - **API:** ${{ steps.api.outputs.base-url }}
-            - **Tested merge:** `${{ github.sha }}`
-            - **PR head:** `${{ github.event.pull_request.head.sha }}`
+            - **Dashboard:** ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
+            - **API:** ${{ env.API_PREVIEW_ORIGIN }}
+            - **Cloudflare Git branch:** `${{ env.DASHBOARD_BRANCH }}`
+            - **Pages head:** `${{ github.event.pull_request.head.sha }}`
+            - **Tested API merge:** `${{ github.sha }}`
 
-            The immutable test URL and direct client-side route passed the
-            Cloudflare Pages SPA check. The deployed Chromium journey also
+            The stable dashboard alias passed the exact-SHA marker and
+            client-side SPA route checks. The deployed Chromium journey also
             exercised real auth, Fly, Neon, and one live AI generation against
-            the isolated `harpa-pro-api-pr-${{ github.event.pull_request.number }}` preview.
+            the isolated pull-request API.

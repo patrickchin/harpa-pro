@@ -1,6 +1,6 @@
 # @harpa/site
 
-Astro 5 + Tailwind v4 public site for `harpapro.com`, including marketing,
+Astro 7 + Tailwind v4 public site for `harpapro.com`, including marketing,
 legal, roadmap, and product-guide routes.
 
 See [`docs/marketing/`](../../docs/marketing/) for the full plan
@@ -17,15 +17,16 @@ pnpm --filter @harpa/site test:e2e
 
 ## Stack
 
-- Astro 5 (static output, no SSR adapter)
+- Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)
 - Tailwind v4 via `@tailwindcss/vite`
 - React 19 islands (added in M1/M2)
 - MDX content collections (added in M0.4)
 - Typed product guides under `/docs`
 - Playwright coverage for docs navigation, search, links, and mobile layout
-- Deployed to Cloudflare Pages by uploading `dist/` directly via
-  `wrangler pages deploy` (the `@astrojs/cloudflare` adapter is
-  intentionally not installed — it's only required for SSR routes).
+- Deployed from Git by the `harpa-pro` Cloudflare Pages project. Cloudflare
+  runs `scripts/ci/build-cloudflare-pages.sh site`; the
+  `@astrojs/cloudflare` adapter is intentionally not installed because every
+  route is static.
 
 Hard rules: no JS unless an island needs it; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best

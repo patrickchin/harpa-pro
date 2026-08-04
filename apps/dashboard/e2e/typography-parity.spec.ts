@@ -13,10 +13,13 @@ test.describe('mobile typography parity', () => {
     await expect(email).toHaveCSS('font-weight', '400');
     await expect(email).toHaveCSS('letter-spacing', 'normal');
     await expect(email).toHaveCSS('text-transform', 'none');
-    await expect(page.getByRole('button', { name: 'Send code' })).toHaveCSS(
-      'font-weight',
-      '600',
-    );
+    await expect(page.getByRole('button', { name: 'Send code' })).toHaveCSS('font-weight', '600');
+    await page.getByRole('textbox', { name: 'Email address' }).fill('manager@example.com');
+    await page.getByRole('button', { name: 'Send code' }).click();
+    const otp = page.getByRole('textbox', { name: 'Six-digit code' });
+    await expect(otp).toHaveCSS('font-weight', '400');
+    await expect(otp).toHaveCSS('letter-spacing', 'normal');
+    await expect(otp).toHaveCSS('text-transform', 'none');
 
     const authenticatedApi = new MockDashboardApi({ role: 'owner' });
     await authenticatedApi.install(context);
@@ -30,6 +33,11 @@ test.describe('mobile typography parity', () => {
       'font-weight',
       '700',
     );
+    await expect(page.getByRole('table', { name: 'Projects' }).getByRole('link').first()).toHaveCSS(
+      'font-weight',
+      '700',
+    );
+    await expect(page.getByRole('button', { name: 'New project' })).toHaveCSS('font-size', '16px');
     const projectsNavigationLink = page
       .getByRole('navigation', { name: 'Primary' })
       .getByRole('link', { name: 'Projects' });
@@ -53,10 +61,7 @@ test.describe('mobile typography parity', () => {
     await page.goto('/projects/prj_01234567/reports/8');
     await page.getByRole('tab', { name: 'Report' }).click();
     const preview = page.getByTestId('report-preview');
-    await expect(preview.getByRole('heading', { name: 'Summary' })).toHaveCSS(
-      'font-size',
-      '13px',
-    );
+    await expect(preview.getByRole('heading', { name: 'Summary' })).toHaveCSS('font-size', '13px');
     await expect(page.getByRole('tab', { name: 'Report' })).toHaveCSS('font-weight', '600');
 
     await page.getByRole('tab', { name: 'Review' }).click();

@@ -37,7 +37,7 @@ function ProjectRows({ projects }: { projects: projectContract.Project[] }) {
   return projects.map((project) => (
     <tr className="transition-colors hover:bg-surface-emphasis" key={project.id}>
       <th className={tableCellClassName} scope="row">
-        <Link className={`${projectLinkClassName} font-semibold`} to={`/projects/${project.id}`}>
+        <Link className={`${projectLinkClassName} font-bold`} to={`/projects/${project.id}`}>
           {project.name}
         </Link>
       </th>
@@ -80,21 +80,15 @@ function ProjectCards({ projects }: { projects: projectContract.Project[] }) {
             </div>
             <dl className="mt-4 grid gap-3 text-meta sm:grid-cols-2">
               <div className="min-w-0 border-t border-border pt-3">
-                <dt className="text-label text-muted-foreground uppercase">
-                  Client
-                </dt>
+                <dt className="text-label text-muted-foreground uppercase">Client</dt>
                 <dd className="mt-1 break-words">{project.clientName ?? 'Not provided'}</dd>
               </div>
               <div className="min-w-0 border-t border-border pt-3">
-                <dt className="text-label text-muted-foreground uppercase">
-                  Address
-                </dt>
+                <dt className="text-label text-muted-foreground uppercase">Address</dt>
                 <dd className="mt-1 break-words">{project.address ?? 'Not provided'}</dd>
               </div>
               <div className="min-w-0 border-t border-border pt-3 sm:col-span-2">
-                <dt className="text-label text-muted-foreground uppercase">
-                  Last updated
-                </dt>
+                <dt className="text-label text-muted-foreground uppercase">Last updated</dt>
                 <dd className="mt-1">
                   <time dateTime={project.updatedAt}>{formatRelativeDate(project.updatedAt)}</time>
                 </dd>
@@ -213,9 +207,7 @@ export function ProjectsPageView({
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-label text-muted-foreground uppercase">
-                Create
-              </p>
+              <p className="text-label text-muted-foreground uppercase">Create</p>
               <h2 className="mt-1 text-title-sm" id="new-project-title">
                 New project
               </h2>

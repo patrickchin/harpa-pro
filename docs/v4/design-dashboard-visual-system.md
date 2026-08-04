@@ -1,6 +1,6 @@
 # Dashboard visual system
 
-**Status:** approved direction for the office dashboard  
+**Status:** approved direction for the office dashboard
 **Source of truth:** the shipped mobile app
 
 ## 1. Scope

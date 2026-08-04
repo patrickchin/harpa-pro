@@ -14,19 +14,28 @@ replacement for the existing suite.
 ## Decision
 
 Keep the existing `test:e2e` four-browser mock suite for cheap UI breadth. Add
-`test:e2e:live`, a serial Chromium-only journey against the exact deployed
-dashboard and an isolated Fly/Neon backend for the same pull request.
+`test:e2e:live`, a serial Chromium-only journey against the stable deployed
+dashboard alias and an isolated Fly/Neon backend for the same pull request.
 
 Every dashboard pull request gets that backend, including frontend-only
-changes. The dashboard workflow waits for the exact merge SHA before deploying
-and testing Pages. Live auth uses the existing `TEST_ACCOUNT_EMAILS` and
+changes. Cloudflare Git builds the generated `pr-<number>` branch at the pull
+request head SHA. Live auth uses the existing `TEST_ACCOUNT_EMAILS` and
 `TEST_ACCOUNT_PASSWORD` path already present in the `dev` preview secrets.
 
 The live lane runs after:
 
-1. the matching Fly API reports the expected merge SHA and passes readiness;
-2. the dashboard build is deployed to its immutable Pages URL; and
-3. direct client-side routing on that deployment passes the SPA check.
+1. the matching Fly API reports the tested synthetic merge SHA;
+2. the stable Pages alias serves the pull request head SHA marker; and
+3. direct client-side routing on that alias passes the SPA check.
+
+The two SHA checks are intentionally distinct. The backend validates GitHub's
+tested merge. The static artifact validates the exact head mirrored to
+`refs/heads/pr-<number>`.
+
+This lane becomes active after the approved dashboard Pages project
+recreation. The pre-cutover project has seven preview deployments, no
+production deployment, and no custom domain. It cannot adopt Git integration
+in place.
 
 ## Dashboard-capable parity
 
@@ -74,10 +83,10 @@ deployment and supplies stable owner/editor emails through
 Those values mirror the allowlist that the preview release seeds from Doppler,
 avoiding a second hardcoded source of truth.
 
-The preview build receives those public email identities through
-`VITE_PASSWORD_ACCOUNT_EMAILS`, allowing the same dashboard form used by demo
-accounts to expose its password step. No password is bundled into the Vite
-artifact; the API remains authoritative for the allowlist and credential.
+Cloudflare receives those public email identities through the preview build
+variable `VITE_PASSWORD_ACCOUNT_EMAILS`. This lets the deployed dashboard show
+the password step for the test accounts. No password is bundled into the Vite
+artifact. The API remains authoritative for the allowlist and credential.
 
 The dashboard UI still supports demo-password sign-in; that branch stays
 covered in the mock browser suite. The live preview lane uses the dedicated
@@ -118,6 +127,7 @@ No test writes directly to Neon.
 ## Acceptance
 
 The gate is complete when static policy tests require the isolated preview,
-account seeding, safe Playwright config, live-provider assertion, and post-deploy
-workflow order; the local mock suite still passes; and the deployed PR workflow
-passes the live journey against the current merge SHA.
+account seeding, safe Playwright config, live-provider assertion, and workflow
+order. The local mock suite must still pass. The deployed workflow must verify
+the exact head SHA, then pass the live journey on the stable `pr-<number>`
+alias.

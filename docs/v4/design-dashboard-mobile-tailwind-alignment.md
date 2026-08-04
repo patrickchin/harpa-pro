@@ -51,6 +51,7 @@ second palette, type scale, radius scale, or control-height scale.
 The dashboard uses the established web equivalents of the mobile NativeWind
 stack:
 
+- Vite 8 with the matching official React plugin for the dashboard build;
 - Tailwind CSS v4 through the official `@tailwindcss/vite` integration for all
   ordinary layout and visual styling;
 - `@headlessui/react` for complex accessible interactions such as dialogs,

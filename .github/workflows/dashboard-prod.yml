@@ -1,7 +1,7 @@
 name: dashboard-prod
 
-# Deploy the office dashboard to app.harpapro.com through the production branch
-# of its dedicated Cloudflare Pages project. Never cancel a production deploy.
+# Cloudflare Git publishes main. GitHub first verifies the production Fly API,
+# then proves the exact dashboard commit and SPA fallback on both origins.
 
 on:
   push:
@@ -11,9 +11,11 @@ on:
       - 'packages/api-contract/**'
       - 'packages/design-tokens/**'
       - 'packages/report-core/**'
-      - '.github/workflows/dashboard-*.yml'
-      - 'scripts/ci/ensure-dashboard-pages-project.sh'
+      - '.github/workflows/dashboard-prod.yml'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-api-release.sh'
       - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -26,43 +28,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prod:
+  api:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
-      deployments: write
-    env:
-      VITE_API_BASE_URL: https://api.harpapro.com
-      VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}
-      VITE_SENTRY_ENVIRONMENT: production
-      VITE_SENTRY_RELEASE: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - uses: ./.github/actions/setup-monorepo
-
-      - name: Test dashboard
-        run: pnpm --filter @harpa/dashboard test
-
-      - name: Lint dashboard
-        run: pnpm --filter @harpa/dashboard lint
-
-      - name: Typecheck dashboard
-        run: pnpm --filter @harpa/dashboard typecheck
-
-      - name: Build dashboard
-        run: pnpm --filter @harpa/dashboard build
-
-      - name: Assert Cloudflare Pages SPA artifact
-        shell: bash
-        run: |
-          test -f apps/dashboard/dist/index.html
-          if [[ -e apps/dashboard/dist/404.html ]]; then
-            echo "::error::A top-level 404.html disables Cloudflare Pages SPA routing"
-            exit 1
-          fi
 
       - name: Verify compatible production API
         env:
@@ -74,29 +49,30 @@ jobs:
           API_RELEASE_SLEEP: 10
         run: bash scripts/ci/verify-api-release.sh
 
-      - name: Ensure dashboard Cloudflare Pages project
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bash scripts/ci/ensure-dashboard-pages-project.sh
+  deployment:
+    needs: api
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        origin:
+          - https://harpa-pro-dashboard.pages.dev
+          - https://app.harpapro.com
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Deploy dashboard to Cloudflare Pages (production)
-        id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          packageManager: pnpm
-          command: >-
-            pages deploy apps/dashboard/dist
-            --project-name=harpa-pro-dashboard
-            --branch=main
-            --commit-hash=${{ github.sha }}
-            --commit-dirty=true
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "${{ matrix.origin }}"
+          --commit "${{ github.sha }}"
+          --branch main
+          --title 'Harpa Pro Dashboard'
 
       - name: Verify deployed dashboard SPA
-        if: steps.deploy.outputs.deployment-url
         env:
-          DASHBOARD_URL: ${{ steps.deploy.outputs.deployment-url }}
+          DASHBOARD_URL: ${{ matrix.origin }}
         run: bash scripts/ci/verify-dashboard-pages.sh

@@ -46,6 +46,7 @@ describe('ProjectsPageView', () => {
       'href',
       '/projects/prj_1',
     );
+    expect(within(table).getByRole('link', { name: 'Harbor House' })).toHaveClass('font-bold');
     expect(within(table).getByText('Viewer')).toBeVisible();
     expect(within(table).getAllByText('Not provided')).toHaveLength(2);
   });

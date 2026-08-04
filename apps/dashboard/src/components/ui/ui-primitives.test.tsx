@@ -31,6 +31,7 @@ describe('dashboard UI primitives', () => {
       'min-h-11',
       'bg-primary',
       'font-semibold',
+      'text-base',
     );
     expect(screen.getByRole('button', { name: 'Save changes' })).not.toHaveClass('font-bold');
     expect(screen.getByRole('button', { name: 'Generate report' })).toHaveClass('bg-accent');

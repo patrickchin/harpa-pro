@@ -1,7 +1,7 @@
 # Dashboard typography and density correction
 
-**Status:** approved correction for PR #211 on 2026-08-05  
-**Applies to:** `apps/dashboard` only  
+**Status:** approved correction for PR #211 on 2026-08-05
+**Applies to:** `apps/dashboard` only
 **Visual source of truth:** the checked-in mobile implementation
 
 ## 1. Problem
@@ -36,18 +36,23 @@ The implementation must follow these checked-in sources:
 
 ## 3. Weight contract
 
-| Weight | Dashboard use |
-| --- | --- |
-| 700 | Named `display`, `title`, `title-sm`, `metric`, and `label` tokens; rare avatar initials |
-| 600 | Buttons, tabs, navigation, row names, comment authors, and secondary actions |
-| 500 | Rare supporting emphasis only |
-| 400 | Body copy, form values, select values, textareas, dates, and supporting metadata |
+| Weight | Dashboard use                                                                            |
+| ------ | ---------------------------------------------------------------------------------------- |
+| 700    | Named `display`, `title`, `title-sm`, `metric`, and `label` tokens; rare avatar initials |
+| 600    | Buttons, tabs, navigation, row names, comment authors, and secondary actions             |
+| 500    | Rare supporting emphasis only                                                            |
+| 400    | Body copy, form values, select values, textareas, dates, and supporting metadata         |
 
 `font-extrabold` is not part of the dashboard/mobile parity contract.
 
 Form-label presentation belongs on the label text node, never the wrapper.
 Labels remain 13/16 px, 700, tracked, sentence case, and muted. Uppercase is
 reserved for eyebrows, table headings, and compact status metadata.
+
+Default buttons retain the mobile primitive's 16 px, 600-weight label; the
+explicitly small button remains 14 px. OTP values use regular input typography,
+without a dashboard-only bold or tracked treatment. Project-row titles retain
+the mobile title emphasis at 700 in both card and desktop-table presentations.
 
 ## 4. Scale and spacing contract
 
@@ -76,7 +81,8 @@ This correction does not change `apps/site`.
 
 - Computed form-control weight is 400 and controls do not inherit uppercase or
   label tracking.
-- Computed button, tab, navigation, and member-name weight is 600.
+- Computed default-button size is 16 px; button, tab, navigation, and
+  member-name weight is 600.
 - Ordinary page headings compute to 20/26 px at 700.
 - No `font-extrabold` class is applied by production dashboard components.
 - Report preview section headings follow the compact mobile section-header

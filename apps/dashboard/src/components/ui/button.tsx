@@ -29,7 +29,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  default: 'min-h-11 px-4 py-2.5 text-sm',
+  default: 'min-h-11 px-4 py-2.5 text-base',
   small: 'min-h-11 px-3 py-2 text-sm',
   large: 'min-h-13 px-5 py-3 text-base',
   icon: 'size-11 p-0',

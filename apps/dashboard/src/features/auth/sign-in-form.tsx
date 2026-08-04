@@ -225,7 +225,6 @@ export function SignInForm({
             <Input
               autoComplete="one-time-code"
               autoFocus
-              className="font-bold tracking-[0.24em]"
               disabled={isSubmitting}
               inputMode="numeric"
               maxLength={6}
@@ -237,7 +236,13 @@ export function SignInForm({
           </Field>
           {error ? <AuthError>{error}</AuthError> : null}
           <div className="flex flex-col gap-3">
-            <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
+            <Button
+              className="w-full"
+              disabled={isSubmitting}
+              size="large"
+              type="submit"
+              variant="hero"
+            >
               {pendingAction === 'verify-code' ? 'Verifying…' : 'Verify code'}
             </Button>
             <Button
@@ -262,8 +267,7 @@ export function SignInForm({
       <div className="mt-8">
         <h1 className="text-title text-foreground">Welcome to Harpa Pro</h1>
         <p className="mt-2 text-body text-muted-foreground">
-          Sign in with your work email. Most accounts receive a six-digit code—no password
-          required.
+          Sign in with your work email. Most accounts receive a six-digit code—no password required.
         </p>
       </div>
       <form className="mt-6 flex flex-col gap-4" onSubmit={sendCode} noValidate>
@@ -280,7 +284,13 @@ export function SignInForm({
           />
         </Field>
         {error ? <AuthError>{error}</AuthError> : null}
-        <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
+        <Button
+          className="w-full"
+          disabled={isSubmitting}
+          size="large"
+          type="submit"
+          variant="hero"
+        >
           {pendingAction === 'send-code' ? 'Sending…' : 'Send code'}
         </Button>
       </form>

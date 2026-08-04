@@ -96,12 +96,18 @@ forbid_fixed "$LIVE_SPEC" "page.evaluate(" \
 require_fixed "$CHANGED_PATHS" "dashboard:" "changed-paths publishes a dashboard output"
 require_fixed "$CHANGED_PATHS" "- 'apps/dashboard/**'" \
   "dashboard changes activate isolated preview provisioning"
+require_fixed "$CHANGED_PATHS" "- '.github/workflows/pages-preview-ref.yml'" \
+  "preview-ref changes activate isolated preview provisioning"
+require_fixed "$CHANGED_PATHS" "- 'scripts/ci/build-cloudflare-pages.sh'" \
+  "Cloudflare dashboard builder changes activate preview provisioning"
+require_fixed "$CHANGED_PATHS" "- 'scripts/ci/verify-pages-deployment.sh'" \
+  "exact-SHA verifier changes activate preview provisioning"
 require_fixed "$PR_PREVIEW" "needs.changes.outputs.dashboard == 'true'" \
   "PR Fly and Neon previews include dashboard-only changes"
 require_fixed "$FLY_PREVIEW" "db:seed-test-account" \
   "preview release seeds password-gated automation accounts"
 
-require_fixed "$PREVIEW" 'https://harpa-pro-api-pr-${PR_NUMBER}.fly.dev' \
+require_fixed "$PREVIEW" 'API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev' \
   "dashboard preview always selects its isolated PR API"
 forbid_fixed "$PREVIEW" "https://harpa-pro-api-dev.fly.dev" \
   "live preview never mutates the shared dev backend"
@@ -113,16 +119,28 @@ require_fixed "$PREVIEW" 'DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMA
   "editor identity follows the seeded test-account allowlist"
 require_fixed "$PREVIEW" "VITE_PASSWORD_ACCOUNT_EMAILS:" \
   "preview build exposes only the public password-account identities"
+require_fixed "$PREVIEW" ".github/workflows/pages-preview-ref.yml" \
+  "preview-ref changes trigger the dashboard gate"
+require_fixed "$PREVIEW" "scripts/ci/build-cloudflare-pages.sh" \
+  "Cloudflare build-wrapper changes trigger the dashboard gate"
+require_fixed "$PREVIEW" "scripts/ci/verify-pages-deployment.sh" \
+  "exact-SHA verifier changes trigger the dashboard gate"
 require_fixed "$PREVIEW" "- '.github/actions/setup-monorepo/**'" \
   "shared monorepo setup changes trigger the dashboard gate"
 require_fixed "$PREVIEW" "- 'scripts/ci/verify-api-release.sh'" \
   "API compatibility verifier changes trigger the dashboard gate"
 require_fixed "$PREVIEW" "pnpm --filter @harpa/dashboard test:e2e:live" \
   "workflow runs the deployed live journey"
-require_fixed "$PREVIEW" 'DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}' \
-  "live journey targets the immutable Pages deployment"
-require_fixed "$PREVIEW" 'DASHBOARD_LIVE_API_URL: ${{ steps.api.outputs.base-url }}' \
+require_fixed "$PREVIEW" 'DASHBOARD_LIVE_BASE_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}' \
+  "live journey targets the exact verified stable Pages alias"
+require_fixed "$PREVIEW" 'DASHBOARD_LIVE_API_URL: ${{ env.API_PREVIEW_ORIGIN }}' \
   "live setup targets the matching PR API"
+require_fixed "$PREVIEW" 'EXPECTED_GIT_COMMIT: ${{ github.sha }}' \
+  "Fly verification uses the synthetic merge SHA"
+require_fixed "$PREVIEW" '--commit "${{ github.event.pull_request.head.sha }}"' \
+  "Pages verification uses the mirrored pull-request head SHA"
+require_fixed "$PREVIEW" 'DASHBOARD_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}' \
+  "SPA verification uses the stable Pages alias"
 require_before "$PREVIEW" "bash scripts/ci/verify-dashboard-pages.sh" \
   "pnpm --filter @harpa/dashboard test:e2e:live" \
   "deployed SPA verification precedes live journeys"

@@ -1,169 +1,172 @@
 # Office dashboard deployment (Cloudflare Pages)
 
-This runbook covers the React SPA at `apps/dashboard`. It deploys to the
-dedicated Cloudflare Pages project `harpa-pro-dashboard`; it never uploads to
-the public site's `harpa-pro` project.
+This runbook covers the React SPA at `apps/dashboard`. Its dedicated
+Cloudflare Pages project name is `harpa-pro-dashboard`.
 
-## Deployment topology
+## Provider status and approval boundary
 
-| Source                          | Workflow                | Pages target                                           | API target                  |
-| ------------------------------- | ----------------------- | ------------------------------------------------------ | --------------------------- |
-| Pull request to `dev` or `main` | `dashboard-preview.yml` | `pr-<n>` preview branch                                | Matching isolated PR API    |
-| Push to `dev`                   | `dashboard-dev.yml`     | `dev.harpa-pro-dashboard.pages.dev`                    | `harpa-pro-api-dev.fly.dev` |
-| Push to `main`                  | `dashboard-prod.yml`    | `app.harpapro.com` and `harpa-pro-dashboard.pages.dev` | `api.harpapro.com`          |
+The pre-cutover provider snapshot on 2026-08-05 shows seven preview
+deployments. It shows no production deployment and no custom domain.
 
-Each pull request deployment has two URLs:
+The current project uses Direct Upload. Cloudflare does not support converting
+that project to Git integration. Cloudflare requires a new Git-integrated
+project, as stated in its
+[Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/).
 
-- an immutable, hash-addressed URL for that exact Cloudflare deployment;
-- `pr-<n>.harpa-pro-dashboard.pages.dev`, an alias that advances to the latest
-  push for that pull request.
+Deleting or replacing the current project is an external destructive action.
+It also removes the seven preview deployment records and their URLs. An
+operator must approve that exact action before the provider cutover.
 
-`dashboard-preview.yml` puts both URLs, the selected API URL, GitHub's tested
-synthetic merge SHA, and the pull request head SHA in one `dashboard-preview`
-sticky comment. Cloudflare documents the immutable and branch-alias distinction
-in its
-[preview deployment guide](https://developers.cloudflare.com/pages/configuration/preview-deployments/).
+Until that approval and recreation finish:
 
-The preview workflow runs for dashboard inputs and API inputs. Every run uses
-`https://harpa-pro-api-pr-<n>.fly.dev`. The shared changed-path action makes a
-dashboard-only change provision matching application/admin Neon branches and a
-Fly API, so live browser journeys can create and clean up data without mutating
-the shared dev environment. The Fly release command migrates both branches and
-idempotently seeds any configured test/demo password accounts before the
-dashboard journey starts.
+- do not claim that dashboard Git deployment is active;
+- do not claim that a dashboard production deployment exists;
+- do not claim that `app.harpapro.com` is attached to Pages; and
+- treat dashboard verification timeouts as a provider setup gap.
 
-Before any Pages upload, `scripts/ci/verify-api-release.sh` proves the selected
-API is ready and compatible with the checked-out commit. The dev and production
-workflows use the same gate, so an API contract change cannot publish the
-dashboard ahead of its matching API rollout.
+The minimal cutover recreates the Git-integrated project with the same
+`harpa-pro-dashboard` name. If Cloudflare cannot preserve that name, stop.
+A new hostname also changes API CORS, tests, workflows, and documentation.
 
-## Project bootstrap
+## Target deployment topology
 
-The first preview does not depend on a manual project-creation step.
-`scripts/ci/ensure-dashboard-pages-project.sh` uses the Cloudflare API to read
-or create `harpa-pro-dashboard` and repairs its production branch to `main`.
-Every dashboard workflow runs it immediately before the Pages upload. The
-operation is idempotent and verifies the end state if two first deployments
-race.
+The following table is the post-cutover contract. It does not describe the
+current external project before recreation.
 
-To pre-create the project for an operator check, authenticate Wrangler as a
-Cloudflare account member and run:
+| Git source | Pages origin                           | API target                     |
+| ---------- | -------------------------------------- | ------------------------------ |
+| `pr-<n>`   | `pr-<n>.harpa-pro-dashboard.pages.dev` | `harpa-pro-api-pr-<n>.fly.dev` |
+| `dev`      | `dev.harpa-pro-dashboard.pages.dev`    | `harpa-pro-api-dev.fly.dev`    |
+| `main`     | `harpa-pro-dashboard.pages.dev`        | `api.harpapro.com`             |
 
-```bash
-pnpm exec wrangler pages project create harpa-pro-dashboard \
-  --production-branch=main
-```
+`app.harpapro.com` is a later production custom-domain target. It is not part
+of the current preview-only provider state.
 
-Whether CI or an operator creates it, confirm it is separate from the public
-site:
+Cloudflare Git publishes each static artifact. GitHub Actions tests the source
+and verifies the deployed artifact. GitHub Actions does not upload the
+dashboard or hold Cloudflare credentials.
 
-```bash
-pnpm exec wrangler pages project list
-```
+## Project recreation
 
-There must be two project rows:
+After explicit approval, configure the replacement project as follows:
 
-- `harpa-pro` for `apps/site`;
-- `harpa-pro-dashboard` for `apps/dashboard`.
+1. Connect `patrickchin/harpa-pro` through Cloudflare Pages Git integration.
+2. Keep the project name `harpa-pro-dashboard`.
+3. Set the repository root as the build root.
+4. Set the build command to
+   `bash scripts/ci/build-cloudflare-pages.sh dashboard`.
+5. Set the output directory to `apps/dashboard/dist`.
+6. Set `main` as the production branch.
+7. Restrict preview builds to `dev` and `pr-*` branches.
+8. Keep production builds disabled until production activation is approved.
 
-Cloudflare's
-[Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/)
-describes the project and branch model used by these workflows.
+Build watch paths must include `apps/dashboard`, its workspace dependencies,
+the root workspace files, and `scripts/ci/build-cloudflare-pages.sh`.
 
-The automated bootstrap and deployments use the GitHub Actions secrets already
-configured for the public site:
+## Cloudflare build environment
 
-- `CLOUDFLARE_ACCOUNT_ID`;
-- `CLOUDFLARE_API_TOKEN`, scoped to Account → Cloudflare Pages → Edit.
-- `SENTRY_DASHBOARD_DSN`, optional; when present, the build enables
-  privacy-safe dashboard error and performance telemetry.
+The build wrapper derives the API target from `CF_PAGES_BRANCH` and exports it
+as `VITE_API_BASE_URL`:
 
-The token may be reused because it is account-scoped. No dashboard API URL is a
-secret. Vite inlines `VITE_API_BASE_URL` into the uploaded bundle, so every
-workflow sets it on the build itself. Preview builds also inline
-`VITE_PASSWORD_ACCOUNT_EMAILS`, a comma-separated list of public automation
-identities from repository variables; the password remains server-side and in
-the live-test process only. Setting either value in the Pages dashboard does not
-change a pre-built `dist` upload.
+| Branch   | `VITE_API_BASE_URL`                    |
+| -------- | -------------------------------------- |
+| `pr-<n>` | `https://harpa-pro-api-pr-<n>.fly.dev` |
+| `dev`    | `https://harpa-pro-api-dev.fly.dev`    |
+| `main`   | `https://api.harpapro.com`             |
 
-## Production hostname
+Configure these dashboard values in Cloudflare Pages:
 
-Do not create only a DNS record. In Workers & Pages:
+- `VITE_PASSWORD_ACCOUNT_EMAILS`: preview-only, comma-separated public test
+  account email addresses;
+- `VITE_SENTRY_DSN`: optional public browser DSN.
 
-1. Open `harpa-pro-dashboard`.
-2. Open **Custom domains** and select **Set up a domain**.
-3. Add `app.harpapro.com`.
-4. Replace the existing parked/redirect record only as part of this setup.
-5. Wait for the Pages custom domain and TLS certificate to become active.
+The build wrapper sets `VITE_SENTRY_RELEASE` from
+`CF_PAGES_COMMIT_SHA`. It sets the default Sentry environment from the branch.
+The dashboard does not initialize Sentry when `VITE_SENTRY_DSN` is empty.
 
-Because `harpapro.com` is already a Cloudflare zone, Cloudflare should create or
-replace the proxied CNAME during the custom-domain flow. Manually pointing a
-CNAME at Pages without associating the hostname with the project can return
-`522`; follow Cloudflare's
-[custom-domain procedure](https://developers.cloudflare.com/pages/configuration/custom-domains/).
+The password-account emails are public browser configuration. The password is
+not. The live test loads `TEST_ACCOUNT_PASSWORD` from Doppler after deployment
+and keeps it out of the Pages artifact.
 
-Verify before merging the first dashboard change to `main`:
+Do not add `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` to a dashboard
+workflow. The Git integration owns publication.
 
-```bash
-curl -I https://app.harpapro.com/
-DASHBOARD_URL=https://app.harpapro.com \
-  bash scripts/ci/verify-dashboard-pages.sh
-```
+## Pull request ref and SHA contract
 
-## Browser auth and CORS setup
+`pages-preview-ref.yml` owns the preview branch lifecycle for human-owned,
+same-repository pull requests:
 
-The API must validate and echo allowed dashboard origins while allowing
-credentials. Do not use `Access-Control-Allow-Origin: *` for authenticated
-requests.
+1. It creates or updates `refs/heads/pr-<n>` to the pull request head SHA.
+2. It never checks out pull request code while holding `contents: write`.
+3. It deletes only that generated ref when the pull request closes.
 
-The browser-auth/CORS allowlist must cover:
+Cloudflare builds the generated branch. The build writes
+`_cf-pages-deployment.json` with `CF_PAGES_COMMIT_SHA` and `CF_PAGES_BRANCH`.
 
-- `http://localhost:3003` and `http://127.0.0.1:3003` for local Vite and
-  Playwright development;
-- `https://app.harpapro.com`;
+`dashboard-preview.yml` polls the stable `pr-<n>` Pages origin until the
+marker contains the pull request head SHA and branch. A stale `200` response
+does not pass this gate.
+
+The API and browser checks have distinct SHA contracts:
+
+- the Fly preview must report GitHub's tested synthetic merge SHA; and
+- the Pages marker must report the pull request head SHA from `pr-<n>`.
+
+After both checks pass, the workflow verifies SPA routing and runs the live
+Chromium journey against the stable `pr-<n>` alias. It does not depend on a
+deployment-specific URL.
+
+## Browser authentication and CORS
+
+The API must echo a validated dashboard origin and allow credentials. Never
+use `Access-Control-Allow-Origin: *` for authenticated requests.
+
+The dashboard origin allowlist covers:
+
+- `http://localhost:3003` and `http://127.0.0.1:3003`;
 - `https://harpa-pro-dashboard.pages.dev`;
 - `https://dev.harpa-pro-dashboard.pages.dev`;
-- the narrowly validated `*.harpa-pro-dashboard.pages.dev` preview hostname
-  pattern, including immutable hashes and `pr-<n>` aliases.
+- the validated `*.harpa-pro-dashboard.pages.dev` preview hostname boundary;
+  and
+- `https://app.harpapro.com` only after custom-domain activation.
 
-The Pages hostname pattern must be validated as a hostname boundary, not with a
-substring check and never as a general `*.pages.dev` wildcard. The same origin
-set must be accepted by better-auth and the dedicated dashboard CORS policy.
+The same origin set must satisfy Better Auth and the dashboard CORS policy.
 The API integration suite owns positive and negative origin cases.
 
-Pages previews are public by default, while dashboard data remains behind Harpa
-Pro authentication. Do not enable Cloudflare Access for previews until the
-post-deploy verifier has a service-token path; Access would otherwise turn its
-anonymous deep-route request into a failure. If Access is added, follow
-Cloudflare's
-[preview Access guidance](https://developers.cloudflare.com/pages/configuration/preview-deployments/)
-and keep application authentication in place.
+Pages previews are public by default. Dashboard data remains behind Harpa Pro
+authentication. Do not enable Cloudflare Access until the verifier has a
+service-token path.
 
 ## SPA routing contract
 
-Cloudflare Pages treats a deployment without a top-level `404.html` as a
-single-page application and serves `/index.html` for unmatched navigation
-paths. See Cloudflare's
-[Pages serving behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/).
+The dashboard artifact must contain `index.html` and no top-level `404.html`.
+Cloudflare then serves the SPA entry document for client-side routes.
 
-Every dashboard workflow therefore:
+After exact-SHA verification, `scripts/ci/verify-dashboard-pages.sh` checks
+both `/` and `/projects/spa-routing-smoke`. Both routes must return `200` with
+the same HTML body.
 
-1. asserts that `apps/dashboard/dist/index.html` exists;
-2. rejects `apps/dashboard/dist/404.html`;
-3. deploys the static directory;
-4. requests both `/` and `/projects/spa-routing-smoke`;
-5. requires both responses to be `200` with the same HTML body.
+## Dev and production activation
 
-`scripts/ci/verify-dashboard-pages.sh` owns the deployed check, and
-`scripts/ci/__tests__/verify-dashboard-pages.test.sh` covers the successful SPA,
-deployment propagation, deep-link `404`, and wrong-document cases with a fake
-HTTP server. The verifier allows up to 18 attempts at five-second intervals so
-transient `522` responses during a new Pages deployment do not create a false
-negative.
+The tokenless workflows verify stable aliases. They do not publish artifacts.
 
-## Local and diagnostic commands
+- `dashboard-dev.yml` checks API compatibility, verifies the exact `dev` SHA,
+  and checks SPA routing on `dev.harpa-pro-dashboard.pages.dev`.
+- `dashboard-prod.yml` checks API compatibility and verifies the exact `main`
+  SHA on each configured production hostname.
 
-Run the same dashboard checks as preview CI:
+Do not enable dashboard production builds during the preview-only cutover.
+Production activation requires a separate approval after `apps/dashboard`
+reaches `main` and the production API compatibility gate passes.
+
+Do not create only a DNS record for `app.harpapro.com`. A later production
+cutover must attach it through the Pages custom-domain flow and wait for an
+active TLS certificate. A CNAME alone does not prove that Pages owns the
+hostname.
+
+## Local checks
+
+Run the dashboard checks without a Cloudflare credential:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:8787 \
@@ -172,48 +175,23 @@ VITE_API_BASE_URL=http://localhost:8787 \
   pnpm --filter @harpa/dashboard lint
 VITE_API_BASE_URL=http://localhost:8787 \
   pnpm --filter @harpa/dashboard typecheck
-VITE_API_BASE_URL=http://localhost:8787 \
-  pnpm --filter @harpa/dashboard build
-pnpm --filter @harpa/dashboard exec playwright install chromium firefox webkit msedge
-pnpm --filter @harpa/dashboard test:e2e
+CF_PAGES_BRANCH=pr-42 \
+CF_PAGES_COMMIT_SHA=0123456789abcdef0123456789abcdef01234567 \
+VITE_PASSWORD_ACCOUNT_EMAILS=test-owner@example.com,test-editor@example.com \
+  bash scripts/ci/build-cloudflare-pages.sh dashboard
+bash scripts/ci/__tests__/cloudflare-pages-build.test.sh
+bash scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh
 bash scripts/ci/__tests__/dashboard-pages-policy.test.sh
+bash scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh
 bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
-```
-
-CI is the deployment source of truth. For a manual preview diagnostic after the
-build:
-
-```bash
-pnpm exec wrangler pages deploy apps/dashboard/dist \
-  --project-name=harpa-pro-dashboard \
-  --branch=diagnostic
-```
-
-Then run:
-
-```bash
-DASHBOARD_URL=https://diagnostic.harpa-pro-dashboard.pages.dev \
-  bash scripts/ci/verify-dashboard-pages.sh
 ```
 
 ## Rollback
 
-For a production frontend regression:
+The current external project has no production deployment to roll back. A
+failed preview cutover rolls forward through a corrected `pr-<n>` commit or
+pauses Git builds while the provider configuration is fixed.
 
-1. Open `harpa-pro-dashboard` → **Deployments**.
-2. Select a known-good production deployment.
-3. Choose **Rollback to this deployment** and confirm.
-4. Run the SPA verifier against `https://app.harpapro.com`.
-5. Confirm sign-in, project load, and one report load against the current API.
-6. Revert or fix the source commit so the next `main` deployment preserves the
-   rollback.
-
-Cloudflare allows rollback to successful production deployments, not preview
-deployments. See its
-[Pages rollback guide](https://developers.cloudflare.com/pages/configuration/rollbacks/).
-Do not roll the dashboard across a breaking API boundary; coordinate the API
-rollback or forward fix first.
-
-For dev, revert or fix on `dev` and let `dashboard-dev.yml` replace the branch
-alias. For a pull request preview, push a correction; the sticky comment keeps
-the prior immutable URL and updates to the new deployment.
+After production activation, use the Cloudflare Pages production rollback
+control for a bad static artifact. Then verify the exact selected artifact,
+SPA routing, sign-in, and one report against the compatible API.

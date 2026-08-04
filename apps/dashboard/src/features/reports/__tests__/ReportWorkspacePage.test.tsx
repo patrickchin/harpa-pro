@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ReportConflictError } from '../api';
 import { ReportWorkspacePage, reportDraftStorageKey } from '../ReportWorkspacePage';
-import { button, change, click, field, flush, keydown, render } from './dom';
+import { button, change, click, field, flush, keydown, render, waitMs } from './dom';
 import { commentFixture, fakeReportsApi, reportFixture } from './fixtures';
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -106,6 +106,58 @@ describe('ReportWorkspacePage draft editing', () => {
     expect(rendered.container.textContent).toContain('Saved');
     expect(button(rendered.container, 'Finalize').disabled).toBe(false);
     expect(rendered.container.textContent).toContain('Concrete delivery moved to 09:15.');
+  });
+
+  it('re-arms autosave when the draft changes during an in-flight save', async () => {
+    let resolveFirstSave: ((report: ReturnType<typeof reportFixture>) => void) | undefined;
+    const updateReport = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<ReturnType<typeof reportFixture>>((resolve) => {
+            resolveFirstSave = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        async (
+          _project: string,
+          _number: number,
+          input: Parameters<ReturnType<typeof fakeReportsApi>['updateReport']>[2],
+        ) =>
+          reportFixture({
+            body: input.body,
+            updatedAt: '2026-07-28T09:02:00.000Z',
+          }),
+      );
+    const rendered = await mountWorkspace({
+      api: fakeReportsApi({ updateReport }),
+      autosaveDelayMs: 10,
+    });
+
+    await change(field(rendered.container, 'Report title'), 'First keyboard edit');
+    await keydown(document, 's', { ctrlKey: true });
+    expect(updateReport).toHaveBeenCalledTimes(1);
+
+    await change(field(rendered.container, 'Report title'), 'Second edit while saving');
+    await waitMs(15);
+    expect(updateReport).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstSave?.(
+        reportFixture({
+          body: updateReport.mock.calls[0]?.[2].body,
+          updatedAt: '2026-07-28T09:01:00.000Z',
+        }),
+      );
+    });
+    await waitMs(15);
+
+    expect(updateReport).toHaveBeenCalledTimes(2);
+    expect(updateReport.mock.calls[1]?.[2]).toMatchObject({
+      expectedUpdatedAt: '2026-07-28T09:01:00.000Z',
+      body: { meta: { title: 'Second edit while saving' } },
+    });
+    expect(rendered.container.textContent).toContain('Saved');
   });
 
   it('forces save with Cmd/Ctrl+S without waiting for autosave', async () => {
@@ -297,6 +349,7 @@ describe('ReportWorkspacePage draft editing', () => {
       }),
     });
 
+    expect(button(rendered.container, 'Generate report')).toHaveClass('bg-accent');
     await click(button(rendered.container, 'Generate report'));
     await flush();
     expect(generateReport).toHaveBeenCalledWith('highland-tower', 7, {
@@ -335,6 +388,21 @@ describe('ReportWorkspacePage draft editing', () => {
 });
 
 describe('ReportWorkspacePage finalized report', () => {
+  it('opens a shared review link on the review tab', async () => {
+    const rendered = await mountWorkspace({
+      api: fakeReportsApi({
+        getReport: async () =>
+          reportFixture({
+            status: 'finalized',
+            finalizedAt: '2026-07-28T10:00:00.000Z',
+          }),
+      }),
+      initialFinalizedTab: 'review',
+    });
+
+    expect(rendered.container.querySelector('[aria-selected="true"]')).toHaveTextContent('Review');
+  });
+
   it('defaults to Report, downloads a PDF, and keeps Review comments append-only', async () => {
     const finalized = reportFixture({
       status: 'finalized',
@@ -462,6 +530,10 @@ describe('ReportWorkspacePage finalized report', () => {
       api: fakeReportsApi({ getReport: async () => finalized }),
       role: 'editor',
     });
+
+    expect(rendered.container.querySelector('[role="tablist"]')).toHaveClass(
+      'bg-surface-muted',
+    );
 
     await click(button(rendered.container, 'Copy link'));
     await flush();

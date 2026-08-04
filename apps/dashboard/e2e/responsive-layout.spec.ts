@@ -4,6 +4,7 @@ import { MockDashboardApi } from './support/mock-api';
 
 const routes = [
   { heading: 'Projects', path: '/projects' },
+  { heading: 'Harbor House', path: '/projects/prj_01234567' },
   { heading: 'Members', path: '/projects/prj_01234567/members' },
   { heading: 'Reports', path: '/projects/prj_01234567/reports' },
   { heading: 'Harbor House progress report', path: '/projects/prj_01234567/reports/7' },
@@ -31,7 +32,11 @@ for (const viewport of viewports) {
       await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible();
       await expect
         .poll(() =>
-          page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+          page.evaluate(() => {
+            const content = document.querySelector<HTMLElement>('#dashboard-content');
+            if (!content) throw new Error('Dashboard content container not found');
+            return content.scrollWidth - content.clientWidth;
+          }),
         )
         .toBeLessThanOrEqual(1);
 

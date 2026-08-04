@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { Badge, BrandMark, Button, Card, Field, Input } from './index';
+import { Badge, BrandMark, Button, Card, Field, Input, TableShell } from './index';
 
 describe('dashboard UI primitives', () => {
   it('renders the canonical brand mark with meaningful or decorative text alternatives', () => {
@@ -59,5 +59,21 @@ describe('dashboard UI primitives', () => {
       'rounded-card-ui',
       'shadow-raised-ui',
     );
+  });
+
+  it('keeps wide desktop tables reachable instead of clipping their columns', () => {
+    render(
+      <TableShell data-testid="table-shell">
+        <table>
+          <tbody>
+            <tr>
+              <td>Report</td>
+            </tr>
+          </tbody>
+        </table>
+      </TableShell>,
+    );
+
+    expect(screen.getByTestId('table-shell')).toHaveClass('overflow-x-auto');
   });
 });

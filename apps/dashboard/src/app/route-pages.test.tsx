@@ -40,7 +40,9 @@ vi.mock('@/features/projects/data-api', () => ({
 vi.mock('@/features/reports', () => {
   return {
     ReportsListPage: () => null,
-    ReportWorkspacePage: () => <section data-testid="report-workspace" />,
+    ReportWorkspacePage: ({ initialFinalizedTab }: { initialFinalizedTab?: string }) => (
+      <section data-initial-tab={initialFinalizedTab} data-testid="report-workspace" />
+    ),
     reportsApi: reportsApiMocks,
   };
 });
@@ -220,5 +222,19 @@ describe('ProjectReportWorkspaceRoute', () => {
     );
 
     expect(screen.getByTestId('report-workspace').parentElement).not.toHaveClass('px-5');
+  });
+
+  it('passes a shared review link through to the finalized report tabs', () => {
+    render(
+      <MemoryRouter initialEntries={['/projects/prj_01234567/reports/7?tab=review']}>
+        <Routes>
+          <Route path="/projects/:project" element={<Outlet context={{ project }} />}>
+            <Route path="reports/:number" element={<ProjectReportWorkspaceRoute />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('report-workspace')).toHaveAttribute('data-initial-tab', 'review');
   });
 });

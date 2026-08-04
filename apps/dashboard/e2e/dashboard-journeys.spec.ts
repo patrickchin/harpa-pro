@@ -35,6 +35,10 @@ test.describe('office dashboard journeys', () => {
 
     await expect(page).toHaveURL(/\/projects\/prj_01234567\/reports\/8\?tab=review$/);
     await expect(page.getByText('Site Visit #8')).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Review' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   test('viewer navigates read-only surfaces, downloads a PDF, and comments', async ({

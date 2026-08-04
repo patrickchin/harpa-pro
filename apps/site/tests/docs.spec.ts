@@ -35,10 +35,10 @@ test("presents two core workflows and concise supporting tasks", async ({
     "/docs/guides/generate-ai-report",
     "/docs/guides/export-share-pdf",
   ];
-  for (let index = 0; index < montageDestinations.length; index += 1) {
+  for (const [index, destination] of montageDestinations.entries()) {
     await expect(montageCards.nth(index)).toHaveAttribute(
       "href",
-      montageDestinations[index],
+      destination,
     );
   }
   await expect(page.locator(".docs-phone-frame")).toHaveCount(0);

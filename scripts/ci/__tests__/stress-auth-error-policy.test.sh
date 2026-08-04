@@ -2,8 +2,8 @@
 # Stress-journey authentication error contract regression test.
 #
 # As a release verifier, I want the post-deploy journey to accept the API's
-# reviewed empty-body response while retaining the distinct malformed-JSON
-# contract, so correct 400 responses do not make dev deployments look broken.
+# reviewed invalid-body response, so correct 400 responses do not make dev
+# deployments look broken.
 #
 # Run directly:
 #   bash scripts/ci/__tests__/stress-auth-error-policy.test.sh

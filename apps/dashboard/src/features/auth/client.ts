@@ -35,3 +35,13 @@ export async function verifySignInCode(input: { email: string; otp: string }): P
     throw new Error(result.error.message ?? 'The sign-in code was not accepted.');
   }
 }
+
+export async function signInWithPassword(input: {
+  email: string;
+  password: string;
+}): Promise<void> {
+  const result = await authClient.signIn.email(input);
+  if (result.error) {
+    throw new Error(result.error.message ?? 'Unable to sign in.');
+  }
+}

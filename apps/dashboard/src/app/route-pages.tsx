@@ -16,6 +16,7 @@ import {
   OnboardingForm,
   SignInForm,
   requestSignInCode,
+  signInWithPassword,
   useAuthSession,
   verifySignInCode,
 } from '@/features/auth';
@@ -78,6 +79,10 @@ export function SignInRoute(): React.JSX.Element {
     <AuthCanvas>
       <SignInForm
         onSendCode={requestSignInCode}
+        onSignInWithPassword={async (input) => {
+          await signInWithPassword(input);
+          await session.refresh();
+        }}
         onVerifyCode={async (input) => {
           await verifySignInCode(input);
           await session.refresh();

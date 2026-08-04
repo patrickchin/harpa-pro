@@ -1,15 +1,22 @@
-import { MailCheck } from 'lucide-react';
+import { KeyRound, MailCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 import { BrandMark, Button, Field, Input } from '@/components/ui';
+import { isDemoAccountEmail } from './demo-account';
 
 interface VerifyCodeInput {
   email: string;
   otp: string;
 }
 
+interface PasswordSignInInput {
+  email: string;
+  password: string;
+}
+
 interface SignInFormProps {
   onSendCode: (email: string) => Promise<void>;
+  onSignInWithPassword: (input: PasswordSignInInput) => Promise<void>;
   onVerifyCode: (input: VerifyCodeInput) => Promise<void>;
 }
 
@@ -40,10 +47,15 @@ function AuthBrand({ eyebrow }: { eyebrow: string }): React.JSX.Element {
   );
 }
 
-export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React.JSX.Element {
-  const [step, setStep] = useState<'email' | 'code'>('email');
+export function SignInForm({
+  onSendCode,
+  onSignInWithPassword,
+  onVerifyCode,
+}: SignInFormProps): React.JSX.Element {
+  const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,6 +69,11 @@ export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React
     setError(null);
     setIsSubmitting(true);
     try {
+      if (isDemoAccountEmail(normalizedEmail)) {
+        setEmail(normalizedEmail);
+        setStep('password');
+        return;
+      }
       await onSendCode(normalizedEmail);
       setEmail(normalizedEmail);
       setStep('code');
@@ -82,6 +99,83 @@ export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedPassword = password.trim();
+    if (!normalizedPassword) {
+      setError('Enter the demo account password.');
+      return;
+    }
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await onSignInWithPassword({ email, password: normalizedPassword });
+    } catch (signInError) {
+      setError(errorMessage(signInError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function useAnotherEmail() {
+    setOtp('');
+    setPassword('');
+    setError(null);
+    setStep('email');
+  }
+
+  if (step === 'password') {
+    return (
+      <section className="w-full max-w-sm">
+        <AuthBrand eyebrow="Secure sign in" />
+        <div className="mt-8">
+          <KeyRound aria-hidden="true" className="mb-3 size-6 text-accent" />
+          <h1 className="text-title font-bold text-foreground">Enter your password</h1>
+          <p className="mt-2 text-body text-muted-foreground">
+            Sign in as <strong className="text-foreground">{email}</strong>.
+          </p>
+        </div>
+        <form className="mt-6 flex flex-col gap-4" onSubmit={submitPassword} noValidate>
+          <Field label="Password">
+            <Input
+              autoComplete="current-password"
+              autoFocus
+              disabled={isSubmitting}
+              key="demo-password"
+              name="password"
+              onChange={(event) => setPassword(event.currentTarget.value)}
+              placeholder="Password"
+              type="password"
+              value={password}
+            />
+          </Field>
+          {error ? <AuthError>{error}</AuthError> : null}
+          <div className="flex flex-col gap-3">
+            <Button
+              className="w-full"
+              disabled={isSubmitting || password.trim().length === 0}
+              size="large"
+              type="submit"
+              variant="hero"
+            >
+              {isSubmitting ? 'Signing in…' : 'Sign in'}
+            </Button>
+            <Button
+              className="w-full"
+              disabled={isSubmitting}
+              onClick={useAnotherEmail}
+              size="large"
+              type="button"
+              variant="outline"
+            >
+              Use another email
+            </Button>
+          </div>
+        </form>
+      </section>
+    );
   }
 
   if (step === 'code') {
@@ -118,14 +212,10 @@ export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React
             <Button
               className="w-full"
               disabled={isSubmitting}
+              onClick={useAnotherEmail}
               size="large"
               type="button"
               variant="outline"
-              onClick={() => {
-                setOtp('');
-                setError(null);
-                setStep('email');
-              }}
             >
               Use another email
             </Button>
@@ -141,7 +231,8 @@ export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React
       <div className="mt-8">
         <h1 className="text-title font-bold text-foreground">Welcome to Harpa Pro</h1>
         <p className="mt-2 text-body text-muted-foreground">
-          Sign in with your work email. We’ll send a six-digit code—no password required.
+          Sign in with your work email. Most accounts receive a six-digit code—no password
+          required.
         </p>
       </div>
       <form className="mt-6 flex flex-col gap-4" onSubmit={sendCode} noValidate>

@@ -17,7 +17,7 @@ test("opens the dashboard from the public header on desktop and mobile", async (
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator("details.site-menu");
-  await mobileMenu.getByRole("button", { name: "Toggle menu" }).click();
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
 
   const mobileDashboard = mobileMenu.getByRole("link", {
     name: "Dashboard",

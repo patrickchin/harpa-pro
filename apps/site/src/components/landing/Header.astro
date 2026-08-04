@@ -1,6 +1,7 @@
 ---
 import Wordmark from "./Wordmark.astro";
 import Icon from "../Icon.astro";
+import { getPublicEnv } from "../../lib/env";
 import { APP_STORE_URL } from "../../lib/links";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 const { hideCta = false } = Astro.props;
+const { dashboardUrl } = getPublicEnv();
 ---
 
 <header
@@ -40,6 +42,12 @@ const { hideCta = false } = Astro.props;
           Download iOS app
         </a>
       )}
+      <a
+        href={dashboardUrl}
+        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:brightness-95 ring-focus"
+      >
+        Dashboard
+      </a>
     </nav>
 
     {/* No-JS mobile menu via <details>/<summary>. The panel is
@@ -84,6 +92,12 @@ const { hideCta = false } = Astro.props;
               Download iOS app
             </a>
           )}
+          <a
+            href={dashboardUrl}
+            class="mt-1 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:brightness-95 ring-focus"
+          >
+            Dashboard
+          </a>
         </div>
       </div>
     </details>

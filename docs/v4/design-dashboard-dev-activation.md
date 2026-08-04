@@ -1,6 +1,6 @@
 # Dashboard dev activation and public entry
 
-**Status:** Approved on 2026-08-05; implementation pending
+**Status:** Implemented on 2026-08-05; dev deployment verification pending
 
 ## Problem
 
@@ -8,7 +8,7 @@ The office dashboard is available on the pull-request Pages branch, but the
 public site has no obvious account entry. The dashboard Pages project also
 limits previews to `pr-211` while the application is absent from `dev`.
 
-Two release blockers must close before the dashboard merges:
+The implementation closes two release blockers before the dashboard merges:
 
 - attachment placement and PDF registration can assign an `updatedAt` value
   that does not advance at millisecond wire precision; and
@@ -27,11 +27,11 @@ unchanged.
 
 The button opens in the same tab. Its build-time URL follows the Pages branch:
 
-| Site branch | Dashboard destination |
-| --- | --- |
-| `pr-<n>` | `https://pr-<n>.harpa-pro-dashboard.pages.dev` |
-| `dev` | `https://dev.harpa-pro-dashboard.pages.dev` |
-| `main` | `https://harpa-pro-dashboard.pages.dev` |
+| Site branch | Dashboard destination                          |
+| ----------- | ---------------------------------------------- |
+| `pr-<n>`    | `https://pr-<n>.harpa-pro-dashboard.pages.dev` |
+| `dev`       | `https://dev.harpa-pro-dashboard.pages.dev`    |
+| `main`      | `https://harpa-pro-dashboard.pages.dev`        |
 
 `app.harpapro.com` remains a later production custom-domain activation. The
 public site must not link to that hostname until Pages owns it and its TLS
@@ -83,4 +83,3 @@ precondition reliable under same-millisecond writes and clock skew.
 4. Merge to `dev`, then verify the exact dashboard and site deployment markers,
    SPA routing, the public-site button, and dashboard sign-in.
 5. Leave `main` and `app.harpapro.com` unchanged.
-

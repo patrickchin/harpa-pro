@@ -337,6 +337,12 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — Attachment placement and PDF registration used direct
+  database timestamps, so `updatedAt` could stay equal at millisecond wire
+  precision or move backward under clock skew. Fix: apply the shared monotonic
+  report-version rule to both writers and pin them with future-timestamp
+  integration tests.
+  [detail](2026-08-05-report-version-millisecond-collision.md)
 - **2026-08-05** — The dormant `harpa-pro-dashboard` Pages project built every
   mirrored `pr-*` ref while `apps/dashboard` existed only in draft PR #211, so
   unrelated pull requests received a failed external dashboard check. Fix:

@@ -66,7 +66,7 @@ rules. Summary below.
   `pnpm --filter @harpa/api db:generate`; policy-only and data migrations
   can use reviewed hand-written SQL. Committed files use
   `<digits>_<slug>.sql`. The current sequence uses four-digit prefixes,
-  such as `0027_project_write_roles.sql`, while the loader also accepts
+  such as `0028_report_version_monotonic.sql`, while the loader also accepts
   older numeric timestamp prefixes.
 - Admin SQL lives under `packages/api/admin-migrations` and is applied with
   `pnpm --filter @harpa/api db:migrate:admin` against
@@ -243,6 +243,18 @@ finalize, and unfinalize. The generate path checks it before the AI call
 and again in the final `UPDATE`, so an edit during generation cannot be
 overwritten. Attachment placement keeps its existing
 `expectedBodyVersion` precondition.
+
+The API serializes `updated_at` at millisecond precision, so every report-row
+writer must advance that value by at least one millisecond. Report service
+writes use the later of the millisecond-truncated database clock and the
+stored value plus one millisecond. Attachment placement uses that shared
+expression. Migration `0028_report_version_monotonic.sql` replaces
+`app.attach_report_pdf()` so PDF registration follows the same rule.
+
+The monotonic rule also handles a database clock behind the stored value. An
+integration test sets a future version before each write and requires the
+returned value to be later. See the
+[recurring-bug entry](../bugs/2026-08-05-report-version-millisecond-collision.md).
 
 `GET /projects/{project}/reports` accepts `status=draft` or
 `status=finalized`. The database applies the status predicate before

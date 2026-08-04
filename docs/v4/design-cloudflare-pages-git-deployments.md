@@ -23,11 +23,11 @@ Cloudflare Git is the only publisher for `harpa-pro`, `harpa-pro-admin`, and
 the Cloudflare API.
 
 The production branch remains `main`. Dashboard automatic production builds
-remain disabled. During the draft rollout, dashboard preview builds are
-restricted to the exact `pr-211` branch. After the application lands on `dev`,
-that allowlist expands to `dev` and ephemeral `pr-*` branches. All three
-projects keep the default `*` build watch include so every allowed branch
-commit produces the exact-SHA marker expected by its verification workflow.
+remain disabled. The initial draft rollout restricted dashboard previews to
+the exact `pr-211` branch. Dev activation expands that allowlist to `dev` and
+ephemeral `pr-*` branches. All three projects keep the default `*` build watch
+include so every allowed branch commit produces the exact-SHA marker expected
+by its verification workflow.
 
 ### Stable pull request branches
 
@@ -59,11 +59,11 @@ Cloudflare invokes `scripts/ci/build-cloudflare-pages.sh <application>`. The
 script fails closed for an unexpected branch and selects build-time public
 configuration as follows:
 
-| Branch        | Public site API | Admin/dashboard API  |
-| ------------- | --------------- | -------------------- |
-| `main`        | production      | production           |
-| `dev`         | development     | development          |
-| `pr-<number>` | production      | matching Fly preview |
+| Branch        | Public site API | Admin/dashboard API  | Public header dashboard                             |
+| ------------- | --------------- | -------------------- | --------------------------------------------------- |
+| `main`        | production      | production           | `https://harpa-pro-dashboard.pages.dev`             |
+| `dev`         | development     | development          | `https://dev.harpa-pro-dashboard.pages.dev`         |
+| `pr-<number>` | production      | matching Fly preview | `https://pr-<number>.harpa-pro-dashboard.pages.dev` |
 
 Every successful build writes a non-sensitive deployment marker containing
 `CF_PAGES_COMMIT_SHA` and `CF_PAGES_BRANCH`. Verification workflows poll the
@@ -83,9 +83,12 @@ password-account identities and an optional public Sentry DSN. Cloudflare
 credentials do not remain in GitHub.
 
 For dashboard builds, the wrapper exports `VITE_API_BASE_URL` from the branch.
-Cloudflare supplies preview-only `VITE_PASSWORD_ACCOUNT_EMAILS` and optional
-`VITE_SENTRY_DSN`. The wrapper derives `VITE_SENTRY_ENVIRONMENT` and
-`VITE_SENTRY_RELEASE` from the branch and `CF_PAGES_COMMIT_SHA`.
+Cloudflare supplies required `VITE_PASSWORD_ACCOUNT_EMAILS` values in both the
+Preview and Production variable scopes. The wrapper rejects a native dashboard
+build when that value is missing or empty. Cloudflare can also supply the
+optional `VITE_SENTRY_DSN`. The wrapper derives `VITE_SENTRY_ENVIRONMENT` and
+`VITE_SENTRY_RELEASE` from the branch and `CF_PAGES_COMMIT_SHA`. The Production
+password-account value stays dormant while production builds are disabled.
 
 ## Workflow ownership
 
@@ -114,8 +117,8 @@ The 2026-08-05 provider verification records this configuration:
 - output directory: `apps/dashboard/dist`;
 - preview build variable: `SKIP_DEPENDENCY_INSTALL=1`;
 - production branch: `main`;
-- automatic production deployments: disabled; and
-- preview custom branch: `pr-211`; and
+- automatic production deployments: disabled;
+- initial preview custom branch: `pr-211`;
 - build watch include: `*`.
 
 Cloudflare preserved the seven existing preview deployments during the
@@ -123,14 +126,13 @@ in-place connection. The project has no production deployment or custom
 domain. Production and `app.harpapro.com` activation require separate
 approval.
 
-The dashboard application remains isolated in
-[draft PR #211](https://github.com/patrickchin/harpa-pro/pull/211). Restricting
-the provider to that exact generated branch prevents unrelated `dev` or
-`pr-*` commits from starting an absent-application build before the dashboard
-lands, while the default watch include guarantees a deployment for every new
-PR head. Expand the preview allowlist only after `apps/dashboard` reaches
-`dev`. Automatic production deployments stay disabled until the application
-reaches `main` through the protected promotion workflow.
+Before dev activation, the dashboard application remained isolated in
+[PR #211](https://github.com/patrickchin/harpa-pro/pull/211). Restricting the
+provider to that exact generated branch prevented unrelated `dev` or `pr-*`
+commits from starting an absent-application build. The dev activation expands
+the preview allowlist to `dev` and `pr-*`. Automatic production deployments
+stay disabled until the application reaches `main` through the protected
+promotion workflow.
 
 ## Verification and rollback
 

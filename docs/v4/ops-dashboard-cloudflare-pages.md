@@ -11,6 +11,8 @@ preview deployments. No project deletion or recreation occurred.
 
 The project has no production deployment or custom domain. Its production
 branch is `main`, but automatic production deployments remain disabled.
+The initial connection limited previews to `pr-211`. Dev activation expands
+the custom preview branches to `dev` and `pr-*` without enabling production.
 
 ## Target deployment topology
 
@@ -24,7 +26,7 @@ remains inactive while automatic production deployments are disabled.
 | `main`     | `harpa-pro-dashboard.pages.dev`        | `api.harpapro.com`             |
 
 `app.harpapro.com` is a later production custom-domain target. It is not part
-of the current preview-only provider state.
+of the current provider state.
 
 Cloudflare Git publishes each static artifact. GitHub Actions tests the source
 and verifies the deployed artifact. GitHub Actions does not upload the
@@ -41,12 +43,27 @@ The verified project configuration is:
 4. Production branch: `main`.
 5. Automatic production deployments: disabled.
 6. Preview branch mode: custom branches.
-7. Preview custom branch during the draft rollout: `pr-211`.
+7. Initial preview custom branch during the draft rollout: `pr-211`.
 8. Build watch include: `*`.
 
-After the dashboard lands on `dev`, expand preview custom branches to `dev` and
-`pr-*`. Keep the build watch include at `*`: every allowed branch commit must
-produce the exact-SHA marker expected by the verification workflow.
+For dev activation, expand preview custom branches to `dev` and `pr-*`. Keep
+the build watch include at `*`. Every allowed branch commit must produce the
+exact-SHA marker expected by the verification workflow.
+
+## Public-site dashboard entry
+
+The shared public-site header shows `Dashboard` as its final desktop and mobile
+action. `PUBLIC_DASHBOARD_URL` is required by the site environment. The Pages
+build wrapper derives its value from the site branch:
+
+| Site branch | `PUBLIC_DASHBOARD_URL`                         |
+| ----------- | ---------------------------------------------- |
+| `pr-<n>`    | `https://pr-<n>.harpa-pro-dashboard.pages.dev` |
+| `dev`       | `https://dev.harpa-pro-dashboard.pages.dev`    |
+| `main`      | `https://harpa-pro-dashboard.pages.dev`        |
+
+The link opens in the same tab. The `main` value defines the future production
+contract, but automatic dashboard production builds remain disabled.
 
 ## Cloudflare build environment
 
@@ -64,9 +81,14 @@ Configure these dashboard values in Cloudflare Pages:
 - `SKIP_DEPENDENCY_INSTALL=1`: required so Pages does not interpret the
   repository-root Fastlane `Gemfile.lock` as a dashboard dependency; the
   explicit build command installs the pnpm workspace with the frozen lockfile;
-- `VITE_PASSWORD_ACCOUNT_EMAILS`: preview-only, comma-separated public test
-  account email addresses;
+- `VITE_PASSWORD_ACCOUNT_EMAILS`: required, comma-separated public test
+  account email addresses. Set it in both the Preview and Production variable
+  scopes;
 - `VITE_SENTRY_DSN`: optional public browser DSN.
+
+The build wrapper fails every native dashboard build when
+`VITE_PASSWORD_ACCOUNT_EMAILS` is missing or empty. The Production value stays
+dormant while automatic production builds are disabled.
 
 The build wrapper sets `VITE_SENTRY_RELEASE` from
 `CF_PAGES_COMMIT_SHA`. It sets the default Sentry environment from the branch.
@@ -143,8 +165,8 @@ The tokenless workflows verify stable aliases. They do not publish artifacts.
 - `dashboard-prod.yml` checks API compatibility and verifies the exact `main`
   SHA on each configured production hostname.
 
-Do not enable dashboard production builds during the current preview-only
-state. Production activation requires separate approval after `apps/dashboard`
+Do not enable dashboard production builds during the current dev activation.
+Production activation requires separate approval after `apps/dashboard`
 reaches `main` and the production API compatibility gate passes.
 
 Do not create only a DNS record for `app.harpapro.com`. A later production

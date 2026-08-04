@@ -573,7 +573,7 @@ export async function placeNoteInReport(
   const updated = await db.execute<RawReport>(sql`
     UPDATE app.reports
        SET body = ${bodyJson}::jsonb,
-           updated_at = now()
+           updated_at = ${nextReportUpdatedAt()}
      WHERE id = ${reportId}
        AND status = 'draft'
        AND date_trunc('milliseconds', generated_at)

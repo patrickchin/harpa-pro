@@ -1091,14 +1091,24 @@ describe('reports AI/PDF', () => {
   });
 
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const generated = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/generate`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({}),
+      },
+    );
+    expect(generated.status).toBe(200);
+
     const previousUpdatedAt = '2099-01-02T00:00:00.000Z';
     await getPool().query(
       `UPDATE app.reports SET updated_at = $1::timestamptz WHERE id = $2`,
       [previousUpdatedAt, reportId],
     );
 
-    const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/pdf`, {
       method: 'POST',
       headers: headers(tok),

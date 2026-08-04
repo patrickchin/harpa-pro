@@ -1,8 +1,8 @@
 # Design — Office dashboard
 
-Status: **implemented for PR preview and release testing. Production
-availability still requires successful checks, merge, and an intentional
-production deployment.**
+Status: **implemented for pull-request preview and dev activation. Automatic
+production builds remain disabled. Promotion to `main` and activation of
+`app.harpapro.com` require separate approval.**
 
 Primary surface: `app.harpapro.com`
 
@@ -353,6 +353,17 @@ The client sends the `updatedAt` value from the report it edited. The SQL
 write includes that value in its predicate. A stale request returns `409`
 with the current server report.
 
+`updatedAt` is also the wire-level report version. Every report-row write must
+advance `updated_at` by at least one millisecond. The SQL uses the later of the
+millisecond-truncated database clock and the stored value plus one
+millisecond. Attachment placement uses the shared service expression.
+Migration `0028_report_version_monotonic.sql` applies the same rule inside
+`app.attach_report_pdf()`.
+
+Attachment placement and PDF registration do not accept
+`expectedUpdatedAt`. They must still advance the version so the next editor
+precondition remains reliable after same-millisecond writes or clock skew.
+
 For generate/regenerate, the comparison happens again in the final body write
 after the AI call. Checking only when the route first loads the report would
 still allow an edit made during the AI call to be overwritten.
@@ -425,9 +436,21 @@ useful.
 Dashboard environment variables load through a Zod-parsed
 `apps/dashboard/src/lib/env.ts` at boot.
 
+The shared public-site header uses the typed `PUBLIC_DASHBOARD_URL` value. The
+Pages build maps `pr-<n>` to the matching dashboard preview, `dev` to
+`https://dev.harpa-pro-dashboard.pages.dev`, and `main` to
+`https://harpa-pro-dashboard.pages.dev`. The `main` destination remains
+inactive while automatic dashboard production builds are disabled. See
+[the dev activation design](design-dashboard-dev-activation.md).
+
 ### 9.2 Browser auth and API access
 
-Use the browser better-auth client with the existing email OTP flow.
+Use the browser better-auth client with the existing email OTP flow. Email OTP
+is the normal sign-in path. Fixed demo accounts and explicitly allowed test
+accounts can use passwords. Native Pages builds require
+`VITE_PASSWORD_ACCOUNT_EMAILS` in both preview and production variable scopes.
+The email addresses are public browser configuration, but passwords remain
+server-side secrets.
 
 API wiring:
 

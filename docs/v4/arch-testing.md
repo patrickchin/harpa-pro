@@ -109,13 +109,15 @@ Each AI-touching route has a test that:
   real emulator, then run the bounded
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
   ceiling, emulator boot has a 300-second ceiling, and the Maestro
-  command has a 180-second ceiling.
+  command has a 420-second ceiling.
 - After clearing app state, the flow waits up to 30 seconds for either
   the Expo Dev Launcher home screen or Android's known Quickstep ANR
   dialog. It chooses the dialog's semantic `Wait` action conditionally,
   then requires the `Development Build` heading within 30 seconds before
   opening the Metro deep link. It performs the same conditional recovery
-  once after `openLink`, before server selection and app assertions.
+  once after `openLink`: a 90-second union wait observes Quickstep,
+  the Metro server row, or app UI before conditional recovery, server
+  selection, and app assertions.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild

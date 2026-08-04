@@ -23,6 +23,9 @@ tags:
 - openLink: 'exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 - waitForAnimationToEnd:
     timeout: 20000
+- extendedWaitUntil:
+    visible: "Quickstep isn't responding|http://10.0.2.2:8081|Continue|Email"
+    timeout: 90000
 - runFlow:
     when:
       visible: "Quickstep isn't responding"

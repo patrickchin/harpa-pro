@@ -12,20 +12,25 @@ trap 'rm -rf "$REPORT_DIR"' EXIT
 
 vitest run \
   --coverage \
+  --silent=passed-only \
   --config vitest.config.ts \
+  --reporter=default \
   --reporter=blob \
-  --outputFile="$REPORT_DIR/unit.json"
+  --outputFile.blob="$REPORT_DIR/unit.json"
 
 for shard in 1 2; do
   vitest run \
     --coverage \
+    --silent=passed-only \
     --config vitest.integration.config.ts \
     --shard="$shard/2" \
+    --reporter=default \
     --reporter=blob \
-    --outputFile="$REPORT_DIR/integration-$shard.json"
+    --outputFile.blob="$REPORT_DIR/integration-$shard.json"
 done
 
 vitest run \
   --coverage \
+  --silent=passed-only \
   --config vitest.coverage.config.ts \
   --merge-reports="$REPORT_DIR"

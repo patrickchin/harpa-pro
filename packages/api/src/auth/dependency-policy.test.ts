@@ -29,4 +29,10 @@ describe('better-auth dependency policy', () => {
       'auth generate --config src/auth/auth.ts --output src/db/auth-schema.ts --yes',
     );
   });
+
+  it('keeps the Expo client on Better Auth compatible Zod types', () => {
+    const mobile = readManifest('../../../../apps/mobile/package.json');
+
+    expect(mobile.dependencies?.zod).toMatch(/^4\.\d+\.\d+$/);
+  });
 });

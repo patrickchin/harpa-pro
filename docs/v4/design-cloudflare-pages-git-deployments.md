@@ -23,12 +23,11 @@ Cloudflare Git is the only publisher for `harpa-pro`, `harpa-pro-admin`, and
 the Cloudflare API.
 
 The production branch remains `main`. Dashboard automatic production builds
-remain disabled. Dashboard preview builds use the custom branches `dev` and
-`pr-*`. The public and admin projects keep the default `*` build watch include
-so every managed branch commit produces the exact-SHA marker expected by their
-verification workflows. The dashboard uses scoped watch paths that mirror its
-preview workflow triggers, preserving the same marker parity without rebuilding
-for unrelated monorepo changes.
+remain disabled. During the draft rollout, dashboard preview builds are
+restricted to the exact `pr-211` branch. After the application lands on `dev`,
+that allowlist expands to `dev` and ephemeral `pr-*` branches. All three
+projects keep the default `*` build watch include so every allowed branch
+commit produces the exact-SHA marker expected by its verification workflow.
 
 ### Stable pull request branches
 
@@ -108,7 +107,8 @@ The 2026-08-05 provider verification records this configuration:
 - output directory: `apps/dashboard/dist`;
 - production branch: `main`;
 - automatic production deployments: disabled; and
-- preview custom branches: `dev` and `pr-*`.
+- preview custom branch: `pr-211`; and
+- build watch include: `*`.
 
 Cloudflare preserved the seven existing preview deployments during the
 in-place connection. The project has no production deployment or custom
@@ -116,13 +116,13 @@ domain. Production and `app.harpapro.com` activation require separate
 approval.
 
 The dashboard application remains isolated in
-[draft PR #211](https://github.com/patrickchin/harpa-pro/pull/211). Its scoped
-build watch paths mirror the dashboard preview workflow triggers, so unrelated
-`dev` or `pr-*` commits cannot start an absent-application build before the
-dashboard lands. If provider watch paths and workflow triggers drift apart,
-disable dashboard preview deployments until parity is restored. Automatic
-production deployments stay disabled until `apps/dashboard` reaches `main`
-through the protected promotion workflow.
+[draft PR #211](https://github.com/patrickchin/harpa-pro/pull/211). Restricting
+the provider to that exact generated branch prevents unrelated `dev` or
+`pr-*` commits from starting an absent-application build before the dashboard
+lands, while the default watch include guarantees a deployment for every new
+PR head. Expand the preview allowlist only after `apps/dashboard` reaches
+`dev`. Automatic production deployments stay disabled until the application
+reaches `main` through the protected promotion workflow.
 
 ## Verification and rollback
 

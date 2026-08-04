@@ -40,10 +40,12 @@ The verified project configuration is:
 4. Production branch: `main`.
 5. Automatic production deployments: disabled.
 6. Preview branch mode: custom branches.
-7. Preview custom branches: `dev` and `pr-*`.
+7. Preview custom branch during the draft rollout: `pr-211`.
+8. Build watch include: `*`.
 
-Build watch paths must include `apps/dashboard`, its workspace dependencies,
-the root workspace files, and `scripts/ci/build-cloudflare-pages.sh`.
+After the dashboard lands on `dev`, expand preview custom branches to `dev` and
+`pr-*`. Keep the build watch include at `*`: every allowed branch commit must
+produce the exact-SHA marker expected by the verification workflow.
 
 ## Cloudflare build environment
 

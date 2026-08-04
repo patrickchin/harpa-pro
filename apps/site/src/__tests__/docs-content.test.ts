@@ -13,6 +13,7 @@ import {
   guideSlug,
   sortGuides,
 } from "../lib/docs";
+import { DOCS_SCREENSHOTS } from "../lib/docs-screenshots";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const docsDir = resolve(srcRoot, "content/docs");
@@ -59,6 +60,10 @@ function readJsonArray(source: string, key: string): string[] {
 
 function guideStepCount(source: string): number {
   return source.match(/<GuideStep\b/g)?.length ?? 0;
+}
+
+function guideStepTags(source: string): string[] {
+  return [...source.matchAll(/<GuideStep\b[\s\S]*?>/g)].map(([tag]) => tag);
 }
 
 function guideWordCount(source: string): number {
@@ -164,14 +169,25 @@ describe("docs content model", () => {
     expect(docsIndex).toContain("docs-core-grid");
     expect(docsIndex).toContain("docs-everyday-grid");
     expect(docsIndex).toContain("docs-setup-links");
-    expect(docsIndex).toContain("<PhoneFrame");
+    expect(docsIndex).toContain("<DocsMontage");
+    expect(docsIndex).not.toContain("<PhoneFrame");
 
     const guidePage = readFileSync(
       resolve(srcRoot, "pages/docs/guides/[...slug].astro"),
       "utf8",
     );
     expect(guidePage).toContain("docsTierLabel");
-    expect(guidePage).toContain("guide.data.heroScreenshot");
+    expect(guidePage).not.toContain("guide.data.heroScreenshot");
+    expect(guidePage).not.toContain("<PhoneFrame");
+
+    const guideStep = readFileSync(
+      resolve(srcRoot, "components/docs/GuideStep.astro"),
+      "utf8",
+    );
+    expect(guideStep).toContain("<GuideStepMedia");
+    expect(
+      existsSync(resolve(srcRoot, "components/docs/GuideStepMedia.astro")),
+    ).toBe(true);
 
     const sidebar = readFileSync(
       resolve(srcRoot, "components/docs/DocsSidebar.astro"),
@@ -209,12 +225,27 @@ describe("docs content model", () => {
       expect(guideWordCount(source), `${file} words`).toBeLessThanOrEqual(
         tier === "core" ? 450 : 300,
       );
-      expect(source, `${file} screenshot`).toMatch(
-        /^heroScreenshot: "[^"]+"$/m,
+      expect(source, `${file} guide hero`).not.toMatch(/^heroScreenshot:/m);
+      expect(source, `${file} guide hero alt`).not.toMatch(
+        /^heroScreenshotAlt:/m,
       );
-      expect(source, `${file} screenshot alt`).toMatch(
-        /^heroScreenshotAlt: ".{12,}"$/m,
+
+      const illustratedSteps = guideStepTags(source).filter((tag) =>
+        tag.includes('screenshot="'),
       );
+      expect(
+        illustratedSteps.length,
+        `${file} illustrated steps`,
+      ).toBeGreaterThan(0);
+      for (const tag of illustratedSteps) {
+        const screenshot = tag.match(/screenshot="([^"]+)"/)?.[1];
+        expect(DOCS_SCREENSHOT_IDS, `${file}: ${screenshot}`).toContain(
+          screenshot,
+        );
+        expect(tag, `${file}: ${screenshot} alt`).toMatch(
+          /screenshotAlt=".{12,}"/,
+        );
+      }
       expect(source).not.toContain("## Good to know");
       expect(source, `${file} verification date`).toMatch(
         /^lastVerified: "\d{4}-\d{2}-\d{2}"$/m,
@@ -239,6 +270,10 @@ describe("docs content model", () => {
     expect(DOCS_SCREENSHOT_IDS).toEqual(EXPECTED_SCREENSHOTS);
     for (const id of DOCS_SCREENSHOT_IDS) {
       expect(registry, id).toContain(`"${id}"`);
+      expect(DOCS_SCREENSHOTS[id], `${id} crop metadata`).toMatchObject({
+        image: expect.any(Object),
+        focus: expect.stringMatching(/^\d+% \d+%$/),
+      });
     }
 
     expect(existsSync(screenshotDir)).toBe(true);

@@ -22,6 +22,12 @@ island, Tailwind/CSS, Vitest, Playwright, Lighthouse CI, Cloudflare Pages.
 **Design source:**
 [`docs/v4/design-public-site-docs.md`](design-public-site-docs.md)
 
+> **2026-08-05 follow-up:** The contextual screenshot layout in the design
+> source supersedes this completed plan's hero `PhoneFrame` and two-column
+> screenshot instructions. Guide headings are now text-only, the docs index
+> uses a shallow three-stage strip, and guide images are step-local crops with
+> full-capture links.
+
 ---
 
 ## File map

@@ -315,6 +315,20 @@ id before hydration, namespace durable state by that id, withhold descendants
 during identity transitions, and clear both active memory and unattributable
 legacy state on every unauthenticated boundary.
 
+### R16 — Workspace manifests disagree with the resolved peer graph
+
+A root package-manager override can make a workspace install a different
+framework major than its own manifest declares. An undeclared build-tool peer
+then lets the package manager choose that peer from whichever dependency update
+happens to run first. Each install can be internally valid while Dependabot and
+reviewers are reasoning from manifests that describe a different graph.
+
+Mitigation: declare the root-selected React runtime directly in every web
+workspace, align its React types, and pin the Astro-compatible Vite major in
+both workspaces. Keep `tailwindcss` and `@tailwindcss/vite` on the same patch
+line. Workspace smoke tests must parse the manifests and fail when those
+compatibility pins drift.
+
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
@@ -322,6 +336,7 @@ legacy state on every unauthenticated boundary.
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
 - **2026-08-04** *(R14)* — Dependabot PRs entered combined preview/deploy, OTA, and production-journey jobs, so GitHub's withheld secrets made useful verification red while same-repo checks still treated bot-controlled branches as publishable. Fix: split read-only verification, gate every privileged job by immutable PR author, and route direct security updates through human-owned `dev` PRs. [detail](2026-08-04-dependabot-privileged-pr-jobs.md)
+- **2026-08-04** *(R16)* — The site and admin manifests declared React 18 while the root override installed React 19.2.0, and both consumed Vite only as an auto-installed peer. Dependency updates could therefore resolve a different peer graph than the manifests described. Fix: align React runtime and types, pin Vite 6.4.3 directly, and keep Tailwind core/plugin patches paired in both workspaces. [detail](2026-08-04-web-peer-graph-drift.md)
 - **2026-07-31** *(R5)* — The application PostgreSQL rate limiter implemented
   periodic stale-bucket cleanup, but `server.ts` never started it, so production
   rows could grow indefinitely while middleware tests stayed green. Fix: start

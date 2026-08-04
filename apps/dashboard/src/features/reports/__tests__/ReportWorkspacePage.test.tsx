@@ -49,6 +49,18 @@ async function mountWorkspace(
 }
 
 describe('ReportWorkspacePage draft editing', () => {
+  it('uses a responsive Tailwind workspace scaffold', async () => {
+    const rendered = await mountWorkspace();
+    const workspace = rendered.container.querySelector('[data-testid="report-workspace"]');
+    const draftLayout = rendered.container.querySelector('[data-testid="report-draft-layout"]');
+
+    expect(workspace).not.toBeNull();
+    expect(workspace?.className).toContain('min-w-0');
+    expect(workspace?.className).not.toContain('reports-workspace');
+    expect(draftLayout?.className).toContain('grid');
+    expect(draftLayout?.className).toContain('xl:grid-cols-[minmax(0,1.8fr)_minmax(20rem,1fr)]');
+  });
+
   it('updates the live preview and autosaves with the loaded version', async () => {
     const updateReport = vi.fn(
       async (
@@ -462,6 +474,11 @@ describe('ReportWorkspacePage finalized report', () => {
     await click(button(rendered.container, 'Review'));
     await click(button(rendered.container, 'Report'));
     expect(rendered.container.querySelector('[aria-selected="true"]')?.textContent).toBe('Report');
+
+    const reportTab = button(rendered.container, 'Report');
+    reportTab.focus();
+    await keydown(reportTab, 'ArrowRight');
+    expect(rendered.container.querySelector('[aria-selected="true"]')?.textContent).toBe('Review');
 
     await click(button(rendered.container, 'Download PDF'));
     await flush();

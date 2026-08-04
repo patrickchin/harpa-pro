@@ -9,9 +9,10 @@ and high-severity denial of service
 through `shell-quote@1.8.3` in the mobile development toolchain.
 
 **Root cause.** `react-native@0.83.6` depends on
-`react-devtools-core@6.1.5`, which pins `shell-quote` to the vulnerable exact
-version. The first advisory is fixed in `1.8.4`, but that release remains
-affected by the second advisory; all known advisories require at least `1.9.0`.
+`react-devtools-core@6.1.5`, which allows `shell-quote@^1.6.1`. The frozen
+lockfile retained vulnerable `1.8.3` after patched releases became available.
+The first advisory is fixed in `1.8.4`, but that release remains affected by
+the second advisory; all known advisories require at least `1.9.0`.
 
 **Fix.** Add a parent-scoped pnpm override for
 `react-devtools-core>shell-quote` to `1.10.0`, the current patched 1.x release,
@@ -24,7 +25,7 @@ the lockfile, and verifies `react-devtools-core` resolves the patched version.
 The credential-free `lint-typecheck` workflow runs the policy on every relevant
 pull request.
 
-**Pattern.** An exact transitive pin can strand a security patch behind a much
-broader framework upgrade. Use the narrowest parent-child override that clears
-all current advisories, pin its resolved graph in CI, and remove it when the
-parent adopts the secure floor.
+**Pattern.** A frozen lockfile can strand a security patch even when the
+parent's transitive range permits it. Use the narrowest parent-child override
+that clears all current advisories, pin its resolved graph in CI, and remove it
+when the parent declares the secure floor.

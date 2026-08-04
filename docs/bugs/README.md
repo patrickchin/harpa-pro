@@ -337,11 +337,12 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
-- **2026-08-04** — React Native's `react-devtools-core@6.1.5` pinned
-  `shell-quote@1.8.3`, leaving the mobile toolchain exposed to critical command
-  injection and high-severity denial-of-service advisories. Fix: narrowly
-  override that edge to current `shell-quote@1.10.0` and enforce the resolved
-  version in CI. [detail](2026-08-04-react-devtools-shell-quote-security.md)
+- **2026-08-04** — React Native's `react-devtools-core@6.1.5` allowed
+  `shell-quote@^1.6.1`, but the frozen lockfile retained vulnerable `1.8.3`,
+  leaving the mobile toolchain exposed to critical command injection and
+  high-severity denial-of-service advisories. Fix: narrowly override that edge
+  to current `1.10.0` and enforce the resolved version in CI.
+  [detail](2026-08-04-react-devtools-shell-quote-security.md)
 - **2026-08-04** *(R16)* — Astro 7 static builds loaded hoisted CommonJS `cookie@0.7.2` instead of Astro's nested ESM `cookie@2.0.1`, so prerendering failed on a missing named export. Fix: pin `cookie@2.0.1` directly in both web workspaces and assert the build graph. [detail](2026-08-04-astro-cookie-hoist-build.md)
 - **2026-08-04** — The PR-time Android smoke first opened its Metro link without a native readiness boundary; the follow-up then exposed `Quickstep isn't responding` intercepting Maestro over a ready Dev Launcher. Fix: recover through the semantic `Wait` action, strictly reassert `Development Build`, and use a bounded post-link wait that can observe a later Quickstep dialog before server/app assertions. [detail](2026-08-04-expo-dev-launcher-readiness-race.md)
 - **2026-08-04** *(R14)* — Dependabot PRs entered combined preview/deploy, OTA, and production-journey jobs, so GitHub's withheld secrets made useful verification red while same-repo checks still treated bot-controlled branches as publishable. Fix: split read-only verification, gate every privileged job by immutable PR author, and route direct security updates through human-owned `dev` PRs. [detail](2026-08-04-dependabot-privileged-pr-jobs.md)

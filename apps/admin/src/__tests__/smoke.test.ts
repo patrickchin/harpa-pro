@@ -40,12 +40,14 @@ describe('admin site smoke', () => {
     });
   });
 
-  it('renders activity at the root and keeps every document out of search', () => {
+  it('renders activity and operations routes and keeps every document out of search', () => {
     const page = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
+    const operationsPage = readFileSync(resolve(here, '../pages/operations.astro'), 'utf8');
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
     const robots = readFileSync(resolve(here, '../pages/robots.txt.ts'), 'utf8');
 
     expect(page).toContain('AdminActivity');
+    expect(operationsPage).toContain('AdminOperations');
     expect(layout).toContain('noindex, nofollow');
     expect(robots).toContain("'User-agent: *\\nDisallow: /\\n'");
   });

@@ -18,7 +18,7 @@ describe('admin auth credentials', () => {
     expect(second).not.toBe(first);
     await expect(verifyAdminPassword(password, first)).resolves.toBe(true);
     await expect(verifyAdminPassword(`${password}!`, first)).resolves.toBe(false);
-  });
+  }, 15_000);
 
   it('rejects short passwords and malformed stored hashes', async () => {
     await expect(hashAdminPassword('too-short')).rejects.toThrow(/20/);

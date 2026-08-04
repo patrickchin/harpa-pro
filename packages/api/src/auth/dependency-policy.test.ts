@@ -24,6 +24,7 @@ describe('better-auth dependency policy', () => {
     expect(mobile.dependencies?.['better-auth']).toBe(version);
     expect(mobile.dependencies?.['@better-auth/expo']).toBe(version);
     expect(api.dependencies).not.toHaveProperty('@better-auth/cli');
+    expect(api.dependencies).not.toHaveProperty('jose');
     expect(api.devDependencies?.auth).toBe(version);
     expect(api.scripts?.['auth:schema:generate']).toBe(
       'auth generate --config src/auth/auth.ts --output src/db/auth-schema.ts --yes',

@@ -35,7 +35,8 @@ dashboard or hold Cloudflare credentials.
 The verified project configuration is:
 
 1. Git repository: `patrickchin/harpa-pro`.
-2. Build command: `bash scripts/ci/build-cloudflare-pages.sh dashboard`.
+2. Build command: `pnpm install --frozen-lockfile`, followed by
+   `bash scripts/ci/build-cloudflare-pages.sh dashboard`.
 3. Output directory: `apps/dashboard/dist`.
 4. Production branch: `main`.
 5. Automatic production deployments: disabled.
@@ -60,6 +61,9 @@ as `VITE_API_BASE_URL`:
 
 Configure these dashboard values in Cloudflare Pages:
 
+- `SKIP_DEPENDENCY_INSTALL=1`: required so Pages does not interpret the
+  repository-root Fastlane `Gemfile.lock` as a dashboard dependency; the
+  explicit build command installs the pnpm workspace with the frozen lockfile;
 - `VITE_PASSWORD_ACCOUNT_EMAILS`: preview-only, comma-separated public test
   account email addresses;
 - `VITE_SENTRY_DSN`: optional public browser DSN.

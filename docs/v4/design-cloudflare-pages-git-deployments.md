@@ -71,6 +71,12 @@ stable Pages origin until that marker matches the expected Git SHA, then run
 the surface-specific HTTP checks. A `200` from an old deployment is not
 success.
 
+The dashboard Pages project sets `SKIP_DEPENDENCY_INSTALL=1` and runs
+`pnpm install --frozen-lockfile` explicitly before the build wrapper. This
+keeps the repository-root `Gemfile.lock`, which belongs to native release
+tooling, from making Pages install Ruby dependencies for a static web build.
+It also makes the JavaScript dependency install use the committed lockfile.
+
 The Turnstile site key remains a plain-text Cloudflare build variable because
 it is intentionally shipped to browsers. Dashboard builds also receive public
 password-account identities and an optional public Sentry DSN. Cloudflare
@@ -103,8 +109,10 @@ The 2026-08-05 provider verification records this configuration:
 
 - project: `harpa-pro-dashboard`;
 - Git repository: `patrickchin/harpa-pro`;
-- build command: `bash scripts/ci/build-cloudflare-pages.sh dashboard`;
+- build command: an explicit `pnpm install --frozen-lockfile`, followed by
+  `bash scripts/ci/build-cloudflare-pages.sh dashboard`;
 - output directory: `apps/dashboard/dist`;
+- preview build variable: `SKIP_DEPENDENCY_INSTALL=1`;
 - production branch: `main`;
 - automatic production deployments: disabled; and
 - preview custom branch: `pr-211`; and

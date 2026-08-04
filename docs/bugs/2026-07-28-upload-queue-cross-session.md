@@ -22,6 +22,6 @@ The unattributable legacy `v1` blob is discarded.
 clear aborts active work, users cannot read each other's persisted jobs,
 and sign-out, 401, and account switching all clear the active queue.
 
-**Pattern.** R14 — persisted client state that can outlive a screen must be
+**Pattern.** R15 — persisted client state that can outlive a screen must be
 scoped to the authenticated principal and participate explicitly in auth
 teardown.

@@ -1,4 +1,4 @@
-# 2026-07-30 — query cache crossed auth sessions (Pattern R14)
+# 2026-07-30 — query cache crossed auth sessions (Pattern R15)
 
 > See [`README.md`](README.md) for the index of all bug entries and patterns.
 
@@ -24,5 +24,5 @@ asserts that no Bob-session render observes Alice's data before Bob's own cache
 is restored; a delayed-restore regression releases Alice's restore after Bob is
 mounted and proves Bob's client remains unchanged.
 
-**Pattern.** R14 — durable client state must be scoped to the authenticated
+**Pattern.** R15 — durable client state must be scoped to the authenticated
 principal and must not hydrate before that principal is known.

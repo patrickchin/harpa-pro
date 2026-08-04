@@ -632,7 +632,7 @@ export function ReportWorkspacePage({
             {displayReportTitle(localBody)}
           </h1>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
           {report.status === 'draft' && canWrite ? (
             <>
               <Button

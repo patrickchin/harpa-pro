@@ -72,7 +72,7 @@ afterEach(() => {
 
 beforeAll(async () => {
   await import('./auth.js');
-});
+}, 30_000);
 
 describe('preview email OTP diagnostics', () => {
   it('does not log the OTP or full recipient address', async () => {

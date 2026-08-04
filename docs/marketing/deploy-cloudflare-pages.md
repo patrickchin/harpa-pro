@@ -26,13 +26,17 @@ rename the Cloudflare project.
 ## Cloudflare project setup
 
 1. Open **Workers & Pages** in the Cloudflare dashboard.
-2. Select the Pages project named `harpa-pro` and connect
-   `patrickchin/harpa-pro` through the GitHub App.
+2. Confirm the canonical `harpa-pro` Pages project is Git-integrated with
+   `patrickchin/harpa-pro` through the GitHub App. A Direct Upload project
+   cannot be converted in place; create a replacement Git-integrated project
+   if recovery ever finds the canonical project in that state.
 3. Set `main` as production. Restrict previews to `dev` and `pr-*`.
 4. Set the build command to install the pinned workspace dependencies and run
    `scripts/ci/build-cloudflare-pages.sh site`; output is `apps/site/dist`.
-5. Configure monorepo watch paths for `apps/site`, the root pnpm inputs, and
-   the shared Pages build script.
+5. Leave the build watch include at its default `*` and configure no excludes.
+   GitHub verification may run for deployment-infrastructure changes outside
+   the app directory, so every managed branch commit must produce a fresh
+   exact-SHA deployment marker.
 6. Store `PUBLIC_TURNSTILE_SITE_KEY` as a plain-text production and preview
    build variable. It is a browser-visible site key, not a server secret.
 7. Attach `harpapro.com` and `www.harpapro.com` as production custom domains.
@@ -62,7 +66,7 @@ pnpm --filter @harpa/site test:e2e
 
 Git is the deployment source of truth. For a manual diagnostic rebuild, retry
 the selected Git deployment in the Cloudflare dashboard. Do not restore a
-Direct Upload workflow or a long-lived GitHub API token.
+credentialed Wrangler workflow or a long-lived GitHub API token.
 
 ## Documentation hostname cutover
 

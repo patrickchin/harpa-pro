@@ -32,6 +32,22 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Location", "/docs/guides/getting-started")
             self.end_headers()
             return
+        if self.path == "/guides/cross-origin":
+            self.send_response(301)
+            self.send_header(
+                "Location",
+                "https://attacker.example/docs/guides/getting-started",
+            )
+            self.end_headers()
+            return
+        if self.path == "/guides/wrong-path":
+            self.send_response(301)
+            self.send_header(
+                "Location",
+                "/unexpected/docs/guides/getting-started",
+            )
+            self.end_headers()
+            return
         self.send_response(404)
         self.end_headers()
 

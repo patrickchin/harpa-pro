@@ -4,9 +4,12 @@
 
 ## Problem
 
-Historical GitHub Actions workflows built each static application and
-published it with Cloudflare credentials. The public and admin projects now
-use Cloudflare Git, so GitHub only tests and verifies those deployments.
+GitHub Actions historically built each static application and published it
+with Wrangler using long-lived `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets. That upload path did not establish
+how the Pages projects were created: Git-integrated projects also accept manual
+Wrangler deployments. Native Cloudflare Git is now active on the canonical
+public and admin projects, so the credentialed GitHub publisher is redundant.
 
 On 2026-08-05, the Cloudflare UI connected the existing
 `harpa-pro-dashboard` Direct Upload project to `patrickchin/harpa-pro` in
@@ -21,7 +24,11 @@ the Cloudflare API.
 
 The production branch remains `main`. Dashboard automatic production builds
 remain disabled. Dashboard preview builds use the custom branches `dev` and
-`pr-*`. Build watch paths keep each monorepo project isolated.
+`pr-*`. The public and admin projects keep the default `*` build watch include
+so every managed branch commit produces the exact-SHA marker expected by their
+verification workflows. The dashboard uses scoped watch paths that mirror its
+preview workflow triggers, preserving the same marker parity without rebuilding
+for unrelated monorepo changes.
 
 ### Stable pull request branches
 
@@ -121,5 +128,6 @@ Verify the tokenless deployment contract as follows:
 
 Rollback uses the Cloudflare Pages production rollback control for an active
 production project. The current dashboard project has no production deployment
-to roll back. Push a correction or pause Git builds if a preview fails. Do not
-restore credentialed uploads.
+to roll back. Push a correction or pause Git builds if a preview fails. For an
+active production project, use the Cloudflare Pages rollback control. Do not
+restore credentialed Wrangler workflows or long-lived GitHub credentials.

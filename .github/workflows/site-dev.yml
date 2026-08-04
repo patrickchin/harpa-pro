@@ -8,6 +8,7 @@ on:
     branches: [dev]
     paths:
       - 'apps/site/**'
+      - 'packages/api-contract/**'
       - 'scripts/ci/build-cloudflare-pages.sh'
       - 'scripts/ci/verify-pages-deployment.sh'
       - '.github/workflows/site-dev.yml'

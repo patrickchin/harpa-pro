@@ -63,6 +63,17 @@ require_regex() {
   fi
 }
 
+require_command_success() {
+  local description="$1"
+  shift
+  if "$@" >/dev/null; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 require_adjacent_fixed() {
   local path="$1" first="$2" second="$3" description="$4"
   if [[ -f "$REPO_ROOT/$path" ]] && awk -v first="$first" -v second="$second" '
@@ -157,6 +168,11 @@ require_fixed "packages/api/package.json" '"test:coverage":' \
 require_fixed ".github/workflows/api-integration.yml" \
   "pnpm --filter @harpa/api test:coverage" \
   "API integration CI runs the coverage gate"
+require_file "scripts/ci/__tests__/api-coverage-reporting-policy.test.cjs" \
+  "API coverage reporter wiring has a structural policy test"
+require_command_success \
+  "every API coverage command keeps its required reporter contract" \
+  node "$REPO_ROOT/scripts/ci/__tests__/api-coverage-reporting-policy.test.cjs"
 require_fixed ".github/workflows/api-integration.yml" \
   "permissions:" \
   "API integration workflow declares explicit permissions"

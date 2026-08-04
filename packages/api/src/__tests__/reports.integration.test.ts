@@ -701,6 +701,35 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
     expect(after.changed_at?.getTime()).toBe(before.changed_at?.getTime());
   });
 
+  it('advances updatedAt by a wire-visible millisecond for attachment placement', async () => {
+    const previousUpdatedAt = '2099-01-01T00:00:00.000Z';
+    await getPool().query(
+      `UPDATE app.reports SET updated_at = $1::timestamptz WHERE id = $2`,
+      [previousUpdatedAt, reportId],
+    );
+
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: { updatedAt: string } };
+    expect(new Date(body.report.updatedAt).getTime()).toBeGreaterThan(
+      new Date(previousUpdatedAt).getTime(),
+    );
+  });
+
   it('moves the image note to a section exactly once', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
@@ -1062,6 +1091,12 @@ describe('reports AI/PDF', () => {
   });
 
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
+    const previousUpdatedAt = '2099-01-02T00:00:00.000Z';
+    await getPool().query(
+      `UPDATE app.reports SET updated_at = $1::timestamptz WHERE id = $2`,
+      [previousUpdatedAt, reportId],
+    );
+
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/pdf`, {
@@ -1079,8 +1114,9 @@ describe('reports AI/PDF', () => {
     const lifecycle = await getPool().query<{
       file_key: string;
       consumed_at: Date;
+      updated_at: Date;
     }>(
-      `SELECT f.file_key, lease.consumed_at
+      `SELECT f.file_key, lease.consumed_at, report.updated_at
        FROM app.reports report
        JOIN app.files f ON f.id = report.pdf_file_id
        JOIN app.file_upload_leases lease
@@ -1094,6 +1130,9 @@ describe('reports AI/PDF', () => {
       `projects/${aliceProjSlug}/reports/`,
     );
     expect(lifecycle.rows[0]?.consumed_at).toBeInstanceOf(Date);
+    expect(lifecycle.rows[0]!.updated_at.getTime()).toBeGreaterThan(
+      new Date(previousUpdatedAt).getTime(),
+    );
   });
 
   it('keeps a durable PDF key when registration fails after the object write', async () => {

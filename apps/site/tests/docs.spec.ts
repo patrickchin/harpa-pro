@@ -28,8 +28,21 @@ test("presents two core workflows and concise supporting tasks", async ({
   await expect(page.locator(".docs-everyday-grid > *")).toHaveCount(5);
   await expect(page.locator(".docs-setup-links li")).toHaveCount(2);
   await expect(page.locator(".docs-guide-grid")).toHaveCount(0);
+  const montageCards = page.locator(".docs-montage-card");
+  await expect(montageCards).toHaveCount(3);
+  const montageDestinations = [
+    "/docs/guides/capture-notes-voice",
+    "/docs/guides/generate-ai-report",
+    "/docs/guides/export-share-pdf",
+  ];
+  for (const [index, destination] of montageDestinations.entries()) {
+    await expect(montageCards.nth(index)).toHaveAttribute(
+      "href",
+      destination,
+    );
+  }
+  await expect(page.locator(".docs-phone-frame")).toHaveCount(0);
 });
-
 test("searches guides locally and stays quiet before a query", async ({
   page,
 }) => {
@@ -63,13 +76,24 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
     page.getByRole("heading", { level: 1, name: "Generate an AI report" }),
   ).toBeVisible();
   await expect(page.locator(".docs-step")).toHaveCount(5);
+  await expect(page.locator(".docs-guide-heading img")).toHaveCount(0);
 
-  const screenshots = page.locator(
-    ".docs-guide-heading img, .docs-step .docs-phone-frame img",
-  );
+  const screenshots = page.locator(".docs-step-media img");
+  await expect(screenshots).toHaveCount(3);
   await expect(screenshots.first()).toHaveAttribute("alt", /\S+/);
   for (let index = 0; index < (await screenshots.count()); index += 1) {
     await expect(screenshots.nth(index)).toHaveAttribute("src", /^\/_astro\//);
+  }
+
+  const fullScreenshotLinks = page.getByRole("link", {
+    name: /^View full screenshot for /,
+  });
+  await expect(fullScreenshotLinks).toHaveCount(3);
+  for (let index = 0; index < (await fullScreenshotLinks.count()); index += 1) {
+    await expect(fullScreenshotLinks.nth(index)).toHaveAttribute(
+      "href",
+      /^\/_astro\//,
+    );
   }
 
   const pagination = page.getByRole("navigation", {
@@ -131,7 +155,8 @@ test("serves canonical docs links and generated images", async ({
     expect(response.status(), src).toBeLessThan(400);
   }
 
-  const docsScreenshots = page.locator(".docs-phone-frame img");
+  const docsScreenshots = page.locator(".docs-montage img");
+  await expect(page.locator(".docs-montage-card")).toHaveCount(3);
   expect(await docsScreenshots.count()).toBeGreaterThan(0);
   for (let index = 0; index < (await docsScreenshots.count()); index += 1) {
     await expect(docsScreenshots.nth(index)).toHaveAttribute(

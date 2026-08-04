@@ -475,6 +475,7 @@ export function ReportWorkspacePage({
     onSuccess: ({ report: updated }) => {
       updateCachedReport(updated);
       setFinalizedTab('report');
+      onFinalizedTabChange?.('report');
       setConfirmation(null);
       setKnownSaveState(initialSaveState(updated.updatedAt));
     },
@@ -497,6 +498,7 @@ export function ReportWorkspacePage({
       setKnownBody(coerced.body);
       setMalformedBody(coerced.malformed);
       setFinalizedTab('report');
+      onFinalizedTabChange?.('report');
       setConfirmation(null);
       setKnownSaveState(initialSaveState(updated.updatedAt));
     },

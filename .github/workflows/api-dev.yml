@@ -82,9 +82,9 @@ jobs:
           ADMIN_DATABASE_URL: ${{ env.ADMIN_DATABASE_URL }}
         run: pnpm --filter @harpa/api db:migrate:admin
 
-      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
 
-      - uses: dopplerhq/cli-action@v3
+      - uses: dopplerhq/cli-action@v4
 
       - name: Sync Fly secrets from Doppler
         # Pulls the `dev` config and stages it onto the Fly app. Filters

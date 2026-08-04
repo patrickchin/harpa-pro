@@ -131,11 +131,12 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
       - Triggers on PR to `dev` or `main`, path filter `apps/site/**`
         (+ `pnpm-lock.yaml` + the workflow itself).
       - Cancels stale preview builds via `concurrency`.
-      - Installs deps, builds, deploys via `cloudflare/wrangler-action@v3`
-        with `--branch=${{ github.head_ref }}` (CF auto-creates a
+      - Installs deps, builds, deploys via `cloudflare/wrangler-action@v4`
+        with Wrangler CLI pinned to `3.114.17` and
+        `--branch=${{ github.head_ref }}` (CF auto-creates a
         per-branch preview URL).
       - Posts (or sticky-updates) a comment on the PR with the
-        preview URL via `marocchino/sticky-pull-request-comment@v2`.
+        preview URL via `marocchino/sticky-pull-request-comment@v3`.
 - [x] GitHub Action `.github/workflows/site-prod.yml`:
       - Triggers on push to `main` (default branch, per AGENTS.md
         hard rule #7) + manual `workflow_dispatch`.

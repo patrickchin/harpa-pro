@@ -1,15 +1,15 @@
 # Cloudflare Pages Git deployments
 
-**Status:** Approved for implementation
+**Status:** Implemented
 
 ## Problem
 
-The public and admin Pages projects were created as Direct Upload projects.
-GitHub Actions therefore built each static application and published it with
-Wrangler using long-lived `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` repository secrets. After the projects were connected
-to `patrickchin/harpa-pro`, the production workflows and the native Cloudflare
-Git build both published the same commit.
+GitHub Actions historically built each static application and published it
+with Wrangler using long-lived `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets. That upload path did not establish
+how the Pages projects were created: Git-integrated projects also accept manual
+Wrangler deployments. Native Cloudflare Git is now active on the canonical
+public and admin projects, so the credentialed GitHub publisher is redundant.
 
 Removing only the production upload is incomplete. Development and pull
 request workflows still use Wrangler, and the admin preview contract depends
@@ -24,8 +24,11 @@ Pages projects. GitHub Actions verifies deployments but does not call the
 Cloudflare API.
 
 The production branch remains `main`. Automatic preview builds are restricted
-to `dev` and ephemeral `pr-*` branches. Build watch paths keep each monorepo
-project isolated.
+to `dev` and ephemeral `pr-*` branches. Cloudflare's build watch include stays
+at its default `*`, with no excludes. This ensures every managed branch commit
+produces the exact-SHA marker that a triggered GitHub verification workflow
+expects. Monorepo watch-path optimization is deferred until provider settings
+and verifier-trigger parity can be enforced together.
 
 ### Stable pull request branches
 
@@ -93,11 +96,13 @@ requests satisfy that invariant.
 
 ## Dashboard boundary
 
-The dashboard application is still isolated in its feature pull request. Its
-existing Pages project may be connected immediately with automatic production
-builds disabled and preview builds restricted to `pr-*`. Production is enabled
-only after `apps/dashboard` reaches `main`; a failed build of an absent
-application is not used as a rollout mechanism.
+The dashboard application is still isolated in its feature pull request. It
+must use a Git-integrated Pages project with automatic production builds
+disabled and preview builds restricted to `pr-*`. If its existing project is a
+Direct Upload project, create a replacement Git-integrated project instead of
+attempting an unsupported in-place conversion. Production is enabled only
+after `apps/dashboard` reaches `main`; a failed build of an absent application
+is not used as a rollout mechanism.
 
 ## Verification and rollback
 
@@ -114,4 +119,5 @@ Before removing the GitHub secrets:
 
 Rollback uses the Cloudflare Pages production rollback control for a bad
 static artifact. Git settings can temporarily disable automatic builds, but
-the Direct Upload workflows and long-lived GitHub credentials are not restored.
+the credentialed Wrangler workflows and long-lived GitHub credentials are not
+restored.

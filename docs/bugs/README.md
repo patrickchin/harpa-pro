@@ -337,6 +337,12 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-04** — React Native's `react-devtools-core@6.1.5` allowed
+  `shell-quote@^1.6.1`, but the frozen lockfile retained vulnerable `1.8.3`,
+  leaving the mobile toolchain exposed to critical command injection and
+  high-severity denial-of-service advisories. Fix: narrowly override that edge
+  to current `1.10.0` and enforce the resolved version in CI.
+  [detail](2026-08-04-react-devtools-shell-quote-security.md)
 - **2026-08-04** — API coverage shard failures were opaque because every
   bounded Vitest process used only the blob reporter. Fix: retain blob files for
   the merged threshold while also printing the default failure report to the

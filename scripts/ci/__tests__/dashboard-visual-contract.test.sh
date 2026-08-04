@@ -26,6 +26,10 @@ expect_file() {
   [[ -f "$1" ]] || fail "expected file $1"
 }
 
+expect_absent_file() {
+  [[ ! -e "$1" ]] || fail "did not expect legacy visual stylesheet $1"
+}
+
 expect_contains() {
   local file="$1"
   local expected="$2"
@@ -43,6 +47,8 @@ expect_not_contains() {
 expect_file "$tokens"
 expect_file "$dashboard_css"
 expect_file "$dashboard_brand"
+expect_absent_file "$repo_root/apps/dashboard/src/styles.css"
+expect_absent_file "$repo_root/apps/dashboard/src/features/reports/reports.css"
 
 # Mobile-authored colour, type, shape, and sizing values.
 expect_contains "$tokens" '--background: #f8f6f1;'
@@ -89,6 +95,12 @@ cmp -s "$mobile_brand" "$dashboard_brand" || fail 'dashboard brand icon must mat
 
 if rg -n --glob '*.tsx' '>\s*HP\s*<' "$repo_root/apps/dashboard/src" >/dev/null; then
   fail 'textual HP placeholder remains in dashboard UI'
+fi
+
+if rg -n --glob '*.tsx' \
+  'button-(primary|secondary|quiet|danger)|reports-(button|field|badge)' \
+  "$repo_root/apps/dashboard/src" >/dev/null; then
+  fail 'legacy dashboard visual classes remain in React components'
 fi
 
 # Prevent dashboard-local design-system forks from returning.

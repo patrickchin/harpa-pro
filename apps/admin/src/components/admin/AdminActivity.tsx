@@ -668,6 +668,9 @@ function ActivityFeed({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a className={buttonClass} href="/operations">
+            Operations
+          </a>
           {state === 'ready' && textUrl && (
             <a
               className={buttonClass}

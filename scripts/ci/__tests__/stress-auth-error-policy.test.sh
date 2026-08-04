@@ -41,7 +41,7 @@ expect_statuses() {
 echo "stress journey authentication error policy"
 
 expect_statuses "empty body" "400|429"
-expect_statuses "malformed JSON" "500|429"
+expect_statuses "malformed JSON" "400|429"
 
 if grep -Fq 'bash scripts/ci/__tests__/stress-auth-error-policy.test.sh' "$LINT_WORKFLOW"; then
   pass "lint-typecheck runs the auth error policy"

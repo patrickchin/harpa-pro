@@ -19,12 +19,12 @@ async function renderRootLayout({ screenshotMode }: { screenshotMode: boolean })
       React.createElement('rn-status-bar', props, null),
   }));
 
-  vi.doMock('@tanstack/react-query-persist-client', () => ({
-    PersistQueryClientProvider: provider('PersistQueryClientProvider'),
-  }));
-
   vi.doMock('@/lib/auth/session', () => ({
     AuthSessionProvider: provider('AuthSessionProvider'),
+  }));
+
+  vi.doMock('@/lib/api/session-query-provider', () => ({
+    SessionQueryProvider: provider('SessionQueryProvider'),
   }));
 
   vi.doMock('@/lib/dialogs/DialogSheetProvider', () => ({
@@ -43,15 +43,6 @@ async function renderRootLayout({ screenshotMode }: { screenshotMode: boolean })
     SentryProvider: provider('SentryProvider'),
     captureReactError: vi.fn(),
     initSentry: vi.fn(),
-  }));
-
-  vi.doMock('@/lib/api/query-client', () => ({
-    queryClient: {},
-    queryPersister: { persister: {}, maxAge: 1, buster: 'test' },
-  }));
-
-  vi.doMock('@/lib/api/query-persister', () => ({
-    shouldDehydrateQuery: vi.fn(),
   }));
 
   vi.doMock('@/lib/config/env', () => ({

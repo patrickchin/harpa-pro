@@ -8,11 +8,28 @@ tags:
     clearState: true
     stopApp: true
 - extendedWaitUntil:
+    visible: "Quickstep isn't responding|Development Build"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Quickstep isn't responding"
+    commands:
+      - tapOn: 'Wait'
+      - waitForAnimationToEnd:
+          timeout: 10000
+- extendedWaitUntil:
     visible: 'Development Build'
     timeout: 30000
 - openLink: 'exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 - waitForAnimationToEnd:
     timeout: 20000
+- runFlow:
+    when:
+      visible: "Quickstep isn't responding"
+    commands:
+      - tapOn: 'Wait'
+      - waitForAnimationToEnd:
+          timeout: 10000
 - runFlow:
     when:
       visible: 'http://10.0.2.2:8081'

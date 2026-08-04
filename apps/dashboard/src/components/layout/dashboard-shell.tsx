@@ -57,7 +57,7 @@ function RailLink({
       aria-label={ariaLabel}
       className={({ isActive }) =>
         cn(
-          'flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-card-ui px-3 py-2 text-sm font-bold no-underline transition-colors lg:justify-start',
+          'flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-card-ui px-1 py-1.5 text-label font-bold no-underline transition-colors sm:flex-row sm:gap-2 sm:px-3 sm:py-2 sm:text-sm lg:justify-start',
           isActive
             ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
@@ -67,7 +67,7 @@ function RailLink({
       to={to}
     >
       <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
-      <span>{label}</span>
+      <span className="max-[319px]:sr-only">{label}</span>
     </NavLink>
   );
 }
@@ -135,7 +135,10 @@ export function DashboardShell({
 
           <nav
             aria-label="Primary"
-            className="order-3 -mx-5 mt-3 flex basis-[calc(100%+2.5rem)] gap-1 overflow-x-auto border-t border-border px-5 pt-3 lg:order-none lg:mx-0 lg:mt-5 lg:flex lg:basis-auto lg:flex-col lg:overflow-visible lg:border-0 lg:px-0 lg:pt-0"
+            className={cn(
+              'order-3 -mx-5 mt-3 basis-[calc(100%+2.5rem)] gap-1 border-t border-border px-5 pt-3 lg:order-none lg:mx-0 lg:mt-5 lg:flex lg:basis-auto lg:flex-col lg:border-0 lg:px-0 lg:pt-0',
+              projectBase ? 'grid grid-cols-4' : 'flex',
+            )}
           >
             {!projectBase ? (
               <RailLink icon={FolderKanban} label="Projects" to="/projects" />

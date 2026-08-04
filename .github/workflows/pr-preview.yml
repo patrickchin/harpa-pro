@@ -24,8 +24,9 @@ name: pr-preview
 # Docs / marketing / mobile-only PRs skip Neon and Fly. Close events always
 # run so we never orphan resources created earlier in the PR's life.
 #
-# Forks are deliberately skipped (no FLY_API_TOKEN / DOPPLER_TOKEN_DEV /
-# NEON_API_KEY available to fork PRs). Same-repo PRs only.
+# Changed-path and migration guards are credential-free. Privileged preview
+# lifecycle jobs skip forks and Dependabot (no control-plane credentials are
+# exposed to dependency-controlled code).
 
 on:
   pull_request:
@@ -114,7 +115,8 @@ jobs:
     if: |
       github.event.action != 'closed' &&
       (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -136,7 +138,8 @@ jobs:
     if: |
       github.event.action != 'closed' &&
       (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -158,7 +161,8 @@ jobs:
     needs: [guard, neon-create, admin-neon-create]
     if: |
       github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -305,7 +309,8 @@ jobs:
   fly-destroy:
     if: |
       github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: superfly/flyctl-actions/setup-flyctl@1.6
@@ -324,7 +329,8 @@ jobs:
     if: |
       always() &&
       github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -342,7 +348,8 @@ jobs:
     if: |
       always() &&
       github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

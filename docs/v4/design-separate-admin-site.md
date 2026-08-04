@@ -49,9 +49,11 @@ origin.
 
 ## Deployments
 
-The admin app has independent preview, development, and production workflows:
+The admin app has independent preview, development, and production workflows.
+Every relevant pull request runs credential-free tests and a build; only
+human-owned same-repository pull requests publish a preview:
 
-- Pull requests deploy `apps/admin/dist` to branch `pr-<number>` of
+- Eligible pull requests deploy `apps/admin/dist` to branch `pr-<number>` of
   `harpa-pro-admin`. The stable browser origin is therefore
   `https://pr-<number>.harpa-pro-admin.pages.dev`.
 - Pushes to `dev` deploy branch `dev`, served at

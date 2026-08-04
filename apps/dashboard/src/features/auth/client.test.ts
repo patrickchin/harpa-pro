@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authMocks = vi.hoisted(() => {
   const sendVerificationOtp = vi.fn();
+  const signInWithEmail = vi.fn();
   const verifyEmailOtp = vi.fn();
   const client = {
     emailOtp: { sendVerificationOtp },
-    signIn: { emailOtp: verifyEmailOtp },
+    signIn: { email: signInWithEmail, emailOtp: verifyEmailOtp },
   };
 
   return {
@@ -13,6 +14,7 @@ const authMocks = vi.hoisted(() => {
     createAuthClient: vi.fn(() => client),
     emailOTPClient: vi.fn(() => ({ id: 'email-otp-plugin' })),
     sendVerificationOtp,
+    signInWithEmail,
     verifyEmailOtp,
   };
 });
@@ -25,11 +27,14 @@ vi.mock('better-auth/client/plugins', () => ({
   emailOTPClient: authMocks.emailOTPClient,
 }));
 
-import { authClient, requestSignInCode, verifySignInCode } from './client';
+import * as clientModule from './client';
+
+const { authClient, requestSignInCode, verifySignInCode } = clientModule;
 
 describe('dashboard auth client', () => {
   beforeEach(() => {
     authMocks.sendVerificationOtp.mockReset();
+    authMocks.signInWithEmail.mockReset();
     authMocks.verifyEmailOtp.mockReset();
   });
 
@@ -95,5 +100,50 @@ describe('dashboard auth client', () => {
         otp: '123456',
       }),
     ).rejects.toThrow('The sign-in code was not accepted.');
+  });
+
+  it('signs an allowlisted account in with email and password', async () => {
+    authMocks.signInWithEmail.mockResolvedValue({ error: null });
+    const signInWithPassword = (
+      clientModule as unknown as {
+        signInWithPassword?: (input: { email: string; password: string }) => Promise<void>;
+      }
+    ).signInWithPassword;
+
+    expect(signInWithPassword).toBeTypeOf('function');
+    await signInWithPassword?.({
+      email: 'demo@harpapro.com',
+      password: 'demo-password-for-dashboard',
+    });
+
+    expect(authMocks.signInWithEmail).toHaveBeenCalledWith({
+      email: 'demo@harpapro.com',
+      password: 'demo-password-for-dashboard',
+    });
+  });
+
+  it('surfaces password sign-in errors without exposing implementation details', async () => {
+    authMocks.signInWithEmail
+      .mockResolvedValueOnce({ error: { message: 'Invalid credentials.' } })
+      .mockResolvedValueOnce({ error: {} });
+    const signInWithPassword = (
+      clientModule as unknown as {
+        signInWithPassword?: (input: { email: string; password: string }) => Promise<void>;
+      }
+    ).signInWithPassword;
+
+    expect(signInWithPassword).toBeTypeOf('function');
+    await expect(
+      signInWithPassword?.({
+        email: 'demo@harpapro.com',
+        password: 'wrong-password-for-dashboard',
+      }),
+    ).rejects.toThrow('Invalid credentials.');
+    await expect(
+      signInWithPassword?.({
+        email: 'demo@harpapro.com',
+        password: 'wrong-password-for-dashboard',
+      }),
+    ).rejects.toThrow('Unable to sign in.');
   });
 });

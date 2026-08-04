@@ -4,6 +4,32 @@ import { DashboardPage } from './support/dashboard-page';
 import { MockDashboardApi } from './support/mock-api';
 
 test.describe('office dashboard journeys', () => {
+  test('signs a demo account in with a password without requesting an OTP', async ({
+    context,
+    page,
+  }) => {
+    const api = new MockDashboardApi({ authenticated: false });
+    await api.install(context);
+
+    await page.goto('/projects');
+    await page.getByRole('textbox', { name: 'Email address' }).fill('demo@harpapro.com');
+    await page.getByRole('button', { name: 'Send code' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Enter your password' })).toBeVisible();
+    await expect(page.getByLabel('Password')).toHaveAttribute('type', 'password');
+    expect(api.callsFor('POST', '/api/auth/email-otp/send-verification-otp')).toHaveLength(0);
+
+    await page.getByLabel('Password').fill('demo-password-for-dashboard');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
+    expect(api.callsFor('POST', '/api/auth/sign-in/email')).toHaveLength(1);
+    expect(api.callsFor('POST', '/api/auth/sign-in/email')[0]?.body).toEqual({
+      email: 'demo@harpapro.com',
+      password: 'demo-password-for-dashboard',
+    });
+  });
+
   test('signs in, completes onboarding, and returns to a shared report link', async ({
     context,
     page,

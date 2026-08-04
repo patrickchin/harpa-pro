@@ -328,6 +328,23 @@ export class MockDashboardApi {
       return;
     }
 
+    if (url.pathname === '/api/auth/sign-in/email' && method === 'POST') {
+      const input = body as { email?: string; password?: string };
+      if (
+        input.email !== 'demo@harpapro.com' ||
+        input.password !== 'demo-password-for-dashboard'
+      ) {
+        await fulfillJson(route, { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }, 401);
+        return;
+      }
+      this.authenticated = true;
+      await fulfillJson(route, {
+        token: 'dashboard-e2e-session',
+        user: this.sessionUser(),
+      });
+      return;
+    }
+
     if (url.pathname === '/me' && method === 'PATCH') {
       const input = body as {
         displayName?: string;

@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const authMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   requestSignInCode: vi.fn(),
+  signInWithPassword: vi.fn(),
   signOut: vi.fn(),
   useAuthSession: vi.fn(),
   verifySignInCode: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/features/auth', async () => {
     OnboardingForm: () => null,
     SignInForm,
     requestSignInCode: authMocks.requestSignInCode,
+    signInWithPassword: authMocks.signInWithPassword,
     useAuthSession: authMocks.useAuthSession,
     verifySignInCode: authMocks.verifySignInCode,
   };
@@ -128,6 +130,7 @@ describe('SignInRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authMocks.requestSignInCode.mockResolvedValue(undefined);
+    authMocks.signInWithPassword.mockResolvedValue(undefined);
     authMocks.verifySignInCode.mockResolvedValue(undefined);
     authMocks.refresh.mockResolvedValue(undefined);
     authMocks.signOut.mockResolvedValue(undefined);
@@ -164,6 +167,30 @@ describe('SignInRoute', () => {
     });
     expect(authMocks.refresh).toHaveBeenCalledOnce();
     expect(authMocks.verifySignInCode.mock.invocationCallOrder[0]).toBeLessThan(
+      authMocks.refresh.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('refreshes the auth boundary after demo password sign-in succeeds', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <SignInRoute />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'demo@harpapro.com');
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+    await user.type(screen.getByLabelText('Password'), 'demo-password-for-dashboard');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(authMocks.requestSignInCode).not.toHaveBeenCalled();
+    expect(authMocks.signInWithPassword).toHaveBeenCalledWith({
+      email: 'demo@harpapro.com',
+      password: 'demo-password-for-dashboard',
+    });
+    expect(authMocks.refresh).toHaveBeenCalledOnce();
+    expect(authMocks.signInWithPassword.mock.invocationCallOrder[0]).toBeLessThan(
       authMocks.refresh.mock.invocationCallOrder[0] ?? 0,
     );
   });

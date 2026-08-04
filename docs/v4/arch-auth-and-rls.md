@@ -453,9 +453,10 @@ allowlisted user already exists, it creates or refreshes that user's
 
 Demo users, including App Store reviewers, use the normal email screen.
 When the email is one of `demo@harpapro.com`, `demo2@harpapro.com`, or
-`demo3@harpapro.com`, mobile skips requesting an OTP and the next screen
-accepts a password instead. There is no visible demo or reviewer-only
-button in the mobile app.
+`demo3@harpapro.com`, mobile and the office dashboard skip requesting an OTP
+and the next screen accepts a password instead. There is no visible demo or
+reviewer-only button in either client. The dashboard behavior is specified in
+[`design-dashboard-demo-password-sign-in.md`](design-dashboard-demo-password-sign-in.md).
 
 The production API may set:
 

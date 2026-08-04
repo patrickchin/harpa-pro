@@ -137,8 +137,8 @@ Each AI-touching route has a test that:
 - `apps/site/tests/docs.spec.ts` covers local search, empty results, guide
   traversal, responsive navigation, internal links, assets, duplicate ids,
   and the branded 404 against the production static build.
-- `site-preview.yml` also verifies one checked-in legacy redirect after the
-  build is deployed to Cloudflare Pages.
+- `site-preview.yml` also waits for the native Cloudflare Git deployment's
+  exact-SHA marker and verifies one checked-in legacy redirect.
 
 ## Test the default wiring
 
@@ -150,7 +150,7 @@ trivial to swap collaborators for fakes. They also make it trivial
 to never actually run the route through its **default** wiring —
 the wiring that `docker compose up`, `:mock` builds, and PR
 previews depend on. When 100% of a route's tests inject a stub,
-the stub *is* the spec; the factory is untested.
+the stub _is_ the spec; the factory is untested.
 
 The rule, applied to every route that constructs a collaborator
 via a `createXClient()` factory:
@@ -182,18 +182,19 @@ review note.
 
 Active today:
 
-| Workflow | Trigger | Gate |
-|---|---|---|
-| `lint-typecheck.yml` | every push | ESLint + tsc clean across the workspace |
-| `unit.yml` | every push | `pnpm test` green |
-| `api-integration.yml` | every push | Combined API unit + Testcontainers suite green at ≥ 90% line coverage |
+| Workflow                      | Trigger                   | Gate                                                                                                   |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `lint-typecheck.yml`          | every push                | ESLint + tsc clean across the workspace                                                                |
+| `unit.yml`                    | every push                | `pnpm test` green                                                                                      |
+| `api-integration.yml`         | every push                | Combined API unit + Testcontainers suite green at ≥ 90% line coverage                                  |
 | `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
-| `dependency-review.yml` | every PR | Reject newly introduced high or critical dependency vulnerabilities |
-| `pr-preview.yml` | PR open / push | Credential-free path/migration guards; human-owned PR preview lifecycle |
-| `mobile-ota-pr.yml` | mobile-relevant PR | Human-owned same-repo PR OTA publication |
-| `admin-preview.yml` | admin-relevant PR | Credential-free verification; human-owned same-repo Pages preview |
-| `site-prod.yml` | push to `main` | Deploy the public site to Cloudflare Pages prod |
-| `site-preview.yml` | PR to `dev` or `main` | Credential-free verification; human-owned same-repo Pages preview |
+| `dependency-review.yml`       | every PR                  | Reject newly introduced high or critical dependency vulnerabilities                                    |
+| `pr-preview.yml`              | PR open / push            | Credential-free path/migration guards; human-owned PR preview lifecycle                                |
+| `pages-preview-ref.yml`       | human-owned same-repo PR  | Mirror/delete the exact `pr-N` Git ref without checking out PR code                                    |
+| `mobile-ota-pr.yml`           | mobile-relevant PR        | Human-owned same-repo PR OTA publication                                                               |
+| `admin-preview.yml`           | admin-relevant PR         | Credential-free checks plus exact-SHA native Pages preview verification                                |
+| `site-prod.yml`               | push to `main`            | Verify exact native Pages deployment on every production hostname                                      |
+| `site-preview.yml`            | PR to `dev` or `main`     | Credential-free checks plus exact-SHA native Pages preview verification                                |
 
 ### Dependency security automation
 

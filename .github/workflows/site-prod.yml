@@ -1,58 +1,48 @@
 name: site-prod
 
-# Build + deploy the production public site to Cloudflare Pages on
-# every push to `main` (the default branch — see AGENTS.md hard
-# rule #7). M3.1 maps harpapro.com to this project; until then the
-# prod URL is harpa-pro.pages.dev.
+# Cloudflare Git publishes main. This workflow verifies the exact commit on
+# the Pages hostname and both production custom domains.
 
 on:
   push:
     branches: [main]
     paths:
-      - "apps/site/**"
-      - ".github/workflows/site-prod.yml"
-      - "pnpm-lock.yaml"
-  # Allow manual re-deploys (e.g. content-only republish without a
-  # code change).
+      - 'apps/site/**'
+      - 'packages/api-contract/**'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - '.github/workflows/site-prod.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
   workflow_dispatch: {}
 
 concurrency:
   group: site-prod
-  cancel-in-progress: false # never cancel a prod deploy
+  cancel-in-progress: false
 
 jobs:
-  prod:
+  verify:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
-      deployments: write
+    strategy:
+      fail-fast: false
+      matrix:
+        origin:
+          - https://harpa-pro.pages.dev
+          - https://harpapro.com
+          - https://www.harpapro.com
     steps:
       - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup-monorepo
-
-      - name: Build public site
-        # PUBLIC_* env vars are inlined by Astro at build time, so they
-        # must be present here — setting them in the CF Pages dashboard
-        # is a no-op because we upload a pre-built dist/. Site key is
-        # technically public (it's in the browser bundle anyway) but
-        # kept as a secret so it doesn't end up in the workflow source.
-        env:
-          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
-          PUBLIC_API_BASE_URL: https://api.harpapro.com
-        run: pnpm --filter @harpa/site build
-
-      - name: Deploy to Cloudflare Pages (production)
-        uses: cloudflare/wrangler-action@v4
-        with:
-          wranglerVersion: '3.114.17'
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Cloudflare Pages: deploys whose --branch matches the
-          # project's "production branch" become production. Our
-          # production branch is `main` (set in the CF dashboard).
-          command: >-
-            pages deploy apps/site/dist
-            --project-name=harpa-pro
-            --branch=main
-            --commit-dirty=true
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "${{ matrix.origin }}"
+          --commit "${{ github.sha }}"
+          --branch main
+          --redirect-path /guides/getting-started
+          --redirect-suffix /docs/guides/getting-started

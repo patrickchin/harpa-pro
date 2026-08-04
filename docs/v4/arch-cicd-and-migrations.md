@@ -57,11 +57,11 @@ production uses `main`, development uses `dev`, and API previews use `pr-N`
 from admin `dev`. Production snapshots and scheduled pruning run independently
 in both Neon projects.
 
-Hosted PR browser admin login is intentionally disabled: Cloudflare's dynamic
-Pages preview origins cannot satisfy the exact-origin cookie policy without
-cross-workflow coordination. The PR gate instead runs the full admin browser
-flow locally against two independent Testcontainers databases. Shared
-development is the first hosted environment for browser verification.
+Hosted admin previews keep the exact-origin cookie policy. A credential-free
+workflow mirrors an eligible pull request head to Git branch `pr-N`;
+Cloudflare Git builds the stable `pr-N.harpa-pro-admin.pages.dev` alias against
+`harpa-pro-api-pr-N.fly.dev`. The PR gate also runs the full admin browser flow
+locally against two independent Testcontainers databases.
 
 ### Alternatives rejected
 
@@ -158,14 +158,17 @@ environment and only surfaces when the deploy fires.
 | `cli.yml`                     |       ✓       | dev + main            | `apps/cli` typecheck + tests                                                                                               |
 | `e2e-maestro-testid-gate.yml` |       ✓       | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke                                              |
 | `pr-preview.yml`              |       ✓       | (PR-only)             | Credential-free path/migration guards; human-owned PR Neon/Fly lifecycle                                                   |
-| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Human-owned same-repository PR Expo OTA preview                                                                             |
-| `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin verification; human-owned same-repository Pages preview                                               |
-| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public-site verification; human-owned same-repository Pages preview                                         |
+| `pages-preview-ref.yml`       |       ✓       | (PR-only)             | Tokenless exact `pr-N` Git-ref lifecycle for native Cloudflare previews                                                    |
+| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Human-owned same-repository PR Expo OTA preview                                                                            |
+| `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin checks plus exact-SHA native Pages preview verification                                              |
+| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public checks plus exact-SHA native Pages preview verification                                             |
 | `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys                                        |
 | `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                                    |
 | `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                                       |
-| `site-dev.yml`                |       ✗       | dev                   | Cloudflare Pages `dev` branch deploy                                                                                       |
-| `site-prod.yml`               |       ✗       | main                  | Cloudflare Pages prod deploy                                                                                               |
+| `site-dev.yml`                |       ✗       | dev                   | Verify the exact SHA served by the native Pages `dev` deployment                                                           |
+| `site-prod.yml`               |       ✗       | main                  | Verify the exact SHA on the Pages hostname and public custom domains                                                       |
+| `admin-dev.yml`               |       ✗       | dev                   | Verify the exact SHA and static routing on the native admin `dev` deployment                                               |
+| `admin-prod.yml`              |       ✗       | main                  | Verify the exact SHA and static routing on both admin production hostnames                                                 |
 | `mobile-ota-dev.yml`          |       ✗       | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy                                                     |
 | `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                                                 |
 | `ai-live.yml`                 |       ✗       | dev + main + dispatch | Live AI provider smoke (no fixtures)                                                                                       |
@@ -179,8 +182,9 @@ membership is therefore not sufficient authorization for a privileged job.
 
 Credential-free verification remains available to Dependabot: lint, tests,
 typechecks, local browser checks, static builds, changed-path detection, and
-migration filename guards. Cloudflare, Neon, Fly, EAS, cleanup, and PR-comment
-jobs additionally require
+migration filename guards. The Pages ref workflow holds only scoped GitHub
+`contents: write`, never checks out pull request code, and uses no Cloudflare
+credential. Neon, Fly, EAS, cleanup, and PR-comment jobs additionally require
 `github.event.pull_request.user.login != 'dependabot[bot]'`. This must use the
 PR author rather than `github.actor`, because a maintainer rerun changes the
 actor without transferring branch ownership.

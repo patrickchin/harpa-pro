@@ -38,10 +38,11 @@ jobs:
           bash scripts/check-no-unistyles.sh
           bash scripts/check-scope-tests.sh
           bash scripts/check-mobile-lib-flat.sh
-      - name: CI shell policy tests
-        # Self-tests and focused policy checks for shell glue. Keeps it
+      - name: CI policy tests
+        # Focused policy checks for dependencies and shell glue. Keeps them
         # honest without spinning up the full integration matrix.
         run: |
+          node scripts/ci/__tests__/shell-quote-security-policy.test.cjs
           bash scripts/ci/__tests__/api-prod-policy.test.sh
           bash scripts/ci/__tests__/stress-viewer-policy.test.sh
           bash scripts/ci/__tests__/verify-readyz.test.sh

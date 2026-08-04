@@ -337,6 +337,12 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** *(R13)* — The post-deploy stress journey still expected a
+  server error for empty or malformed sign-in JSON after the API began
+  returning the correct 400 `BAD_REQUEST`, so an unrelated dependency merge
+  left `dev` red despite every product assertion passing. Fix: accept
+  `400|429` for both inputs and enforce the contract in PR-gated CI.
+  [detail](2026-08-05-journey-auth-bad-request-drift.md)
 - **2026-08-05** — The dormant `harpa-pro-dashboard` Pages project built every
   mirrored `pr-*` ref while `apps/dashboard` existed only in draft PR #211, so
   unrelated pull requests received a failed external dashboard check. Fix:

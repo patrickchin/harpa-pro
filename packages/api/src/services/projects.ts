@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
 import { newId } from '../lib/ids.js';
+import { getPgError } from '../lib/pg-error.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -349,8 +350,8 @@ export async function removeMember(db: Db, projectId: string, userId: string): P
  * an HTTP-friendly category.
  */
 export function mapPgError(err: unknown): 'forbidden' | 'not_found' | 'conflict' | 'unknown' {
-  const e = err as { code?: string; message?: string };
-  if (!e.code) return 'unknown';
+  const e = getPgError(err);
+  if (!e) return 'unknown';
   if (e.code === '42501') return 'forbidden'; // RAISE 'not_a_member' / 'not_an_owner'
   if (e.code === 'P0002') return 'not_found'; // RAISE 'user_not_found'
   if (e.code === '23505') return 'conflict'; // unique_violation

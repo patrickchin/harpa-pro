@@ -12,6 +12,7 @@ import { getAdminPool } from '../../db/admin-client.js';
 import { getPool, rawDb, resetPool } from '../../db/client.js';
 import { withAnonConnection, withScopedConnection } from '../../db/scope.js';
 import { newId } from '../../lib/ids.js';
+import { getPgError } from '../../lib/pg-error.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { hashAdminPassword } from '../../services/admin-auth.js';
 import { makeSessionId, makeUserId } from '../factories/index.js';
@@ -132,19 +133,22 @@ describe('scope: GET /admin/activity', () => {
   });
 
   it('keeps activity events unreadable to anonymous DB scope', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(sql`SELECT id FROM app.activity_events`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(sql`SELECT id FROM app.activity_events`);
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('keeps activity events unreadable to app-user DB scope', async () => {
-    await expect(
-      withScopedConnection({ sub: regularId, sid: regularSessionId }, async (db) => {
+    const error = await withScopedConnection(
+      { sub: regularId, sid: regularSessionId },
+      async (db) => {
         await db.execute(sql`SELECT id FROM app.activity_events`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+      },
+    ).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('does not create admin-auth tables in the application database', async () => {

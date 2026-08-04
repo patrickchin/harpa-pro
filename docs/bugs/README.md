@@ -337,6 +337,12 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — The dormant `harpa-pro-dashboard` Pages project built every
+  mirrored `pr-*` ref while `apps/dashboard` existed only in draft PR #211, so
+  unrelated pull requests received a failed external dashboard check. Fix:
+  disable automatic production and preview builds until a refreshed dashboard
+  PR proves its exact head, then broaden previews only after the app lands on
+  `dev`. [detail](2026-08-05-dashboard-pages-absent-app-build.md)
 - **2026-08-04** — React Native's `react-devtools-core@6.1.5` allowed
   `shell-quote@^1.6.1`, but the frozen lockfile retained vulnerable `1.8.3`,
   leaving the mobile toolchain exposed to critical command injection and

@@ -171,6 +171,16 @@ foreign keys to application or Better Auth users. See
   `app._migrations`. Deployment automation separately resolves the URLs from
   different Neon project IDs; that remains the restore-boundary guarantee.
 
+## PostgreSQL errors through Drizzle
+
+Drizzle ORM wraps node-postgres query failures in `DrizzleQueryError`; the
+driver error containing the PostgreSQL SQLSTATE and server message is exposed
+through its `cause` chain. Route and service error mapping must use
+`packages/api/src/lib/pg-error.ts::getPgError` rather than reading `code` or
+`message` directly from the caught value. Real-Postgres integration tests pin
+the last-owner `23514` response and the account-deletion rollout `55000`
+response so dependency upgrades cannot silently turn them into HTTP 500s.
+
 ## Roles
 
 | Role                | Used by                                           | Permissions                                                                                                       |

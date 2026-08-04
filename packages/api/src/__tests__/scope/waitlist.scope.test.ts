@@ -20,6 +20,7 @@ import { sql } from 'drizzle-orm';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { withAnonConnection } from '../../db/scope.js';
 import { resetPool, getPool } from '../../db/client.js';
+import { getPgError } from '../../lib/pg-error.js';
 import { makeWaitlistId } from '../factories/index.js';
 
 let fx: PgFixture;
@@ -61,29 +62,29 @@ describe('scope: app.waitlist_signups (anonymous)', () => {
   });
 
   it('anon CANNOT SELECT', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(sql`SELECT email FROM app.waitlist_signups`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(sql`SELECT email FROM app.waitlist_signups`);
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('anon CANNOT UPDATE', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(
-          sql`UPDATE app.waitlist_signups SET confirmed_at = now() WHERE email = 'existing@buildco.com'`,
-        );
-      }),
-    ).rejects.toThrow(/permission denied/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(
+        sql`UPDATE app.waitlist_signups SET confirmed_at = now() WHERE email = 'existing@buildco.com'`,
+      );
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('anon CANNOT DELETE', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(sql`DELETE FROM app.waitlist_signups`);
-      }),
-    ).rejects.toThrow(/permission denied/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(sql`DELETE FROM app.waitlist_signups`);
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/permission denied/i);
   });
 
   it('negative control — superuser CAN SELECT (proves the test is not a false-positive)', async () => {
@@ -94,13 +95,13 @@ describe('scope: app.waitlist_signups (anonymous)', () => {
   });
 
   it('email uniqueness — duplicate INSERT fails for anon', async () => {
-    await expect(
-      withAnonConnection(async (db) => {
-        await db.execute(sql`
-          INSERT INTO app.waitlist_signups(id, email)
-          VALUES (${makeWaitlistId()}, 'existing@buildco.com')
-        `);
-      }),
-    ).rejects.toThrow(/duplicate key|unique/i);
+    const error = await withAnonConnection(async (db) => {
+      await db.execute(sql`
+        INSERT INTO app.waitlist_signups(id, email)
+        VALUES (${makeWaitlistId()}, 'existing@buildco.com')
+      `);
+    }).catch((caught: unknown) => caught);
+
+    expect(getPgError(error)?.message).toMatch(/duplicate key|unique/i);
   });
 });

@@ -54,6 +54,9 @@
     monitoring; unknown browser paths return a static 404. `/admin/activity`
     remains an API resource path. Data requests require the dedicated API admin
     session. See [Separate admin site](design-separate-admin-site.md).
+  - Both static web workspaces use Astro 7 with Vite 8 and require Node
+    22.12.0 or newer. The current shared CI setup uses the Node 22 channel;
+    Node 24 standardization is tracked separately.
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary

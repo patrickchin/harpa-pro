@@ -93,6 +93,19 @@ require_before() {
   fi
 }
 
+require_occurrence_before() {
+  local path="$1" first="$2" first_occurrence="$3" second="$4" second_occurrence="$5" description="$6"
+  local first_line second_line
+  first_line="$(grep -nF -- "$first" "$REPO_ROOT/$path" | sed -n "${first_occurrence}p" | cut -d: -f1 || true)"
+  second_line="$(grep -nF -- "$second" "$REPO_ROOT/$path" | sed -n "${second_occurrence}p" | cut -d: -f1 || true)"
+  if [[ -n "$first_line" && -n "$second_line" && "$first_line" -lt "$second_line" ]]; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 echo "release confidence gates"
 
 require_file ".github/dependabot.yml" \
@@ -172,9 +185,22 @@ require_fixed ".maestro/ci-launch-smoke.yaml" \
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "Maestro waits for the Expo Dev Launcher before opening Metro"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding|Development Build"' \
+  "Maestro accepts the recoverable Quickstep dialog at launcher readiness"
+require_fixed_count ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding"' 2 \
+  "Maestro checks for the Quickstep dialog around both launcher transitions"
+require_fixed_count ".maestro/ci-launch-smoke.yaml" \
+  "- tapOn: 'Wait'" 2 \
+  "Maestro recovers both Quickstep checks through the semantic Wait action"
 forbid_fixed ".maestro/ci-launch-smoke.yaml" \
   "optional: true" \
   "Expo app-readiness wait fails closed"
+require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding|Development Build"' \
+  "timeout: 30000" \
+  "launcher or Quickstep readiness remains bounded to 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "timeout: 30000" \
@@ -192,12 +218,28 @@ require_fixed ".maestro/ci-launch-smoke.yaml" \
   "Maestro launch flow detects the Android emulator's Metro server row"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "clearState: true" \
+  'visible: "Quickstep isn'\''t responding|Development Build"' \
+  "Maestro clears state before observing launcher or Quickstep readiness"
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding"' 1 \
+  "visible: 'Development Build'" 1 \
+  "Maestro handles the initial Quickstep dialog before requiring the launcher"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "clearState: true" \
   "visible: 'Development Build'" \
   "Maestro clears state before waiting for the Expo Dev Launcher"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "- openLink:" \
   "Maestro waits for the Expo Dev Launcher before opening Metro"
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  "- openLink:" 1 \
+  'visible: "Quickstep isn'\''t responding"' 2 \
+  "Maestro checks for a second Quickstep dialog after opening Metro"
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  "- tapOn: 'Wait'" 2 \
+  "visible: 'http://10.0.2.2:8081'" 1 \
+  "Maestro handles post-link Quickstep before selecting the Metro server"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "id: 'input-email'" \

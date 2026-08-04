@@ -391,6 +391,16 @@ green. Both the poll loop and the surrounding job are bounded.
   statements (e.g. `CREATE INDEX CONCURRENTLY`) must be named
   `*.notx.sql` and the loader runs them outside a transaction. Documented
   in §"Failure & rollback".
+- Normal transactional migrations must not contain top-level transaction
+  control. The loader owns `BEGIN`/`COMMIT`, rejects new files that try to
+  manage their own transaction, and strips the legacy outer wrapper from the
+  known historical files `0014_better_auth_init.sql`,
+  `0019_account_deletion.sql`, and `0022_r2_object_lifecycle.sql` so their
+  body and `app._migrations` ledger write remain atomic.
+- A `*.notx.sql` file must not manage transactions either. Put any
+  transactional preparation in an earlier normal migration; keep the
+  non-transactional file limited to statements that cannot run in the
+  loader-owned transaction and document its cleanup/retry procedure.
 - Export the computed head (last filename) so a future health check or
   diagnostic can reuse it without re-globbing.
 

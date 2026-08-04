@@ -14,6 +14,7 @@ let alice: string;
 let bob: string;
 let aliceSid: string;
 let bobSid: string;
+let project: string;
 let report: string;
 
 beforeAll(async () => {
@@ -28,19 +29,19 @@ beforeAll(async () => {
   await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const projId = makeProjectId();
+  project = makeProjectId();
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'NotesProj', $2)`,
-    [projId, alice],
+    [project, alice],
   );
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner')`,
-    [projId, alice],
+    [project, alice],
   );
   report = makeReportId();
   await admin.query(
     `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
-    [report, projId, alice],
+    [report, project, alice],
   );
   await admin.end();
 }, 120_000);
@@ -357,6 +358,173 @@ describe('batch photo notes', () => {
     expect(new Date(after.changed_at!).getTime()).toBeGreaterThan(
       new Date(after.generated_at!).getTime(),
     );
+  });
+
+  it('serializes concurrent file appends without collisions or lost positions', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const create = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: fileIds[0] }],
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: string };
+
+    // Widen the window between each append's MAX(position) read and INSERT.
+    // This keeps the reproducer deterministic while still exercising two
+    // independent scoped transactions against real Postgres.
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(`
+      CREATE FUNCTION app.test_delay_note_file_insert()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        PERFORM pg_sleep(0.75);
+        RETURN NEW;
+      END;
+      $$;
+
+      CREATE TRIGGER test_delay_note_file_insert
+      BEFORE INSERT ON app.note_files
+      FOR EACH ROW
+      EXECUTE FUNCTION app.test_delay_note_file_insert();
+    `);
+
+    try {
+      const responses = await Promise.all([
+        app.request(`/notes/${created.id}/files`, {
+          method: 'POST',
+          headers: headers(tok),
+          body: JSON.stringify({ files: [{ fileId: fileIds[3] }] }),
+        }),
+        app.request(`/notes/${created.id}/files`, {
+          method: 'POST',
+          headers: headers(tok),
+          body: JSON.stringify({ files: [{ fileId: fileIds[4] }] }),
+        }),
+      ]);
+
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+
+      const rows = await admin.query<{ file_id: string; position: number }>(
+        `SELECT file_id, position
+           FROM app.note_files
+          WHERE note_id = $1
+          ORDER BY position`,
+        [created.id],
+      );
+      expect(rows.rows[0]).toEqual({ file_id: fileIds[0], position: 0 });
+      expect(rows.rows.slice(1)).toHaveLength(2);
+      expect(rows.rows.slice(1).map((row) => row.position)).toEqual([1, 2]);
+      expect(rows.rows.slice(1).map((row) => row.file_id).sort()).toEqual(
+        [fileIds[3], fileIds[4]].sort(),
+      );
+    } finally {
+      await admin.query(`
+        DROP TRIGGER IF EXISTS test_delay_note_file_insert ON app.note_files;
+        DROP FUNCTION IF EXISTS app.test_delay_note_file_insert();
+      `);
+      await admin.end();
+    }
+  });
+
+  it('does not deadlock a concurrent parent report deletion', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const deleteTarget = makeReportId();
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO app.reports(id, project_id, author_id, number)
+       VALUES ($1, $2, $3, 999)`,
+      [deleteTarget, project, alice],
+    );
+
+    const create = await app.request(`/reports/${deleteTarget}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: fileIds[0] }],
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: string };
+
+    await admin.query(`
+      CREATE FUNCTION app.test_delay_note_file_insert_for_delete()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        PERFORM pg_sleep(0.75);
+        RETURN NEW;
+      END;
+      $$;
+
+      CREATE TRIGGER test_delay_note_file_insert_for_delete
+      BEFORE INSERT ON app.note_files
+      FOR EACH ROW
+      EXECUTE FUNCTION app.test_delay_note_file_insert_for_delete();
+    `);
+
+    try {
+      const appendPromise = app.request(`/notes/${created.id}/files`, {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ files: [{ fileId: fileIds[3] }] }),
+      });
+
+      let appendReachedTrigger = false;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const activity = await admin.query<{ sleeping: boolean }>(`
+          SELECT EXISTS (
+            SELECT 1
+              FROM pg_stat_activity
+             WHERE wait_event = 'PgSleep'
+               AND query LIKE '%INSERT INTO app.note_files%'
+          ) AS sleeping
+        `);
+        if (activity.rows[0]?.sleeping) {
+          appendReachedTrigger = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(appendReachedTrigger).toBe(true);
+
+      const deletePromise = admin.query(
+        `DELETE FROM app.reports WHERE id = $1`,
+        [deleteTarget],
+      );
+      const [append, deleted] = await Promise.allSettled([
+        appendPromise,
+        deletePromise,
+      ]);
+
+      expect(append.status).toBe('fulfilled');
+      if (append.status === 'fulfilled') {
+        expect(append.value.status).toBe(200);
+      }
+      expect(deleted.status).toBe('fulfilled');
+      if (deleted.status === 'fulfilled') {
+        expect(deleted.value.rowCount).toBe(1);
+      }
+    } finally {
+      await admin.query(`
+        DROP TRIGGER IF EXISTS test_delay_note_file_insert_for_delete
+          ON app.note_files;
+        DROP FUNCTION IF EXISTS app.test_delay_note_file_insert_for_delete();
+      `);
+      await admin.query(`DELETE FROM app.reports WHERE id = $1`, [deleteTarget]);
+      await admin.end();
+    }
   });
 
   it('list notes returns files array', async () => {

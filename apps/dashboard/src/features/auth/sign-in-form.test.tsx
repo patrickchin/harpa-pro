@@ -107,4 +107,33 @@ describe('SignInForm', () => {
       password: 'demo-password-for-dashboard',
     });
   });
+
+  it('lets a demo account fall back to the normal email code flow', async () => {
+    const user = userEvent.setup();
+    const onSendCode = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SignInForm
+        onSendCode={onSendCode}
+        onSignInWithPassword={vi.fn()}
+        onVerifyCode={vi.fn()}
+      />,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'demo@harpapro.com');
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+
+    expect(onSendCode).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText('Password'), 'password-to-clear');
+    await user.click(screen.getByRole('button', { name: 'Use email code instead' }));
+
+    expect(onSendCode).toHaveBeenCalledOnce();
+    expect(onSendCode).toHaveBeenCalledWith('demo@harpapro.com');
+    expect(screen.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Six-digit code' })).toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: 'Use another email' }));
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+
+    expect(screen.getByLabelText('Password')).toHaveValue('');
+  });
 });

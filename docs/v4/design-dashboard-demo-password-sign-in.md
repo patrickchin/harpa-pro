@@ -19,6 +19,8 @@ not depend on access to an email inbox.
   the existing OTP flow without seeing demo-only controls.
 - As a demo user, I enter the same normal email field and continue to a
   password screen without requesting an OTP.
+- As a demo user, I can explicitly request an email code from the password
+  screen when password access is unavailable.
 - As a demo user, I can change the email and return to the first step without
   retaining the password I typed.
 - As an operator, I never expose the configured demo password in dashboard
@@ -39,6 +41,10 @@ not depend on access to an email inbox.
   allowlist and keeps password sign-up disabled.
 - Successful password sign-in refreshes the existing dashboard session exactly
   as successful OTP verification does.
+- The password screen offers an explicit `Use email code instead` action. It
+  requests an OTP only after the user selects it, then continues through the
+  normal code-verification step. This keeps demo emails usable when optional
+  server-side demo password configuration is absent.
 - The dashboard does not add a visible demo/reviewer shortcut. This preserves
   the mobile interaction and keeps OTP visually primary for normal users.
 
@@ -50,8 +56,9 @@ not depend on access to an email inbox.
 - The password input uses `type="password"` and
   `autocomplete="current-password"`, receives initial focus, and is never
   persisted.
-- The primary action reads `Sign in`; the secondary action returns to the email
-  step and clears the password and error state.
+- The primary action reads `Sign in`; a quiet action requests an email code;
+  and the secondary action returns to the email step and clears the password
+  and error state.
 - Authentication errors are announced through the existing `role="alert"`
   treatment and do not disclose whether an account exists.
 
@@ -60,8 +67,8 @@ not depend on access to an email inbox.
 - Normal email behavior and OTP tests remain unchanged and green.
 - Unit tests prove exact demo-email matching, OTP bypass, password field
   semantics, Better Auth request shape, error handling, and session refresh.
-- A Playwright journey proves a demo account can complete the password path and
-  that no OTP request is made.
+- Playwright journeys prove a demo account can complete the password path
+  without an OTP request and can deliberately fall back to the OTP path.
 - Dashboard lint, typecheck, unit coverage, production build, and the existing
   cross-browser journey matrix pass.
 - `apps/site` remains unchanged.

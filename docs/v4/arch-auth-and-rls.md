@@ -457,6 +457,9 @@ When the email is one of `demo@harpapro.com`, `demo2@harpapro.com`, or
 and the next screen accepts a password instead. There is no visible demo or
 reviewer-only button in either client. The dashboard behavior is specified in
 [`design-dashboard-demo-password-sign-in.md`](design-dashboard-demo-password-sign-in.md).
+Because the server-side demo-password configuration is optional, the dashboard
+password screen also lets the user explicitly request a standard email OTP.
+No OTP is sent until the user selects that fallback.
 
 The production API may set:
 
@@ -480,6 +483,8 @@ authenticated API routes behave the same as they do for a regular user.
 Normal users still receive and enter six-digit email OTPs. The demo
 password path does not change the email-OTP route; if that route is
 called directly, better-auth still generates standard six-digit OTPs.
+The dashboard exposes that route as an explicit fallback from its demo
+password screen, so demo emails remain usable without password configuration.
 Demo password attempts are logged with `{email, outcome}` and never log
 the password.
 

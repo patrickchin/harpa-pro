@@ -30,6 +30,26 @@ test.describe('office dashboard journeys', () => {
     });
   });
 
+  test('lets a demo account request an email code from the password step', async ({
+    context,
+    page,
+  }) => {
+    const api = new MockDashboardApi({ authenticated: false });
+    await api.install(context);
+
+    await page.goto('/projects');
+    await page.getByRole('textbox', { name: 'Email address' }).fill('demo3@harpapro.com');
+    await page.getByRole('button', { name: 'Send code' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Enter your password' })).toBeVisible();
+    expect(api.callsFor('POST', '/api/auth/email-otp/send-verification-otp')).toHaveLength(0);
+
+    await page.getByRole('button', { name: 'Use email code instead' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+    expect(api.callsFor('POST', '/api/auth/email-otp/send-verification-otp')).toHaveLength(1);
+  });
+
   test('signs in, completes onboarding, and returns to a shared report link', async ({
     context,
     page,

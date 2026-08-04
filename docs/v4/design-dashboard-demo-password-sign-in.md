@@ -1,6 +1,6 @@
 # Dashboard demo-account password sign-in
 
-**Status:** approved for implementation on 2026-08-04
+**Status:** implemented on 2026-08-04
 
 **Applies to:** `apps/dashboard` authentication only
 

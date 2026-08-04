@@ -26,9 +26,7 @@ test.describe('office dashboard journeys', () => {
     await page.getByRole('textbox', { name: 'Six-digit code' }).fill('123456');
     await page.getByRole('button', { name: 'Verify code' }).click();
 
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Set up your profile' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Welcome' })).toBeVisible();
     await page.getByRole('textbox', { name: 'Full name' }).fill('Morgan Lee');
     await page.getByRole('textbox', { name: /Company/ }).fill('Northstar Construction');
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -67,7 +65,9 @@ test.describe('office dashboard journeys', () => {
 
     await dashboard.openPrimarySection('Members');
     await expect(page.getByRole('heading', { level: 1, name: 'Members' })).toBeVisible();
-    await expect(page.getByText('Riley Chen')).toBeVisible();
+    await expect(
+      page.getByTestId('members-desktop-table').getByText('Riley Chen'),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add member' })).toHaveCount(0);
     await expect(page.getByRole('combobox')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Remove/ })).toHaveCount(0);
@@ -157,20 +157,21 @@ test.describe('office dashboard journeys', () => {
     await addDialog.getByRole('textbox', { name: 'Email address' }).fill('casey@example.com');
     await addDialog.getByRole('combobox', { name: 'Project role' }).selectOption('editor');
     await addDialog.getByRole('button', { name: 'Add member', exact: true }).click();
-    await expect(page.getByText('Casey Brooks', { exact: true })).toBeVisible();
+    const membersTable = page.getByTestId('members-desktop-table');
+    await expect(membersTable.getByText('Casey Brooks', { exact: true })).toBeVisible();
 
-    await page
+    await membersTable
       .getByRole('combobox', { name: 'Change role for Casey Brooks' })
       .selectOption('viewer');
     await expect
       .poll(() => api.state.members.find((member) => member.email === 'casey@example.com')?.role)
       .toBe('viewer');
-    await page.getByRole('button', { name: 'Remove Casey Brooks' }).click();
+    await membersTable.getByRole('button', { name: 'Remove Casey Brooks' }).click();
     await page
       .getByRole('dialog', { name: 'Remove Casey Brooks' })
       .getByRole('button', { name: 'Confirm removal' })
       .click();
-    await expect(page.getByText('Casey Brooks', { exact: true })).toHaveCount(0);
+    await expect(membersTable.getByText('Casey Brooks', { exact: true })).toHaveCount(0);
 
     await dashboard.openPrimarySection('Reports');
     await page.getByRole('button', { name: 'New report' }).click();

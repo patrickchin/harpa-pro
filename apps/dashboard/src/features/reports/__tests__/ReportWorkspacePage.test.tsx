@@ -258,8 +258,11 @@ describe('ReportWorkspacePage draft editing', () => {
         finalizedAt: '2026-07-28T09:05:00.000Z',
       }),
     }));
+    const onFinalizedTabChange = vi.fn();
     const rendered = await mountWorkspace({
       api: fakeReportsApi({ updateGeneratedReport, finalizeReport }),
+      initialFinalizedTab: 'review',
+      onFinalizedTabChange,
     });
 
     await click(button(rendered.container, 'Update report'));
@@ -276,6 +279,7 @@ describe('ReportWorkspacePage draft editing', () => {
     expect(finalizeReport).toHaveBeenCalledWith('highland-tower', 7, {
       expectedUpdatedAt: '2026-07-28T09:04:00.000Z',
     });
+    expect(onFinalizedTabChange).toHaveBeenCalledWith('report');
   });
 
   it('reloads the current server body after a conflict without losing it first', async () => {
@@ -467,12 +471,15 @@ describe('ReportWorkspacePage finalized report', () => {
     const reopenReport = vi.fn(async () => ({
       report: reportFixture({ status: 'draft', finalizedAt: null }),
     }));
+    const onFinalizedTabChange = vi.fn();
     const rendered = await mountWorkspace({
       api: fakeReportsApi({
         getReport: async () => finalized,
         reopenReport,
       }),
       role: 'editor',
+      initialFinalizedTab: 'review',
+      onFinalizedTabChange,
     });
 
     await click(button(rendered.container, 'Reopen as draft'));
@@ -485,6 +492,7 @@ describe('ReportWorkspacePage finalized report', () => {
     expect(reopenReport).toHaveBeenCalledWith('highland-tower', 7, {
       expectedUpdatedAt: '2026-07-28T09:00:00.000Z',
     });
+    expect(onFinalizedTabChange).toHaveBeenCalledWith('report');
     expect(rendered.container.textContent).toContain('Draft');
   });
 

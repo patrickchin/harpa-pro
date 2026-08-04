@@ -337,6 +337,11 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — API integration intermittently failed after all 219
+  integration tests passed because two rate-limiter test pools could re-emit
+  PostgreSQL shutdown `57P01` while Testcontainers stopped. Fix: observe
+  only those pools, tolerate that exact code only during teardown, and fail on
+  every other pool error. [detail](2026-08-05-rate-limiter-testcontainers-teardown-57p01.md)
 - **2026-08-05** *(R13)* — The post-deploy stress journey still expected a
   server error for empty or malformed sign-in JSON after the API began
   returning the correct 400 `BAD_REQUEST`, so an unrelated dependency merge

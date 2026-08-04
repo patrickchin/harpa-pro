@@ -3,24 +3,21 @@
  *
  * Provider order (top → bottom):
  *   AppErrorBoundary → GestureHandlerRootView → SafeAreaProvider →
- *   PersistQueryClientProvider → AuthSessionProvider → StatusBar →
+ *   AuthSessionProvider → StatusBar + SessionQueryProvider →
  *   DialogSheetProvider → QueueProvider → AudioPlaybackProvider →
- *   SentryProvider → Slot
+ *   SentryProvider → Slot.
  *
  * See docs/v4/arch-p2-6-app-shell.md for rationale.
  *
- * `PersistQueryClientProvider` rehydrates the TanStack Query cache
- * from MMKV before children mount, so cold-start screens render the
- * last-seen data instantly while a background refetch revalidates.
- * See `lib/api/query-persister.ts` for the storage adapter and
- * allowlist.
+ * `SessionQueryProvider` waits for auth, then rehydrates only that
+ * user's TanStack Query cache from MMKV. During user-id transitions it
+ * withholds descendants while swapping to a fresh in-memory client.
  */
 import '../global.css';
 import { Component, type ReactNode } from 'react';
 import { Slot } from 'expo-router';
 import { ActivityIndicator, View, Text, Pressable } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '@/lib/design-tokens/colors';
@@ -33,18 +30,10 @@ import {
   captureReactError,
   initSentry,
 } from '@/lib/telemetry/Sentry';
-import { queryClient, queryPersister } from '@/lib/api/query-client';
-import { shouldDehydrateQuery } from '@/lib/api/query-persister';
+import { SessionQueryProvider } from '@/lib/api/session-query-provider';
 
 // Initialize Sentry when EXPO_PUBLIC_SENTRY_DSN is present.
 initSentry();
-
-const persistOptions = {
-  persister: queryPersister.persister,
-  maxAge: queryPersister.maxAge,
-  buster: queryPersister.buster,
-  dehydrateOptions: { shouldDehydrateQuery },
-};
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -131,12 +120,22 @@ export default function RootLayout() {
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <PersistQueryClientProvider
-            client={queryClient}
-            persistOptions={persistOptions}
-          >
-            <AuthSessionProvider>
-              <StatusBar hidden={false} style="dark" />
+          <AuthSessionProvider>
+            <StatusBar hidden={false} style="dark" />
+            <SessionQueryProvider
+              fallback={
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.background,
+                  }}
+                >
+                  <ActivityIndicator color={colors.foreground} />
+                </View>
+              }
+            >
               <DialogSheetProvider>
                 <QueueProvider>
                   <AudioPlaybackProvider>
@@ -146,8 +145,8 @@ export default function RootLayout() {
                   </AudioPlaybackProvider>
                 </QueueProvider>
               </DialogSheetProvider>
-            </AuthSessionProvider>
-          </PersistQueryClientProvider>
+            </SessionQueryProvider>
+          </AuthSessionProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>

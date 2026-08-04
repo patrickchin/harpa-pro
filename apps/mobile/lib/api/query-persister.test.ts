@@ -52,9 +52,7 @@ describe('createMmkvAsyncStorage', () => {
 describe('shouldDehydrateQuery', () => {
   it('allows whitelisted query heads', () => {
     expect(shouldDehydrateQuery(makeQuery(['projects'], []))).toBe(true);
-    expect(
-      shouldDehydrateQuery(makeQuery(['project', { project: 'p' }], {})),
-    ).toBe(true);
+    expect(shouldDehydrateQuery(makeQuery(['project', { project: 'p' }], {}))).toBe(true);
     expect(shouldDehydrateQuery(makeQuery(['me'], {}))).toBe(true);
     expect(shouldDehydrateQuery(makeQuery(['meLimits'], {}))).toBe(true);
   });
@@ -62,18 +60,12 @@ describe('shouldDehydrateQuery', () => {
   it('blocks non-whitelisted heads', () => {
     expect(shouldDehydrateQuery(makeQuery(['meUsage'], {}))).toBe(false);
     expect(shouldDehydrateQuery(makeQuery(['health'], {}))).toBe(false);
-    expect(
-      shouldDehydrateQuery(makeQuery(['resolveProjectSlug'], {})),
-    ).toBe(false);
+    expect(shouldDehydrateQuery(makeQuery(['resolveProjectSlug'], {}))).toBe(false);
   });
 
   it('blocks queries that are not in success state', () => {
-    expect(shouldDehydrateQuery(makeQuery(['projects'], [], 'pending'))).toBe(
-      false,
-    );
-    expect(shouldDehydrateQuery(makeQuery(['projects'], [], 'error'))).toBe(
-      false,
-    );
+    expect(shouldDehydrateQuery(makeQuery(['projects'], [], 'pending'))).toBe(false);
+    expect(shouldDehydrateQuery(makeQuery(['projects'], [], 'error'))).toBe(false);
   });
 
   it('blocks reportNotes pages that still contain optimistic ids', () => {
@@ -94,7 +86,7 @@ describe('createQueryPersister round-trip', () => {
   beforeEach(() => clearPersistedStore());
 
   it('persists allowed queries and restores them into a fresh client', async () => {
-    const { persister, buster, maxAge } = createQueryPersister();
+    const { persister, buster, maxAge } = createQueryPersister('usr_alice');
 
     const writer = new QueryClient();
     writer.setQueryData(['projects'], [{ slug: 'demo', name: 'Demo' }]);
@@ -115,16 +107,14 @@ describe('createQueryPersister round-trip', () => {
       maxAge,
     });
 
-    expect(reader.getQueryData(['projects'])).toEqual([
-      { slug: 'demo', name: 'Demo' },
-    ]);
+    expect(reader.getQueryData(['projects'])).toEqual([{ slug: 'demo', name: 'Demo' }]);
     // meUsage was filtered out by shouldDehydrateQuery, so it must
     // not appear in the restored cache.
     expect(reader.getQueryData(['meUsage'])).toBeUndefined();
   });
 
   it('drops the persisted blob when buster changes', async () => {
-    const { persister, maxAge } = createQueryPersister();
+    const { persister, maxAge } = createQueryPersister('usr_alice');
 
     const writer = new QueryClient();
     writer.setQueryData(['projects'], [{ slug: 'x' }]);
@@ -146,7 +136,7 @@ describe('createQueryPersister round-trip', () => {
   });
 
   it('persister.removeClient wipes the persisted blob (logout path)', async () => {
-    const { persister, buster, maxAge } = createQueryPersister();
+    const { persister, buster, maxAge } = createQueryPersister('usr_alice');
 
     const writer = new QueryClient();
     writer.setQueryData(['projects'], [{ slug: 'x' }]);
@@ -167,5 +157,68 @@ describe('createQueryPersister round-trip', () => {
       maxAge,
     });
     expect(reader.getQueryData(['projects'])).toBeUndefined();
+  });
+
+  it('does not cold-restore another user’s persisted data', async () => {
+    const alice = createQueryPersister('usr_alice');
+    const aliceClient = new QueryClient();
+    aliceClient.setQueryData(['projects'], [{ slug: 'alice-private', name: 'Alice Private' }]);
+    await persistQueryClientSave({
+      queryClient: aliceClient,
+      persister: alice.persister,
+      buster: alice.buster,
+      dehydrateOptions: { shouldDehydrateQuery },
+    });
+
+    const bob = createQueryPersister('usr_bob');
+    const bobClient = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: bobClient,
+      persister: bob.persister,
+      buster: bob.buster,
+      maxAge: bob.maxAge,
+    });
+
+    expect(bobClient.getQueryData(['projects'])).toBeUndefined();
+  });
+
+  it('keeps each account snapshot isolated across account switches', async () => {
+    const alice = createQueryPersister('usr_alice');
+    const aliceClient = new QueryClient();
+    aliceClient.setQueryData(['projects'], [{ slug: 'alice-private' }]);
+    await persistQueryClientSave({
+      queryClient: aliceClient,
+      persister: alice.persister,
+      buster: alice.buster,
+      dehydrateOptions: { shouldDehydrateQuery },
+    });
+
+    const bob = createQueryPersister('usr_bob');
+    const bobClient = new QueryClient();
+    bobClient.setQueryData(['projects'], [{ slug: 'bob-private' }]);
+    await persistQueryClientSave({
+      queryClient: bobClient,
+      persister: bob.persister,
+      buster: bob.buster,
+      dehydrateOptions: { shouldDehydrateQuery },
+    });
+
+    const restoredAlice = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: restoredAlice,
+      persister: alice.persister,
+      buster: alice.buster,
+      maxAge: alice.maxAge,
+    });
+    const restoredBob = new QueryClient();
+    await persistQueryClientRestore({
+      queryClient: restoredBob,
+      persister: bob.persister,
+      buster: bob.buster,
+      maxAge: bob.maxAge,
+    });
+
+    expect(restoredAlice.getQueryData(['projects'])).toEqual([{ slug: 'alice-private' }]);
+    expect(restoredBob.getQueryData(['projects'])).toEqual([{ slug: 'bob-private' }]);
   });
 });

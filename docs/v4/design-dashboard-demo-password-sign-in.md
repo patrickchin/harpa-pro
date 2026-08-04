@@ -30,6 +30,9 @@ not depend on access to an email inbox.
 
 - The dashboard recognizes the same exact public addresses as mobile:
   `demo@harpapro.com`, `demo2@harpapro.com`, and `demo3@harpapro.com`.
+- Non-production automation builds may add public, allowlisted test identities
+  through `VITE_PASSWORD_ACCOUNT_EMAILS`. This changes only which emails reveal
+  the password form; it never exposes a password or weakens the API allowlist.
 - Email matching trims whitespace, lowercases the address, and requires an
   exact match. Similar or malformed addresses remain on the OTP path.
 - A recognized demo email skips
@@ -68,7 +71,9 @@ not depend on access to an email inbox.
 - Unit tests prove exact demo-email matching, OTP bypass, password field
   semantics, Better Auth request shape, error handling, and session refresh.
 - Playwright journeys prove a demo account can complete the password path
-  without an OTP request and can deliberately fall back to the OTP path.
+  without an OTP request and can deliberately fall back to the OTP path. The
+  deployed-preview journey also submits this same form with an explicitly
+  configured test identity against the real backend.
 - Dashboard lint, typecheck, unit coverage, production build, and the existing
   cross-browser journey matrix pass.
 - `apps/site` remains unchanged.

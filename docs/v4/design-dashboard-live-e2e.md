@@ -65,15 +65,24 @@ provider wiring.
 
 ## Auth and secret handling
 
-The live lane authenticates through Better Auth's real
-`POST /api/auth/sign-in/email` path using allowlisted test accounts. CI loads
-only `TEST_ACCOUNT_PASSWORD` from the existing Doppler dev configuration after
-deployment and supplies stable owner/editor emails
-(`test@harpapro.com`, `test2@harpapro.com`) through workflow env.
+The live lane submits the deployed dashboard password form, which calls Better
+Auth's real `POST /api/auth/sign-in/email` path using allowlisted test accounts
+and then refreshes the application session. CI loads only
+`TEST_ACCOUNT_PASSWORD` from the existing Doppler dev configuration after
+deployment and supplies stable owner/editor emails through
+`TEST_ACCOUNT_EMAIL_DEV` and `TEST_ACCOUNT_EMAIL2_DEV` repository variables.
+Those values mirror the allowlist that the preview release seeds from Doppler,
+avoiding a second hardcoded source of truth.
+
+The preview build receives those public email identities through
+`VITE_PASSWORD_ACCOUNT_EMAILS`, allowing the same dashboard form used by demo
+accounts to expose its password step. No password is bundled into the Vite
+artifact; the API remains authoritative for the allowlist and credential.
 
 The dashboard UI still supports demo-password sign-in; that branch stays
-covered in the mock browser suite. The live preview lane does not rely on
-`DEMO_ACCOUNT_PASSWORD` because the current dev secret set does not include it.
+covered in the mock browser suite. The live preview lane uses the dedicated
+test-account contract because demo credentials are optional deployment
+configuration, while test accounts are the established automation identity.
 
 The live Playwright config uses one worker, zero retries, no trace, and no video.
 It never writes storage state. Failure screenshots may be uploaded, but no
@@ -82,10 +91,10 @@ is retained only in memory for black-box API setup and cleanup.
 
 ## State setup and cleanup
 
-Each run uses a unique `pw-pr-<number>-<run>` project name. Project, membership,
-and report mutations go through the browser UI. The dashboard intentionally does
-not create source notes, so the harness uses the authenticated public API for
-one setup action:
+Each run derives a unique project name from `pr-<number>-<run>`. Project,
+membership, and report mutations go through the browser UI. The dashboard
+intentionally does not create source notes, so the harness uses the authenticated
+public API for one setup action:
 
 ```text
 POST /reports/{reportId}/notes

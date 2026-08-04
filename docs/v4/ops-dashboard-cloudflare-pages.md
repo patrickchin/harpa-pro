@@ -80,8 +80,11 @@ configured for the public site:
 
 The token may be reused because it is account-scoped. No dashboard API URL is a
 secret. Vite inlines `VITE_API_BASE_URL` into the uploaded bundle, so every
-workflow sets it on the build itself. Setting that value in the Pages dashboard
-does not change a pre-built `dist` upload.
+workflow sets it on the build itself. Preview builds also inline
+`VITE_PASSWORD_ACCOUNT_EMAILS`, a comma-separated list of public automation
+identities from repository variables; the password remains server-side and in
+the live-test process only. Setting either value in the Pages dashboard does not
+change a pre-built `dist` upload.
 
 ## Production hostname
 

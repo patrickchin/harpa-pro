@@ -46,4 +46,22 @@ describe('parseDashboardEnv', () => {
       }),
     ).toThrow(/VITE_SENTRY_DSN/);
   });
+
+  it('validates optional password-account identities without treating them as secrets', () => {
+    expect(
+      parseDashboardEnv({
+        VITE_API_BASE_URL: 'https://api.harpapro.com',
+        VITE_PASSWORD_ACCOUNT_EMAILS: 'test+1@harpapro.com,test+2@harpapro.com',
+      }),
+    ).toMatchObject({
+      VITE_PASSWORD_ACCOUNT_EMAILS: 'test+1@harpapro.com,test+2@harpapro.com',
+    });
+
+    expect(() =>
+      parseDashboardEnv({
+        VITE_API_BASE_URL: 'https://api.harpapro.com',
+        VITE_PASSWORD_ACCOUNT_EMAILS: 'not-an-email',
+      }),
+    ).toThrow(/VITE_PASSWORD_ACCOUNT_EMAILS/);
+  });
 });

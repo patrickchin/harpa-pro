@@ -2,7 +2,7 @@ import { KeyRound, MailCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 import { BrandMark, Button, Field, Input } from '@/components/ui';
-import { isDemoAccountEmail } from './demo-account';
+import { isPasswordAccountEmail } from './demo-account';
 
 interface VerifyCodeInput {
   email: string;
@@ -18,6 +18,7 @@ interface SignInFormProps {
   onSendCode: (email: string) => Promise<void>;
   onSignInWithPassword: (input: PasswordSignInInput) => Promise<void>;
   onVerifyCode: (input: VerifyCodeInput) => Promise<void>;
+  passwordAccountEmails?: readonly string[];
 }
 
 function errorMessage(error: unknown): string {
@@ -51,6 +52,7 @@ export function SignInForm({
   onSendCode,
   onSignInWithPassword,
   onVerifyCode,
+  passwordAccountEmails = [],
 }: SignInFormProps): React.JSX.Element {
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [email, setEmail] = useState('');
@@ -72,7 +74,7 @@ export function SignInForm({
     setError(null);
     setPendingAction('send-code');
     try {
-      if (isDemoAccountEmail(normalizedEmail)) {
+      if (isPasswordAccountEmail(normalizedEmail, passwordAccountEmails)) {
         setEmail(normalizedEmail);
         setStep('password');
         return;
@@ -108,7 +110,7 @@ export function SignInForm({
     event.preventDefault();
     const normalizedPassword = password.trim();
     if (!normalizedPassword) {
-      setError('Enter the demo account password.');
+      setError('Enter the account password.');
       return;
     }
     setError(null);

@@ -25,6 +25,7 @@ import { ProjectOverview, ProjectSettingsPanel, ProjectsPageView } from '@/featu
 import { dashboardDataApi } from '@/features/projects/data-api';
 import { ReportWorkspacePage, ReportsListPage, reportsApi } from '@/features/reports';
 import { ApiError } from '@/lib/api';
+import { env } from '@/lib/env';
 
 export const projectKeys = {
   all: ['dashboard', 'projects'] as const,
@@ -87,6 +88,7 @@ export function SignInRoute(): React.JSX.Element {
           await verifySignInCode(input);
           await session.refresh();
         }}
+        passwordAccountEmails={env.VITE_PASSWORD_ACCOUNT_EMAILS?.split(',')}
       />
     </AuthCanvas>
   );

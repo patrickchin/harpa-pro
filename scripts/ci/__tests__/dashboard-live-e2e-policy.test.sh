@@ -19,7 +19,11 @@ fail() { echo "  FAIL - $1"; FAIL=$((FAIL + 1)); }
 
 require_file() {
   local file="$1" description="$2"
-  [[ -f "$file" ]] && pass "$description" || fail "$description"
+  if [[ -f "$file" ]]; then
+    pass "$description"
+  else
+    fail "$description"
+  fi
 }
 
 require_fixed() {
@@ -66,14 +70,28 @@ require_fixed "$LIVE_CONFIG" "retries: 0" "live AI calls are never double-billed
 require_fixed "$LIVE_CONFIG" "trace: 'off'" "live traces cannot capture auth payloads"
 require_fixed "$LIVE_CONFIG" "video: 'off'" "live video artifacts stay disabled"
 forbid_fixed "$LIVE_CONFIG" "webServer:" "live config targets a deployed Pages build"
+forbid_fixed "$LIVE_CONFIG" "storageState" "live auth state is never persisted"
+forbid_fixed "$LIVE_CONFIG" "html" "live reports cannot retain secret-bearing steps"
 
 require_fixed "$LIVE_SPEC" "/reports/\${encodeURIComponent(reportId)}/notes" \
   "live journey seeds source text through the authenticated public API"
-require_fixed "$LIVE_SPEC" "/projects/\${encodeURIComponent(projectSlug)}/reports/\${reportNumber}/debug" \
+require_fixed "$LIVE_SPEC" "async function getReportDebug" \
   "live journey reads persisted generation diagnostics"
-require_fixed "$LIVE_SPEC" "fixtureMode).toBe('live')" \
+require_fixed "$LIVE_SPEC" "expect(reportDebug.lastGeneration?.fixtureMode).toBe('live')" \
   "live journey proves server-selected provider mode"
 require_fixed "$LIVE_SPEC" "finally" "live journey has failure-path cleanup"
+require_fixed "$LIVE_SPEC" "This report changed on another device" \
+  "live journey protects concurrent keyboard edits"
+require_fixed "$LIVE_SPEC" "Confirm removal" \
+  "live journey proves removed-member access loss"
+require_fixed "$LIVE_SPEC" "Reopen as draft" \
+  "live journey covers finalized report reopening"
+require_fixed "$LIVE_SPEC" "signOutThroughUi" \
+  "live journey signs both browser sessions out"
+require_fixed "$LIVE_SPEC" "getByRole('button', { name: 'Sign in' }).click()" \
+  "live journey submits the deployed dashboard password form"
+forbid_fixed "$LIVE_SPEC" "page.evaluate(" \
+  "live authentication cannot bypass the dashboard UI"
 
 require_fixed "$CHANGED_PATHS" "dashboard:" "changed-paths publishes a dashboard output"
 require_fixed "$CHANGED_PATHS" "- 'apps/dashboard/**'" \
@@ -89,10 +107,20 @@ forbid_fixed "$PREVIEW" "https://harpa-pro-api-dev.fly.dev" \
   "live preview never mutates the shared dev backend"
 require_fixed "$PREVIEW" "doppler secrets get TEST_ACCOUNT_PASSWORD --plain" \
   "workflow loads only the server-owned test password"
+require_fixed "$PREVIEW" 'DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}' \
+  "owner identity follows the seeded test-account allowlist"
+require_fixed "$PREVIEW" 'DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}' \
+  "editor identity follows the seeded test-account allowlist"
+require_fixed "$PREVIEW" "VITE_PASSWORD_ACCOUNT_EMAILS:" \
+  "preview build exposes only the public password-account identities"
+require_fixed "$PREVIEW" "- '.github/actions/setup-monorepo/**'" \
+  "shared monorepo setup changes trigger the dashboard gate"
+require_fixed "$PREVIEW" "- 'scripts/ci/verify-api-release.sh'" \
+  "API compatibility verifier changes trigger the dashboard gate"
 require_fixed "$PREVIEW" "pnpm --filter @harpa/dashboard test:e2e:live" \
   "workflow runs the deployed live journey"
-require_fixed "$PREVIEW" 'DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}' \
-  "live journey targets the deployed PR alias"
+require_fixed "$PREVIEW" 'DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}' \
+  "live journey targets the immutable Pages deployment"
 require_fixed "$PREVIEW" 'DASHBOARD_LIVE_API_URL: ${{ steps.api.outputs.base-url }}' \
   "live setup targets the matching PR API"
 require_before "$PREVIEW" "bash scripts/ci/verify-dashboard-pages.sh" \

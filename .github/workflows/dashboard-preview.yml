@@ -16,11 +16,13 @@ on:
       - 'packages/design-tokens/**'
       - 'packages/report-core/**'
       - '.github/actions/changed-paths/**'
+      - '.github/actions/setup-monorepo/**'
       - '.github/workflows/dashboard-*.yml'
       - '.github/workflows/pr-preview.yml'
       - 'infra/fly/fly.preview.toml'
       - 'scripts/ci/ensure-dashboard-pages-project.sh'
       - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/verify-api-release.sh'
       - 'scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh'
       - 'scripts/ci/__tests__/dashboard-pages-policy.test.sh'
       - 'scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh'
@@ -70,6 +72,17 @@ jobs:
           bash scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh
           bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
 
+      - name: Validate dashboard live identities
+        shell: bash
+        env:
+          DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
+        run: |
+          if [[ -z "$DASHBOARD_LIVE_OWNER_EMAIL" || -z "$DASHBOARD_LIVE_EDITOR_EMAIL" ]]; then
+            echo "::error::TEST_ACCOUNT_EMAIL_DEV and TEST_ACCOUNT_EMAIL2_DEV must match the Doppler test-account allowlist"
+            exit 1
+          fi
+
       - name: Test dashboard
         run: pnpm --filter @harpa/dashboard test
 
@@ -88,6 +101,7 @@ jobs:
       - name: Build dashboard
         env:
           VITE_API_BASE_URL: ${{ steps.api.outputs.base-url }}
+          VITE_PASSWORD_ACCOUNT_EMAILS: '${{ vars.TEST_ACCOUNT_EMAIL_DEV }},${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}'
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}
           VITE_SENTRY_ENVIRONMENT: preview
           VITE_SENTRY_RELEASE: ${{ github.sha }}
@@ -145,7 +159,7 @@ jobs:
 
       - uses: dopplerhq/cli-action@v4
 
-      - name: Load dashboard live password
+      - name: Load dashboard live credentials
         if: steps.deploy.outputs.deployment-url
         shell: bash
         env:
@@ -164,10 +178,10 @@ jobs:
         if: steps.deploy.outputs.deployment-url
         shell: bash
         env:
-          DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+          DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}
           DASHBOARD_LIVE_API_URL: ${{ steps.api.outputs.base-url }}
-          DASHBOARD_LIVE_OWNER_EMAIL: test@harpapro.com
-          DASHBOARD_LIVE_EDITOR_EMAIL: test2@harpapro.com
+          DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
           DASHBOARD_LIVE_RUN_ID: pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: pnpm --filter @harpa/dashboard test:e2e:live
 

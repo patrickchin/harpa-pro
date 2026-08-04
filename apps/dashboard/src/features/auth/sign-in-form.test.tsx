@@ -108,6 +108,31 @@ describe('SignInForm', () => {
     });
   });
 
+  it('uses the password path for an explicitly configured preview account', async () => {
+    const user = userEvent.setup();
+    const onSendCode = vi.fn().mockResolvedValue(undefined);
+    const onSignInWithPassword = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SignInForm
+        onSendCode={onSendCode}
+        onSignInWithPassword={onSignInWithPassword}
+        onVerifyCode={vi.fn()}
+        passwordAccountEmails={['test+1@harpapro.com']}
+      />,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'TEST+1@HARPAPRO.COM');
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+
+    expect(onSendCode).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText('Password'), 'preview-account-password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(onSignInWithPassword).toHaveBeenCalledWith({
+      email: 'test+1@harpapro.com',
+      password: 'preview-account-password',
+    });
+  });
+
   it('lets a demo account fall back to the normal email code flow', async () => {
     const user = userEvent.setup();
     const onSendCode = vi.fn().mockResolvedValue(undefined);

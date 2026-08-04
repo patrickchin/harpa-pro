@@ -8,13 +8,13 @@ the fallback Metro server row, and never rendered `Continue`, `Email`, or
 `input-email`. The bounded app-readiness assertion failed in
 [Actions run 30924240940].
 
-**Root cause.** The clear-state flow called `openLink` immediately after
-`launchApp`. Completion of the launch command did not prove that Expo Dev
-Launcher's native home screen was ready to receive a development-client URL,
-so URL delivery could race Android's initial `ACTION_MAIN` transition. The run
-log proves the missing synchronization and the resulting failure sequence; it
-does not expose Android's internal URL-dispatch decision. This is a new timing
-variant of the earlier [unselected Metro server bug].
+**Root cause.** The verified harness defect was a missing synchronization
+boundary: the clear-state flow called `openLink` immediately after `launchApp`
+without first asserting that Expo Dev Launcher's native home screen was ready.
+The run log proves that gap and the resulting failure sequence. Whether Android
+discarded or overrode the URL during its initial `ACTION_MAIN` transition is an
+inference consistent with the evidence, not an internally observed decision.
+This is a new timing variant of the earlier [unselected Metro server bug].
 
 **Fix.** After clearing app state, wait up to 30 seconds for the native
 `Development Build` screen before opening the Metro deep link. Keep the

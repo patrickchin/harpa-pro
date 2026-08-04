@@ -112,8 +112,8 @@ Each AI-touching route has a test that:
   command has a 180-second ceiling.
 - After clearing app state, the flow waits up to 30 seconds for the
   Expo Dev Launcher home screen before opening the Metro deep link.
-  This prevents the initial Android `ACTION_MAIN` launch from racing
-  the development-client URL and discarding it.
+  This keeps development-client URL delivery behind an observable
+  native readiness boundary during Android's initial `ACTION_MAIN` launch.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild

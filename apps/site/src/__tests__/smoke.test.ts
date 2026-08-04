@@ -37,6 +37,7 @@ describe('site smoke', () => {
       '@astrojs/check': '^0.9.10',
       '@types/react': '^19.2.0',
       '@types/react-dom': '~19.2.3',
+      cookie: '2.0.1',
       vite: '8.2.0',
     });
     expect(pkg.engines.node).toBe('>=22.12.0');

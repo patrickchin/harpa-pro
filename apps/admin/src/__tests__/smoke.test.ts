@@ -40,6 +40,7 @@ describe('admin site smoke', () => {
       '@tailwindcss/vite': '^4.3.3',
       '@types/react': '^19.2.0',
       '@types/react-dom': '~19.2.3',
+      cookie: '2.0.1',
       tailwindcss: '^4.3.3',
       vite: '8.2.0',
     });

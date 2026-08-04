@@ -289,6 +289,8 @@
   .docs-related a:focus-visible,
   .docs-empty-state a:focus-visible,
   .docs-empty-state button:focus-visible,
+  .docs-montage-card:focus-visible,
+  .docs-step-media:focus-visible,
   .docs-search-field input:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
@@ -345,42 +347,95 @@
     margin-top: 1rem;
   }
 
-  .docs-index-hero,
-  .docs-guide-heading {
+  .docs-index-hero {
     display: grid;
     gap: 2rem;
     max-width: 56rem;
   }
 
+  .docs-guide-heading {
+    max-width: 45rem;
+  }
+
   .docs-index-hero-copy {
-    align-self: center;
     min-width: 0;
   }
 
-  .docs-phone-frame {
-    margin: 0 auto;
-    max-width: 20rem;
-    width: 100%;
+  .docs-montage {
+    display: grid;
+    gap: 0.75rem;
   }
 
-  .docs-phone-frame--compact {
-    max-width: 12.5rem;
+  .docs-montage > li {
+    min-width: 0;
   }
 
-  .docs-phone-frame > div {
-    background: oklch(0.22 0.025 265);
-    border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
-    border-radius: 2rem;
-    box-shadow: 0 1.25rem 3rem oklch(0.2 0.03 265 / 16%);
-    padding: 0.42rem;
-  }
-
-  .docs-phone-frame img {
+  .docs-montage-card {
     background: var(--color-card);
-    border-radius: 1.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    color: inherit;
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 42%) minmax(0, 1fr);
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .docs-montage-card:hover {
+    border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-border));
+  }
+
+  .docs-montage-visual {
+    background: var(--color-secondary);
+    border-right: 1px solid var(--color-border);
+    min-height: 7.5rem;
+    overflow: hidden;
+  }
+
+  .docs-montage-visual img {
     display: block;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--docs-screenshot-focus, 50% 50%);
     width: 100%;
+  }
+
+  .docs-montage-copy {
+    align-items: center;
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 0.85rem;
+  }
+
+  .docs-montage-copy > span {
+    align-items: center;
+    background: var(--color-primary);
+    border-radius: 999px;
+    color: var(--color-primary-foreground);
+    display: flex;
+    font-size: 0.68rem;
+    font-weight: 750;
+    height: 1.9rem;
+    justify-content: center;
+    width: 1.9rem;
+  }
+
+  .docs-montage-copy strong,
+  .docs-montage-copy small {
+    display: block;
+  }
+
+  .docs-montage-copy strong {
+    font-size: 0.9rem;
+    line-height: 1.3;
+  }
+
+  .docs-montage-copy small {
+    color: var(--color-muted-foreground);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    margin-top: 0.2rem;
   }
 
   .docs-index-section {
@@ -654,6 +709,51 @@
     margin-top: 0.75rem;
   }
 
+  .docs-prose .docs-step-media {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    color: inherit;
+    display: block;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-decoration: none;
+    width: 100%;
+  }
+
+  .docs-prose .docs-step-media:hover {
+    border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-border));
+  }
+
+  .docs-step-media-crop {
+    aspect-ratio: 16 / 10;
+    background: var(--color-secondary);
+    border-bottom: 1px solid var(--color-border);
+    display: block;
+    overflow: hidden;
+  }
+
+  .docs-step-media-crop img {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--docs-screenshot-focus, 50% 50%);
+    width: 100%;
+  }
+
+  .docs-step-media-caption {
+    align-items: center;
+    color: var(--color-accent-ink);
+    display: flex;
+    font-size: 0.78rem;
+    font-weight: 650;
+    justify-content: space-between;
+    line-height: 1.35;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.8rem;
+  }
+
   .docs-prose h2 {
     font-size: 1.45rem;
     font-weight: 650;
@@ -789,15 +889,28 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .docs-index-hero,
-    .docs-guide-heading {
-      align-items: center;
-      grid-template-columns: minmax(0, 1fr) minmax(12rem, 17rem);
+    .docs-montage {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .docs-step:has(.docs-phone-frame) {
+    .docs-montage-card {
+      display: block;
+    }
+
+    .docs-montage-visual {
+      aspect-ratio: 16 / 10;
+      border-bottom: 1px solid var(--color-border);
+      border-right: 0;
+      min-height: 0;
+    }
+
+    .docs-montage-copy {
+      min-height: 5rem;
+    }
+
+    .docs-step--with-media {
       align-items: start;
-      grid-template-columns: minmax(0, 1fr) 12.5rem;
+      grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
     }
   }
 

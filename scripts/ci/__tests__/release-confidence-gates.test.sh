@@ -169,9 +169,16 @@ require_regex ".maestro/ci-launch-smoke.yaml" \
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Continue|Email'" \
   "Maestro waits for either Expo onboarding or rendered app UI"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'Development Build'" \
+  "Maestro waits for the Expo Dev Launcher before opening Metro"
 forbid_fixed ".maestro/ci-launch-smoke.yaml" \
   "optional: true" \
   "Expo app-readiness wait fails closed"
+require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'Development Build'" \
+  "timeout: 30000" \
+  "Expo Dev Launcher readiness wait allows 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Continue|Email'" \
   "timeout: 90000" \
@@ -183,6 +190,14 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "Maestro launch flow detects the Android emulator's Metro server row"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "clearState: true" \
+  "visible: 'Development Build'" \
+  "Maestro clears state before waiting for the Expo Dev Launcher"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'Development Build'" \
+  "- openLink:" \
+  "Maestro waits for the Expo Dev Launcher before opening Metro"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "id: 'input-email'" \

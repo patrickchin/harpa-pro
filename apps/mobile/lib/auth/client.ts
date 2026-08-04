@@ -11,6 +11,7 @@
  * path inside our Hono app — see `packages/api/src/auth/handler.ts`).
  */
 import { createAuthClient } from 'better-auth/react';
+import type { BetterAuthClientPlugin } from 'better-auth/client';
 import { expoClient } from '@better-auth/expo/client';
 import { emailOTPClient } from 'better-auth/client/plugins';
 import * as SecureStore from 'expo-secure-store';
@@ -50,16 +51,33 @@ const storage = __DEV__
     }
   : SecureStore;
 
+const expoPluginBase = expoClient({
+  scheme: 'harpa',
+  storagePrefix: 'harpa',
+  storage: storage,
+});
+
+type ClientPluginActions = NonNullable<BetterAuthClientPlugin['getActions']>;
+
+// The Expo package's generated declaration narrows BetterFetch's generic
+// parameters, so strictFunctionTypes rejects it even though both sides use the
+// same @better-fetch/fetch runtime. Re-expose that one method through Better
+// Auth's public plugin signature while preserving Expo's getCookie return type.
+const expoPlugin = {
+  ...expoPluginBase,
+  getActions: (
+    $fetch: Parameters<ClientPluginActions>[0],
+    $store: Parameters<ClientPluginActions>[1],
+  ) =>
+    expoPluginBase.getActions(
+      $fetch as unknown as Parameters<typeof expoPluginBase.getActions>[0],
+      $store,
+    ),
+} satisfies BetterAuthClientPlugin;
+
 export const authClient = createAuthClient({
   baseURL: `${env.EXPO_PUBLIC_API_URL}/api/auth`,
-  plugins: [
-    expoClient({
-      scheme: 'harpa',
-      storagePrefix: 'harpa',
-      storage: storage,
-    }),
-    emailOTPClient(),
-  ],
+  plugins: [expoPlugin, emailOTPClient()],
 });
 
 /**

@@ -147,13 +147,25 @@ foreign keys receive a separate design and migration.
 `packages/api/src/db/auth-schema.ts` is produced by:
 
 ```bash
-pnpm exec @better-auth/cli generate --output packages/api/src/db/auth-schema.ts
+pnpm --filter @harpa/api auth:schema:generate
 ```
 
 Re-run whenever a better-auth plugin is added or removed. Commit the
 output. CI re-runs the generator and verifies no diff (`git diff
 --exit-code`). Do not edit by hand — declare `additionalFields` in
 `auth.ts` and let the CLI pick them up.
+
+The API and mobile manifests pin `better-auth`, `@better-auth/expo`, and the
+official `auth` CLI to the same exact stable release. Upgrade all of them
+together. Version ranges or the retired `@better-auth/cli` package can let
+pnpm satisfy the Expo plugin with an older `@better-auth/core`, even when the
+top-level runtime package looks current.
+
+The mobile workspace pins Zod 4 because Better Auth's client and Expo plugin
+declarations use Zod 4 through `better-call`. The shared API contract retains
+its own Zod 3 dependency. `apps/mobile/lib/auth/client.ts` also normalises the
+Expo plugin's generated `BetterFetch` generic signature at the plugin boundary;
+the adapter changes types only and preserves Expo's `getCookie` action.
 
 The file is imported by the Drizzle adapter and by the migration
 numbering tool; it is **not** imported directly by route handlers or

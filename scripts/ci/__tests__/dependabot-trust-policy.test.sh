@@ -144,10 +144,10 @@ for workflow in admin-preview site-preview; do
     "$workflow deployment check is credential-free"
 done
 
-require_job_fixed ".github/workflows/dashboard-preview.yml" preview "$AUTHOR_GUARD" \
-  "dashboard preview excludes Dependabot by PR author"
-require_job_fixed ".github/workflows/dashboard-preview.yml" preview "$REPOSITORY_GUARD" \
-  "dashboard preview excludes fork-controlled code"
+require_job_fixed ".github/workflows/dashboard-preview.yml" deployment "$AUTHOR_GUARD" \
+  "dashboard deployment excludes Dependabot by PR author"
+require_job_fixed ".github/workflows/dashboard-preview.yml" deployment "$REPOSITORY_GUARD" \
+  "dashboard deployment excludes fork-controlled code"
 
 require_job_fixed ".github/workflows/admin-preview.yml" verify \
   "pnpm --filter @harpa/admin test:e2e" \

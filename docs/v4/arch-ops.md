@@ -447,10 +447,10 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
   run: flyctl deploy ...
 ```
 
-Deployment workflows use action releases that run on Node 24. Cloudflare
-deployments use `cloudflare/wrangler-action@v4` with Wrangler CLI pinned to
-`3.114.17`; upgrading the action runtime must not silently introduce the
-separate Wrangler 4 migration.
+Deployment workflows use action releases that run on Node 24. Cloudflare Pages
+publishes the static browser applications through its GitHub App; GitHub
+Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
+credential.
 
 `--stage` defers activation; the subsequent `flyctl deploy` flips the
 secrets on — so code + secrets ship in a single transaction. To rotate
@@ -541,6 +541,7 @@ without coupling Fly routing to admin availability.
 PR open / push
   ↳ Credential-free tests, builds, path checks, and migration guards
   ↳ Human-owned same-repository PRs only:
+    ↳ exact Git ref pr-<n> mirrors the immutable PR head
     ↳ Backend preview (API-changing PRs only):
       ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
       ↳ Admin Neon branch pr-<n> from admin dev
@@ -549,7 +550,8 @@ PR open / push
         ↳ /readyz verified
         ↳ /admin/readyz verified separately
         ↳ sticky PR comment with preview URL
-    ↳ public/admin-site preview deploys to CF Pages
+    ↳ Cloudflare Git builds public/admin previews from pr-<n>
+      ↳ GitHub verifies the stable aliases serve the exact PR SHA
     ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
       ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
         when the PR changes API inputs
@@ -559,6 +561,7 @@ PR open / push
   ↳ EAS preview build (manual trigger — planned)
 
 Human-owned same-repository PR close
+  ↳ generated Git ref pr-<n> deleted
   ↳ Fly app harpa-pro-api-pr-<n> destroyed (pr-preview.yml: fly-destroy)
   ↳ Application and admin Neon branches pr-<n> deleted
 
@@ -568,7 +571,8 @@ Push to dev
   ↳ admin migrations applied to admin `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
     ↳ /readyz and /admin/readyz verified independently
-  ↳ public-site deploy to CF Pages dev branch (site-dev.yml)
+  ↳ Cloudflare Git deploys public/admin `dev` branches
+    ↳ site-dev.yml and admin-dev.yml verify exact SHA + routing
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-dev calls OTA after deploy + journeys pass
@@ -585,7 +589,8 @@ Push to main (production)
   ↳ Fly deploy → harpa-pro-api
     ↳ release_command applies app migrations, then admin migrations
     ↳ /readyz and /admin/readyz verified independently
-  ↳ public-site deploy to CF Pages production (site-prod.yml)
+  ↳ Cloudflare Git deploys public/admin production branches
+    ↳ site-prod.yml and admin-prod.yml verify exact SHA + custom domains
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass

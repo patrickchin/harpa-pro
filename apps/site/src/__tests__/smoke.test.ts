@@ -93,8 +93,13 @@ describe('site smoke', () => {
       resolve(here, '../../../../.github/workflows/site-preview.yml'),
       'utf8',
     );
+    const verifyScript = readFileSync(
+      resolve(here, '../../../../scripts/ci/verify-pages-deployment.sh'),
+      'utf8',
+    );
 
-    expect(workflow).toContain(
+    expect(workflow).toContain('bash scripts/ci/verify-pages-deployment.sh');
+    expect(verifyScript).toContain(
       "--write-out '%{http_code} %{redirect_url}\\n'",
     );
   });

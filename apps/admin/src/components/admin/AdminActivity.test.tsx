@@ -208,6 +208,42 @@ function subtractCalendar(now: Date, amount: number, unit: 'day' | 'month' | 'ye
   return result;
 }
 
+function createMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key) {
+      return store.get(key) ?? null;
+    },
+    key(index) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key) {
+      store.delete(key);
+    },
+    setItem(key, value) {
+      store.set(key, value);
+    },
+  };
+}
+
+function ensureStorage(name: 'localStorage' | 'sessionStorage'): Storage {
+  const existing = window[name];
+  if (existing) return existing;
+
+  const storage = createMemoryStorage();
+  Object.defineProperty(window, name, {
+    configurable: true,
+    value: storage,
+  });
+  return storage;
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   Object.defineProperty(URL, 'createObjectURL', {
@@ -222,8 +258,8 @@ beforeEach(() => {
   authMock.getSession.mockResolvedValue(adminSession);
   authMock.login.mockReset();
   authMock.logout.mockReset();
-  window.localStorage.clear();
-  window.sessionStorage.clear();
+  ensureStorage('localStorage').clear();
+  ensureStorage('sessionStorage').clear();
 });
 
 afterEach(() => {

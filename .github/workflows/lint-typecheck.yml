@@ -55,6 +55,9 @@ jobs:
           bash scripts/ci/__tests__/release-confidence-gates.test.sh
           bash scripts/ci/__tests__/admin-site-separation.test.sh
           bash scripts/ci/__tests__/admin-deploy-smoke-policy.test.sh
+          bash scripts/ci/__tests__/cloudflare-pages-build.test.sh
+          bash scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh
+          bash scripts/ci/__tests__/verify-pages-deployment.test.sh
           bash scripts/ci/__tests__/dependabot-trust-policy.test.sh
       - name: Shellcheck CI helpers
         # Lint shared shell scripts that ship in CI workflows. Catches

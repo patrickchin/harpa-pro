@@ -17,29 +17,51 @@ describe('site smoke', () => {
     expect(pkg.name).toBe('@harpa/site');
   });
 
-  it('declares a compatible React, Vite, and Tailwind peer graph', () => {
+  it('declares a secure Astro 7 compatible integration and peer graph', () => {
     const pkg = JSON.parse(readFileSync(resolve(here, '../../package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
+      engines: Record<string, string>;
     };
 
     expect(pkg.dependencies).toMatchObject({
+      '@astrojs/mdx': '^7.0.5',
+      '@astrojs/react': '^6.0.2',
       '@tailwindcss/vite': '^4.3.3',
+      astro: '^7.1.6',
       react: '19.2.0',
       'react-dom': '19.2.0',
       tailwindcss: '^4.3.3',
     });
     expect(pkg.devDependencies).toMatchObject({
+      '@astrojs/check': '^0.9.10',
       '@types/react': '^19.2.0',
       '@types/react-dom': '~19.2.3',
-      vite: '6.4.3',
+      vite: '8.2.0',
     });
+    expect(pkg.engines.node).toBe('>=22.12.0');
+  });
+
+  it('imports Zod from Astro\'s canonical module', () => {
+    const contentConfig = readFileSync(
+      resolve(here, '../content.config.ts'),
+      'utf8',
+    );
+
+    expect(contentConfig).toContain(
+      'import { defineCollection } from "astro:content";',
+    );
+    expect(contentConfig).toContain('import { z } from "astro/zod";');
+    expect(contentConfig).not.toContain(
+      'import { defineCollection, z } from "astro:content";',
+    );
   });
 
   it('astro config targets static output for harpapro.com', () => {
     const cfg = readFileSync(resolve(here, '../../astro.config.mjs'), 'utf8');
     expect(cfg).toMatch(/site:\s*['"]https:\/\/harpapro\.com['"]/);
     expect(cfg).toMatch(/output:\s*['"]static['"]/);
+    expect(cfg).toMatch(/compressHTML:\s*true/);
   });
 
   it('publishes discovery, not-found, and legacy redirect routes', () => {

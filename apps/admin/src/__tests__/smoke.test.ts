@@ -11,17 +11,20 @@ describe('admin site smoke', () => {
       name: string;
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
+      engines: Record<string, string>;
     };
     const config = readFileSync(resolve(here, '../../astro.config.mjs'), 'utf8');
 
     expect(pkg.name).toBe('@harpa/admin');
     expect(pkg.dependencies).not.toHaveProperty('astro');
-    expect(pkg.devDependencies.astro).toBe('^5.1.1');
+    expect(pkg.devDependencies.astro).toBe('^7.1.6');
+    expect(pkg.engines.node).toBe('>=22.12.0');
     expect(config).toMatch(/site:\s*['"]https:\/\/admin\.harpapro\.com['"]/);
     expect(config).toMatch(/output:\s*['"]static['"]/);
+    expect(config).toMatch(/compressHTML:\s*true/);
   });
 
-  it('declares a compatible React, Vite, and Tailwind peer graph', () => {
+  it('declares a secure Astro 7 compatible integration and peer graph', () => {
     const pkg = JSON.parse(readFileSync(resolve(here, '../../package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
@@ -32,11 +35,13 @@ describe('admin site smoke', () => {
       'react-dom': '19.2.0',
     });
     expect(pkg.devDependencies).toMatchObject({
+      '@astrojs/check': '^0.9.10',
+      '@astrojs/react': '^6.0.2',
       '@tailwindcss/vite': '^4.3.3',
       '@types/react': '^19.2.0',
       '@types/react-dom': '~19.2.3',
       tailwindcss: '^4.3.3',
-      vite: '6.4.3',
+      vite: '8.2.0',
     });
   });
 

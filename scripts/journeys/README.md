@@ -72,6 +72,8 @@ A few API quirks the scripts intentionally assert as-is (rather than
 - `PATCH /me` with `{}` returns 200 (no-op).
 - `POST /projects` silently strips unknown fields (Zod default).
 - Wrong HTTP method on an existing route returns 404, not 405.
+- Empty or malformed JSON sent to the email sign-in route returns 400; the
+  stress journey also accepts 429 when the auth-route limiter wins the race.
 - Double finalize is idempotent (200); double unfinalize → 409.
 - Cross-user access returns 404, not 403 (RLS-style resource hiding).
 - Viewer project-content mutations return 404. Published-report review

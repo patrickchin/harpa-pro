@@ -115,6 +115,15 @@ in-place connection. The project has no production deployment or custom
 domain. Production and `app.harpapro.com` activation require separate
 approval.
 
+The dashboard application remains isolated in
+[draft PR #211](https://github.com/patrickchin/harpa-pro/pull/211). Its scoped
+build watch paths mirror the dashboard preview workflow triggers, so unrelated
+`dev` or `pr-*` commits cannot start an absent-application build before the
+dashboard lands. If provider watch paths and workflow triggers drift apart,
+disable dashboard preview deployments until parity is restored. Automatic
+production deployments stay disabled until `apps/dashboard` reaches `main`
+through the protected promotion workflow.
+
 ## Verification and rollback
 
 Verify the tokenless deployment contract as follows:

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
+import { BrandMark, Button, Field, Input } from '@/components/ui';
+
 interface OnboardingInput {
   displayName: string;
   companyName?: string;
@@ -39,43 +41,61 @@ export function OnboardingForm({ email, onSubmit }: OnboardingFormProps): React.
   }
 
   return (
-    <div className="auth-panel">
-      <div className="auth-brand" aria-hidden="true">
-        HP
+    <section className="w-full max-w-sm">
+      <div className="flex items-center gap-3">
+        <BrandMark className="size-12 rounded-card-ui" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-display font-bold text-foreground">Welcome</h1>
+          <p className="mt-1 text-body text-muted-foreground">
+            Finish your account details so reports and projects are labeled correctly from day one.
+          </p>
+        </div>
       </div>
-      <p className="eyebrow">One last step</p>
-      <h1>Set up your profile</h1>
-      <p className="auth-lede">This is how teammates will recognize you across projects.</p>
-      <p className="signed-in-as">
-        Signed in as <strong>{email}</strong>
+
+      <p className="mt-8 text-sm text-muted-foreground">
+        Signed in as <strong className="text-foreground">{email}</strong>
       </p>
-      <form className="form-stack" onSubmit={submit} noValidate>
-        <label>
-          Full name
-          <input
+      <form className="mt-4 flex flex-col gap-4" onSubmit={submit} noValidate>
+        <Field label="Full name">
+          <Input
             autoComplete="name"
+            autoFocus
+            disabled={isSubmitting}
             name="displayName"
             onChange={(event) => setDisplayName(event.currentTarget.value)}
+            placeholder="John Smith"
             value={displayName}
           />
-        </label>
-        <label>
-          Company{' '}
-          <span aria-hidden="true" className="optional-label">
-            Optional
-          </span>
-          <input
+        </Field>
+        <p className="-mt-2 text-meta text-muted-foreground">
+          Use the name teammates will recognize in shared reports.
+        </p>
+        <Field label="Company">
+          <Input
+            aria-describedby="company-hint"
             autoComplete="organization"
+            disabled={isSubmitting}
             name="companyName"
             onChange={(event) => setCompanyName(event.currentTarget.value)}
+            placeholder="Smith Construction LLC"
             value={companyName}
           />
-        </label>
-        {error ? <p role="alert">{error}</p> : null}
-        <button className="button button-primary" disabled={isSubmitting}>
+        </Field>
+        <p className="-mt-2 text-meta text-muted-foreground" id="company-hint">
+          Optional. This shows on your profile and exported report details.
+        </p>
+        {error ? (
+          <p
+            className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger-text"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+        <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
           {isSubmitting ? 'Saving…' : 'Continue'}
-        </button>
+        </Button>
       </form>
-    </div>
+    </section>
   );
 }

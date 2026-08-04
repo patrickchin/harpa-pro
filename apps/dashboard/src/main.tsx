@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react';
 
 import { App } from '@/app/app';
 import { AppProviders } from '@/app/providers';
+import { BrandMark, Button } from '@/components/ui';
 import { env } from '@/lib/env';
 import { initializeDashboardTelemetry } from '@/lib/telemetry/sentry';
 import '@/globals.css';
@@ -24,17 +25,23 @@ createRoot(root).render(
   <StrictMode>
     <Sentry.ErrorBoundary
       fallback={
-        <main className="not-found-page" role="alert">
-          <p className="eyebrow">Dashboard error</p>
-          <h1>Harpa Pro couldn&apos;t open this page</h1>
-          <p>Your saved server data is unchanged. Reload to try again.</p>
-          <button
-            className="button button-primary"
-            type="button"
-            onClick={() => window.location.reload()}
-          >
+        <main
+          className="grid min-h-screen place-content-center place-items-center px-5 py-10 text-center"
+          role="alert"
+        >
+          <BrandMark className="mb-5 size-12" />
+          <p className="mb-2 text-label font-bold tracking-label text-danger-text uppercase">
+            Dashboard error
+          </p>
+          <h1 className="text-title font-bold text-foreground">
+            Harpa Pro couldn&apos;t open this page
+          </h1>
+          <p className="mt-2 max-w-reading text-body text-muted-foreground">
+            Your saved server data is unchanged. Reload to try again.
+          </p>
+          <Button className="mt-5" type="button" onClick={() => window.location.reload()}>
             Reload dashboard
-          </button>
+          </Button>
         </main>
       }
     >

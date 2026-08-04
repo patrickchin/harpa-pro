@@ -191,7 +191,7 @@ describe('ProjectOverviewRoute', () => {
         status: 'all',
       }),
     );
-    expect(await screen.findByRole('link', { name: 'East elevation progress' })).toBeVisible();
+    expect((await screen.findAllByRole('link', { name: 'East elevation progress' }))[0]).toBeVisible();
   });
 
   it('creates a draft from the overview and opens its workspace', async () => {
@@ -208,7 +208,7 @@ describe('ProjectOverviewRoute', () => {
 });
 
 describe('ProjectReportWorkspaceRoute', () => {
-  it('uses the shared page gutters around the report workspace', () => {
+  it('leaves shared page gutters to the dashboard shell', () => {
     render(
       <MemoryRouter initialEntries={['/projects/prj_01234567/reports/7']}>
         <Routes>
@@ -219,6 +219,6 @@ describe('ProjectReportWorkspaceRoute', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('report-workspace').parentElement).toHaveClass('page');
+    expect(screen.getByTestId('report-workspace').parentElement).not.toHaveClass('px-5');
   });
 });

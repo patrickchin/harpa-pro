@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { DashboardShell } from './dashboard-shell';
 
@@ -11,6 +11,21 @@ const user = {
   displayName: 'Morgan Lee',
   companyName: 'Northstar Builders',
 };
+
+beforeAll(() => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class ResizeObserverMock {
+      disconnect = vi.fn();
+      observe = vi.fn();
+      unobserve = vi.fn();
+    },
+  );
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('DashboardShell', () => {
   it('renders the global shell without project-only navigation', () => {
@@ -29,6 +44,12 @@ describe('DashboardShell', () => {
     expect(screen.getByRole('link', { name: 'Harpa Pro' })).toHaveAttribute('href', '/projects');
     expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects');
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
+    expect(document.querySelector('#dashboard-content > div')).toHaveClass(
+      'max-w-app',
+      'px-5',
+      'sm:px-6',
+      'xl:px-8',
+    );
   });
 
   it('renders canonical project navigation and a working account menu', async () => {
@@ -66,11 +87,14 @@ describe('DashboardShell', () => {
       'href',
       '/projects/harbor-house/settings',
     );
+    const primaryNavigation = screen.getByRole('navigation', { name: 'Primary' });
+    expect(primaryNavigation).toHaveClass('overflow-x-auto', 'lg:flex-col');
+    expect(primaryNavigation.parentElement).toHaveClass('flex-wrap', 'lg:flex-nowrap');
 
     await interaction.click(screen.getByRole('button', { name: 'Open account menu' }));
     expect(screen.getByText('morgan@example.com')).toBeVisible();
     expect(screen.getByText('Northstar Builders')).toBeVisible();
-    await interaction.click(screen.getByRole('button', { name: 'Sign out' }));
+    await interaction.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(onSignOut).toHaveBeenCalledOnce();
   });
 });

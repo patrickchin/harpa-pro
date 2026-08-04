@@ -1,4 +1,7 @@
+import { MailCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+
+import { BrandMark, Button, Field, Input } from '@/components/ui';
 
 interface VerifyCodeInput {
   email: string;
@@ -12,6 +15,29 @@ interface SignInFormProps {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong.';
+}
+
+function AuthError({ children }: { children: string }): React.JSX.Element {
+  return (
+    <p
+      className="rounded-card-ui border border-danger-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger-text"
+      role="alert"
+    >
+      {children}
+    </p>
+  );
+}
+
+function AuthBrand({ eyebrow }: { eyebrow: string }): React.JSX.Element {
+  return (
+    <div className="flex items-center gap-3">
+      <BrandMark className="size-12 rounded-card-ui" />
+      <div className="min-w-0 flex-1">
+        <p className="text-label font-bold tracking-label text-accent-ink uppercase">{eyebrow}</p>
+        <p className="text-display font-bold text-foreground">Harpa Pro</p>
+      </div>
+    </div>
+  );
 }
 
 export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React.JSX.Element {
@@ -60,76 +86,85 @@ export function SignInForm({ onSendCode, onVerifyCode }: SignInFormProps): React
 
   if (step === 'code') {
     return (
-      <div className="auth-panel">
-        <div className="auth-brand" aria-hidden="true">
-          HP
+      <section className="w-full max-w-sm">
+        <AuthBrand eyebrow="Secure sign in" />
+        <div className="mt-8">
+          <MailCheck aria-hidden="true" className="mb-3 size-6 text-accent" />
+          <h1 className="text-title font-bold text-foreground">Check your email</h1>
+          <p className="mt-2 text-body text-muted-foreground">
+            Enter the six-digit code sent to <strong className="text-foreground">{email}</strong>.
+          </p>
         </div>
-        <p className="eyebrow">Secure sign in</p>
-        <h1>Check your email</h1>
-        <p className="auth-lede">
-          Enter the six-digit code sent to <strong>{email}</strong>.
-        </p>
-        <form className="form-stack" onSubmit={verifyCode} noValidate>
-          <label>
-            Six-digit code
-            <input
+        <form className="mt-6 flex flex-col gap-4" onSubmit={verifyCode} noValidate>
+          <Field label="Six-digit code">
+            <Input
               autoComplete="one-time-code"
+              autoFocus
+              className="font-bold tracking-[0.24em]"
+              disabled={isSubmitting}
               inputMode="numeric"
               maxLength={6}
               name="otp"
               onChange={(event) => setOtp(event.currentTarget.value.replace(/\D/g, ''))}
+              placeholder="123456"
               value={otp}
             />
-          </label>
-          {error ? <p role="alert">{error}</p> : null}
-          <button className="button button-primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Verifying…' : 'Verify code'}
-          </button>
-          <button
-            className="button button-quiet"
-            type="button"
-            onClick={() => {
-              setOtp('');
-              setError(null);
-              setStep('email');
-            }}
-          >
-            Use another email
-          </button>
+          </Field>
+          {error ? <AuthError>{error}</AuthError> : null}
+          <div className="flex flex-col gap-3">
+            <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
+              {isSubmitting ? 'Verifying…' : 'Verify code'}
+            </Button>
+            <Button
+              className="w-full"
+              disabled={isSubmitting}
+              size="large"
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOtp('');
+                setError(null);
+                setStep('email');
+              }}
+            >
+              Use another email
+            </Button>
+          </div>
         </form>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="auth-panel">
-      <div className="auth-brand" aria-hidden="true">
-        HP
+    <section className="w-full max-w-sm">
+      <AuthBrand eyebrow="Office dashboard" />
+      <div className="mt-8">
+        <h1 className="text-title font-bold text-foreground">Welcome to Harpa Pro</h1>
+        <p className="mt-2 text-body text-muted-foreground">
+          Sign in with your work email. We’ll send a six-digit code—no password required.
+        </p>
       </div>
-      <p className="eyebrow">Office dashboard</p>
-      <h1>Welcome to Harpa Pro</h1>
-      <p className="auth-lede">
-        Sign in with your work email. We’ll send a six-digit code—no password required.
-      </p>
-      <form className="form-stack" onSubmit={sendCode} noValidate>
-        <label>
-          Email address
-          <input
+      <form className="mt-6 flex flex-col gap-4" onSubmit={sendCode} noValidate>
+        <Field label="Email address">
+          <Input
             autoComplete="email"
+            autoFocus
+            disabled={isSubmitting}
             name="email"
             onChange={(event) => setEmail(event.currentTarget.value)}
+            placeholder="you@example.com"
             type="email"
             value={email}
           />
-        </label>
-        {error ? <p role="alert">{error}</p> : null}
-        <button className="button button-primary" disabled={isSubmitting}>
+        </Field>
+        {error ? <AuthError>{error}</AuthError> : null}
+        <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
           {isSubmitting ? 'Sending…' : 'Send code'}
-        </button>
+        </Button>
       </form>
-      <p className="auth-footnote">
+      <p className="mt-4 text-meta text-muted-foreground">
         By continuing, you agree to use Harpa Pro for authorized project work.
       </p>
-    </div>
+    </section>
   );
 }

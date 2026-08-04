@@ -1,8 +1,10 @@
 import type { projects } from '@harpa/api-contract';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, LoaderCircle } from 'lucide-react';
 import { Link, Outlet, useNavigate, useOutletContext, useParams } from 'react-router';
 
 import { DashboardShell } from '@/components/layout';
+import { buttonStyles, Button, Card } from '@/components/ui';
 import {
   OnboardingForm,
   SignInForm,
@@ -41,19 +43,26 @@ function LoadFailure({
   onRetry: () => void;
 }) {
   return (
-    <section className="surface route-error" role="alert">
-      <p className="eyebrow">Couldn’t load</p>
-      <h1>{title}</h1>
-      <p>{queryErrorMessage(error)}</p>
-      <button className="button button-secondary" onClick={onRetry} type="button">
+    <Card className="max-w-content p-5" role="alert">
+      <AlertTriangle aria-hidden="true" className="mb-3 size-6 text-danger-text" />
+      <p className="mb-2 text-label font-bold tracking-label text-danger-text uppercase">
+        Couldn’t load
+      </p>
+      <h1 className="text-title font-bold text-foreground">{title}</h1>
+      <p className="mt-2 text-body text-muted-foreground">{queryErrorMessage(error)}</p>
+      <Button className="mt-5" onClick={onRetry} type="button" variant="secondary">
         Try again
-      </button>
-    </section>
+      </Button>
+    </Card>
   );
 }
 
 function AuthCanvas({ children }: { children: React.ReactNode }) {
-  return <main className="auth-canvas">{children}</main>;
+  return (
+    <main className="flex min-h-screen justify-center bg-background px-6 py-10 sm:items-center">
+      {children}
+    </main>
+  );
 }
 
 export function SignInRoute(): React.JSX.Element {
@@ -111,13 +120,11 @@ export function ProjectsRoute(): React.JSX.Element | null {
   return (
     <DashboardShell user={session.user} onSignOut={session.signOut}>
       {projectsQuery.error ? (
-        <div className="page">
-          <LoadFailure
-            title="Projects"
-            error={projectsQuery.error}
-            onRetry={() => void projectsQuery.refetch()}
-          />
-        </div>
+        <LoadFailure
+          title="Projects"
+          error={projectsQuery.error}
+          onRetry={() => void projectsQuery.refetch()}
+        />
       ) : (
         <ProjectsPageView
           isLoading={projectsQuery.isLoading}
@@ -150,35 +157,34 @@ export function ProjectShellRoute(): React.JSX.Element | null {
   if (!projectParam) {
     return (
       <DashboardShell user={session.user} onSignOut={session.signOut}>
-        <div className="page">
-          <LoadFailure
-            title="Project"
-            error={new Error('The project URL is incomplete.')}
-            onRetry={() => undefined}
-          />
-        </div>
+        <LoadFailure
+          title="Project"
+          error={new Error('The project URL is incomplete.')}
+          onRetry={() => undefined}
+        />
       </DashboardShell>
     );
   }
   if (projectQuery.error) {
     return (
       <DashboardShell user={session.user} onSignOut={session.signOut}>
-        <div className="page">
-          <LoadFailure
-            title="Project"
-            error={projectQuery.error}
-            onRetry={() => void projectQuery.refetch()}
-          />
-        </div>
+        <LoadFailure
+          title="Project"
+          error={projectQuery.error}
+          onRetry={() => void projectQuery.refetch()}
+        />
       </DashboardShell>
     );
   }
   if (!projectQuery.data) {
     return (
       <DashboardShell user={session.user} onSignOut={session.signOut}>
-        <section className="boot-screen" aria-busy="true">
-          <span className="spinner" aria-hidden="true" />
-          <p>Loading project…</p>
+        <section
+          className="grid min-h-[50vh] place-content-center place-items-center gap-3 px-5 py-8 text-center"
+          aria-busy="true"
+        >
+          <LoaderCircle aria-hidden="true" className="size-8 animate-spin text-accent" />
+          <p className="text-body text-muted-foreground">Loading project…</p>
         </section>
       </DashboardShell>
     );
@@ -268,13 +274,11 @@ export function ProjectMembersRoute(): React.JSX.Element {
 
   if (membersQuery.error) {
     return (
-      <div className="page">
-        <LoadFailure
-          title="Members"
-          error={membersQuery.error}
-          onRetry={() => void membersQuery.refetch()}
-        />
-      </div>
+      <LoadFailure
+        title="Members"
+        error={membersQuery.error}
+        onRetry={() => void membersQuery.refetch()}
+      />
     );
   }
 
@@ -345,36 +349,34 @@ export function ProjectReportWorkspaceRoute(): React.JSX.Element {
 
   if (!Number.isInteger(reportNumber) || reportNumber < 1) {
     return (
-      <div className="page">
-        <LoadFailure
-          title="Report"
-          error={new Error('The report number in this URL is invalid.')}
-          onRetry={() => navigate('..', { relative: 'path' })}
-        />
-      </div>
+      <LoadFailure
+        title="Report"
+        error={new Error('The report number in this URL is invalid.')}
+        onRetry={() => navigate('..', { relative: 'path' })}
+      />
     );
   }
 
   return (
-    <div className="page">
-      <ReportWorkspacePage
-        api={reportsApi}
-        onDeleted={() => navigate('..', { relative: 'path', replace: true })}
-        projectSlug={project.id}
-        reportNumber={reportNumber}
-        role={project.myRole}
-      />
-    </div>
+    <ReportWorkspacePage
+      api={reportsApi}
+      onDeleted={() => navigate('..', { relative: 'path', replace: true })}
+      projectSlug={project.id}
+      reportNumber={reportNumber}
+      role={project.myRole}
+    />
   );
 }
 
 export function NotFoundRoute(): React.JSX.Element {
   return (
-    <main className="not-found-page">
-      <p className="eyebrow">404</p>
-      <h1>That page isn’t here</h1>
-      <p>The link may be old, or you may no longer have project access.</p>
-      <Link className="button button-primary" to="/projects">
+    <main className="grid min-h-screen place-content-center place-items-center px-5 py-10 text-center">
+      <p className="mb-2 text-label font-bold tracking-label text-accent-ink uppercase">404</p>
+      <h1 className="text-title font-bold text-foreground">That page isn’t here</h1>
+      <p className="mt-2 max-w-reading text-body text-muted-foreground">
+        The link may be old, or you may no longer have project access.
+      </p>
+      <Link className={buttonStyles({ className: 'mt-5' })} to="/projects">
         Back to projects
       </Link>
     </main>

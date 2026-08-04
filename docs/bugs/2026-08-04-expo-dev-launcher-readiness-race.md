@@ -13,14 +13,16 @@ Launcher, including the `Development Build` heading and green Metro server row.
 An [earlier failed attempt] captured the same system dialog, while its retry
 passed at the identical head SHA.
 
-**Root cause.** The first verified harness defect was a missing synchronization
-boundary: the clear-state flow called `openLink` immediately after `launchApp`
-without first asserting that Expo Dev Launcher's native home screen was ready.
-The later artifacts prove a separate emulator-system interception: Android's
+**Root cause.** The #255 log proves a harness design gap: the clear-state flow
+called `openLink` immediately after `launchApp` without first observing Expo
+Dev Launcher readiness. Its diagnostic artifact was unavailable, so that run
+does not prove whether Android discarded the URL, Quickstep intercepted the
+flow, or another timing mechanism caused the later app-readiness failure. The
+#256 artifact does prove an emulator-system interception in that run: Android's
 Quickstep ANR dialog owned the accessibility surface even though the Dev
-Launcher beneath it was ready. The green retry at the same application head
-confirms this was not a deterministic application failure. This is a new timing
-variant of the earlier [unselected Metro server bug].
+Launcher beneath it was ready. The earlier same-head failure followed by a
+green retry confirms the Quickstep condition is nondeterministic. This is a new
+timing variant of the earlier [unselected Metro server bug].
 
 **Fix.** After clearing app state, wait up to 30 seconds for either the native
 `Development Build` heading or the known Quickstep dialog. If Quickstep is

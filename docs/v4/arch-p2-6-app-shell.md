@@ -23,7 +23,9 @@ group has one hidden Projects tab. P2.6 also disposes of §A
 - **No `Alert.alert`** (hard rule #9) — use `AppDialogSheet` or inline UI.
 - **No `EXPO_PUBLIC_*!`** (hard rule #6) — env via `lib/env.ts`.
 - **GestureHandlerRootView outermost**, **SafeAreaProvider before any screen renders**, **AppErrorBoundary inside SafeAreaProvider** (so a render error has insets).
-- **QueryClientProvider before AuthSessionProvider** — the bootstrap calls `request('/me', 'get')` directly (not via React Query), but children below use the generated query hooks.
+- **AuthSessionProvider before SessionQueryProvider** — better-auth resolves the
+  authenticated user without React Query. Only then may the app select and
+  restore that user's persisted query cache.
 - **AuthSessionProvider mounted at root with no injected props** — keeps default `storage`/`api` referentially stable.
 
 ## Provider tree (top → bottom)
@@ -32,9 +34,9 @@ group has one hidden Projects tab. P2.6 also disposes of §A
 <AppErrorBoundary>                    {/* class component, wraps all */}
   <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthSessionProvider>
-          <StatusBar style="dark" />
+      <AuthSessionProvider>
+        <StatusBar style="dark" />
+        <SessionQueryProvider>
           <DialogSheetProvider>
             <QueueProvider>              {/* stub */}
               <AudioPlaybackProvider>    {/* stub */}
@@ -44,8 +46,8 @@ group has one hidden Projects tab. P2.6 also disposes of §A
               </AudioPlaybackProvider>
             </QueueProvider>
           </DialogSheetProvider>
-        </AuthSessionProvider>
-      </QueryClientProvider>
+        </SessionQueryProvider>
+      </AuthSessionProvider>
     </SafeAreaProvider>
   </GestureHandlerRootView>
 </AppErrorBoundary>
@@ -56,8 +58,8 @@ group has one hidden Projects tab. P2.6 also disposes of §A
 | `AppErrorBoundary` | Class component; renders fallback UI with inline styles pulling `colors.background`/`foreground` from Tailwind config so it works even if NativeWind fails. |
 | `GestureHandlerRootView` | RN-Gesture requirement, must wrap everything using gesture primitives. |
 | `SafeAreaProvider` | Provides `useSafeAreaInsets`. Sits before QueryClient so a query-error fallback can still read insets. |
-| `QueryClientProvider` | Defaults: `staleTime: 30_000`, `gcTime: 5 * 60_000`, `refetchOnWindowFocus: false`, `refetchOnReconnect: true`, `retry: 1`. App-state-driven refetch wired in P3 via per-screen `useFocusEffect`. |
 | `AuthSessionProvider` | Mounts once, reads SecureStore, calls `/me`, settles `status` to `loading` → `authenticated`/`needs-onboarding`/`unauthenticated`. Children call `useAuthSession()`. |
+| `SessionQueryProvider` | Waits for a settled auth identity, selects that user's MMKV cache, and gives every user-id or anonymous scope a fresh `QueryClient`. Descendants stay blocked during transitions, so a late restore can mutate only the unreachable previous client. Query defaults: `staleTime: 30_000`, `gcTime: 5 * 60_000`, `refetchOnWindowFocus: false`, `refetchOnReconnect: true`, `retry: 1`. |
 | `StatusBar` | `expo-status-bar` styled `"dark"` for the light theme. |
 | `DialogSheetProvider` | Hosts `<DialogSheetHost />` at root with imperative `showDialog`/`closeDialog` context. |
 | `QueueProvider` | **Stub.** Real upload queue lands in P3; stub `enqueue` throws. Locks provider order. |

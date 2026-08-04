@@ -17,6 +17,25 @@ describe('site smoke', () => {
     expect(pkg.name).toBe('@harpa/site');
   });
 
+  it('declares a compatible React, Vite, and Tailwind peer graph', () => {
+    const pkg = JSON.parse(readFileSync(resolve(here, '../../package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+
+    expect(pkg.dependencies).toMatchObject({
+      '@tailwindcss/vite': '^4.3.3',
+      react: '19.2.0',
+      'react-dom': '19.2.0',
+      tailwindcss: '^4.3.3',
+    });
+    expect(pkg.devDependencies).toMatchObject({
+      '@types/react': '^19.2.0',
+      '@types/react-dom': '~19.2.3',
+      vite: '6.4.3',
+    });
+  });
+
   it('astro config targets static output for harpapro.com', () => {
     const cfg = readFileSync(resolve(here, '../../astro.config.mjs'), 'utf8');
     expect(cfg).toMatch(/site:\s*['"]https:\/\/harpapro\.com['"]/);

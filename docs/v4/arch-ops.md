@@ -13,21 +13,22 @@
   - `harpa-pro-api-pr-<n>` (per-PR preview) at
     `https://harpa-pro-api-pr-<n>.fly.dev` — created by
     `.github/workflows/pr-preview.yml` (job `fly-preview`) when the PR
-    changes API inputs or the admin browser app, destroyed on PR
+    changes API inputs, the admin browser app, or the office dashboard,
+    destroyed on PR
     close (job `fly-destroy`). Config:
     [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
     Single shared-cpu-1x machine, `min_machines_running = 0`,
     `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
     The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
-    branch. Admin previews use the matching Fly app so their exact browser
-    origin can be allowlisted. Mobile dev/preview builds can flip to a preview URL via
-    `setApiBaseUrlOverride`.
+    branch. Admin and dashboard previews use the matching Fly app so browser
+    auth and live journeys never mutate the shared dev database. Mobile
+    dev/preview builds can flip to a preview URL via `setApiBaseUrlOverride`.
 - **Databases**: two independent Neon projects:
   - the application project uses long-lived `main` (production) and `dev`
     branches plus per-PR `pr-<n>` branches; and
   - `harpa-pro-admin` uses database `harpa_admin`, with matching `main`,
-    long-lived `dev`, and matching per-PR `pr-<n>` branches for
-    API-changing previews.
+    long-lived `dev`, and matching per-PR `pr-<n>` branches for API, admin,
+    and dashboard previews.
     The separate projects give application and admin credentials independent
     restore timelines. See [arch-database.md](arch-database.md).
 - **Storage**: Cloudflare R2. Separate buckets per env
@@ -61,8 +62,8 @@
   - Dev branch `dev` → `https://dev.harpa-pro-dashboard.pages.dev` against the
     dev API.
   - Pull requests → immutable deployment URL plus the stable
-    `pr-<n>.harpa-pro-dashboard.pages.dev` alias. API-changing pull requests
-    use the matching Fly preview; frontend-only pull requests use the dev API.
+    `pr-<n>.harpa-pro-dashboard.pages.dev` alias. Every dashboard preview uses
+    its matching Fly/Neon preview so browser journeys have isolated data.
   - Direct client routes are verified after deployment through the Pages SPA
     fallback. See
     [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
@@ -552,11 +553,12 @@ without coupling Fly routing to admin availability.
 PR open / push
   ↳ Credential-free tests, builds, path checks, and migration guards
   ↳ Human-owned same-repository PRs only:
-    ↳ Backend preview (API or admin-site changes only):
+    ↳ Backend preview (API, admin-site, or dashboard changes):
       ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
       ↳ Admin Neon branch pr-<n> from admin dev
       ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-        ↳ release_command applies app migrations, then admin migrations
+        ↳ release_command applies app migrations, admin migrations, then
+          seeds configured test/demo password accounts
         ↳ /readyz verified
         ↳ /admin/readyz verified separately
         ↳ sticky PR comment with preview URL

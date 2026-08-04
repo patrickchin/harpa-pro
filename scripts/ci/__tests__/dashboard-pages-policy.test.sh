@@ -3,7 +3,7 @@
 #
 # User journeys pinned here:
 #   - A reviewer gets one immutable dashboard URL and one stable PR alias.
-#   - Dashboard previews use the PR API when API inputs changed, otherwise dev.
+#   - Dashboard previews always use their isolated PR API.
 #   - Dev and production builds never point at the wrong API environment.
 #   - Every environment deploys to the dashboard's own Pages project and proves
 #     that a directly loaded client-side route receives the SPA entry document.
@@ -134,14 +134,11 @@ for workflow in "$PREVIEW" "$DEV" "$PROD"; do
 done
 
 require_fixed "$PREVIEW" \
-  "uses: ./.github/actions/changed-paths" \
-  "preview detects whether API inputs changed"
-require_fixed "$PREVIEW" \
   "https://harpa-pro-api-pr-\${PR_NUMBER}.fly.dev" \
-  "API-changing previews point at the matching Fly preview"
-require_fixed "$PREVIEW" \
+  "previews point at the matching isolated Fly API"
+forbid_fixed "$PREVIEW" \
   "https://harpa-pro-api-dev.fly.dev" \
-  "frontend-only previews fall back to the shared dev API"
+  "previews never mutate the shared dev API"
 require_fixed "$PREVIEW" \
   'VITE_API_BASE_URL: ${{ steps.api.outputs.base-url }}' \
   "preview injects the selected API URL at build time"
@@ -172,6 +169,9 @@ require_fixed "$PREVIEW" \
 require_fixed "$PREVIEW" \
   "bash scripts/ci/__tests__/dashboard-pages-policy.test.sh" \
   "preview runs the static deployment policy before upload"
+require_fixed "$PREVIEW" \
+  "bash scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh" \
+  "preview runs the live-journey policy before upload"
 require_fixed "$PREVIEW" \
   "bash scripts/ci/__tests__/verify-dashboard-pages.test.sh" \
   "preview runs the SPA verifier self-test before upload"

@@ -1,8 +1,9 @@
 name: dashboard-preview
 
 # Test and deploy the office dashboard to a unique Cloudflare Pages preview.
-# API-changing PRs use the matching Fly/Neon preview; frontend-only PRs use the
-# shared dev API. Forks are skipped because Pages credentials are unavailable.
+# Every dashboard preview uses the matching isolated Fly/Neon PR backend so
+# live browser journeys never mutate the shared dev environment. Forks are
+# skipped because deployment and test credentials are unavailable.
 
 on:
   pull_request:
@@ -16,8 +17,11 @@ on:
       - 'packages/report-core/**'
       - '.github/actions/changed-paths/**'
       - '.github/workflows/dashboard-*.yml'
+      - '.github/workflows/pr-preview.yml'
+      - 'infra/fly/fly.preview.toml'
       - 'scripts/ci/ensure-dashboard-pages-project.sh'
       - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh'
       - 'scripts/ci/__tests__/dashboard-pages-policy.test.sh'
       - 'scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh'
       - 'scripts/ci/__tests__/verify-dashboard-pages.test.sh'
@@ -32,19 +36,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      api: ${{ steps.paths.outputs.api }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: paths
-        uses: ./.github/actions/changed-paths
-
   preview:
-    needs: changes
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
@@ -64,21 +56,17 @@ jobs:
         id: api
         shell: bash
         env:
-          API_CHANGED: ${{ needs.changes.outputs.api }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          if [[ "$API_CHANGED" == "true" ]]; then
-            base_url="https://harpa-pro-api-pr-${PR_NUMBER}.fly.dev"
-          else
-            base_url="https://harpa-pro-api-dev.fly.dev"
-          fi
+          base_url="https://harpa-pro-api-pr-${PR_NUMBER}.fly.dev"
           echo "base-url=$base_url" >> "$GITHUB_OUTPUT"
           echo "VITE_API_BASE_URL=$base_url" >> "$GITHUB_ENV"
 
       - name: Test dashboard deployment policy
         run: |
           bash scripts/ci/__tests__/dashboard-pages-policy.test.sh
+          bash scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh
           bash scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh
           bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
 
@@ -118,11 +106,13 @@ jobs:
         env:
           API_HEALTH_URL: ${{ steps.api.outputs.base-url }}/healthz
           API_READY_URL: ${{ steps.api.outputs.base-url }}/readyz
-          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|pnpm-lock\.yaml$|tsconfig.*\.json$)'
+          # This preview is rebuilt for every dashboard PR, so an ancestor is
+          # never sufficient: browser and API must share the exact merge SHA.
+          API_PATH_PATTERN: '.*'
           # pr-preview.yml and this workflow both test GitHub's synthetic
           # pull-request merge ref, so compatibility must use github.sha.
           EXPECTED_GIT_COMMIT: ${{ github.sha }}
-          API_RELEASE_ATTEMPTS: 30
+          API_RELEASE_ATTEMPTS: 60
           API_RELEASE_SLEEP: 10
         run: bash scripts/ci/verify-api-release.sh
 
@@ -153,6 +143,43 @@ jobs:
           DASHBOARD_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: bash scripts/ci/verify-dashboard-pages.sh
 
+      - uses: dopplerhq/cli-action@v4
+
+      - name: Load dashboard live password
+        if: steps.deploy.outputs.deployment-url
+        shell: bash
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        run: |
+          set -euo pipefail
+          dashboard_live_password="$(doppler secrets get TEST_ACCOUNT_PASSWORD --plain)"
+          if [[ -z "$dashboard_live_password" ]]; then
+            echo "::error::TEST_ACCOUNT_PASSWORD is missing from Doppler dev"
+            exit 1
+          fi
+          echo "::add-mask::$dashboard_live_password"
+          echo "DASHBOARD_LIVE_PASSWORD=$dashboard_live_password" >> "$GITHUB_ENV"
+
+      - name: Test deployed dashboard live journeys
+        if: steps.deploy.outputs.deployment-url
+        shell: bash
+        env:
+          DASHBOARD_LIVE_BASE_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+          DASHBOARD_LIVE_API_URL: ${{ steps.api.outputs.base-url }}
+          DASHBOARD_LIVE_OWNER_EMAIL: test@harpapro.com
+          DASHBOARD_LIVE_EDITOR_EMAIL: test2@harpapro.com
+          DASHBOARD_LIVE_RUN_ID: pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: pnpm --filter @harpa/dashboard test:e2e:live
+
+      - name: Upload live journey failure screenshots
+        if: failure() && steps.deploy.outputs.deployment-url
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-live-e2e-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
+          path: apps/dashboard/test-results-live/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Comment dashboard preview URLs on PR
         if: steps.deploy.outputs.deployment-url
         uses: marocchino/sticky-pull-request-comment@v2
@@ -168,6 +195,6 @@ jobs:
             - **PR head:** `${{ github.event.pull_request.head.sha }}`
 
             The immutable test URL and direct client-side route passed the
-            Cloudflare Pages SPA check. API-changing PRs use the matching
-            `harpa-pro-api-pr-${{ github.event.pull_request.number }}` preview;
-            frontend-only PRs use the shared dev API.
+            Cloudflare Pages SPA check. The deployed Chromium journey also
+            exercised real auth, Fly, Neon, and one live AI generation against
+            the isolated `harpa-pro-api-pr-${{ github.event.pull_request.number }}` preview.

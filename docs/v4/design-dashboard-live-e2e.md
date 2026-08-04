@@ -18,9 +18,9 @@ Keep the existing `test:e2e` four-browser mock suite for cheap UI breadth. Add
 dashboard and an isolated Fly/Neon backend for the same pull request.
 
 Every dashboard pull request gets that backend, including frontend-only
-changes. The backend release command migrates both databases and seeds the
-existing password-gated demo accounts. The dashboard workflow then waits for
-the exact merge SHA before deploying and testing Pages.
+changes. The dashboard workflow waits for the exact merge SHA before deploying
+and testing Pages. Live auth uses the existing `TEST_ACCOUNT_EMAILS` and
+`TEST_ACCOUNT_PASSWORD` path already present in the `dev` preview secrets.
 
 The live lane runs after:
 
@@ -33,7 +33,7 @@ The live lane runs after:
 The live journey covers the parts of the Maestro regression that the desktop
 product owns:
 
-- demo password sign-in and conditional onboarding;
+- password-authenticated sign-in and conditional onboarding;
 - project create, update, and delete;
 - member add, editor access, downgrade to viewer, removal, and access loss;
 - report create and delete;
@@ -65,9 +65,15 @@ provider wiring.
 
 ## Auth and secret handling
 
-The browser signs in through the reviewer-visible demo password form. CI loads
-only `DEMO_ACCOUNT_PASSWORD` from the existing Doppler dev configuration after
-deployment. Demo email addresses are public configuration.
+The live lane authenticates through Better Auth's real
+`POST /api/auth/sign-in/email` path using allowlisted test accounts. CI loads
+only `TEST_ACCOUNT_PASSWORD` from the existing Doppler dev configuration after
+deployment and supplies stable owner/editor emails
+(`test@harpapro.com`, `test2@harpapro.com`) through workflow env.
+
+The dashboard UI still supports demo-password sign-in; that branch stays
+covered in the mock browser suite. The live preview lane does not rely on
+`DEMO_ACCOUNT_PASSWORD` because the current dev secret set does not include it.
 
 The live Playwright config uses one worker, zero retries, no trace, and no video.
 It never writes storage state. Failure screenshots may be uploaded, but no

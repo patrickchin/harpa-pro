@@ -6,11 +6,11 @@ the public site's `harpa-pro` project.
 
 ## Deployment topology
 
-| Source                          | Workflow                | Pages target                                           | API target                                             |
-| ------------------------------- | ----------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
-| Pull request to `dev` or `main` | `dashboard-preview.yml` | `pr-<n>` preview branch                                | Matching PR API when API inputs changed; otherwise dev |
-| Push to `dev`                   | `dashboard-dev.yml`     | `dev.harpa-pro-dashboard.pages.dev`                    | `harpa-pro-api-dev.fly.dev`                            |
-| Push to `main`                  | `dashboard-prod.yml`    | `app.harpapro.com` and `harpa-pro-dashboard.pages.dev` | `api.harpapro.com`                                     |
+| Source                          | Workflow                | Pages target                                           | API target                  |
+| ------------------------------- | ----------------------- | ------------------------------------------------------ | --------------------------- |
+| Pull request to `dev` or `main` | `dashboard-preview.yml` | `pr-<n>` preview branch                                | Matching isolated PR API    |
+| Push to `dev`                   | `dashboard-dev.yml`     | `dev.harpa-pro-dashboard.pages.dev`                    | `harpa-pro-api-dev.fly.dev` |
+| Push to `main`                  | `dashboard-prod.yml`    | `app.harpapro.com` and `harpa-pro-dashboard.pages.dev` | `api.harpapro.com`          |
 
 Each pull request deployment has two URLs:
 
@@ -24,12 +24,13 @@ sticky comment. Cloudflare documents the immutable and branch-alias distinction
 in its
 [preview deployment guide](https://developers.cloudflare.com/pages/configuration/preview-deployments/).
 
-The preview workflow runs for dashboard inputs and API inputs. It uses
-`.github/actions/changed-paths` to select:
-
-- `https://harpa-pro-api-pr-<n>.fly.dev` when the same pull request creates a
-  Fly/Neon API preview;
-- `https://harpa-pro-api-dev.fly.dev` for a frontend-only change.
+The preview workflow runs for dashboard inputs and API inputs. Every run uses
+`https://harpa-pro-api-pr-<n>.fly.dev`. The shared changed-path action makes a
+dashboard-only change provision matching application/admin Neon branches and a
+Fly API, so live browser journeys can create and clean up data without mutating
+the shared dev environment. The Fly release command migrates both branches and
+idempotently seeds any configured test/demo password accounts before the
+dashboard journey starts.
 
 Before any Pages upload, `scripts/ci/verify-api-release.sh` proves the selected
 API is ready and compatible with the checked-out commit. The dev and production

@@ -1,7 +1,7 @@
 name: Detect changed paths
 description: >
   Compute boolean outputs for each top-level area of the monorepo
-  (api, mobile, site, admin, cli, etc.) so heavy CI jobs can
+  (api, mobile, site, admin, dashboard, cli, etc.) so heavy CI jobs can
   short-circuit on PRs that don't touch their code. Required-check
   jobs gate downstream steps on these outputs instead of using
   workflow-level `paths:` filters (which would report the workflow as
@@ -35,6 +35,9 @@ outputs:
   admin:
     description: True if the standalone admin site or its preview wiring changed.
     value: ${{ steps.filter.outputs.admin }}
+  dashboard:
+    description: True if the office dashboard or its preview wiring changed.
+    value: ${{ steps.filter.outputs.dashboard }}
   cli:
     description: True if apps/cli changed.
     value: ${{ steps.filter.outputs.cli }}
@@ -95,6 +98,26 @@ runs:
             - 'pnpm-lock.yaml'
             - 'pnpm-workspace.yaml'
             - 'tsconfig.base.json'
+          dashboard:
+            - 'apps/dashboard/**'
+            - 'packages/api-contract/**'
+            - 'packages/design-tokens/**'
+            - 'packages/report-core/**'
+            - '.github/actions/changed-paths/**'
+            - '.github/actions/setup-monorepo/**'
+            - '.github/workflows/dashboard-*.yml'
+            - '.github/workflows/pr-preview.yml'
+            - 'infra/fly/fly.preview.toml'
+            - 'scripts/ci/ensure-dashboard-pages-project.sh'
+            - 'scripts/ci/verify-dashboard-pages.sh'
+            - 'scripts/ci/__tests__/dashboard-*.test.sh'
+            - 'scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh'
+            - 'scripts/ci/__tests__/verify-dashboard-pages.test.sh'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'pnpm-workspace.yaml'
+            - 'turbo.json'
+            - 'tsconfig*.json'
           cli:
             - 'apps/cli/**'
             - 'packages/api-contract/**'

@@ -149,7 +149,7 @@ jobs:
           pnpm db:branch:prune-snapshots 30 2
           pnpm db:branch:snapshot "${GITHUB_SHA}" main
 
-      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - uses: dopplerhq/cli-action@v3
 

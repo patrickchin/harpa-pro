@@ -92,6 +92,16 @@ describe('ReportsListPage', () => {
     expect(rendered.container.textContent).toContain('Needs update');
     expect(calls[0]).toMatchObject({ status: 'all', cursor: undefined });
 
+    expect(rendered.container.querySelector('table')?.parentElement).toHaveClass(
+      'hidden',
+      'lg:block',
+    );
+    expect(rendered.container.querySelector('ul[aria-label="Reports"]')).toHaveClass(
+      'grid',
+      'gap-3',
+      'lg:hidden',
+    );
+
     await change(field(rendered.container, 'Status'), 'finalized');
     await flush();
 
@@ -238,13 +248,13 @@ describe('ReportsListPage', () => {
     const deleteTrigger = button(rendered.container, 'Delete Site Visit #7');
     deleteTrigger.focus();
     await click(deleteTrigger);
-    expect(rendered.container.textContent).toContain('Delete Site Visit #7?');
-    expect(button(rendered.container, 'Cancel')).toHaveFocus();
+    expect(document.body.textContent).toContain('Delete Site Visit #7?');
+    expect(button(document, 'Cancel')).toHaveFocus();
     await keydown(document, 'Escape');
-    expect(rendered.container.textContent).not.toContain('Delete Site Visit #7?');
+    expect(document.body.textContent).not.toContain('Delete Site Visit #7?');
     expect(deleteTrigger).toHaveFocus();
     await click(deleteTrigger);
-    await click(button(rendered.container, 'Confirm delete'));
+    await click(button(document, 'Confirm delete'));
     await flush();
 
     expect(deleteReport).toHaveBeenCalledWith('highland-tower', 7);

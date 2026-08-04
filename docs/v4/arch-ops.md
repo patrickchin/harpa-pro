@@ -428,7 +428,7 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 **inside the deploy job** before `flyctl deploy`. Pattern:
 
 ```yaml
-- uses: dopplerhq/cli-action@v3
+- uses: dopplerhq/cli-action@v4
 - name: Sync Fly secrets from Doppler
   env:
     DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }} # or _PRD
@@ -443,6 +443,11 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 - name: Deploy
   run: flyctl deploy ...
 ```
+
+Deployment workflows use action releases that run on Node 24. Cloudflare
+deployments use `cloudflare/wrangler-action@v4` with Wrangler CLI pinned to
+`3.114.17`; upgrading the action runtime must not silently introduce the
+separate Wrangler 4 migration.
 
 `--stage` defers activation; the subsequent `flyctl deploy` flips the
 secrets on — so code + secrets ship in a single transaction. To rotate

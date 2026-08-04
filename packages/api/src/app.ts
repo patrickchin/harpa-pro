@@ -105,6 +105,15 @@ export function createApp(): OpenAPIHono<AppEnv> {
       maxAge: 86400,
     }),
   );
+  app.use(
+    '/readyz',
+    cors({
+      origin: credentialedOrigin,
+      allowMethods: ['GET', 'OPTIONS'],
+      credentials: true,
+      maxAge: 86400,
+    }),
+  );
   app.onError(errorMapper());
 
   // Register the Bearer security scheme. Better-auth's expo() plugin

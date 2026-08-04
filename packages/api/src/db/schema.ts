@@ -174,6 +174,34 @@ export const files = appSchema.table('files', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const noteFiles = appSchema.table(
+  'note_files',
+  {
+    id: text('id').primaryKey(),
+    noteId: text('note_id')
+      .notNull()
+      .references(() => notes.id, { onDelete: 'cascade' }),
+    fileId: text('file_id')
+      .notNull()
+      .references(() => files.id),
+    thumbnailFileId: text('thumbnail_file_id').references(() => files.id, {
+      onDelete: 'set null',
+    }),
+    position: integer('position').notNull().default(0),
+    caption: text('caption'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    notePositionUnique: unique('note_files_note_id_position_key').on(
+      t.noteId,
+      t.position,
+    ),
+    noteIdIdx: index('note_files_note_id_idx').on(t.noteId, t.position),
+  }),
+);
+
 export type FileUploadScope = 'project' | 'avatar' | 'scratch';
 
 export const fileUploadLeases = appSchema.table(

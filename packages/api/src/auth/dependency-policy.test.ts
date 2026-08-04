@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 type PackageManifest = {
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 };
@@ -24,5 +25,8 @@ describe('better-auth dependency policy', () => {
     expect(mobile.dependencies?.['@better-auth/expo']).toBe(version);
     expect(api.dependencies).not.toHaveProperty('@better-auth/cli');
     expect(api.devDependencies?.auth).toBe(version);
+    expect(api.scripts?.['auth:schema:generate']).toBe(
+      'auth generate --config src/auth/auth.ts --output src/db/auth-schema.ts --yes',
+    );
   });
 });

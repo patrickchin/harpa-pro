@@ -157,9 +157,10 @@ environment and only surfaces when the deploy fires.
 | `api-integration.yml`         |       ✓       | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold                                             |
 | `cli.yml`                     |       ✓       | dev + main            | `apps/cli` typecheck + tests                                                                                               |
 | `e2e-maestro-testid-gate.yml` |       ✓       | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke                                              |
-| `pr-preview.yml`              |       ✓       | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify                                                        |
-| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Per-PR Expo OTA preview                                                                                                    |
-| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Tests + Cloudflare Pages preview for the public site                                                                       |
+| `pr-preview.yml`              |       ✓       | (PR-only)             | Credential-free path/migration guards; human-owned PR Neon/Fly lifecycle                                                   |
+| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Human-owned same-repository PR Expo OTA preview                                                                             |
+| `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin verification; human-owned same-repository Pages preview                                               |
+| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public-site verification; human-owned same-repository Pages preview                                         |
 | `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys                                        |
 | `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                                    |
 | `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                                       |
@@ -169,6 +170,27 @@ environment and only surfaces when the deploy fires.
 | `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                                                 |
 | `ai-live.yml`                 |       ✗       | dev + main + dispatch | Live AI provider smoke (no fixtures)                                                                                       |
 | `neon-snapshot-prune.yml`     |       ✗       | (cron 04:17 UTC)      | Prune stale Neon branches                                                                                                  |
+
+### Pull-request automation trust boundary
+
+Dependabot controls a same-repository branch, but GitHub deliberately withholds
+ordinary Actions secrets from its pull-request workflows. Same-repository
+membership is therefore not sufficient authorization for a privileged job.
+
+Credential-free verification remains available to Dependabot: lint, tests,
+typechecks, local browser checks, static builds, changed-path detection, and
+migration filename guards. Cloudflare, Neon, Fly, EAS, cleanup, and PR-comment
+jobs additionally require
+`github.event.pull_request.user.login != 'dependabot[bot]'`. This must use the
+PR author rather than `github.actor`, because a maintainer rerun changes the
+actor without transferring branch ownership.
+
+Do not add deployment credentials to Dependabot secrets, and do not use
+`pull_request_target`: checking out dependency-controlled code in a base-branch
+privileged context crosses the trust boundary. Direct Dependabot security PRs
+to `main` fail `main-gate` with instructions to port the coordinated update
+through a human-owned `dev` PR; live journeys never receive the test-account
+password on that bot path.
 
 ### Closing post-merge blind spots
 
@@ -348,8 +370,9 @@ green. Both the poll loop and the surrounding job are bounded.
     after `fly-destroy`.
 - `guard` job: same filename checks for both migration streams (no manifest
   diff because previews are ephemeral).
-- Forks are skipped (no `FLY_API_TOKEN` / `DOPPLER_TOKEN_DEV` /
-  `NEON_API_KEY` available to fork PRs).
+- Credential-free `changes` and `guard` jobs run for Dependabot. Preview create,
+  deploy, comment, and teardown jobs skip forks and Dependabot because they
+  require `FLY_API_TOKEN`, `DOPPLER_TOKEN_DEV`, or `NEON_API_KEY`.
 - Path filter: `neon-create`, `fly-preview`, and `guard` run only for PRs
   that change API inputs (`packages/api`, `packages/api-contract`,
   `packages/ai-fixtures`, lockfile, or TS config). Frontend-only PRs use

@@ -21,6 +21,25 @@ describe('admin site smoke', () => {
     expect(config).toMatch(/output:\s*['"]static['"]/);
   });
 
+  it('declares a compatible React, Vite, and Tailwind peer graph', () => {
+    const pkg = JSON.parse(readFileSync(resolve(here, '../../package.json'), 'utf8')) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+
+    expect(pkg.dependencies).toMatchObject({
+      react: '19.2.0',
+      'react-dom': '19.2.0',
+    });
+    expect(pkg.devDependencies).toMatchObject({
+      '@tailwindcss/vite': '^4.3.3',
+      '@types/react': '^19.2.0',
+      '@types/react-dom': '~19.2.3',
+      tailwindcss: '^4.3.3',
+      vite: '6.4.3',
+    });
+  });
+
   it('renders activity and operations routes and keeps every document out of search', () => {
     const page = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
     const operationsPage = readFileSync(resolve(here, '../pages/operations.astro'), 'utf8');

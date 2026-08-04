@@ -1,5 +1,5 @@
 import type { projects, reports } from '@harpa/api-contract';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -105,12 +105,37 @@ describe('ProjectOverview', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Recent reports' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'East elevation progress' })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: 'East elevation progress' })).toHaveLength(2);
+    expect(screen.getAllByRole('link', { name: 'East elevation progress' })[0]).toHaveAttribute(
       'href',
       '/projects/prj_1/reports/14',
     );
-    expect(screen.getByText('Draft')).toBeVisible();
-    expect(screen.getByText('Needs update')).toBeVisible();
+    expect(screen.getAllByText('Draft')).toHaveLength(2);
+    expect(screen.getAllByText('Needs update')).toHaveLength(2);
+  });
+
+  it('switches recent reports from a table to stacked cards below 1024px', () => {
+    render(
+      <MemoryRouter>
+        <ProjectOverview
+          project={baseProject}
+          members={members}
+          onCreateReport={vi.fn()}
+          recentReports={recentReports}
+        />
+      </MemoryRouter>,
+    );
+
+    const table = screen.getByRole('table', { name: 'Recent reports' });
+    const cardList = screen.getByRole('list', { name: 'Recent reports' });
+
+    expect(table.parentElement).toHaveClass('hidden', 'lg:block');
+    expect(cardList).toHaveClass('grid', 'gap-3', 'lg:hidden');
+    expect(within(cardList).getByRole('link', { name: 'East elevation progress' })).toHaveAttribute(
+      'href',
+      '/projects/prj_1/reports/14',
+    );
+    expect(within(cardList).getByText('Needs update')).toBeVisible();
   });
 
   it('does not expose report mutation controls to a viewer', () => {

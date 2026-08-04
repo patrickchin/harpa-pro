@@ -1,8 +1,10 @@
 import type { projects } from '@harpa/api-contract';
+import { Trash2 } from 'lucide-react';
 import { useRef, useState, type FormEvent } from 'react';
 
 import { PageHeader } from '@/components/layout';
 import { Modal } from '@/components/modal';
+import { Button, Field, Input, Textarea } from '@/components/ui';
 
 interface UpdateProjectInput {
   name: string;
@@ -69,7 +71,7 @@ export function ProjectSettingsPanel({
   }
 
   return (
-    <div className="page">
+    <div className="flex min-w-0 flex-col gap-8">
       <PageHeader
         eyebrow={project.name}
         title="Project settings"
@@ -77,78 +79,96 @@ export function ProjectSettingsPanel({
       />
 
       {canEdit ? (
-        <section className="surface settings-panel">
-          <div className="section-heading">
-            <div>
-              <h2>Project details</h2>
-              <p>These details appear in the project shell and report exports.</p>
-            </div>
+        <section className="w-full max-w-3xl rounded-card-ui border border-border bg-card p-5 shadow-raised-ui sm:p-6">
+          <div>
+            <h2 className="text-title-sm font-bold">Project details</h2>
+            <p className="mt-1 text-meta text-muted-foreground">
+              These details appear in the project shell and report exports.
+            </p>
           </div>
-          <form className="form-stack" onSubmit={save}>
-            <label>
-              Project name
-              <input defaultValue={project.name} name="name" />
-            </label>
-            <label>
-              Client{' '}
-              <span aria-hidden="true" className="optional-label">
-                Optional
-              </span>
-              <input defaultValue={project.clientName ?? ''} name="clientName" />
-            </label>
-            <label>
-              Address{' '}
-              <span aria-hidden="true" className="optional-label">
-                Optional
-              </span>
-              <textarea defaultValue={project.address ?? ''} name="address" />
-            </label>
-            {error && !deleteOpen ? <p role="alert">{error}</p> : null}
-            <div>
-              <button className="button button-primary" disabled={busyAction !== null}>
+          <form className="mt-6 grid gap-5" onSubmit={save}>
+            <Field label="Project name">
+              <Input defaultValue={project.name} name="name" />
+            </Field>
+            <Field label="Client" optional>
+              <Input
+                aria-label="Client"
+                defaultValue={project.clientName ?? ''}
+                name="clientName"
+              />
+            </Field>
+            <Field label="Address" optional>
+              <Textarea aria-label="Address" defaultValue={project.address ?? ''} name="address" />
+            </Field>
+            {error && !deleteOpen ? (
+              <p
+                className="rounded-control-ui border border-danger-border bg-danger-soft px-4 py-3 text-meta text-danger-text"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
+            <div className="flex justify-stretch sm:justify-start">
+              <Button
+                className="w-full sm:w-auto"
+                disabled={busyAction !== null}
+                type="submit"
+                variant="hero"
+              >
                 {busyAction === 'save' ? 'Saving…' : 'Save changes'}
-              </button>
+              </Button>
             </div>
           </form>
         </section>
       ) : (
-        <section className="surface settings-panel">
-          <h2>Project details</h2>
-          <dl className="details-list">
-            <div>
-              <dt>Project name</dt>
-              <dd>{project.name}</dd>
+        <section className="w-full max-w-3xl rounded-card-ui border border-border bg-card p-5 shadow-raised-ui sm:p-6">
+          <h2 className="text-title-sm font-bold">Project details</h2>
+          <dl className="mt-5 grid gap-4">
+            <div className="border-t border-border pt-3 first:border-t-0 first:pt-0">
+              <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                Project name
+              </dt>
+              <dd className="mt-1 break-words">{project.name}</dd>
             </div>
-            <div>
-              <dt>Client</dt>
-              <dd>{project.clientName ?? 'Not provided'}</dd>
+            <div className="border-t border-border pt-3">
+              <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                Client
+              </dt>
+              <dd className="mt-1 break-words">{project.clientName ?? 'Not provided'}</dd>
             </div>
-            <div>
-              <dt>Address</dt>
-              <dd>{project.address ?? 'Not provided'}</dd>
+            <div className="border-t border-border pt-3">
+              <dt className="text-label font-bold tracking-label text-muted-foreground uppercase">
+                Address
+              </dt>
+              <dd className="mt-1 break-words">{project.address ?? 'Not provided'}</dd>
             </div>
           </dl>
-          <p className="notice">Only owners and editors can change project details.</p>
+          <p className="mt-5 rounded-control-ui border border-info-border bg-info-soft px-4 py-3 text-meta text-info-text">
+            Only owners and editors can change project details.
+          </p>
         </section>
       )}
 
       {project.myRole === 'owner' ? (
-        <section className="surface danger-zone">
-          <div>
-            <h2>Delete project</h2>
-            <p>Permanently remove this project, its reports, and attached project records.</p>
+        <section className="flex w-full max-w-3xl flex-col gap-4 rounded-card-ui border border-danger-border bg-danger-soft p-5 shadow-raised-ui sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="min-w-0">
+            <h2 className="text-title-sm font-bold text-danger-text">Delete project</h2>
+            <p className="mt-1 text-meta text-danger-text">
+              Permanently remove this project, its reports, and attached project records.
+            </p>
           </div>
-          <button
-            className="button button-danger"
+          <Button
+            className="w-full sm:w-auto"
             onClick={() => {
               setConfirmation('');
               setError(null);
               setDeleteOpen(true);
             }}
-            type="button"
+            variant="destructive"
           >
+            <Trash2 className="size-4" aria-hidden="true" />
             Delete project
-          </button>
+          </Button>
         </section>
       ) : null}
 
@@ -160,36 +180,46 @@ export function ProjectSettingsPanel({
           initialFocusRef={deleteConfirmationRef}
           onClose={() => setDeleteOpen(false)}
         >
-          <p className="eyebrow danger-copy">Permanent action</p>
-          <h2 id="delete-project-title">Delete {project.name}?</h2>
-          <p id="delete-project-description">
+          <p className="text-label font-bold tracking-label text-danger-text uppercase">
+            Permanent action
+          </p>
+          <h2 className="mt-2 text-title-sm font-bold" id="delete-project-title">
+            Delete {project.name}?
+          </h2>
+          <p className="mt-2 text-meta text-muted-foreground" id="delete-project-description">
             Its reports and attached project records are removed. This cannot be undone.
           </p>
-          <label>
-            Type {project.name} to confirm
-            <input
+          <Field className="mt-5" label={`Type ${project.name} to confirm`}>
+            <Input
               onChange={(event) => setConfirmation(event.currentTarget.value)}
               ref={deleteConfirmationRef}
               value={confirmation}
             />
-          </label>
-          {error ? <p role="alert">{error}</p> : null}
-          <div className="modal-actions">
-            <button
-              className="button button-quiet"
+          </Field>
+          {error ? (
+            <p
+              className="mt-4 rounded-control-ui border border-danger-border bg-danger-soft px-4 py-3 text-meta text-danger-text"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button
+              className="w-full sm:w-auto"
               onClick={() => setDeleteOpen(false)}
-              type="button"
+              variant="quiet"
             >
               Cancel
-            </button>
-            <button
-              className="button button-danger"
+            </Button>
+            <Button
+              className="w-full sm:w-auto"
               disabled={confirmation !== project.name || busyAction === 'delete'}
               onClick={() => void deleteProject()}
-              type="button"
+              variant="danger-solid"
             >
               {busyAction === 'delete' ? 'Deleting…' : 'Permanently delete project'}
-            </button>
+            </Button>
           </div>
         </Modal>
       ) : null}

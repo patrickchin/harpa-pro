@@ -93,4 +93,15 @@ describe('ProjectSettingsPanel', () => {
     expect(screen.getByText('Northstar Developments')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
   });
+
+  it('uses mobile-sized controls and a narrow readable settings column', () => {
+    render(<ProjectSettingsPanel project={project} onSave={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByRole('textbox', { name: 'Project name' })).toHaveClass('min-h-11');
+    expect(screen.getByRole('textbox', { name: 'Address' })).toHaveClass('min-h-28');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toHaveClass('min-h-11');
+    expect(screen.getByRole('heading', { name: 'Project details' }).closest('section')).toHaveClass(
+      'max-w-3xl',
+    );
+  });
 });

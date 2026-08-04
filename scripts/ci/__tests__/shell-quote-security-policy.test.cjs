@@ -15,9 +15,20 @@ const lockfile = fs.readFileSync(
 
 const overrideKey = 'react-devtools-core>shell-quote';
 const secureVersion = '1.10.0';
+const overrides = packageJson.pnpm?.overrides ?? {};
+
+const shellQuoteOverrideKeys = Object.keys(overrides).filter(
+  (key) => key === 'shell-quote' || key.endsWith('>shell-quote'),
+);
+
+assert.deepEqual(
+  shellQuoteOverrideKeys,
+  [overrideKey],
+  `shell-quote must be overridden only through ${overrideKey}`,
+);
 
 assert.equal(
-  packageJson.pnpm?.overrides?.[overrideKey],
+  overrides[overrideKey],
   secureVersion,
   `${overrideKey} must be pinned to ${secureVersion}`,
 );

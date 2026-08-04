@@ -535,25 +535,27 @@ connection and `admin._migrations` head and fails the deployment workflow
 without coupling Fly routing to admin availability.
 
 ```
-PR open / push (same-repo only, forks skipped)
-  ↳ Backend preview (API-changing PRs only):
-    ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
-    ↳ Admin Neon branch pr-<n> from admin dev
-    ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-      ↳ release_command applies app migrations, then admin migrations
-      ↳ /readyz verified
-      ↳ /admin/readyz verified separately
-      ↳ sticky PR comment with preview URL
-  ↳ public-site preview deploy to CF Pages (site-preview.yml)
-  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
-    ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
-      when the PR changes API inputs
-    ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
-    ↳ branch is last-write-wins; engineers select older PR bundles
-      via the dev-client launcher (Updates → development → pick)
+PR open / push
+  ↳ Credential-free tests, builds, path checks, and migration guards
+  ↳ Human-owned same-repository PRs only:
+    ↳ Backend preview (API-changing PRs only):
+      ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
+      ↳ Admin Neon branch pr-<n> from admin dev
+      ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
+        ↳ release_command applies app migrations, then admin migrations
+        ↳ /readyz verified
+        ↳ /admin/readyz verified separately
+        ↳ sticky PR comment with preview URL
+    ↳ public/admin-site preview deploys to CF Pages
+    ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
+      ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
+        when the PR changes API inputs
+      ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
+      ↳ branch is last-write-wins; engineers select older PR bundles
+        via the dev-client launcher (Updates → development → pick)
   ↳ EAS preview build (manual trigger — planned)
 
-PR close
+Human-owned same-repository PR close
   ↳ Fly app harpa-pro-api-pr-<n> destroyed (pr-preview.yml: fly-destroy)
   ↳ Application and admin Neon branches pr-<n> deleted
 

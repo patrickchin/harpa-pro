@@ -33,15 +33,17 @@ The line has a consistent scanning order:
 1. optional `New` marker;
 2. compact local timestamp;
 3. event label;
-4. actor label;
+4. user label;
 5. subject label; and
 6. project context.
 
 A compact header strip uses the same grid and labels those positions `New`,
-`Time`, `Event`, `Actor`, `Subject`, and `Project`. It scrolls horizontally with
-the rows so the labels stay aligned. The feed retains list-and-button semantics
-because every row opens its detail drawer; each button's complete accessible
-name remains self-contained rather than relying on ARIA table semantics.
+`Time`, `Event`, `User`, `Subject`, and `Project`. It scrolls horizontally with
+the rows so the labels stay aligned. `Time`, `Event`, `User`, and `Project` are
+filter buttons; `New` and `Subject` remain plain labels. The feed retains
+list-and-button semantics because every row opens its detail drawer; each
+button's complete accessible name remains self-contained rather than relying on
+ARIA table semantics.
 
 Event, actor, and subject use medium or semibold weight. Timestamp and project
 context use the softer ink token. The event label occupies a stable width so
@@ -57,36 +59,44 @@ name with event, actor, subject, project, and occurrence-time labels, while the
 complete visible text remains the source of truth.
 
 Selecting a row still opens the detail drawer for IDs, request ID, and strict
-metadata. Filtering actions are removed from the drawer because the filter bar
-is the primary control surface.
+metadata. Filtering actions are removed from the drawer because the attached
+column-header controls are the primary filter surface.
 
 ## Filters
 
-All filters apply immediately on selection. There is no Apply button and no
-separate draft-filter state.
+All server filters apply immediately on selection. There is no Apply button and
+no separate draft-filter state. The detached filter card is removed.
 
-The first filter row contains:
+The `Time`, `Event`, `User`, and `Project` header buttons expose
+`aria-expanded` and open one non-modal filter region attached directly below
+the header. The region is named for its column, for example `Time filter` or
+`User filter`. Opening another header button replaces the current region, so
+only one filter region exists at a time. Closing the region leaves its current
+selection active.
 
-- a segmented detail-level button group;
-- a segmented time-period button group; and
-- Clear.
+The attached regions contain:
 
-The second row is always visible and contains:
+- `Time`: the existing `Time period` radio group with Past week, Past month,
+  Past 6 months, Past year, and All time;
+- `Event`: the existing `Detail level` radio group with Milestones, Detailed
+  activity, and All activity; there is no separate event-type filter;
+- `User`: a local `Search users` field, an `Included users` radio group with All
+  users and one Only choice per known user, plus one Exclude checkbox per known
+  user; and
+- `Project`: a local `Search projects` field and an All projects or Only project
+  radio choice.
 
-- Filter actor;
-- Exclude actor; and
-- Filter project.
+The search fields narrow the cached choices locally and do not add API query
+parameters. User and project choices are collected from events returned during
+the current browser session. The option cache keeps labels available after a
+server filter removes those rows from the current response. Up to 20 users may
+be excluded at once.
 
-There is no event-type filter. The level and time-period choices expose all
-options without opening a menu and apply immediately. They look like segmented
-buttons but use native radio-group semantics so Tab enters each group once and
-arrow keys move the checked choice. The remaining native selects use the same
-rounded surface, deliberate hover/focus states, and custom chevron treatment.
-
-Actor and project choices are collected from events returned during the
-current browser session. The option cache keeps labels available after a
-filter removes those rows from the current response. Excluded actors remain
-visible as removable chips, with the existing maximum of 20.
+User inclusion and exclusion cannot contradict each other. Choosing `Only` for
+an excluded user removes that user's exclusion. Excluding the currently
+included user returns inclusion to `All users`. Each resolved selection sends
+one immediate request with the resulting `actorUserId`,
+`excludeActorUserIds`, `projectId`, `level`, and derived `from` parameters.
 
 The server remains authoritative for filtering. Changing a filter resets
 cursor pagination, closes the detail drawer, clears any `New` markers, and
@@ -138,6 +148,8 @@ content, transcripts, filenames, storage keys, or other excluded data.
 ## Failure and accessibility behavior
 
 - Rows remain keyboard-focusable and expose the detail action as a button.
+- Header filter buttons and their attached region remain available when a query
+  returns no rows, so an operator can broaden or clear the active filters.
 - Immediate filter requests use the existing loading, forbidden, and retryable
   error states.
 - Refresh keeps its button disabled while a refresh is in flight.
@@ -153,15 +165,19 @@ Component tests cover:
 
 - aligned visible column headers without changing the interactive list semantics;
 - single-line row hierarchy and decorative event/context icon mapping;
-- immediate button-driven level and time filtering;
-- radio-group keyboard behavior and narrow-width horizontal reachability;
-- styled actor, exclusion, and project selects;
-- multiple removable actor exclusions;
+- one attached filter region controlled by the Time, Event, User, and Project
+  header buttons;
+- immediate radio and checkbox filtering for time, level, included user,
+  multiple excluded users, and project;
+- local user and project choice search;
+- deterministic resolution of contradictory user include/exclude choices;
+- header controls that remain usable for empty results;
 - out-of-order request protection;
 - refresh baselines and local `New` markers;
 - cursor pagination; and
 - the generated plain-text Blob.
 
-The admin Playwright smoke covers the visible controls, icon rendering, dense
-row geometry, immediate filter requests, refresh markers, the text view, detail
-inspection, and sign-out against the real local API wiring.
+The admin Playwright smoke covers the attached header filters, choice search,
+immediate filter requests, icon rendering, dense row geometry, empty-result
+recovery, refresh markers, the text view, detail inspection, and sign-out
+against the real local API wiring.

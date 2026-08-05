@@ -125,9 +125,11 @@ function HeaderFilterButton({
   onToggle: (filter: HeaderFilter, trigger: HTMLButtonElement) => void;
 }) {
   const expanded = openFilter === filter;
+  const activeDescriptionId = `activity-${filter}-filter-status`;
   return (
     <button
       aria-controls={expanded ? FILTER_PANEL_ID : undefined}
+      aria-describedby={activeCount > 0 ? activeDescriptionId : undefined}
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-label={`Filter by ${filter}`}
@@ -140,12 +142,18 @@ function HeaderFilterButton({
     >
       <span>{label}</span>
       {activeCount > 0 && (
-        <span
-          aria-label={`${activeCount} active ${label.toLocaleLowerCase()} filter${activeCount === 1 ? '' : 's'}`}
-          className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] leading-4 text-accent-foreground"
-        >
-          {activeCount}
-        </span>
+        <>
+          <span
+            aria-hidden="true"
+            className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] leading-4 text-accent-foreground"
+          >
+            {activeCount}
+          </span>
+          <span className="sr-only" id={activeDescriptionId}>
+            {activeCount} active {label.toLocaleLowerCase()} filter
+            {activeCount === 1 ? '' : 's'}
+          </span>
+        </>
       )}
       <svg
         aria-hidden="true"
@@ -738,9 +746,15 @@ function ActivityFeed({
 
     positionHeaderFilter();
     popupRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+    const popupResizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => positionHeaderFilter());
+    if (popupRef.current) popupResizeObserver?.observe(popupRef.current);
     window.addEventListener('resize', positionHeaderFilter);
     window.addEventListener('scroll', positionHeaderFilter, true);
     return () => {
+      popupResizeObserver?.disconnect();
       window.removeEventListener('resize', positionHeaderFilter);
       window.removeEventListener('scroll', positionHeaderFilter, true);
     };

@@ -122,7 +122,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
 
   const desktopViewport = page.viewportSize();
   expect(desktopViewport).not.toBeNull();
-  await page.setViewportSize({ width: 320, height: 800 });
+  await page.setViewportSize({ width: 320, height: 480 });
   const feedScroller = page.getByTestId('activity-table-scroller');
   const feedWidths = await feedScroller.evaluate((element) => ({
     clientWidth: element.clientWidth,
@@ -138,9 +138,25 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   expect(mobilePopupBox).not.toBeNull();
   expect(mobilePopupBox!.x).toBeGreaterThanOrEqual(0);
   expect(mobilePopupBox!.x + mobilePopupBox!.width).toBeLessThanOrEqual(320);
+  await mobileProjectPopup
+    .getByRole('searchbox', { name: 'Search projects' })
+    .fill('no matching project');
   await page.keyboard.press('Escape');
   await expect(mobileProjectPopup).toHaveCount(0);
+  await page.getByRole('button', { name: 'Filter by project' }).click();
+  const resizedProjectPopup = page.getByRole('dialog', { name: 'Project filter' });
+  await resizedProjectPopup.getByRole('searchbox', { name: 'Search projects' }).fill('');
+  await expect
+    .poll(async () => {
+      const bounds = await resizedProjectPopup.boundingBox();
+      return bounds === null ? null : bounds.y + bounds.height;
+    })
+    .toBeLessThanOrEqual(480);
+  await page.keyboard.press('Escape');
+  await expect(resizedProjectPopup).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 800 });
   const timePeriodScroller = page.getByTestId('time-period-options');
+  await timePeriodScroller.scrollIntoViewIfNeeded();
   const timePeriodWidths = await timePeriodScroller.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,

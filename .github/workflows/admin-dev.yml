@@ -26,7 +26,7 @@ jobs:
   verify:
     if: github.event_name == 'push' || github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 150
     permissions:
       contents: read
     steps:

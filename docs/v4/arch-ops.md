@@ -98,7 +98,9 @@
     Release operators run Fastlane from the repo root:
 
   ```sh
-  bundle install --path vendor/bundle
+  gem install bundler -v 2.6.9 --no-document
+  bundle _2.6.9_ config set --local path vendor/bundle
+  bundle _2.6.9_ install
   bundle exec fastlane doctor
   bundle exec fastlane screenshots_preview       # only after assets exist
   bundle exec fastlane app_privacy_preview       # only after review
@@ -125,7 +127,10 @@
   from authenticated local tools or environment variables. The first
   Play metadata upload may require an existing release on the target
   track; if `supply` reports an empty track, run the EAS submit lane
-  once for that track and re-run the metadata lane.
+  once for that track and re-run the metadata lane. Local release tooling
+  follows [`.ruby-version`](../../.ruby-version) (`3.4.10` today) and
+  Bundler `2.6.9`; the Gemfile stays compatible with the Ruby 3.2 runtime
+  on Expo's SDK 55 builders.
 
 ## Mobile store launch workflow
 
@@ -239,7 +244,9 @@ that might create noisy or disposable data.
 Internal QA flow:
 
 ```sh
-bundle install --path vendor/bundle
+gem install bundler -v 2.6.9 --no-document
+bundle _2.6.9_ config set --local path vendor/bundle
+bundle _2.6.9_ install
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane doctor
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane metadata_preview
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane beta

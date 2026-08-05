@@ -429,6 +429,31 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "set -euo pipefail" \
   "Maestro smoke enables strict Bash handling"
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  "adb shell settings put global hide_error_dialogs 1" \
+  "Maestro smoke suppresses system crash and ANR dialogs on the test emulator"
+# This is a literal runner-script string, not a policy-test expansion.
+# shellcheck disable=SC2016
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  'hide_error_dialogs="$(adb shell settings get global hide_error_dialogs | tr -d '\''\r'\'')"' \
+  "Maestro smoke reads back the Android error-dialog setting"
+# shellcheck disable=SC2016
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  'if [[ "$hide_error_dialogs" != "1" ]]; then' \
+  "Maestro smoke fails closed when Android rejects error-dialog suppression"
+# shellcheck disable=SC2016
+require_adjacent_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  '"$hide_error_dialogs" >&2' \
+  "exit 1" \
+  "Maestro smoke exits after reporting rejected error-dialog suppression"
+require_before "scripts/ci/run-maestro-launch-smoke.sh" \
+  "adb shell settings put global hide_error_dialogs 1" \
+  "adb shell settings get global hide_error_dialogs" \
+  "Maestro smoke sets Android error-dialog suppression before verifying it"
+require_before "scripts/ci/run-maestro-launch-smoke.sh" \
+  "adb shell settings get global hide_error_dialogs" \
+  'maestro" test' \
+  "Maestro smoke verifies Android error-dialog suppression before the flow"
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \

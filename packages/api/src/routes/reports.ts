@@ -124,16 +124,17 @@ function reportConflict(report: ReportRow) {
 
 /**
  * Older mobile callers send `content-type: application/json` with no body on
- * finalize/unfinalize. Seed Hono's body cache with `{}` so adding the optional
- * precondition remains backward-compatible instead of treating that shape as
- * malformed JSON.
+ * finalize/unfinalize. Read through Hono because the Node adapter represents a
+ * zero-byte POST as an empty stream rather than `Request.body === null`. Only
+ * replace an exactly empty cached body; non-empty and malformed JSON must keep
+ * the validator's normal semantics.
  */
 const allowEmptyJsonBody: MiddlewareHandler<AppEnv> = async (c, next) => {
-  if (
-    c.req.raw.body === null
-    && c.req.header('content-type')?.startsWith('application/json')
-  ) {
-    c.req.bodyCache.json = Promise.resolve({});
+  if (c.req.header('content-type')?.startsWith('application/json')) {
+    const text = await c.req.text();
+    if (text.length === 0) {
+      c.req.bodyCache.text = Promise.resolve('{}');
+    }
   }
   await next();
 };

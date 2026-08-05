@@ -104,19 +104,19 @@ require "$verifier" '\"commit\":\"$expected_commit\"' \
   'verifier requires the expected commit marker'
 require "$verifier" '\"branch\":\"$expected_branch\"' \
   'verifier requires the expected branch marker'
-require "$verifier" 'PAGES_VERIFY_TIMEOUT_SEC:-4500' \
-  'verifier allows 75 minutes for provider queue latency'
+require "$verifier" 'PAGES_VERIFY_TIMEOUT_SEC:-7200' \
+  'verifier allows 120 minutes for provider queue latency'
 
 for workflow in site-preview admin-preview dashboard-preview; do
   require_job_line ".github/workflows/$workflow.yml" deployment \
-    '    timeout-minutes: 90' \
-    "$workflow deployment job keeps a 90-minute provider ceiling"
+    '    timeout-minutes: 150' \
+    "$workflow deployment job keeps a 150-minute provider ceiling"
 done
 
 for workflow in site-dev admin-dev dashboard-dev; do
   require_job_line ".github/workflows/$workflow.yml" verify \
-    '    timeout-minutes: 90' \
-    "$workflow verify job keeps a 90-minute provider ceiling"
+    '    timeout-minutes: 150' \
+    "$workflow verify job keeps a 150-minute provider ceiling"
 done
 
 for workflow in \

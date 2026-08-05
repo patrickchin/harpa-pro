@@ -52,8 +52,9 @@ produce the exact-SHA marker expected by the verification workflow.
 
 ## Public-site dashboard entry
 
-The shared public-site header shows `Dashboard` as its final desktop and mobile
-action. `PUBLIC_DASHBOARD_URL` is required by the site environment. The Pages
+The shared public-site header intentionally does not expose `Dashboard` on
+desktop or mobile while the product is not ready for public discovery.
+`PUBLIC_DASHBOARD_URL` remains reserved in the site environment, and the Pages
 build wrapper derives its value from the site branch:
 
 | Site branch | `PUBLIC_DASHBOARD_URL`                         |
@@ -62,8 +63,9 @@ build wrapper derives its value from the site branch:
 | `dev`       | `https://dev.harpa-pro-dashboard.pages.dev`    |
 | `main`      | `https://harpa-pro-dashboard.pages.dev`        |
 
-The link opens in the same tab. The `main` value defines the future production
-contract, but automatic dashboard production builds remain disabled.
+These values preserve the future routing contract; no current public-site
+component renders them. Restoring the link requires separate product-readiness
+approval. Automatic dashboard production builds remain disabled.
 
 ## Cloudflare build environment
 

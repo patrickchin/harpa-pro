@@ -436,11 +436,12 @@ useful.
 Dashboard environment variables load through a Zod-parsed
 `apps/dashboard/src/lib/env.ts` at boot.
 
-The shared public-site header uses the typed `PUBLIC_DASHBOARD_URL` value. The
-Pages build maps `pr-<n>` to the matching dashboard preview, `dev` to
+The public-site build retains a typed `PUBLIC_DASHBOARD_URL` value for future
+activation, but the shared header does not expose the dashboard while the
+product is not ready for public discovery. Pages still maps `pr-<n>` to the
+matching dashboard preview, `dev` to
 `https://dev.harpa-pro-dashboard.pages.dev`, and `main` to
-`https://harpa-pro-dashboard.pages.dev`. The `main` destination remains
-inactive while automatic dashboard production builds are disabled. See
+`https://harpa-pro-dashboard.pages.dev`. See
 [the dev activation design](design-dashboard-dev-activation.md).
 
 ### 9.2 Browser auth and API access

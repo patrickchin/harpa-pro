@@ -150,11 +150,14 @@ Each AI-touching route has a test that:
   actions against the same `PUBLIC_DASHBOARD_URL` embedded in that build.
 - `site-preview.yml` also waits for the native Cloudflare Git deployment's
   exact-SHA marker and verifies one checked-in legacy redirect.
-- `scripts/ci/verify-pages-deployment.sh` allows 4,500 seconds for the native
+- `scripts/ci/verify-pages-deployment.sh` allows 7,200 seconds for the native
   queue. All six site, admin, and dashboard `dev` or pull-request marker jobs
-  have 90-minute outer limits. The Pages policy test pins both budgets and the
+  have 150-minute outer limits. The Pages policy test pins both budgets and the
   exact commit-and-branch checks. Production jobs retain their 20-minute outer
-  limits, which remain their effective maximum.
+  limits, which remain their effective maximum. This covers an observed stack
+  of account-wide Pages waves that kept an exact site build incomplete beyond
+  the former 75-minute inner limit and the admin build beyond the former
+  90-minute job limit. All three stable aliases settled after about 93 minutes.
 
 ### Dashboard (Playwright)
 

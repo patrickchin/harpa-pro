@@ -485,13 +485,18 @@ publishes Git-connected browser applications through its GitHub App. GitHub
 Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
 credential.
 
-The shared Pages marker verifier allows 4,500 seconds for Cloudflare's native
+The shared Pages marker verifier allows 7,200 seconds for Cloudflare's native
 build queue. The public site, admin site, and dashboard `dev` verification and
-pull-request deployment jobs each have a 90-minute outer limit. They still
+pull-request deployment jobs each have a 150-minute outer limit. They still
 require the exact expected commit and branch before any route or browser check
-can pass. Production callers inherit the shared inner default, but their
-unchanged 20-minute job limits remain the effective maximum. This waiting
-budget does not change production deployment settings or activate a build.
+can pass. The budget covers an observed account-wide stack in which four
+earlier site/admin/dashboard waves kept the next exact site deployment
+incomplete after 75 minutes. All three exact aliases settled after about
+93 minutes, leaving about 27 minutes of measured margin inside the two-hour
+wait and another 30 minutes before the affected job limit. Production callers
+inherit the shared inner default, but their unchanged 20-minute job limits
+remain the effective maximum. This waiting budget does not change production
+deployment settings or activate a build.
 
 The root lint job runs `pnpm test:docs:links`. It checks repository Markdown
 links and local image references before merge.

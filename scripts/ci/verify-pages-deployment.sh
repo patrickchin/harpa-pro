@@ -37,7 +37,7 @@ fi
 
 origin="${origin%/}"
 # Individual workflows can impose a shorter outer job limit.
-timeout_seconds="${PAGES_VERIFY_TIMEOUT_SEC:-4500}"
+timeout_seconds="${PAGES_VERIFY_TIMEOUT_SEC:-7200}"
 deadline=$((SECONDS + timeout_seconds))
 response_file="$(mktemp)"
 trap 'rm -f -- "$response_file"' EXIT

@@ -716,6 +716,12 @@ describe('AdminActivity', () => {
         'usr_0123456789ab',
       ),
     );
+    const userTrigger = screen.getByRole('button', { name: 'Filter by user' });
+    const activeDescriptionId = userTrigger.getAttribute('aria-describedby');
+    expect(activeDescriptionId).not.toBeNull();
+    expect(document.getElementById(activeDescriptionId!)?.textContent?.trim()).toBe(
+      '1 active user filter',
+    );
 
     await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${bobLabel}` }));
     await waitFor(() =>

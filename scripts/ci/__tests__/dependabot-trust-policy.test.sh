@@ -138,8 +138,8 @@ for workflow in admin-preview site-preview; do
     "$workflow deployment check excludes Dependabot by PR author"
   require_job_fixed "$path" deployment "$REPOSITORY_GUARD" \
     "$workflow deployment check excludes fork-controlled code"
-  require_job_fixed "$path" deployment "pull-requests: write" \
-    "$workflow keeps comment permission inside the guarded job"
+  forbid_job_fixed "$path" deployment "pull-requests: write" \
+    "$workflow deployment check does not need PR write permission"
   forbid_job_fixed "$path" deployment '${{ secrets.' \
     "$workflow deployment check is credential-free"
 done

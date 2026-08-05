@@ -358,13 +358,18 @@ The presentation and interaction model is refined by
 [Dense admin activity log view](design-admin-activity-log-view.md). The page
 includes:
 
-- one filter region attached to the `Time`, `Event`, `User`, or `Project`
-  column header, with no detached filter card or separate event-type control;
+- `Time period` and `Detail level` controls in a filter region above the feed,
+  with no separate event-type control;
+- compact non-modal filter popups attached only to the `User` and `Project`
+  column headers, without changing table row positions;
 - immediately applied time, detail-level, included-user, multiple
   excluded-user, and project choices;
-- local user and project choice search, with contradictory user inclusion and
-  exclusion resolved before the request;
-- column-header filters that remain available when a query returns no rows;
+- one user list with an email or stable user ID for duplicate-name clarity;
+- project choices with stable project IDs for duplicate-name clarity;
+- local user and project choice search by name and displayed identifier, with
+  contradictory user inclusion and exclusion resolved before the request;
+- page and column-header filters that remain available when a query returns no
+  rows;
 - dense, non-wrapping log lines with clear information hierarchy;
 - local refresh baselines and `New` markers;
 - a browser-local plain-text view of the currently loaded rows;
@@ -435,10 +440,11 @@ explicit deployment choice after the password flow is verified.
 ### Admin site
 
 - Component tests cover password auth, loading, generic failure, empty,
-  populated, pagination, the attached Time/Event/User/Project filter region,
-  local choice search, immediate requests, multiple user exclusions,
-  include/exclude conflict resolution, refresh/new markers, plain-text output,
-  deleted entities, and the detail drawer.
+  populated, pagination, the above-feed time and detail controls, User and
+  Project header popups, local choice search, duplicate-name labels, immediate
+  requests, multiple user exclusions, include/exclude conflict resolution,
+  stable table geometry, refresh/new markers, plain-text output, deleted
+  entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).
 - Run the admin workspace typecheck, lint, unit, build, and focused Playwright

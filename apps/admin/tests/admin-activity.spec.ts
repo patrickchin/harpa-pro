@@ -86,6 +86,9 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(page.getByLabel('Filter actor')).toHaveCount(0);
   await expect(page.getByLabel('Exclude actor')).toHaveCount(0);
   await expect(page.getByLabel('Filter project')).toHaveCount(0);
+  const activityFilters = page.getByRole('region', { name: 'Activity filters' });
+  await expect(activityFilters.getByRole('group', { name: 'Detail level' })).toBeVisible();
+  await expect(activityFilters.getByRole('group', { name: 'Time period' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open as text' })).toBeVisible();
 
@@ -100,21 +103,27 @@ test('signs in through the visible admin form and signs out', async ({ context, 
     'Subject',
     'Project',
   ]);
-  for (const column of ['time', 'event', 'user', 'project']) {
+  await expect(page.getByRole('button', { name: 'Filter by time' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Filter by event' })).toHaveCount(0);
+  for (const column of ['user', 'project']) {
     await expect(page.getByRole('button', { name: `Filter by ${column}` })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
+    await expect(page.getByRole('button', { name: `Filter by ${column}` })).toHaveAttribute(
+      'aria-haspopup',
+      'dialog',
+    );
   }
 
-  await page.getByRole('button', { name: 'Filter by time' }).click();
-  const timeFilter = page.getByRole('region', { name: 'Time filter' });
-  await expect(timeFilter.getByRole('radio', { name: 'Past month' })).toBeChecked();
+  await expect(
+    activityFilters.getByRole('radio', { name: 'Past month' }),
+  ).toBeChecked();
 
   const desktopViewport = page.viewportSize();
   expect(desktopViewport).not.toBeNull();
-  await page.setViewportSize({ width: 320, height: 800 });
-  const feedScroller = columnHeaders.locator('..');
+  await page.setViewportSize({ width: 320, height: 480 });
+  const feedScroller = page.getByTestId('activity-table-scroller');
   const feedWidths = await feedScroller.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -123,8 +132,31 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await feedScroller.evaluate((element) => {
     element.scrollLeft = element.scrollWidth;
   });
-  await expect(timeFilter).toBeVisible();
+  await page.getByRole('button', { name: 'Filter by project' }).click();
+  const mobileProjectPopup = page.getByRole('dialog', { name: 'Project filter' });
+  const mobilePopupBox = await mobileProjectPopup.boundingBox();
+  expect(mobilePopupBox).not.toBeNull();
+  expect(mobilePopupBox!.x).toBeGreaterThanOrEqual(0);
+  expect(mobilePopupBox!.x + mobilePopupBox!.width).toBeLessThanOrEqual(320);
+  await mobileProjectPopup
+    .getByRole('searchbox', { name: 'Search projects' })
+    .fill('no matching project');
+  await page.keyboard.press('Escape');
+  await expect(mobileProjectPopup).toHaveCount(0);
+  await page.getByRole('button', { name: 'Filter by project' }).click();
+  const resizedProjectPopup = page.getByRole('dialog', { name: 'Project filter' });
+  await resizedProjectPopup.getByRole('searchbox', { name: 'Search projects' }).fill('');
+  await expect
+    .poll(async () => {
+      const bounds = await resizedProjectPopup.boundingBox();
+      return bounds === null ? null : bounds.y + bounds.height;
+    })
+    .toBeLessThanOrEqual(480);
+  await page.keyboard.press('Escape');
+  await expect(resizedProjectPopup).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 800 });
   const timePeriodScroller = page.getByTestId('time-period-options');
+  await timePeriodScroller.scrollIntoViewIfNeeded();
   const timePeriodWidths = await timePeriodScroller.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -176,13 +208,11 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('level') === 'detail'
     );
   });
-  await page.getByRole('button', { name: 'Filter by event' }).click();
-  await expect(page.getByRole('region', { name: 'Time filter' })).toHaveCount(0);
-  const eventFilter = page.getByRole('region', { name: 'Event filter' });
-  await page.getByRole('radio', { name: 'Milestones' }).focus();
+  const detailLevel = activityFilters.getByRole('group', { name: 'Detail level' });
+  await detailLevel.getByRole('radio', { name: 'Milestones' }).focus();
   await page.keyboard.press('ArrowRight');
   expect((await detailResponsePromise).status()).toBe(200);
-  await expect(eventFilter.getByRole('radio', { name: 'Detailed activity' })).toBeChecked();
+  await expect(detailLevel.getByRole('radio', { name: 'Detailed activity' })).toBeChecked();
 
   const detailRows = feed.locator('[data-testid^="activity-row-"]');
   await expect(detailRows).toHaveCount(4);
@@ -207,12 +237,16 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.has('from')
     );
   });
-  await page.getByRole('button', { name: 'Filter by time' }).click();
-  await page.getByRole('region', { name: 'Time filter' }).getByText('Past week', { exact: true }).click();
+  await activityFilters.getByText('Past week', { exact: true }).click();
   expect((await weekResponsePromise).status()).toBe(200);
 
+  const rowYBeforePopup = (await row.boundingBox())?.y;
+  expect(rowYBeforePopup).toBeDefined();
   await page.getByRole('button', { name: 'Filter by user' }).click();
-  const userFilter = page.getByRole('region', { name: 'User filter' });
+  const userFilter = page.getByRole('dialog', { name: 'User filter' });
+  await expect(userFilter).toHaveCSS('position', 'fixed');
+  await expect(userFilter).toHaveAttribute('aria-modal', 'false');
+  expect((await row.boundingBox())?.y).toBeCloseTo(rowYBeforePopup!, 0);
   await userFilter.getByRole('searchbox', { name: 'Search users' }).fill('activity');
   const onlyActorLabel = 'Only Admin Activity E2E — activity-actor@e2e.harpapro.com';
   const onlyActor = userFilter.getByRole('radio', {
@@ -228,15 +262,15 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('actorUserId') === actorUserId
     );
   });
-  await userFilter.getByText(onlyActorLabel, { exact: true }).click();
+  await onlyActor.click();
   expect((await actorResponsePromise).status()).toBe(200);
 
   await page.getByRole('button', { name: 'Filter by project' }).click();
-  const projectFilter = page.getByRole('region', { name: 'Project filter' });
+  await expect(userFilter).toHaveCount(0);
+  const projectFilter = page.getByRole('dialog', { name: 'Project filter' });
   await projectFilter.getByRole('searchbox', { name: 'Search projects' }).fill('admin activity');
-  const onlyProjectLabel = 'Only Admin Activity E2E Project';
   const onlyProject = projectFilter.getByRole('radio', {
-    name: onlyProjectLabel,
+    name: /^Only Admin Activity E2E Project — prj_/,
   });
   const projectId = (await onlyProject.getAttribute('value'))!;
   const projectResponsePromise = page.waitForResponse((response) => {
@@ -248,11 +282,11 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('projectId') === projectId
     );
   });
-  await projectFilter.getByText(onlyProjectLabel, { exact: true }).click();
+  await onlyProject.click();
   expect((await projectResponsePromise).status()).toBe(200);
 
   await page.getByRole('button', { name: 'Filter by user' }).click();
-  const reopenedUserFilter = page.getByRole('region', { name: 'User filter' });
+  const reopenedUserFilter = page.getByRole('dialog', { name: 'User filter' });
   const actorExclusionLabel =
     'Exclude Admin Activity E2E — activity-actor@e2e.harpapro.com';
   const actorExclusion = reopenedUserFilter.getByRole('checkbox', {
@@ -268,7 +302,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('excludeActorUserIds') === actorUserId
     );
   });
-  await reopenedUserFilter.getByText(actorExclusionLabel, { exact: true }).click();
+  await actorExclusion.click();
   expect((await exclusionResponsePromise).status()).toBe(200);
   await expect(page.getByText('No activity matches these filters.')).toBeVisible();
   await expect(page.getByTestId('activity-column-headers')).toBeVisible();
@@ -284,9 +318,11 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('excludeActorUserIds')
     );
   });
-  await reopenedUserFilter.getByText(actorExclusionLabel, { exact: true }).click();
+  await actorExclusion.click();
   expect((await removeExclusionResponsePromise).status()).toBe(200);
   await expect(detailRows).toHaveCount(4);
+  await page.keyboard.press('Escape');
+  await expect(reopenedUserFilter).toHaveCount(0);
 
   const textLink = page.getByRole('link', { name: 'Open as text' });
   await expect(textLink).toHaveAttribute('target', '_blank');
@@ -310,8 +346,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('eventType')
     );
   });
-  await page.getByRole('button', { name: 'Filter by event' }).click();
-  await page.getByRole('region', { name: 'Event filter' }).getByText('Milestones', { exact: true }).click();
+  await detailLevel.getByText('Milestones', { exact: true }).click();
   expect((await milestoneResponsePromise).status()).toBe(200);
 
   const existingRow = feed.locator('[data-testid^="activity-row-"]').first();

@@ -124,6 +124,20 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
       name: "Harpa Pro Reports list with the New report button",
     }),
   ).toHaveAttribute("src", screenshotUrl ?? "");
+  await expect(dialog.getByText("Start a report", { exact: true })).toBeVisible();
+
+  const bounds = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  expect(bounds).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(
+    Math.abs(
+      (bounds?.x ?? 0) + (bounds?.width ?? 0) / 2 - (viewport?.width ?? 0) / 2,
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(bounds?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    viewport?.height ?? 0,
+  );
 
   await dialog.getByRole("button", { name: "Close full screenshot" }).click();
   await expect(dialog).not.toBeVisible();

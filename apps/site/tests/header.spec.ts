@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const dashboardUrl =
-  process.env.PUBLIC_DASHBOARD_URL ?? "http://127.0.0.1:3003";
-
-test("opens the dashboard from the public header on desktop and mobile", async ({
+test("keeps the unreleased dashboard out of public navigation", async ({
   page,
 }) => {
   await page.goto("/");
@@ -13,8 +10,7 @@ test("opens the dashboard from the public header on desktop and mobile", async (
     name: "Dashboard",
     exact: true,
   });
-  await expect(desktopDashboard).toBeVisible();
-  await expect(desktopDashboard).toHaveAttribute("href", dashboardUrl);
+  await expect(desktopDashboard).toHaveCount(0);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator("details.site-menu");
@@ -24,8 +20,7 @@ test("opens the dashboard from the public header on desktop and mobile", async (
     name: "Dashboard",
     exact: true,
   });
-  await expect(mobileDashboard).toBeVisible();
-  await expect(mobileDashboard).toHaveAttribute("href", dashboardUrl);
+  await expect(mobileDashboard).toHaveCount(0);
 
   const overflow = await page.evaluate(
     () =>

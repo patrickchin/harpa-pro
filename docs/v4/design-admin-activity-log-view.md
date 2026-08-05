@@ -39,11 +39,11 @@ The line has a consistent scanning order:
 
 A compact header strip uses the same grid and labels those positions `New`,
 `Time`, `Event`, `User`, `Subject`, and `Project`. It scrolls horizontally with
-the rows so the labels stay aligned. `Time`, `Event`, `User`, and `Project` are
-filter buttons; `New` and `Subject` remain plain labels. The feed retains
-list-and-button semantics because every row opens its detail drawer; each
-button's complete accessible name remains self-contained rather than relying on
-ARIA table semantics.
+the rows so the labels stay aligned. `User` and `Project` are filter buttons.
+The other columns remain plain labels. The feed retains list-and-button
+semantics because every row opens its detail drawer. Each button's complete
+accessible name remains self-contained rather than relying on ARIA table
+semantics.
 
 Event, actor, and subject use medium or semibold weight. Timestamp and project
 context use the softer ink token. The event label occupies a stable width so
@@ -65,34 +65,36 @@ column-header controls are the primary filter surface.
 ## Filters
 
 All server filters apply immediately on selection. There is no Apply button and
-no separate draft-filter state. The detached filter card is removed.
+no separate draft-filter state.
 
-The `Time`, `Event`, `User`, and `Project` header buttons expose
-`aria-expanded` and open one non-modal filter region attached directly below
-the header. The region is named for its column, for example `Time filter` or
-`User filter`. Opening another header button replaces the current region, so
-only one filter region exists at a time. Closing the region leaves its current
-selection active. The region is a full-width tray pinned to the visible feed
-scrollport, while the active header button identifies the column that owns it.
-This keeps the controls usable when the rows and header scroll horizontally.
+A filter region above the feed contains the `Detail level` and `Time period`
+radio groups. `Detail level` offers Milestones, Detailed activity, and All
+activity. There is no separate event-type filter. `Time period` offers Past
+week, Past month, Past 6 months, Past year, and All time. A `Clear filters`
+button resets these controls and the active User and Project filters.
 
-The attached regions contain:
+The `User` and `Project` header buttons expose `aria-expanded` and
+`aria-haspopup="dialog"`. Each button opens a compact non-modal popup anchored
+to its header. The popup uses `role="dialog"` and a column-specific accessible
+name. Opening one popup closes the other. Escape and an outside click close the
+popup without changing its active selection.
 
-- `Time`: the existing `Time period` radio group with Past week, Past month,
-  Past 6 months, Past year, and All time;
-- `Event`: the existing `Detail level` radio group with Milestones, Detailed
-  activity, and All activity; there is no separate event-type filter;
-- `User`: a local `Search users` field, an `Included users` radio group with All
-  users and one Only choice per known user, plus one Exclude checkbox per known
-  user; and
-- `Project`: a local `Search projects` field and an All projects or Only project
-  radio choice.
+The popup renders in an overlay layer and does not change the table height or
+row positions. It stays within the viewport at narrow widths. The `User` popup
+contains a local `Search users` field and one list of known users. Each user row
+contains an `Only` choice and an `Exclude` choice. The `Project` popup contains
+a local `Search projects` field and an All projects or Only project choice.
 
-The search fields narrow the cached choices locally and do not add API query
-parameters. User and project choices are collected from events returned during
-the current browser session. The option cache keeps labels available after a
-server filter removes those rows from the current response. Up to 20 users may
-be excluded at once.
+Each user row shows the user's name and a second identity line. The second line
+shows the email address when available, or the stable user ID otherwise. Each
+project row shows the project name and stable project ID. These identifiers
+distinguish choices that have the same display name.
+
+The search fields match names and displayed identifiers. They narrow the cached
+choices locally and do not add API query parameters. User and project choices
+are collected from events returned during the current browser session. The
+option cache keeps labels available after a server filter removes those rows
+from the current response. Up to 20 users may be excluded at once.
 
 User inclusion and exclusion cannot contradict each other. Choosing `Only` for
 an excluded user removes that user's exclusion. Excluding the currently
@@ -150,8 +152,9 @@ content, transcripts, filenames, storage keys, or other excluded data.
 ## Failure and accessibility behavior
 
 - Rows remain keyboard-focusable and expose the detail action as a button.
-- Header filter buttons and their attached region remain available when a query
-  returns no rows, so an operator can broaden or clear the active filters.
+- The above-feed controls and header filter buttons remain available when a
+  query returns no rows. An operator can broaden or clear the active filters.
+- Each popup returns focus to its header button when Escape closes it.
 - Immediate filter requests use the existing loading, forbidden, and retryable
   error states.
 - Refresh keeps its button disabled while a refresh is in flight.
@@ -167,11 +170,13 @@ Component tests cover:
 
 - aligned visible column headers without changing the interactive list semantics;
 - single-line row hierarchy and decorative event/context icon mapping;
-- one attached filter region controlled by the Time, Event, User, and Project
-  header buttons;
+- above-feed time-period and detail-level controls;
+- compact non-modal popups controlled by the User and Project header buttons;
+- popups that overlay the page without changing table row positions;
+- one user list with email or stable-ID identity lines and project-ID labels;
 - immediate radio and checkbox filtering for time, level, included user,
   multiple excluded users, and project;
-- local user and project choice search;
+- local user and project choice search by name and displayed identifier;
 - deterministic resolution of contradictory user include/exclude choices;
 - header controls that remain usable for empty results;
 - out-of-order request protection;
@@ -179,7 +184,7 @@ Component tests cover:
 - cursor pagination; and
 - the generated plain-text Blob.
 
-The admin Playwright smoke covers the attached header filters, choice search,
-immediate filter requests, icon rendering, dense row geometry, empty-result
-recovery, refresh markers, the text view, detail inspection, and sign-out
-against the real local API wiring.
+The admin Playwright smoke covers the above-feed controls, header popups,
+choice search, immediate filter requests, stable row geometry, duplicate-name
+labels, icon rendering, empty-result recovery, refresh markers, the text view,
+detail inspection, and sign-out against the real local API wiring.

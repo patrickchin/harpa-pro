@@ -778,7 +778,7 @@ addition to the HTTP `app` group:
 
 - `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
   to suspend at zero;
-- `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
+- `storage-worker`: `shared-cpu-1x`, 512 MB, no service attachment,
   with its active Machine and stopped standby owned by Fly deploys.
 
 The active worker is not eligible for HTTP auto-stop, so both dev and
@@ -786,6 +786,16 @@ production carry one continuously billed worker Machine. Fly also preserves a
 stopped standby for deploys and restarts. This cost is required for delayed
 cleanup to run while the API is idle. PR previews do not provision workers;
 their account-deletion gate stays closed.
+
+The worker process launches Node with the `tsx` loader directly instead of
+keeping `pnpm` and the `tsx` CLI supervisor resident. The 512 MB allocation is
+intentional headroom: the former 256 MB Machine exposed only about 207 MiB to
+the guest and reached roughly 9 MiB available while its durable queue was
+empty, followed by four daily OOM/exit-137 restarts. A structured
+`storage_delete_worker_memory` log records process uptime, Node RSS/heap, and
+guest total/free memory at startup and hourly. Fly's built-in Machine memory
+metric remains the source for whole-VM saturation and should be checked after
+each rollout.
 
 The worker does not continuously pin Neon with five-second polling. It
 sleeps until the next known job is due, capped at ten minutes to discover
@@ -808,10 +818,20 @@ seconds is the late-PUT safety window.
 `infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
 known exact singleton states, verify at least one Machine has state
 `started` and metadata process group `storage-worker`, then arm by running the
-monotonic rollout command in that group. The command inherits the app's staged
-Fly secrets, so neither CI nor manual callers need the production
-`DATABASE_URL`. The shell policy test stubs external commands, executes this
-sequence, and forbids explicit `storage-worker` scale commands.
+monotonic rollout command on that exact Machine. Arming uses Fly Machine exec,
+whose per-attempt timeout is 120 seconds, for at most three attempts. A failed
+attempt is retried only after a fresh inventory proves the same worker id is
+still the sole started worker. This is safe when transport fails after the SQL
+commit because the database update uses `COALESCE` and boolean `OR`, so later
+attempts cannot reopen the grace or disable deletion. Success also requires the
+arming script's confirmation marker, not only a zero provider exit code.
+
+The command inherits the app's staged Fly secrets, so neither CI nor manual
+callers need the production `DATABASE_URL`. The GitHub deploy step has a
+30-minute outer timeout in case another provider operation ignores its own
+deadline. The shell policy test stubs external commands, executes this
+sequence, verifies the bounded retry budget, and forbids explicit
+`storage-worker` scale commands.
 
 The shared repair is a no-op only for an exact healthy pair: one
 current-release active worker and one current-release stopped, service-less

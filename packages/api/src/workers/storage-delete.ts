@@ -5,15 +5,21 @@ import {
   pruneExpiredFileUploadLeases,
 } from '../services/storage-delete-jobs.js';
 import { captureApiException } from '../telemetry/sentry.js';
+import {
+  storageWorkerMemorySample,
+  type StorageWorkerMemorySampleReason,
+} from './storage-worker-memory.js';
 
 const MAX_IDLE_POLL_MS = 10 * 60_000;
 const MIN_IDLE_POLL_MS = 1_000;
 const ERROR_POLL_MS = 60_000;
 const MAX_JOBS_PER_PASS = 10;
 const LEASE_PRUNE_INTERVAL_MS = 60 * 60_000;
+const MEMORY_SAMPLE_INTERVAL_MS = 60 * 60_000;
 
 let stopping = false;
 let lastLeasePruneAt = 0;
+let lastMemorySampleAt = 0;
 let wakeFromSleep: (() => void) | null = null;
 
 process.once('SIGINT', () => {
@@ -24,8 +30,12 @@ process.once('SIGTERM', () => {
 });
 
 console.log('[storage-delete-worker] started');
+logMemorySample('startup');
 
 while (!stopping) {
+  if (Date.now() - lastMemorySampleAt >= MEMORY_SAMPLE_INTERVAL_MS) {
+    logMemorySample('interval');
+  }
   try {
     const result = await drainStorageDeleteJobs({
       maxJobs: MAX_JOBS_PER_PASS,
@@ -111,4 +121,9 @@ function reportWorkerException(error: unknown): void {
     route: 'storage-delete-jobs',
     status: 0,
   });
+}
+
+function logMemorySample(reason: StorageWorkerMemorySampleReason): void {
+  console.log(JSON.stringify(storageWorkerMemorySample(reason)));
+  lastMemorySampleAt = Date.now();
 }

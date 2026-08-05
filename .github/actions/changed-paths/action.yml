@@ -27,7 +27,7 @@ outputs:
     description: True if packages/api migrations or schema changed.
     value: ${{ steps.filter.outputs.api-migrations }}
   mobile:
-    description: True if apps/mobile or Maestro E2E flows changed.
+    description: True if apps/mobile, Maestro E2E flows, or the launch runner changed.
     value: ${{ steps.filter.outputs.mobile }}
   site:
     description: True if apps/site changed.
@@ -80,6 +80,7 @@ runs:
             - 'packages/api/src/db/**'
           mobile:
             - '.maestro/**'
+            - 'scripts/ci/run-maestro-launch-smoke.sh'
             - 'apps/mobile/**'
             - 'packages/api-contract/**'
             - 'packages/report-core/**'

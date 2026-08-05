@@ -207,9 +207,10 @@ Dev-deployment target:
   finalizes a placed-photo report and asserts the saved-report page keeps
   the placed photo visible without exposing placement or manual-edit
   controls.
-- The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
-  and `.maestro/**` so E2E-only flow changes still validate referenced
-  mobile testIDs.
+- Mobile code (`apps/mobile/**`), Maestro flows (`.maestro/**`), and the
+  launch runner (`scripts/ci/run-maestro-launch-smoke.sh`) trigger the
+  mobile confidence workflow: the Maestro testID gate, Metro bundle
+  leakage gate, and Android launch smoke.
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 

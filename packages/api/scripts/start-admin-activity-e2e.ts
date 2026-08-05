@@ -58,7 +58,7 @@ function configureEnvironment(appDatabaseUrl: string, adminDatabaseUrl: string):
   delete process.env.SENTRY_DSN;
 }
 
-async function seedAppActivity(databaseUrl: string): Promise<void> {
+async function seedAppActivity(databaseUrl: string, testStartedAt: Date): Promise<void> {
   const [{ auth }, { newId }] = await Promise.all([
     import('../src/auth/auth.js'),
     import('../src/lib/ids.js'),
@@ -88,6 +88,15 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
     voice: newId('aud'),
     image: newId('aud'),
     document: newId('aud'),
+  };
+  const eventSpacingMs = 60_000;
+  const testStartMs = testStartedAt.getTime();
+  const eventTimes = {
+    report: new Date(testStartMs - 4 * eventSpacingMs),
+    document: new Date(testStartMs - 3 * eventSpacingMs),
+    image: new Date(testStartMs - 2 * eventSpacingMs),
+    voice: new Date(testStartMs - eventSpacingMs),
+    text: new Date(testStartMs),
   };
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
@@ -128,15 +137,15 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
          (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
           project_id, request_id, dedupe_key, metadata)
        VALUES
-         ($1, '2026-07-29T04:00:00Z', 'report.created', $2, 'report', $3,
+         ($1, $18, 'report.created', $2, 'report', $3,
           $4, 'request-admin-activity-e2e', $5, '{"reportNumber":7}'),
-         ($6, '2026-07-29T04:04:00Z', 'note.text_created', $2, 'note', $10,
+         ($6, $19, 'note.text_created', $2, 'note', $10,
           $4, 'request-note-text-e2e', $14, '{}'),
-         ($7, '2026-07-29T04:03:00Z', 'note.voice_created', $2, 'note', $11,
+         ($7, $20, 'note.voice_created', $2, 'note', $11,
           $4, 'request-note-voice-e2e', $15, '{}'),
-         ($8, '2026-07-29T04:02:00Z', 'note.image_created', $2, 'note', $12,
+         ($8, $21, 'note.image_created', $2, 'note', $12,
           $4, 'request-note-image-e2e', $16, '{}'),
-         ($9, '2026-07-29T04:01:00Z', 'note.document_created', $2, 'note', $13,
+         ($9, $22, 'note.document_created', $2, 'note', $13,
           $4, 'request-note-document-e2e', $17, '{}')`,
       [
         reportEventId,
@@ -156,6 +165,11 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
         `note.voice_created:${noteIds.voice}`,
         `note.image_created:${noteIds.image}`,
         `note.document_created:${noteIds.document}`,
+        eventTimes.report,
+        eventTimes.text,
+        eventTimes.voice,
+        eventTimes.image,
+        eventTimes.document,
       ],
     );
     await client.query('COMMIT');
@@ -202,6 +216,7 @@ process.once('SIGTERM', () => {
 });
 
 async function main(): Promise<void> {
+  const testStartedAt = new Date();
   delete process.env.TESTCONTAINERS_RYUK_DISABLED;
   appContainer = await new PostgreSqlContainer('postgres:16-alpine')
     .withDatabase('harpa_admin_activity_app_e2e')
@@ -230,7 +245,7 @@ async function main(): Promise<void> {
   adminDbClient.getAdminPool(adminDatabaseUrl);
 
   await Promise.all([
-    seedAppActivity(appDatabaseUrl),
+    seedAppActivity(appDatabaseUrl, testStartedAt),
     import('../src/services/admin-auth.js').then(({ setAdminPassword }) =>
       setAdminPassword(ADMIN_EMAIL, ADMIN_PASSWORD),
     ),

@@ -49,16 +49,16 @@
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^10.13.2",
-    "@types/pg": "^8.11.10",
-    "@typescript-eslint/eslint-plugin": "^8.12.2",
-    "@typescript-eslint/parser": "^8.12.2",
+    "@types/pg": "^8.20.4",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
     "@vitest/coverage-v8": "^3.2.7",
     "auth": "1.6.25",
     "drizzle-kit": "0.31.10",
     "eslint": "^8.57.1",
-    "fast-check": "^4.8.0",
+    "fast-check": "^4.9.0",
     "testcontainers": "^10.13.2",
-    "tsx": "^4.19.1",
+    "tsx": "^4.23.7",
     "typescript": "^5.6.2",
     "vitest": "^3.2.7"
   }

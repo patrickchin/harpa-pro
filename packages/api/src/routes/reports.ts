@@ -133,7 +133,10 @@ const allowEmptyJsonBody: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (c.req.header('content-type')?.startsWith('application/json')) {
     const text = await c.req.text();
     if (text.length === 0) {
-      c.req.bodyCache.text = Promise.resolve('{}');
+      // Hono stores promises here at runtime, although its public BodyCache
+      // type describes the resolved values.
+      const bodyCache = c.req.bodyCache as unknown as { text?: Promise<string> };
+      bodyCache.text = Promise.resolve('{}');
     }
   }
   await next();

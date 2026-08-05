@@ -63,6 +63,11 @@ Cloudflare Git builds the stable `pr-N.harpa-pro-admin.pages.dev` alias against
 `harpa-pro-api-pr-N.fly.dev`. The PR gate also runs the full admin browser flow
 locally against two independent Testcontainers databases.
 
+The dashboard uses the same exact head-SHA `pr-N` Pages contract. Cloudflare
+connected the existing project to `patrickchin/harpa-pro` in place on
+2026-08-05. Its live browser lane runs on the stable branch alias. The matching
+Fly preview separately verifies GitHub's synthetic merge SHA first.
+
 ### Alternatives rejected
 
 | Option                                                    | Why rejected                                                                                                                                                                                                                                                                                                                                            |
@@ -150,29 +155,39 @@ post-merge-only column is a blind spot: a regression in code/scripts
 exclusively exercised by those workflows ships to the target
 environment and only surfaces when the deploy fires.
 
-| Workflow                      |   PR-gated    | Push (dev / main)     | What it catches                                                                                                            |
-| ----------------------------- | :-----------: | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `lint-typecheck.yml`          |       ✓       | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell policy tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
-| `unit.yml`                    |       ✓       | dev + main            | Vitest unit suites for every package                                                                                       |
-| `api-integration.yml`         |       ✓       | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold                                             |
-| `cli.yml`                     |       ✓       | dev + main            | `apps/cli` typecheck + tests                                                                                               |
-| `e2e-maestro-testid-gate.yml` |       ✓       | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke                                              |
-| `pr-preview.yml`              |       ✓       | (PR-only)             | Credential-free path/migration guards; human-owned PR Neon/Fly lifecycle                                                   |
-| `pages-preview-ref.yml`       |       ✓       | (PR-only)             | Tokenless exact `pr-N` Git-ref lifecycle for native Cloudflare previews                                                    |
-| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Human-owned same-repository PR Expo OTA preview                                                                            |
-| `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin checks plus exact-SHA native Pages preview verification                                              |
-| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public checks plus exact-SHA native Pages preview verification                                             |
-| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys                                        |
-| `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                                    |
-| `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                                       |
-| `site-dev.yml`                |       ✗       | dev                   | Verify the exact SHA served by the native Pages `dev` deployment                                                           |
-| `site-prod.yml`               |       ✗       | main                  | Verify the exact SHA on the Pages hostname and public custom domains                                                       |
-| `admin-dev.yml`               |       ✗       | dev                   | Verify the exact SHA and static routing on the native admin `dev` deployment                                               |
-| `admin-prod.yml`              |       ✗       | main                  | Verify the exact SHA and static routing on both admin production hostnames                                                 |
-| `mobile-ota-dev.yml`          |       ✗       | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy                                                     |
-| `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                                                 |
-| `ai-live.yml`                 |       ✗       | dev + main + dispatch | Live AI provider smoke (no fixtures)                                                                                       |
-| `neon-snapshot-prune.yml`     |       ✗       | (cron 04:17 UTC)      | Prune stale Neon branches                                                                                                  |
+| Workflow                      |   PR-gated    | Push (dev / main)     | What it catches                                                                           |
+| ----------------------------- | :-----------: | --------------------- | ----------------------------------------------------------------------------------------- |
+| `lint-typecheck.yml`          |       ✓       | dev + main            | ESLint, TypeScript, removal gates, CI policy tests, and shellcheck                        |
+| `unit.yml`                    |       ✓       | dev + main            | Vitest unit suites for every package                                                      |
+| `api-integration.yml`         |       ✓       | dev + main            | Combined API unit and Testcontainers run with a hard 90% line-coverage threshold          |
+| `cli.yml`                     |       ✓       | dev + main            | `apps/cli` typecheck and tests                                                            |
+| `e2e-maestro-testid-gate.yml` |       ✓       | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke             |
+| `dependency-review.yml`       |       ✓       | —                     | Reject newly introduced high or critical dependency vulnerabilities                       |
+| `pr-preview.yml`              |       ✓       | (PR-only)             | Credential-free path/migration guards; human-owned Neon/Fly preview lifecycle             |
+| `pages-preview-ref.yml`       |       ✓       | (PR-only)             | Tokenless exact `pr-N` Git-ref lifecycle for native Cloudflare previews                   |
+| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Human-owned same-repository PR Expo OTA preview                                           |
+| `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin checks plus exact-SHA native Pages preview verification             |
+| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public checks plus exact-SHA native Pages preview verification            |
+| `dashboard-preview.yml`       | ✓ (→dev/main) | (PR-only)             | Exact head-SHA Git preview plus fast and deployed live browser checks on the stable alias |
+| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys       |
+| `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`   |
+| `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`      |
+| `site-dev.yml`                |       ✗       | dev                   | Verify the exact SHA served by the native Pages `dev` deployment                          |
+| `site-prod.yml`               |       ✗       | main                  | Verify the exact SHA on the Pages hostname and public custom domains                      |
+| `admin-dev.yml`               |       ✗       | dev                   | Verify the exact SHA and static routing on the native admin `dev` deployment              |
+| `admin-prod.yml`              |       ✗       | main                  | Verify the exact SHA and static routing on both admin production hostnames                |
+| `dashboard-dev.yml`           |       ✗       | dev                   | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment              |
+| `dashboard-prod.yml`          |       ✗       | main                  | Verify the exact SHA and SPA routes on approved dashboard production hostnames            |
+| `mobile-ota-dev.yml`          |       ✗       | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy                    |
+| `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                |
+| `ai-live.yml`                 |       ✗       | dev + main + dispatch | Live AI provider smoke (no fixtures)                                                      |
+| `neon-snapshot-prune.yml`     |       ✗       | (cron 04:17 UTC)      | Prune stale Neon branches                                                                 |
+
+The dashboard preview/dev/production workflows include
+`packages/design-tokens/**` in their path filters. A dashboard token change
+therefore rebuilds that browser surface even when `apps/dashboard` itself does
+not change. Cloudflare publishes the resulting artifact from the connected
+project. The public site keeps its independent visual system.
 
 ### Pull-request automation trust boundary
 

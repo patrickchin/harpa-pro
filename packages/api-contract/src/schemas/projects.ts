@@ -39,6 +39,7 @@ export const projectMember = z.object({
   role: projectRole,
   joinedAt: isoDateTime,
 });
+export type ProjectMember = z.infer<typeof projectMember>;
 
 export const inviteMemberRequest = z.object({
   email,

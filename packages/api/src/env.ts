@@ -192,6 +192,16 @@ const Env = z
       .string()
       .default('https://harpapro.com,https://www.harpapro.com,http://localhost:3002'),
     /**
+     * Comma-separated browser origins allowed to call authenticated dashboard
+     * and Better Auth routes with credentials. `*` supports Cloudflare Pages
+     * preview subdomains.
+     */
+    DASHBOARD_CORS_ORIGINS: z
+      .string()
+      .default(
+        'https://app.harpapro.com,https://harpa-pro-dashboard.pages.dev,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003,http://127.0.0.1:3003',
+      ),
+    /**
      * Exact browser origins allowed to send credentialed `/admin/*` requests.
      * Better Auth is intentionally not exposed to the admin browser.
      */

@@ -139,6 +139,8 @@ flowchart TB
 | 20a | **Separate admin authentication (rollout pending)** | [design-separate-admin-auth.md](design-separate-admin-auth.md)                           | **Dedicated `@harpapro.com` identities, long-password login, opaque browser sessions, and an independent Neon project**                                                                                                                                     |
 | 20b | **Separate admin site**                             | [design-separate-admin-site.md](design-separate-admin-site.md)                           | **Independent `apps/admin` static artifact, Pages project, exact browser origins, and deployment workflows for `admin.harpapro.com`**                                                                                                                       |
 | 20c | **Cloudflare Pages Git deployments**                | [design-cloudflare-pages-git-deployments.md](design-cloudflare-pages-git-deployments.md) | **Tokenless Git publishing, exact `pr-N` preview refs, build-time environment selection, and exact-SHA deployment verification**                                                                                                                            |
+| 21  | **Office dashboard**                                  | [design-office-dashboard.md](design-office-dashboard.md)                                 | **Project/member/report management companion with keyboard-first report editing and mobile-first field capture**                                                                                                                                        |
+| 21a | **Dashboard visual system**                           | [design-dashboard-visual-system.md](design-dashboard-visual-system.md)                   | **Mobile-authored color, type, spacing, control, and shape contract for the office dashboard only**                                                                                                                                                        |
 
 ## Repo layout (target end of P0)
 
@@ -168,6 +170,7 @@ packages/
     fly.toml
   api-contract/           # Zod schemas + generated OpenAPI types
   ai-fixtures/            # record/replay/live providers + fixtures
+  design-tokens/          # mobile-authored CSS tokens for the dashboard
   ui/                     # shared primitives (P2.1; optional split later)
 
 infra/

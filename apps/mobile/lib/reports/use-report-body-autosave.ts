@@ -43,6 +43,11 @@ export interface UseReportBodyAutosaveInput {
    */
   report: GeneratedSiteReport | null;
   /**
+   * Server version the local edit was based on. Autosave remains paused
+   * until the report query has supplied this concurrency precondition.
+   */
+  expectedUpdatedAt: string | null;
+  /**
    * True iff the local report has been edited by the user since the
    * last successful save. The hook only PATCHes while this is true.
    * The caller is expected to flip it true on edit and clear it via
@@ -53,7 +58,7 @@ export interface UseReportBodyAutosaveInput {
    * Called after a successful PATCH so the caller can clear its
    * `dirty` flag.
    */
-  onSaved?: () => void;
+  onSaved?: (updatedAt: string) => void;
   /** Debounce window in ms. Defaults to 800. */
   debounceMs?: number;
   /**
@@ -81,6 +86,7 @@ export function useReportBodyAutosave({
   slug,
   number,
   report,
+  expectedUpdatedAt,
   dirty,
   onSaved,
   debounceMs = DEFAULT_DEBOUNCE_MS,
@@ -96,16 +102,20 @@ export function useReportBodyAutosave({
     if (!dirty) return;
     if (!slug || number === null) return;
     if (!report) return;
+    if (!expectedUpdatedAt) return;
 
     const handle = setTimeout(() => {
       const body = generatedReportToReportBody(report);
       setError(null);
       mutation.mutate(
-        { params: { project: slug, number }, body: { body } },
         {
-          onSuccess: () => {
+          params: { project: slug, number },
+          body: { body, expectedUpdatedAt },
+        },
+        {
+          onSuccess: (saved) => {
             setLastSavedAt(Date.now());
-            onSaved?.();
+            onSaved?.(saved.updatedAt);
           },
           onError: (err) => {
             setError(err.message ?? 'Autosave failed.');
@@ -120,7 +130,15 @@ export function useReportBodyAutosave({
     // timer on unrelated re-renders. `onSaved` is caller-owned; we
     // intentionally don't depend on it so a re-bound callback doesn't
     // restart the debounce.
-  }, [dirty, paused, slug, number, report, debounceMs]);
+  }, [
+    dirty,
+    paused,
+    slug,
+    number,
+    report,
+    expectedUpdatedAt,
+    debounceMs,
+  ]);
 
   return {
     isAutoSaving: mutation.isPending,

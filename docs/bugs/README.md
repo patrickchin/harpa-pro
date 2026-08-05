@@ -342,6 +342,12 @@ Most recent first. One line per bug — open the linked file only for the full r
   and blocked every unrelated API/admin PR. Fix: seed activity relative to the
   database clock while preserving deterministic event order.
   [detail](2026-08-05-admin-e2e-fixed-time-expiry.md)
+- **2026-08-05** — Attachment placement and PDF registration used direct
+  database timestamps, so `updatedAt` could stay equal at millisecond wire
+  precision or move backward under clock skew. Fix: apply the shared monotonic
+  report-version rule to both writers and pin them with future-timestamp
+  integration tests.
+  [detail](2026-08-05-report-version-millisecond-collision.md)
 - **2026-08-05** — API integration intermittently failed after all 219
   integration tests passed because two rate-limiter test pools could re-emit
   PostgreSQL shutdown `57P01` while Testcontainers stopped. Fix: observe

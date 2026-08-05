@@ -36,13 +36,13 @@
     "@harpa/ai-fixtures": "workspace:*",
     "@harpa/api-contract": "workspace:*",
     "@harpa/report-core": "workspace:*",
-    "@hono/node-server": "^1.13.2",
+    "@hono/node-server": "^2.0.10",
     "@hono/zod-openapi": "^0.18.3",
     "@sentry/hono": "^10.55.0",
     "@sentry/node": "^10.55.0",
-    "better-auth": "^1.6.13",
+    "better-auth": "^1.6.22",
     "drizzle-orm": "^0.36.4",
-    "hono": "^4.6.5",
+    "hono": "^4.12.34",
     "jose": "^5.9.6",
     "nanoid": "^5.1.11",
     "pg": "^8.13.1",
@@ -60,6 +60,6 @@
     "testcontainers": "^10.13.2",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
-    "vitest": "^2.1.2"
+    "vitest": "^3.2.6"
   }
 }

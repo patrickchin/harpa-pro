@@ -1,6 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 
+import DocsScreenshotDialog from "../../../components/docs/DocsScreenshotDialog.astro";
 import DocsPager from "../../../components/docs/DocsPager.astro";
 import DocsLayout from "../../../layouts/DocsLayout.astro";
 import {
@@ -59,6 +60,8 @@ const relatedGuides = guide.data.related
   <article class="docs-prose">
     <Content />
   </article>
+
+  <DocsScreenshotDialog />
 
   {
     relatedGuides.length > 0 && (

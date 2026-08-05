@@ -19,11 +19,11 @@ preview contract became custom branches `dev` and `pr-*`. The build watch
 include remains `*` so each allowed branch head produces its exact-SHA
 deployment marker. Automatic production deployments remain disabled.
 
-**Test.** Final provider verification requires automatic production deployments
-disabled, preview mode `custom`, preview includes `dev` and `pr-*`, and build
-watch include `*`. Repository policy tests also require every dashboard pull
-request to prove its exact head SHA through the deployment marker and dashboard
-checks before merge.
+**Test.** On 2026-08-05, the Cloudflare Pages project API returned automatic
+production deployments disabled, preview mode `custom`, preview includes `dev`
+and `pr-*`, no preview excludes, build watch include `*`, and no path excludes.
+Repository policy tests also require every dashboard pull request to prove its
+exact head SHA through the deployment marker and dashboard checks before merge.
 
 **Pattern.** This is a provider-state variant of stale CI scope: a configured
 deployment target outlived the source tree it expected.

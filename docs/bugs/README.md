@@ -337,6 +337,11 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — The admin Playwright seed used fixed July 29 activity
+  timestamps, so its `Past week` filter began returning zero rows on August 5
+  and blocked every unrelated API/admin PR. Fix: seed activity relative to the
+  database clock while preserving deterministic event order.
+  [detail](2026-08-05-admin-e2e-fixed-time-expiry.md)
 - **2026-08-05** — API integration intermittently failed after all 219
   integration tests passed because two rate-limiter test pools could re-emit
   PostgreSQL shutdown `57P01` while Testcontainers stopped. Fix: observe
@@ -354,6 +359,8 @@ Most recent first. One line per bug — open the linked file only for the full r
   disable automatic production and preview builds until a refreshed dashboard
   PR proves its exact head, then broaden previews only after the app lands on
   `dev`. [detail](2026-08-05-dashboard-pages-absent-app-build.md)
+- **2026-08-04** — The 256 MB service-less storage worker OOM-restarted on four consecutive daily briefs even with an empty durable queue; its guest had only about 9 MiB available while resident `pnpm`/`tsx` launchers consumed avoidable headroom. Fix: launch through Node's `tsx` loader directly, allocate 512 MB in prod/dev, and emit hourly structured memory samples. [detail](2026-08-04-storage-worker-runtime-overhead-oom.md)
+- **2026-08-04** — Production release 31 completed and proved its storage worker, but `flyctl ssh console` stalled after printing only its target address; six hours later the cancelled job still had not run lifecycle arming, readiness, journeys, or OTA. Fix: target the exact worker through bounded Machine exec, retry only after proving the worker id is unchanged, require the database confirmation marker, and cap the outer deploy step. [detail](2026-08-04-fly-ssh-arming-hang.md)
 - **2026-08-04** — React Native's `react-devtools-core@6.1.5` allowed
   `shell-quote@^1.6.1`, but the frozen lockfile retained vulnerable `1.8.3`,
   leaving the mobile toolchain exposed to critical command injection and

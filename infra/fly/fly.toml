@@ -23,7 +23,10 @@ primary_region = "fra"
 
 [processes]
   app = "pnpm --filter @harpa/api exec tsx src/server.ts"
-  storage-worker = "pnpm --filter @harpa/api storage:worker"
+  # Avoid keeping pnpm and the tsx CLI supervisor resident around the
+  # always-on worker. Node's tsx loader runs the same TypeScript entrypoint
+  # with one application process and materially less idle RSS.
+  storage-worker = "node --import tsx packages/api/src/workers/storage-delete.ts"
 
 [http_service]
   processes = ["app"]
@@ -69,4 +72,4 @@ primary_region = "fra"
 [[vm]]
   processes = ["storage-worker"]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"

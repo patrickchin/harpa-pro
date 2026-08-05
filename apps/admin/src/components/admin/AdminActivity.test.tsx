@@ -78,6 +78,21 @@ const secondReportEvent = {
   metadata: { reportNumber: 8 },
 } as unknown as activity.Event;
 
+const duplicateIdentityEvent = {
+  ...reportEvent,
+  id: 'aud_3456789abcdf',
+  occurredAt: '2026-07-29T00:30:00.000Z',
+  actorUserId: 'usr_abcdef012345',
+  actorLabel: 'Alice Activity',
+  actorEmail: null,
+  subjectId: 'rpt_23456789',
+  subjectLabel: 'Report #9',
+  projectId: 'prj_abcdef01',
+  projectLabel: 'Tower Refurbishment',
+  requestId: 'request-report-duplicate-identity',
+  metadata: { reportNumber: 9 },
+} as unknown as activity.Event;
+
 const projectEvent = {
   id: 'aud_789abcdef012',
   occurredAt: '2026-07-29T03:05:00.000Z',
@@ -449,15 +464,14 @@ describe('AdminActivity', () => {
       'Project',
     ]);
     expect(columnHeaders.getAttribute('aria-hidden')).toBeNull();
-    expect(
-      within(columnHeaders)
-        .getByRole('button', { name: 'Filter by time' })
-        .getAttribute('aria-expanded'),
-    ).toBe('false');
-    expect(within(columnHeaders).getByRole('button', { name: 'Filter by event' })).toBeTruthy();
-    expect(within(columnHeaders).getByRole('button', { name: 'Filter by user' })).toBeTruthy();
-    expect(within(columnHeaders).getByRole('button', { name: 'Filter by project' })).toBeTruthy();
-    expect(within(columnHeaders).queryByRole('button', { name: /new|subject/i })).toBeNull();
+    expect(within(columnHeaders).queryByRole('button', { name: 'Filter by time' })).toBeNull();
+    expect(within(columnHeaders).queryByRole('button', { name: 'Filter by event' })).toBeNull();
+    for (const column of ['user', 'project']) {
+      const trigger = within(columnHeaders).getByRole('button', { name: `Filter by ${column}` });
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
+    }
+    expect(within(columnHeaders).queryByRole('button', { name: /new|time|event|subject/i })).toBeNull();
     expect(columnHeaders.className).toContain(
       'grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)]',
     );
@@ -495,23 +509,22 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    const header = screen.getByTestId('activity-column-headers');
-    const timeTrigger = within(header).getByRole('button', { name: 'Filter by time' });
-    expect(timeTrigger.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByRole('group', { name: 'Time period' })).toBeNull();
-    expect(screen.queryByRole('group', { name: 'Detail level' })).toBeNull();
-    expect(screen.queryByLabelText('Filter actor')).toBeNull();
-    expect(screen.queryByLabelText('Exclude actor')).toBeNull();
-    expect(screen.queryByLabelText('Filter project')).toBeNull();
-
-    await user.click(timeTrigger);
-    const timeRegion = screen.getByRole('region', { name: 'Time filter' });
-    const period = within(timeRegion).getByRole('group', { name: 'Time period' });
-    expect(timeTrigger.getAttribute('aria-expanded')).toBe('true');
+    const toolbar = screen.getByRole('region', { name: 'Activity filters' });
+    const period = within(toolbar).getByRole('group', { name: 'Time period' });
+    const level = within(toolbar).getByRole('group', { name: 'Detail level' });
+    expect(within(level).getByRole('radio', { name: 'Milestones' })).toHaveProperty(
+      'checked',
+      true,
+    );
     expect(within(period).getByRole('radio', { name: 'Past month' })).toHaveProperty(
       'checked',
       true,
     );
+    expect(screen.queryByRole('button', { name: 'Filter by time' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Filter by event' })).toBeNull();
+    expect(screen.queryByLabelText('Filter actor')).toBeNull();
+    expect(screen.queryByLabelText('Exclude actor')).toBeNull();
+    expect(screen.queryByLabelText('Filter project')).toBeNull();
     expect(screen.queryByLabelText('From')).toBeNull();
     expect(screen.queryByLabelText('To')).toBeNull();
 
@@ -556,10 +569,7 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    await user.click(screen.getByRole('button', { name: 'Filter by event' }));
-    const level = within(screen.getByRole('region', { name: 'Event filter' })).getByRole('group', {
-      name: 'Detail level',
-    });
+    const level = screen.getByRole('group', { name: 'Detail level' });
     const milestones = within(level).getByRole('radio', { name: 'Milestones' });
     const detailed = within(level).getByRole('radio', { name: 'Detailed activity' });
     const all = within(level).getByRole('radio', { name: 'All activity' });
@@ -587,7 +597,6 @@ describe('AdminActivity', () => {
     expect(screen.queryByLabelText('Event type')).toBeNull();
     expect(lastActivityUrl(fetchMock).searchParams.has('eventType')).toBe(false);
 
-    await user.click(screen.getByRole('button', { name: 'Filter by event' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'All activity',
@@ -605,7 +614,6 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    await user.click(screen.getByRole('button', { name: 'Filter by event' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'All activity',
@@ -631,92 +639,102 @@ describe('AdminActivity', () => {
     ).toBe('file-text');
   });
 
-  it('opens one attached filter region at a time and keeps it usable for empty results', async () => {
+  it('opens one non-modal header popup at a time without placing it inside the table', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
+    const tableShell = screen.getByTestId('activity-table-shell');
     const header = screen.getByTestId('activity-column-headers');
-    const timeTrigger = within(header).getByRole('button', { name: 'Filter by time' });
-    const eventTrigger = within(header).getByRole('button', { name: 'Filter by event' });
     const userTrigger = within(header).getByRole('button', { name: 'Filter by user' });
     const projectTrigger = within(header).getByRole('button', { name: 'Filter by project' });
 
-    await user.click(timeTrigger);
-    expect(screen.getByRole('region', { name: 'Time filter' })).toBeTruthy();
-    expect(timeTrigger.getAttribute('aria-expanded')).toBe('true');
+    await user.click(userTrigger);
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    expect(userPopup.getAttribute('aria-modal')).toBe('false');
+    expect(userPopup.style.position).toBe('fixed');
+    expect(tableShell.contains(userPopup)).toBe(false);
+    expect(userTrigger.getAttribute('aria-expanded')).toBe('true');
 
-    await user.click(eventTrigger);
-    expect(screen.queryByRole('region', { name: 'Time filter' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Event filter' })).toBeTruthy();
-    expect(timeTrigger.getAttribute('aria-expanded')).toBe('false');
-    expect(eventTrigger.getAttribute('aria-expanded')).toBe('true');
-    expect(
-      screen.getAllByRole('region', { name: /^(?:Time|Event|User|Project) filter$/ }),
-    ).toHaveLength(1);
+    await user.click(projectTrigger);
+    expect(screen.queryByRole('dialog', { name: 'User filter' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Project filter' })).toBeTruthy();
+    expect(userTrigger.getAttribute('aria-expanded')).toBe('false');
+    expect(projectTrigger.getAttribute('aria-expanded')).toBe('true');
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Project filter' })).toBeNull();
+    expect(document.activeElement).toBe(projectTrigger);
 
     await user.click(userTrigger);
-    expect(screen.queryByRole('region', { name: 'Event filter' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'User filter' })).toBeTruthy();
-    await user.click(projectTrigger);
-    expect(screen.queryByRole('region', { name: 'User filter' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Project filter' })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(screen.getByRole('dialog', { name: 'User filter' })).toBeTruthy();
+    await user.click(screen.getByRole('heading', { name: 'Harpa Pro activity' }));
+    expect(screen.queryByRole('dialog', { name: 'User filter' })).toBeNull();
   });
 
-  it('searches users and applies include-only and multiple excludes without contradictions', async () => {
+  it('lists each user once, disambiguates duplicate names, and applies include/exclude choices', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(async () => activityResponse([reportEvent, secondReportEvent]));
+      .mockImplementation(async () =>
+        activityResponse([reportEvent, secondReportEvent, duplicateIdentityEvent]),
+      );
     const user = userEvent.setup();
     render(<AdminActivity />);
 
     await screen.findByTestId(`activity-row-${reportEvent.id}`);
     await user.click(screen.getByRole('button', { name: 'Filter by user' }));
-    const userRegion = screen.getByRole('region', { name: 'User filter' });
-    const search = within(userRegion).getByRole('searchbox', { name: 'Search users' });
-    const includedUsers = within(userRegion).getByRole('group', { name: 'Included users' });
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    const search = within(userPopup).getByRole('searchbox', { name: 'Search users' });
+    const users = within(userPopup).getByRole('list', { name: 'Users' });
     const aliceLabel = 'Alice Activity — alice@example.com';
     const bobLabel = 'Bob Builder — bob@example.com';
+    const duplicateAliceLabel = 'Alice Activity — usr_abcdef012345';
 
-    expect(within(includedUsers).getByRole('radio', { name: 'All users' })).toHaveProperty(
+    expect(within(userPopup).getByRole('radio', { name: 'Any user' })).toHaveProperty(
       'checked',
       true,
     );
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(within(users).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(users).getAllByText('Alice Activity', { exact: true })).toHaveLength(2);
+    expect(within(users).getByText('alice@example.com', { exact: true })).toBeTruthy();
+    expect(within(users).getByText('usr_abcdef012345', { exact: true })).toBeTruthy();
+    expect(within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` })).toBeTruthy();
+    expect(within(userPopup).getByRole('checkbox', { name: `Exclude ${duplicateAliceLabel}` })).toBeTruthy();
+
     const requestsBeforeSearch = fetchMock.mock.calls.length;
-    await user.type(search, 'bob');
-    expect(within(includedUsers).queryByRole('radio', { name: `Only ${aliceLabel}` })).toBeNull();
-    expect(within(includedUsers).getByRole('radio', { name: `Only ${bobLabel}` })).toBeTruthy();
+    await user.type(search, 'usr_abcdef012345');
+    expect(within(users).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(requestsBeforeSearch);
     await user.clear(search);
 
-    await user.click(within(userRegion).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }));
+    await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }));
     await waitFor(() =>
       expect(lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')).toBe(
         'usr_0123456789ab',
       ),
     );
 
-    await user.click(within(userRegion).getByRole('checkbox', { name: `Exclude ${bobLabel}` }));
+    await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${bobLabel}` }));
     await waitFor(() =>
       expect(
         lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')?.split(','),
       ).toEqual(['usr_0123456789ab', 'usr_123456789abc']),
     );
 
-    await user.click(within(includedUsers).getByRole('radio', { name: `Only ${aliceLabel}` }));
+    await user.click(within(userPopup).getByRole('radio', { name: `Only ${aliceLabel}` }));
     await waitFor(() => {
       const url = lastActivityUrl(fetchMock);
       expect(url.searchParams.get('actorUserId')).toBe(reportEvent.actorUserId);
       expect(url.searchParams.get('excludeActorUserIds')).toBe(secondReportEvent.actorUserId);
     });
     expect(
-      within(userRegion).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }),
+      within(userPopup).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }),
     ).toHaveProperty('checked', false);
 
-    await user.click(within(userRegion).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }));
+    await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }));
     await waitFor(() => {
       const url = lastActivityUrl(fetchMock);
       expect(url.searchParams.has('actorUserId')).toBe(false);
@@ -724,38 +742,44 @@ describe('AdminActivity', () => {
         [reportEvent.actorUserId!, secondReportEvent.actorUserId!].sort(),
       );
     });
-    expect(within(includedUsers).getByRole('radio', { name: 'All users' })).toHaveProperty(
+    expect(within(userPopup).getByRole('radio', { name: 'Any user' })).toHaveProperty(
       'checked',
       true,
     );
   });
 
-  it('searches projects locally and applies an only-project choice immediately', async () => {
+  it('lists projects once, disambiguates duplicate names, and searches by project ID', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(async () => activityResponse([reportEvent, secondReportEvent]));
+      .mockImplementation(async () =>
+        activityResponse([reportEvent, secondReportEvent, duplicateIdentityEvent]),
+      );
     const user = userEvent.setup();
     render(<AdminActivity />);
 
     await screen.findByTestId(`activity-row-${reportEvent.id}`);
     await user.click(screen.getByRole('button', { name: 'Filter by project' }));
-    const projectRegion = screen.getByRole('region', { name: 'Project filter' });
-    const search = within(projectRegion).getByRole('searchbox', { name: 'Search projects' });
+    const projectPopup = screen.getByRole('dialog', { name: 'Project filter' });
+    const search = within(projectPopup).getByRole('searchbox', { name: 'Search projects' });
+    const projects = within(projectPopup).getByRole('list', { name: 'Projects' });
+    expect(within(projects).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(projects).getAllByText('Tower Refurbishment', { exact: true })).toHaveLength(2);
+    expect(within(projects).getByText('prj_01234567', { exact: true })).toBeTruthy();
+    expect(within(projects).getByText('prj_abcdef01', { exact: true })).toBeTruthy();
+
     const requestsBeforeSearch = fetchMock.mock.calls.length;
 
-    await user.type(search, 'riverside');
-    expect(
-      within(projectRegion).queryByRole('radio', { name: 'Only Tower Refurbishment' }),
-    ).toBeNull();
-    const riverside = within(projectRegion).getByRole('radio', {
-      name: 'Only Riverside Offices',
+    await user.type(search, 'prj_abcdef01');
+    expect(within(projects).getAllByRole('listitem')).toHaveLength(1);
+    const duplicateTower = within(projectPopup).getByRole('radio', {
+      name: 'Only Tower Refurbishment — prj_abcdef01',
     });
     expect(fetchMock).toHaveBeenCalledTimes(requestsBeforeSearch);
 
-    await user.click(riverside);
+    await user.click(duplicateTower);
     await waitFor(() =>
       expect(lastActivityUrl(fetchMock).searchParams.get('projectId')).toBe(
-        secondReportEvent.projectId,
+        duplicateIdentityEvent.projectId,
       ),
     );
   });
@@ -811,7 +835,6 @@ describe('AdminActivity', () => {
     await user.click(refresh);
     expect(refresh).toHaveProperty('disabled', true);
 
-    await user.click(screen.getByRole('button', { name: 'Filter by time' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Time period' })).getByRole('radio', {
         name: 'Past week',
@@ -839,7 +862,6 @@ describe('AdminActivity', () => {
     const user = userEvent.setup();
     render(<AdminActivity />);
 
-    await user.click(await screen.findByRole('button', { name: 'Filter by event' }));
     await user.click(
       within(await screen.findByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'Detailed activity',
@@ -889,7 +911,6 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     expect(await screen.findByRole('link', { name: 'Open as text' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Filter by time' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Time period' })).getByRole('radio', {
         name: 'Past week',

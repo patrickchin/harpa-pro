@@ -58,10 +58,10 @@ A simple counter cannot model what we need:
 1. **Edits double-count.** Editing the same note five times would
    bump it `+5`, but the AI-relevant change is "one note differs."
 2. **Deletes break the noun.** After add 3 → regen → delete 2, the
-   counter reads `2` but there are *fewer* notes than the AI last
+   counter reads `2` but there are _fewer_ notes than the AI last
    saw — "notes since last generation" no longer matches reality.
 3. **Race-unsafe.** `runGenerate` resets the counter to `0`
-   unconditionally on save. A bump that happens *during* the AI
+   unconditionally on save. A bump that happens _during_ the AI
    call is clobbered by the reset, so the follow-up regen never
    fires.
 4. **The check is binary, not a count.** The client only needs to
@@ -89,9 +89,9 @@ needsRegeneration =
 ### Race safety
 
 `runGenerate` captures `snapshotTs := report.notes_changed_at`
-*before* the AI call. On save, set
+_before_ the AI call. On save, set
 `generated_at = COALESCE(snapshotTs, now())`. `generated_at` then
-records *the snapshot of notes we synthesized from* — not the
+records _the snapshot of notes we synthesized from_ — not the
 wall-clock save time. If a note bump fires during the in-flight
 AI run, `notes_changed_at` becomes `> snapshotTs == generated_at`,
 the comparison stays dirty, and the queue-of-one fires another
@@ -109,7 +109,7 @@ Edit-tab changes go through `useReportBodyAutosave`, which PATCHes
 `notes_changed_at`. Manual edits therefore never set
 `needsRegeneration` to true.
 
-The trade-off (accepted): when a note change *does* fire an
+The trade-off (accepted): when a note change _does_ fire an
 auto-regen, the regenerate path forwards `existingBody` to the AI,
 which is prompt-instructed to preserve manual edits. Whether that
 prompt is good enough is out of scope; for now the user has
@@ -128,7 +128,7 @@ reports never auto-regenerate.
 **Expand step only — contract/drop cleanup is deferred to a later release.**
 
 Following the expand-contract rules in
-[`docs/v4/arch-cicd-and-migrations.md §Expand-contract rules`](../v4/arch-cicd-and-migrations.md):
+[`docs/v4/arch-cicd-and-migrations.md §Expand-contract rules`](../../v4/arch-cicd-and-migrations.md):
 
 **PR A (this commit):**
 
@@ -290,7 +290,7 @@ Finalized reports never enter the gate.
 - Updating a voice-note transcript / title / summary bumps it.
 - Generate clears the dirty bit (`generated_at` set, comparison
   becomes false).
-- Race: simulate a bump *between* the snapshot capture and the save
+- Race: simulate a bump _between_ the snapshot capture and the save
   by setting `notes_changed_at` directly with a SQL UPDATE between
   the two AI-fixture calls. Assert `needsRegeneration` remains true
   after the save returns.

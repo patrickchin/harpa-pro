@@ -1,61 +1,47 @@
-# Voice Note Pipeline
+# Voice-note pipeline
 
-> **Design document** — defines the end-to-end voice-note recording,
-> upload, transcription, summarisation, and rendering pipeline shared
-> between the mobile app (`apps/mobile`) and the Hono API
-> (`packages/api`).
+> **Status: implemented.** This document describes the end-to-end
+> recording, upload, transcription, summary, and rendering pipeline
+> shared by the mobile app and API.
 >
 > Companion to [`plan-voice-pipeline.md`](plan-voice-pipeline.md)
 > (seven-phase delivery checklist). Read this for the architecture;
 > read the plan for the order of work.
 >
 > Related:
-> - [`arch-mobile.md` §Voice note pipeline](arch-mobile.md#voice-note-pipeline)
-> - [`arch-api-design.md` §Voice](arch-api-design.md#voice-voice-authed)
+>
+> - [`arch-mobile.md` §Voice notes](arch-mobile.md#voice-notes)
+> - [`arch-api-design.md` §Files, voice, and settings](arch-api-design.md#files-voice-and-settings)
 > - [`arch-storage.md`](arch-storage.md) — R2 upload contract
 > - [`arch-ai-fixtures.md`](arch-ai-fixtures.md) — record/replay
 > - [`pitfalls.md`](pitfalls.md) — Pitfalls 12, 13, 15 referenced below
 
-## Problem statement
+## Current contract
 
-v4 inherits a half-built voice pipeline:
+The mobile app records an M4A file, uploads it through the shared
+queue, and calls one report-scoped aggregator. The API validates the
+file and report role, checks usage limits, transcribes, summarizes,
+records both usage events, and inserts one voice note.
 
-- The API exposes `POST /voice/transcribe` and `POST /voice/summarize`
-  but not a single aggregator. Mobile would have to make four hops
-  (presign → PUT → transcribe → summarize → createNote) and any
-  network blip leaves the user with a paid-for transcript and no
-  note row.
-- `app.notes` collapses transcript + summary into one `transcript`
-  column. There is no place to store the canonical *summary* (the
-  text the report generator should read) separately from the raw
-  transcript (the audit trail the user verifies).
-- `useVoiceNotePipeline` does not exist; the `voice` surface on
-  `GenerateReportProvider` is a no-op. The mic button on
-  `GenerateReportInputBar` calls a no-op.
-- `AudioPlaybackProvider` is a stub that throws on `play()` /
-  `pause()` / `stop()`.
-- `expo-audio` is not installed.
-- AGENTS.md §Mobile dev / fixture mode claims fixture mode "stubs
-  the iOS-simulator audio recorder" — no such stub exists.
-- The upload queue lives in memory only; backgrounding the app
-  during a long voice upload loses the recording.
-- `/voice/summarize` is not idempotent — a retried request rebills.
-- Both AI calls hard-code `vendor: 'openai'` instead of consulting
-  `getAiSettings()` ([Pitfall 15](pitfalls.md#pitfall-15--route-handlers-that-ignore-user-settings)).
-- LLM spend on transcribe + summarize is not attributed to a
-  `(projectId, reportId)` — the Usage screen can't break voice down
-  per project.
+The note keeps the raw transcript separate from its summary. The
+mobile timeline and saved-report pane share the read-side card and
+signed file URL path.
+
+The standalone `/voice/transcribe` and `/voice/summarize` routes remain
+available to other clients. The mobile voice-note flow does not use
+them.
 
 ## Design decisions
 
 ### D1. One server-side aggregator, not four mobile hops
 
-Add `POST /reports/{report}/notes/voice` (`{ fileId, language? }`).
-The handler runs, in one scoped transaction:
+`POST /reports/{report}/notes/voice` accepts `fileId`, optional
+`language`, optional `durationSec`, and optional `fixtureName`. The
+handler runs these steps:
 
 1. Verify file ownership + that `file.kind === 'voice'`.
 2. Load `getAiSettings(db, userId)` → `aiVendor`.
-3. `transcribe()` against the signed R2 URL.
+3. `transcribe()` against a signed R2 URL.
 4. `chat()` with the canonical summary prompt against the transcript.
 5. Insert one `app.notes` row (`kind='voice'`, `body=summary`,
    `transcript=transcript`, plus diagnostics).
@@ -68,8 +54,8 @@ reportId }` so spend lands attributed.
 
 - Idempotency is one key (`fileId+reportId`), not three.
 - Retry-after-network-blip never rebills.
-- The DB row is created in the same transaction as the AI calls —
-  no orphaned spend.
+- The route owns one scoped DB accessor for its reads, usage writes,
+  and note insertion. Provider calls occur before the insert.
 - Mobile state machine collapses from five steps to three.
 
 ### D2. Idempotency keyed on `(fileId, reportId)`
@@ -82,16 +68,16 @@ transport hiccup deduplicate to the same note row + the same
 
 ### D3. Expand-only schema change
 
-Add to `app.notes`:
+The voice migration added these nullable columns to `app.notes`:
 
-| Column                 | Type            | Nullable | Purpose |
-|---                     |---              |---       |---      |
-| `title`                | `text` (≤ 200)  | yes      | **Generic** short headline. Today only the voice aggregator writes it. The summarise LLM call returns a JSON envelope `{title, summary}` — the title field (target ~5–6 words) goes straight into this column. A fallback heuristic (`deriveTitleFromSummary` — first sentence, ≤ 80 chars, word-cut + ellipsis) runs when the model didn't return parseable JSON so the route never 500s on a misbehaving response. Text / image / document notes leave it null but may populate it in the future (e.g. user-supplied document title, photo caption). |
-| `summary`              | `text`          | yes      | **Generic** long-form summary. For `kind='voice'` rows it is the canonical site-note body — what the report generator reads. Other kinds may populate it later. |
-| `duration_sec`         | `int`           | yes      | Voice-only. Recording length (client-reported). |
-| `language`             | `text`          | yes      | Voice-only. BCP-47 transcript language. |
-| `transcribe_provider`  | `text`          | yes      | Voice-only. Vendor + model that produced the transcript (diagnostics). |
-| `transcribed_at`       | `timestamptz`   | yes      | Voice-only. Server time of transcription. |
+| Column                | Type           | Nullable | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------- | -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`               | `text` (≤ 200) | yes      | **Generic** short headline. Today only the voice aggregator writes it. The summarise LLM call returns a JSON envelope `{title, summary}` — the title field (target ~5–6 words) goes straight into this column. A fallback heuristic (`deriveTitleFromSummary` — first sentence, ≤ 80 chars, word-cut + ellipsis) runs when the model didn't return parseable JSON so the route never 500s on a misbehaving response. Text / image / document notes leave it null but may populate it in the future (e.g. user-supplied document title, photo caption). |
+| `summary`             | `text`         | yes      | **Generic** long-form summary. For `kind='voice'` rows it is the canonical site-note body — what the report generator reads. Other kinds may populate it later.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `duration_sec`        | `int`          | yes      | Voice-only. Recording length (client-reported).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `language`            | `text`         | yes      | Voice-only. BCP-47 transcript language.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `transcribe_provider` | `text`         | yes      | Voice-only. Vendor + model that produced the transcript (diagnostics).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `transcribed_at`      | `timestamptz`  | yes      | Voice-only. Server time of transcription.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 `transcript` stays as the raw transcript. `body` keeps its existing
 meaning for non-voice notes; for `voice` notes `body` mirrors
@@ -134,10 +120,9 @@ re-runs presign + PUT (R2 may have GC'd the partial). Retry from
 `'transcribe'` re-calls the aggregator with the **same** `fileId`,
 which deduplicates via D2.
 
-The local audio file (`features/voice/storage.ts`) is **not**
-deleted until the pipeline reaches `saved` or the user explicitly
-discards. This is the only "pending-note persistence" we ship in
-this round — no separate `voice_jobs` table.
+The recorder keeps the local URI in pipeline state for retry. It does
+not maintain a separate `voice_jobs` table. The recorder does not
+delete cancelled cache files. The operating system can reclaim them.
 
 ### D5. Capture UX
 
@@ -171,8 +156,8 @@ server-side by `packages/api/src/routes/voice.ts` (matches Groq
 Whisper's 25 MB free-tier ceiling). The mobile recorder hard-stops at
 **15 min** (≈ 3.5 MB at 32 kbps AAC) with a destructive-coloured
 counter from 10 min onwards and a "Max 15:00" hint under the timer
-(`InlineVoiceRecorder.tsx`). Phase F adds a client-side normalisation
-step to guarantee 16 kHz mono regardless of device defaults.
+(`InlineVoiceRecorder.tsx`). The recorder requests 16 kHz mono AAC.
+The app does not run a separate normalization step.
 
 **Historical:** Phase C–G shipped a full-screen `VoiceRecorderModal`
 with explicit Record/Pause/Resume/Save/Discard buttons. Phase H
@@ -192,16 +177,19 @@ fixture backend:
    `apps/mobile/assets/fixtures/voice-sample.m4a` URI so the queue
    has a real local file to enqueue.
 
-This **is** the AGENTS.md "stubbing the iOS-simulator audio recorder"
-promise.
-[Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken):
-the fixture-mode integration test calls the real upload pipeline and
-the real aggregator against fixture AI providers; no `setUploadDeps`,
-no aggregator mocks on the happy path.
+This satisfies the local recorder-fixture contract. It does not select
+the API's AI mode. The API reads `AI_LIVE` from its own environment,
+and the mobile client sends no fixture-mode header. An `ios:mock` build
+can therefore call live providers when it targets a live API.
+
+[Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken)
+still applies to tests. Mobile tests drive the real queue and request
+boundaries with platform or fetch substitutes at the external edge.
 
 ### D7. Read side
 
-`VoiceNoteCard` (`features/voice/VoiceNoteCard.tsx`) — landed in Phase E:
+`VoiceNoteCard` (`components/notes/VoiceNoteCard.tsx`) renders the
+draft-side voice note:
 
 - Layout matches the marketing-page `PreviousNoteCard`
   (`apps/site/src/components/VoiceDemo.tsx`) via the shared
@@ -230,7 +218,7 @@ card never re-fetches the row. Wired into:
 
 - `NoteTimeline` (generate screen — draft side). The provider also
   injects a synthetic `voiceStatus: 'uploading' | 'transcribing' |
-  'failed'` `NoteEntry` while the pipeline is in flight so the card
+'failed'` `NoteEntry` while the pipeline is in flight so the card
   renders the spinner / retry pill until the saved row arrives via
   the invalidated `useReportNotesQuery`.
 - `ReportNotesPane` (saved report — only `ready` rows because the
@@ -262,7 +250,7 @@ card never re-fetches the row. Wired into:
   the active player.
 - Subscribers (`VoiceNoteCard`, `VoiceNoteRow`) read
   `useAudioPlayback().status` → `{ uri, playing, positionSec,
-  durationSec }`. Each card scopes the status to its own row by
+durationSec }`. Each card scopes the status to its own row by
   comparing `status.uri === audioUri`.
 - A `playerFactory` prop lets node tests swap the lazy
   `createAudioPlayer` require for a fake — production code never
@@ -280,7 +268,7 @@ single refcounted helper module:
 
 - `beginPlayback()` / `endPlayback()` — wraps any voice-note
   playback. Sets `interruptionMode: 'doNotMix'` + `playsInSilentMode:
-  true` (so voice notes are audible even when the iPhone silent
+true` (so voice notes are audible even when the iPhone silent
   switch is on, and so Spotify is paused while we play), and calls
   `setIsAudioActiveAsync(true)` on the first client.
 - `beginRecording()` / `endRecording()` — wraps any voice-note
@@ -312,17 +300,12 @@ surface.
 
 **Landed:**
 
-1. **Queue persistence** — `AsyncStorage` snapshot keyed
-   `harpa.uploads.queue.v1`. Persisted on every notify (status,
-   progress). Snapshot drops `completed` jobs (server already owns
-   them) and normalises in-flight statuses to `pending` so a crash
-   mid-PUT resumes cleanly. `rehydrate()` is called once on
-   `QueueProvider` mount; jobs are deduped by `id` and by
-   `input.clientId`. Corrupt snapshots are dropped via
-   `removeItem` instead of crashing. Rehydrated jobs lose their
-   original promise consumers (no-op resolvers) — callers that need
-   the outcome re-enqueue with the same `clientId`, which hijacks
-   the existing job's resolvers.
+1. **Queue persistence** — a user-scoped MMKV snapshot stores each
+   non-terminal upload job. `QueueProvider` loads the snapshot after
+   auth has a stable user ID. It normalizes in-flight states to
+   `pending`, drops missing source files, and resumes the queue. A
+   corrupt snapshot is discarded. `clientId` prevents a repeated
+   capture from creating a second job.
 2. **AbortSignal** — `UploadDeps.putToR2` accepts an
    `AbortSignal`. The XHR path calls `xhr.abort()` on signal abort;
    the fetch fallback forwards the signal directly. `queue.remove()`
@@ -335,16 +318,16 @@ surface.
 **Deferred (rationale):**
 
 3. **Audio normalisation** (`normalizeAudio(localUri) → 16 kHz
-   mono m4a`) requires `ffmpeg-kit` (native module), is not
+mono m4a`) requires `ffmpeg-kit` (native module), is not
    testable in node-only vitest, and risks app-size regressions.
    Server-side transcription tolerates the `HIGH_QUALITY`
    recorder preset (aac/m4a, 44.1 kHz). Track in
    `docs/bugs/README.md` if real recordings produce poor
    transcripts.
-4. **Interim transcript** (`expo-speech-recognition` under
-   `EXPO_PUBLIC_VOICE_LIVE_TRANSCRIPT`) requires a native module
-   and platform-specific permission flow; defer until the recorder
-   UX has a confirmed need and a Maestro flow that can exercise it.
+4. **Interim transcript** requires a new native module and permission
+   flow. The app does not install `expo-speech-recognition`, define
+   `useLiveTranscript`, or parse
+   `EXPO_PUBLIC_VOICE_LIVE_TRANSCRIPT`.
 
 ### D10. Errors surface as `AppDialogSheet`, not `Alert.alert`
 
@@ -356,14 +339,12 @@ permission-denied dialog, one recorder-error dialog), keyed off
 `useInlineRecorder.permission` and `.error`. The inline strip
 itself never renders an `Alert.alert`.
 
-### D11. No expo-file-system (deprecated)
+### D11. Recorder file-size reads
 
-The voice code does NOT depend on `expo-file-system`. The recorder
-reads its own file size via `fetch(uri).then(r => r.blob()).size`
-(works for `file://` URIs in RN) and skips eager deletion of
-discarded recordings — the OS cleans the cache directory eventually
-and a few KB of orphaned m4a is an acceptable trade for not pulling
-in a deprecated dep.
+The voice recorder reads its file size with
+`fetch(uri).then(r => r.blob()).size`. It does not import Expo File
+System. The shared upload queue uses Expo File System's current `File`
+API to validate and clean local sources.
 
 ## Data flow
 
@@ -430,9 +411,14 @@ in a deprecated dep.
 
 ```ts
 export const createVoiceNoteRequest = z.object({
-  fileId,                       // existing fileId shape
-  language: z.string().min(2).max(8).optional(),  // BCP-47, e.g. "en-US"
-  durationSec: z.number().int().min(1).max(60 * 60).optional(),
+  fileId, // existing fileId shape
+  language: z.string().min(2).max(8).optional(), // BCP-47, e.g. "en-US"
+  durationSec: z
+    .number()
+    .int()
+    .min(1)
+    .max(60 * 60)
+    .optional(),
 });
 
 // The response reuses the existing `noteResponse` schema; the
@@ -442,9 +428,9 @@ export const createVoiceNoteRequest = z.object({
 
 ## Rate-limiting / idempotency budget
 
-| Route                                    | Limit                | Idempotency                       |
-|---                                       |---                   |---                                |
-| `POST /reports/:reportId/notes/voice`    | 30 / min / user      | `voice.note` keyed `fileId+reportId` |
+| Route                                 | Limit           | Idempotency                          |
+| ------------------------------------- | --------------- | ------------------------------------ |
+| `POST /reports/:reportId/notes/voice` | 30 / min / user | `voice.note` keyed `fileId+reportId` |
 
 The aggregator's downstream `transcribe` + `chat` calls bypass the
 per-route AI rate-limiters because the aggregator is itself
@@ -452,6 +438,21 @@ rate-limited (the user-facing surface). This avoids double-billing
 the limiter for one user action.
 
 ## Tests
+
+The detailed lists below record the delivery test plan. The current
+test inventory is the authority. Key files are:
+
+- `packages/api/src/__tests__/voice-aggregator.integration.test.ts`
+- `packages/api/src/__tests__/scope/voice.scope.test.ts`
+- `apps/mobile/features/voice/useVoiceNotePipeline.test.ts`
+- `apps/mobile/features/voice/useInlineRecorder.test.ts`
+- `apps/mobile/features/voice/expoAudioRecorder.test.ts`
+- `apps/mobile/features/voice/fixtureRecorder.test.ts`
+- `apps/mobile/lib/audio/audioSession.test.ts`
+- `.maestro/modules/09-voice-notes.yaml`
+
+Some filenames in the original plan below were changed or folded into
+other tests during implementation.
 
 ### API (`packages/api/src/__tests__/`)
 
@@ -461,7 +462,7 @@ the limiter for one user action.
   - Note row inserted with `kind='voice'`, `summary`, `transcript`,
     `transcribed_at`, `transcribe_provider`.
   - Two `llm_usage_events` rows with matching `(project_id,
-    report_id)`.
+report_id)`.
   - Retry with same `fileId+reportId` returns the same `noteId`
     (idempotency) and inserts **zero** additional usage rows.
   - 404 when caller is not a member of the report.
@@ -500,14 +501,18 @@ the limiter for one user action.
 
 ## Error envelope mapping
 
-| Cause                              | API status | Mobile surface |
-|---                                 |---         |---             |
-| Mic permission denied              | n/a        | `AppDialogSheet` with Open Settings CTA |
-| Recording shorter than 1 sec       | 400        | Inline toast "Recording too short" |
-| Recording > 25 MB                  | 413        | `AppDialogSheet` "Recording too long" |
-| R2 PUT 5xx                         | n/a        | Pipeline `failed('upload')` → retry CTA on card |
-| Aggregator 502 (transcribe down)   | 502        | Pipeline `failed('transcribe')` → retry CTA on card |
-| Aggregator 404 (file not found)    | 404        | `AppDialogSheet` "This recording is no longer available" + discard |
+This table records the intended user experience. Current component and
+route tests define the exact copy and which failures use an inline retry
+instead of a dialog.
+
+| Cause                            | API status | Mobile surface                                                     |
+| -------------------------------- | ---------- | ------------------------------------------------------------------ |
+| Mic permission denied            | n/a        | `AppDialogSheet` with Open Settings CTA                            |
+| Recording shorter than 1 sec     | 400        | Inline toast "Recording too short"                                 |
+| Recording > 25 MB                | 413        | `AppDialogSheet` "Recording too long"                              |
+| R2 PUT 5xx                       | n/a        | Pipeline `failed('upload')` → retry CTA on card                    |
+| Aggregator 502 (transcribe down) | 502        | Pipeline `failed('transcribe')` → retry CTA on card                |
+| Aggregator 404 (file not found)  | 404        | `AppDialogSheet` "This recording is no longer available" + discard |
 
 ## Open questions deferred
 
@@ -521,7 +526,10 @@ the limiter for one user action.
   by Postgres' default text behaviour; adding a trigram or `tsvector`
   index is a P4 follow-up.
 
-## Migration / rollout
+## Historical migration and rollout
+
+The phases below are complete except for the normalization and interim-
+transcript items explicitly deferred in D9.
 
 - **Phase A** (this commit) — design + arch-mobile drift fix +
   AGENTS.md fixture line.

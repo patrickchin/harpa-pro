@@ -1,5 +1,9 @@
 # Photo Upload Pipeline UI Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the three competing pending-state surfaces in the photo upload UI with a single Bluesky-inspired `<PhotoTile>` primitive driven by a unified `attachments[]` array, fixing the 3-wide grid clipping bug and eliminating shifting UI / status-text churn.
@@ -62,6 +66,7 @@
 This task introduces the unified shape and an adapter that derives it from today's `NoteEntry` photo fields, without removing the legacy fields. Subsequent UI tasks call the adapter; the data-model collapse happens last (T8).
 
 **Files:**
+
 - Create: `apps/mobile/lib/notes/attachments.ts`
 - Create: `apps/mobile/lib/notes/attachments.test.ts`
 - Modify: `apps/mobile/lib/notes/note-entry.ts`
@@ -103,9 +108,7 @@ describe('buildAttachments', () => {
       text: '',
       addedAt: 0,
       source: 'image',
-      files: [
-        { id: 'nf_a', fileId: 'fil_a', thumbnailFileId: null, position: 0, caption: null },
-      ],
+      files: [{ id: 'nf_a', fileId: 'fil_a', thumbnailFileId: null, position: 0, caption: null }],
       pendingFiles: [
         { jobId: 'job_1', sourceUri: 'file:///1.jpg', status: 'uploading', progress: 0.4 },
         { jobId: 'job_2', sourceUri: 'file:///2.jpg', status: 'pending', progress: 0 },
@@ -332,6 +335,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Standalone tile-overlay component used by `PhotoTile`. SVG circle whose `strokeDashoffset` is animated via Reanimated `useAnimatedProps`. Tested in isolation against the static `progress` prop.
 
 **Files:**
+
 - Create: `apps/mobile/components/notes/PhotoProgressRing.tsx`
 - Create: `apps/mobile/components/notes/PhotoProgressRing.test.tsx`
 
@@ -350,14 +354,11 @@ vi.mock('react-native-svg', () => ({
     React.createElement('rn-svg', props, (props as { children?: React.ReactNode }).children),
   Svg: (props: Record<string, unknown>) =>
     React.createElement('rn-svg', props, (props as { children?: React.ReactNode }).children),
-  Circle: (props: Record<string, unknown>) =>
-    React.createElement('rn-svg-circle', props, null),
+  Circle: (props: Record<string, unknown>) => React.createElement('rn-svg-circle', props, null),
 }));
 
 vi.mock('react-native-reanimated', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    'react-native-reanimated/mock',
-  );
+  const actual = await vi.importActual<Record<string, unknown>>('react-native-reanimated/mock');
   return actual;
 });
 
@@ -418,11 +419,7 @@ Create `apps/mobile/components/notes/PhotoProgressRing.tsx`:
  * frequent queue snapshots don't re-render the parent card.
  */
 import { View } from 'react-native';
-import Animated, {
-  useAnimatedProps,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { useEffect } from 'react';
 
@@ -519,6 +516,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 One component renders every state (loading-saved / done / pending / failed / overflow). No status text. Tap targets per spec §8 + §9.
 
 **Files:**
+
 - Create: `apps/mobile/components/notes/PhotoTile.tsx`
 - Create: `apps/mobile/components/notes/PhotoTile.test.tsx`
 
@@ -536,14 +534,11 @@ import { PhotoTile } from './PhotoTile';
 import type { Attachment } from '@/lib/notes/attachments';
 
 vi.mock('expo-image', () => ({
-  Image: (props: Record<string, unknown>) =>
-    React.createElement('rn-expo-image', props, null),
+  Image: (props: Record<string, unknown>) => React.createElement('rn-expo-image', props, null),
 }));
 
 vi.mock('react-native-reanimated', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    'react-native-reanimated/mock',
-  );
+  const actual = await vi.importActual<Record<string, unknown>>('react-native-reanimated/mock');
   return actual;
 });
 
@@ -589,9 +584,9 @@ describe('PhotoTile pending state', () => {
     const tree = render(
       <PhotoTile attachment={pending()} size={120} onCancel={onCancel} testID="tile" />,
     );
-    expect(
-      tree.root.findByProps({ testID: 'tile-img' }).props.source.uri,
-    ).toBe('file:///tmp/a.jpg');
+    expect(tree.root.findByProps({ testID: 'tile-img' }).props.source.uri).toBe(
+      'file:///tmp/a.jpg',
+    );
     expect(tree.root.findAllByProps({ testID: 'tile-ring' }).length).toBe(1);
     const cancel = tree.root.findByProps({ testID: 'tile-cancel' });
     act(() => cancel.props.onPress());
@@ -648,12 +643,7 @@ describe('PhotoTile saved state', () => {
 
   it('renders an overflow badge when overflowCount is provided', () => {
     const tree = render(
-      <PhotoTile
-        attachment={saved()}
-        size={120}
-        overflowCount={5}
-        testID="tile"
-      />,
+      <PhotoTile attachment={saved()} size={120} overflowCount={5} testID="tile" />,
     );
     const badge = tree.root.findByProps({ testID: 'tile-overflow' });
     expect(badge.props.children).toContain('5');
@@ -689,11 +679,7 @@ Create `apps/mobile/components/notes/PhotoTile.tsx`:
  */
 import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { AlertTriangle, X } from 'lucide-react-native';
 
 import { CachedImage } from '@/components/ui/CachedImage';
@@ -729,15 +715,14 @@ export function PhotoTile({
   overflowCount,
   testID,
 }: PhotoTileProps) {
-  const { isPending, status, progress, sourceUri, fileId, thumbnailFileId, jobId, error } = attachment;
+  const { isPending, status, progress, sourceUri, fileId, thumbnailFileId, jobId, error } =
+    attachment;
   const isFailed = status === 'failed';
   const isFinalizing = isPending && !isFailed && (progress ?? 0) >= 1;
 
   // Saved-only path needs a signed URL for the server thumbnail.
   const sourceFileId = thumbnailFileId ?? fileId;
-  const { data } = useFileSignedUrl(
-    !isPending && sourceFileId ? sourceFileId : undefined,
-  );
+  const { data } = useFileSignedUrl(!isPending && sourceFileId ? sourceFileId : undefined);
   const serverUri = (data as { url?: string } | undefined)?.url ?? null;
 
   // Image URI: prefer local sourceUri while we have one (pending and
@@ -792,7 +777,7 @@ export function PhotoTile({
       disabled={isPending && !isFailed}
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
-      accessibilityHint={isFailed ? error ?? undefined : undefined}
+      accessibilityHint={isFailed ? (error ?? undefined) : undefined}
       testID={surfaceTestID}
       className="overflow-hidden rounded-md bg-muted"
       style={dims}
@@ -824,10 +809,7 @@ export function PhotoTile({
             <AlertTriangle size={24} color={colors.danger.foreground} />
           </View>
         ) : isPending && !isFinalizing ? (
-          <PhotoProgressRing
-            progress={progress}
-            testID={testID ? `${testID}-ring` : undefined}
-          />
+          <PhotoProgressRing progress={progress} testID={testID ? `${testID}-ring` : undefined} />
         ) : null}
       </Animated.View>
 
@@ -896,6 +878,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Replace the dual resolved/pending branches with a single map over `Attachment[]` rendering `PhotoTile`s. Make `containerWidth` required so callers always pass measured width. Preserve `+N` overflow at index 8.
 
 **Files:**
+
 - Modify: `apps/mobile/components/notes/PhotoBatchGrid.tsx`
 - Create: `apps/mobile/components/notes/PhotoBatchGrid.test.tsx`
 
@@ -913,8 +896,7 @@ import { PhotoBatchGrid } from './PhotoBatchGrid';
 import type { Attachment } from '@/lib/notes/attachments';
 
 vi.mock('expo-image', () => ({
-  Image: (props: Record<string, unknown>) =>
-    React.createElement('rn-expo-image', props, null),
+  Image: (props: Record<string, unknown>) => React.createElement('rn-expo-image', props, null),
 }));
 vi.mock('react-native-reanimated', async () => {
   return await vi.importActual('react-native-reanimated/mock');
@@ -944,10 +926,10 @@ describe('PhotoBatchGrid sizing', () => {
   // GAP = 6, COLUMNS = 3 → tileSize = floor((320 - 12) / 3) = 102
   it('fits 3 tiles into a 320px container without clipping', () => {
     const items: Attachment[] = [saved(0), saved(1), saved(2)];
-    const tree = render(
-      <PhotoBatchGrid attachments={items} containerWidth={320} />,
-    );
-    const tiles = tree.root.findAllByProps({ testID: /^batch-grid-tile-\d+$/ as unknown as string });
+    const tree = render(<PhotoBatchGrid attachments={items} containerWidth={320} />);
+    const tiles = tree.root.findAllByProps({
+      testID: /^batch-grid-tile-\d+$/ as unknown as string,
+    });
     // testID match by exact prop, so re-fetch one-by-one:
     const t0 = tree.root.findByProps({ testID: 'batch-grid-tile-0' });
     const t1 = tree.root.findByProps({ testID: 'batch-grid-tile-1' });
@@ -962,16 +944,10 @@ describe('PhotoBatchGrid sizing', () => {
 
   it('renders +N overflow on the 9th tile when more than 9 attachments', () => {
     const items = Array.from({ length: 11 }, (_, i) => saved(i));
-    const tree = render(
-      <PhotoBatchGrid attachments={items} containerWidth={320} />,
-    );
+    const tree = render(<PhotoBatchGrid attachments={items} containerWidth={320} />);
     // Only the first 9 tiles are rendered; the 9th carries the overflow badge.
-    expect(
-      tree.root.findAllByProps({ testID: 'batch-grid-tile-8' }).length,
-    ).toBeGreaterThan(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'batch-grid-tile-9' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'batch-grid-tile-8' }).length).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'batch-grid-tile-9' })).toHaveLength(0);
     const overflow = tree.root.findByProps({ testID: 'batch-grid-tile-8-overflow' });
     expect(overflow.props.children).toContain(3); // 11 total, 8 visible + overflow shows +3
   });
@@ -1035,12 +1011,11 @@ export function PhotoBatchGrid({
   if (attachments.length === 0) return null;
 
   const total = attachments.length;
-  const visible = total <= MAX_VISIBLE
-    ? attachments
-    : attachments.slice(0, MAX_VISIBLE);
-  const overflowAtLast = total > MAX_VISIBLE
-    ? total - (MAX_VISIBLE - 1) // shows on the 9th tile, replaces the would-be 9th
-    : 0;
+  const visible = total <= MAX_VISIBLE ? attachments : attachments.slice(0, MAX_VISIBLE);
+  const overflowAtLast =
+    total > MAX_VISIBLE
+      ? total - (MAX_VISIBLE - 1) // shows on the 9th tile, replaces the would-be 9th
+      : 0;
 
   const cols = Math.min(visible.length, COLUMNS);
   const tileSize = Math.floor((containerWidth - GAP * (cols - 1)) / cols);
@@ -1050,10 +1025,7 @@ export function PhotoBatchGrid({
       {visible.map((a, idx) => {
         const isOverflowTile = overflowAtLast > 0 && idx === MAX_VISIBLE - 1;
         return (
-          <View
-            key={a.key}
-            style={{ width: tileSize, height: tileSize }}
-          >
+          <View key={a.key} style={{ width: tileSize, height: tileSize }}>
             <PhotoTile
               attachment={a}
               size={tileSize}
@@ -1092,6 +1064,7 @@ Do NOT commit yet. The grid's new contract requires `PhotoNoteCard` to pass meas
 Card measures its interior via `onLayout`. Header + grid only — no `SoloPendingTile`, no `PendingFooter`, no status text. Body text renders below the grid for both saved and pending. Kebab visible always (the per-tile × handles cancel during pending, so the kebab no longer needs to be hidden).
 
 **Files:**
+
 - Modify: `apps/mobile/components/notes/PhotoNoteCard.tsx`
 - Modify: `apps/mobile/components/notes/PhotoNoteCard.test.tsx`
 
@@ -1116,12 +1089,9 @@ import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { Attachment } from '@/lib/notes/attachments';
 
 vi.mock('expo-image', () => ({
-  Image: (props: Record<string, unknown>) =>
-    React.createElement('rn-expo-image', props, null),
+  Image: (props: Record<string, unknown>) => React.createElement('rn-expo-image', props, null),
 }));
-vi.mock('react-native-reanimated', async () =>
-  vi.importActual('react-native-reanimated/mock'),
-);
+vi.mock('react-native-reanimated', async () => vi.importActual('react-native-reanimated/mock'));
 
 function pending(over: Partial<Attachment> = {}): Attachment {
   return {
@@ -1306,10 +1276,7 @@ export function PhotoNoteCard({
   onCancelUpload,
 }: PhotoNoteCardProps) {
   const body = entry.text?.trim() ?? '';
-  const attachments = useMemo(
-    () => entry.attachments ?? buildAttachments(entry),
-    [entry],
-  );
+  const attachments = useMemo(() => entry.attachments ?? buildAttachments(entry), [entry]);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   const onLayout = useCallback((ev: LayoutChangeEvent) => {
@@ -1335,10 +1302,7 @@ export function PhotoNoteCard({
         testIDSuffix={sourceIndex}
         trailing={
           onOpenOptions ? (
-            <NoteOptionsKebab
-              noteId={sourceIndex}
-              onPress={() => onOpenOptions(sourceIndex)}
-            />
+            <NoteOptionsKebab noteId={sourceIndex} onPress={() => onOpenOptions(sourceIndex)} />
           ) : null
         }
       />
@@ -1403,6 +1367,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Hook emits a single shape: every entry carries `attachments[]`. Solo-vs-batch is no longer a structural distinction — a 1-element array is just a 1-element grid. The session-lived `noteIdToSyntheticId` map is unchanged; a new attachment-level map (`fileIdToAttachmentKey`) is added so saved tiles inherit synthetic tile keys when the server row lands.
 
 **Files:**
+
 - Modify: `apps/mobile/lib/uploads/usePhotoUploadEntries.ts`
 - Modify: `apps/mobile/lib/uploads/usePhotoUploadEntries.test.tsx`
 
@@ -1551,10 +1516,7 @@ export function usePhotoUploadEntries(
     (listener: () => void) => (queue ? queue.subscribe(listener) : () => {}),
     [queue],
   );
-  const getSnapshot = useCallback(
-    () => (queue ? queue.getJobs() : EMPTY_JOBS),
-    [queue],
-  );
+  const getSnapshot = useCallback(() => (queue ? queue.getJobs() : EMPTY_JOBS), [queue]);
   const jobs = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const noteIdMapRef = useRef<Map<string, string>>(new Map());
@@ -1566,9 +1528,7 @@ export function usePhotoUploadEntries(
     if (reportId) {
       for (const job of jobs) {
         if (job.input.kind !== 'image' || job.input.reportId !== reportId) continue;
-        const syntheticId = job.batchKey
-          ? batchSyntheticId(job.batchKey)
-          : soloSyntheticId(job.id);
+        const syntheticId = job.batchKey ? batchSyntheticId(job.batchKey) : soloSyntheticId(job.id);
         if (job.noteId && noteMap.get(job.noteId) !== syntheticId) {
           noteMap.set(job.noteId, syntheticId);
         }
@@ -1671,6 +1631,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Saved notes are rebuilt to carry an `attachments[]` derived via `buildAttachments`. The pending overlay then remaps each saved entry's `reactKey` (entry-level, existing) **and** every attachment's `key` (new). `photoGallery` is rewritten to iterate attachments.
 
 **Files:**
+
 - Modify: `apps/mobile/features/generate/GenerateReportProvider.tsx`
 - Modify: `apps/mobile/features/generate/GenerateReportProvider.test.tsx` (if it covers timeline merge; otherwise leave)
 
@@ -1729,9 +1690,7 @@ import { buildAttachments } from '@/lib/notes/attachments';
 
 const remappedSaved = savedNotes.map((note) => {
   const attachments = buildAttachments(note).map((att) => {
-    const synthetic = att.fileId
-      ? fileIdToAttachmentKey.get(att.fileId)
-      : undefined;
+    const synthetic = att.fileId ? fileIdToAttachmentKey.get(att.fileId) : undefined;
     return synthetic ? { ...att, key: synthetic } : att;
   });
   const remappedReactKey = noteIdToSyntheticId.get(note.id) ?? note.id;
@@ -1744,13 +1703,9 @@ const remappedSaved = savedNotes.map((note) => {
 
 // existing dedupe: drop pending entries whose noteId now appears in savedNotes
 const savedNoteIds = new Set(savedNotes.map((n) => n.id));
-const survivingPending = pendingEntries.filter(
-  (e) => !e.noteId || !savedNoteIds.has(e.noteId),
-);
+const survivingPending = pendingEntries.filter((e) => !e.noteId || !savedNoteIds.has(e.noteId));
 
-const merged = [...remappedSaved, ...survivingPending].sort(
-  (a, b) => a.addedAt - b.addedAt,
-);
+const merged = [...remappedSaved, ...survivingPending].sort((a, b) => a.addedAt - b.addedAt);
 ```
 
 c) Rewrite `photoGallery` (currently iterates `e.files` then falls back to `e.fileId`) to iterate attachments:
@@ -1808,6 +1763,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 The bottom upload-progress strip is replaced by per-tile state in `PhotoTile`. The component has no external mount sites (verified by grep at plan time).
 
 **Files:**
+
 - Delete: `apps/mobile/components/uploads/UploadQueueStrip.tsx`
 - Delete: `apps/mobile/components/uploads/UploadQueueStrip.test.tsx`
 
@@ -1819,6 +1775,7 @@ Expected: no output. If a consumer surfaces, stop and delete the import there (i
 - [ ] **Step 2: Delete the files**
 
 Run:
+
 ```bash
 git rm apps/mobile/components/uploads/UploadQueueStrip.tsx apps/mobile/components/uploads/UploadQueueStrip.test.tsx
 ```
@@ -1846,6 +1803,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 `ImageNoteCard`, `PhotoNoteRow`, and `ReportPhotos` render saved-only tiles. Each builds a single `Attachment` inline (from its `NoteFile` / equivalent) and renders `PhotoTile`. After all three migrate, `PhotoGridTile` is deleted.
 
 **Files:**
+
 - Modify: `apps/mobile/components/notes/ImageNoteCard.tsx`
 - Modify: `apps/mobile/components/reports/detail/PhotoNoteRow.tsx`
 - Modify: `apps/mobile/components/reports/detail/ReportPhotos.tsx`
@@ -1890,7 +1848,7 @@ import { attachmentFromSavedFile } from '@/lib/notes/attachments';
   attachment={attachmentFromSavedFile(file)}
   size={TILE_SIZE}
   onPress={() => onPressPhoto?.(file)}
-/>
+/>;
 ```
 
 Where `TILE_SIZE` is whatever sizing the card used previously (pass through the existing measurement; don't introduce a new sizing model).
@@ -1908,6 +1866,7 @@ Around line 87, same pattern. Drop the `PhotoGridTile` import.
 - [ ] **Step 5: Delete `PhotoGridTile`**
 
 Run:
+
 ```bash
 git rm apps/mobile/components/notes/PhotoGridTile.tsx
 # Only if a test exists alongside:
@@ -1915,9 +1874,11 @@ git rm -f apps/mobile/components/notes/PhotoGridTile.test.tsx 2>/dev/null || tru
 ```
 
 Verify no stragglers:
+
 ```bash
 grep -R "PhotoGridTile" apps/mobile --include='*.ts' --include='*.tsx'
 ```
+
 Expected: no output.
 
 - [ ] **Step 6: Test + typecheck**
@@ -1946,6 +1907,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 After consumers go through `attachments[]`, the legacy `pendingUpload`, `pendingFiles`, and photo-batch `files` reads on `NoteEntry` are dead. Voice-note fields (`fileId`, `thumbnailFileId`) stay.
 
 **Files:**
+
 - Modify: `apps/mobile/lib/notes/note-entry.ts`
 - Modify: `apps/mobile/lib/notes/savedNoteToEntry.ts` (or wherever `savedNoteToEntry` lives — verify path before editing)
 - Modify: any test fixtures that construct `NoteEntry` literals with these fields
@@ -1953,12 +1915,14 @@ After consumers go through `attachments[]`, the legacy `pendingUpload`, `pending
 - [ ] **Step 1: Find every remaining reader**
 
 Run:
+
 ```bash
 grep -Rn "pendingUpload\|pendingFiles" apps/mobile --include='*.ts' --include='*.tsx'
 grep -Rn "entry\.files\|note\.files\b" apps/mobile --include='*.ts' --include='*.tsx'
 ```
 
 For each hit on the second grep, decide:
+
 - If the file is a **photo** consumer, it must already read `attachments` (migrated in T4/T5/T9). If it still reads `.files`, fix the migration.
 - If it's a **voice / other** consumer touching `note.files` server-side, leave it.
 
@@ -2010,6 +1974,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Architecture + plan docs reflect the new data shape and UX.
 
 **Files:**
+
 - Modify: `docs/v4/arch-batch-photo-notes.md`
 - Modify: `docs/v4/plan-camera-upload-pipeline.md`
 
@@ -2073,6 +2038,7 @@ Expected: bundles without errors.
 Open `docs/superpowers/specs/2026-05-27-photo-upload-pipeline-ui-design.md` side-by-side with this plan. For each spec section / requirement, point to the implementing task. List any gaps and either add a task or amend an existing one.
 
 Verify in particular:
+
 - 3×N grid fits inside the card (no horizontal overflow) — covered by T4's `containerWidth` measurement.
 - Per-tile progress ring renders during upload — T2 + T3.
 - Error overlay with Retry/Cancel — T3.
@@ -2082,6 +2048,7 @@ Verify in particular:
 - [ ] **Step 4: Manual smoke (if a simulator is handy)**
 
 Boot the app against a dev report, pick 1, 4, and 10 photos in three separate batches. Confirm:
+
 - Grid renders inside the card.
 - Each tile shows its own ring.
 - Killing one upload mid-flight surfaces an error overlay with working Retry/Cancel.

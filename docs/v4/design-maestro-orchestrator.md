@@ -1,8 +1,10 @@
 # Maestro orchestrator (`mo`) — design
 
-> **Status:** design only. No code lives in `tools/maestro-orchestrator/`
-> yet — Phase 3a deliverable. Phase 3b will produce the
-> `scripts/maestro/*` inventory this design references.
+> **Status: implemented.** The Python package lives in
+> `tools/maestro-orchestrator/` and exposes `mo`. Use its README for
+> current installation and commands. The design below preserves the
+> original decisions and proposed layout, some of which changed during
+> implementation.
 >
 > **Phase:** P4 hardening tooling. Wraps the journey defined in
 > [`design-maestro-full-regression.md`](design-maestro-full-regression.md).
@@ -22,7 +24,9 @@
 
 One CLI for two hosts (Windows-pwsh + real Android, macOS-zsh + iOS Sim) with no host-specific wrappers. Bash-tool friendly: every subcommand returns control in **< 5 s**, long Maestro work spawned detached with PID + log files (Pitfall windows#12). `mo reset` replaces the hand-rolled `docker exec ... TRUNCATE ...` + `adb shell pm clear ...` sequence (windows#15). `mo doctor` catches ADB-reverse drops, orphan `java`/driver processes, Metro/API down, missing env (the failure modes that burn 20 minutes on step 3). Lives at `tools/maestro-orchestrator/` under `uv` — not in the pnpm workspace, no imports from `packages/*`. Reuses existing `scripts/maestro/*` helpers via shell-out where they do the right thing.
 
-**Not in scope:** Maestro replacement (still shells `maestro test`), CI runner (GitHub Actions still owns `e2e-maestro-regression.yml`), build tool (no EAS, no Metro startup), fixture authoring (stays with `harpa` CLI), partial-journey resume (Pitfall windows#13 — runs always start from a known reset baseline).
+**Not in scope:** Maestro replacement, hosted CI execution, EAS
+distribution, fixture authoring, or partial-journey resume. No hosted
+workflow currently runs the device suite.
 
 ---
 
@@ -103,23 +107,23 @@ mo doctor [--fix] [--platform auto|android|ios] [--json]
 
 Preflight checklist; exits `0` only if every gate is green. Checks run in parallel where possible.
 
-| Check | How | Pitfall |
-|---|---|---|
-| Project root resolves | Walks up from cwd for `pnpm-workspace.yaml`, or honours `HARPA_PROJECT_ROOT` | — |
-| Host platform supported | `platform.system()` ∈ {Windows, Darwin, Linux} | — |
-| `maestro` on PATH | `shutil.which('maestro')` + `maestro --version` | — |
-| Java visible to Maestro | `java -version` | windows#1 |
-| Docker compose stack up | `docker compose ps --format json`, expect `pg`, `api`, `minio` healthy | — |
-| Postgres reachable | `httpx.get` adminer or `pg_isready` via `docker exec` | — |
-| API health | `GET http://localhost:8787/health`, expect 200 | — |
-| Metro health | `GET http://localhost:8081/status`, expect "packager-status:running" | — |
-| `EXPO_PUBLIC_USE_FIXTURES=true` in the running Metro env | `GET http://localhost:8081/symbolicate` smoke or parse `tmp/metro.log` for the line | windows#11 |
-| Device attached | Android: `adb devices` non-empty. iOS: `xcrun simctl list devices booted` non-empty. | — |
-| `MAESTRO_APP_ID` resolvable | From env, or derived from `apps/mobile/app.config.ts` reading `APP_VARIANT` | mac#7 |
-| Android ADB reverses set | `adb -s <serial> reverse --list` includes `tcp:8081`, `tcp:8787`, `tcp:8790`, and `tcp:9000` | **windows#20** |
-| No orphaned `java` from a previous Maestro run | `psutil.process_iter()` filter for `java.*maestro.jar` whose start-time predates current shell session by >5 min | windows#1, #12 |
-| No orphaned `maestro-driver-ios` | Same, by name | mac (general) |
-| iOS LaunchServices approval (best-effort) | If `MAESTRO_APP_ID` scheme is `harpa`, check the simulator's `schemeapproval.plist` exists and contains the entry; advisory only | **mac#1, #6** |
+| Check                                                    | How                                                                                                                              | Pitfall        |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Project root resolves                                    | Walks up from cwd for `pnpm-workspace.yaml`, or honours `HARPA_PROJECT_ROOT`                                                     | —              |
+| Host platform supported                                  | `platform.system()` ∈ {Windows, Darwin, Linux}                                                                                   | —              |
+| `maestro` on PATH                                        | `shutil.which('maestro')` + `maestro --version`                                                                                  | —              |
+| Java visible to Maestro                                  | `java -version`                                                                                                                  | windows#1      |
+| Docker compose stack up                                  | `docker compose ps --format json`, expect `pg`, `api`, `minio` healthy                                                           | —              |
+| Postgres reachable                                       | `httpx.get` adminer or `pg_isready` via `docker exec`                                                                            | —              |
+| API health                                               | `GET http://localhost:8787/health`, expect 200                                                                                   | —              |
+| Metro health                                             | `GET http://localhost:8081/status`, expect "packager-status:running"                                                             | —              |
+| `EXPO_PUBLIC_USE_FIXTURES=true` in the running Metro env | `GET http://localhost:8081/symbolicate` smoke or parse `tmp/metro.log` for the line                                              | windows#11     |
+| Device attached                                          | Android: `adb devices` non-empty. iOS: `xcrun simctl list devices booted` non-empty.                                             | —              |
+| `MAESTRO_APP_ID` resolvable                              | From env, or derived from `apps/mobile/app.config.ts` reading `APP_VARIANT`                                                      | mac#7          |
+| Android ADB reverses set                                 | `adb -s <serial> reverse --list` includes `tcp:8081`, `tcp:8787`, `tcp:8790`, and `tcp:9000`                                     | **windows#20** |
+| No orphaned `java` from a previous Maestro run           | `psutil.process_iter()` filter for `java.*maestro.jar` whose start-time predates current shell session by >5 min                 | windows#1, #12 |
+| No orphaned `maestro-driver-ios`                         | Same, by name                                                                                                                    | mac (general)  |
+| iOS LaunchServices approval (best-effort)                | If `MAESTRO_APP_ID` scheme is `harpa`, check the simulator's `schemeapproval.plist` exists and contains the entry; advisory only | **mac#1, #6**  |
 
 `--fix` auto-remediates: re-establishes dropped `adb reverse tcp:8081`/`8787`/`8790`/`9000` (windows#20); terminates orphan `java -jar maestro.jar` and `maestro-driver-ios` older than 10 min whose PID isn't in `tmp/mo/maestro.pid`.
 
@@ -219,18 +223,18 @@ Detect host once at startup via `platform.system()`, cache in `mo.host.Host` enu
 
 ### 5.1 Decision matrix
 
-| Concern | Windows + Android | macOS + iOS Sim | macOS + Android | Linux + Android |
-|---|---|---|---|---|
-| Device discovery | `adb devices` | `xcrun simctl list devices booted` | `adb devices` | `adb devices` |
-| Pick device | `MAESTRO_DEVICE` env, else first non-`offline` line | `MAESTRO_DEVICE` env, else first booted UDID | same as win | same as win |
-| App reinstall | `adb shell pm clear <id>` | `xcrun simctl uninstall booted <id>` + reinstall from `.app` | `adb shell pm clear` | `adb shell pm clear` |
-| Re-establish networking after device reset | `adb reverse tcp:8081/8787/8790/9000` (Pitfall windows#20) | n/a — simulator shares host loopback | `adb reverse` | `adb reverse` |
-| Orphan process scan | `psutil` filter on `java.exe` cmdline ~ `maestro.jar` | `psutil` filter on `java`, `maestro-driver-ios` | both | `java`, `idb_companion` |
-| Process spawn flags | `CREATE_NEW_PROCESS_GROUP \| DETACHED_PROCESS` | `start_new_session=True` | `start_new_session=True` | `start_new_session=True` |
-| Log file path separators | `pathlib.Path` everywhere; never raw `/` | same | same | same |
-| Symlink for `maestro-latest.log` | Falls back to copy if symlinks unavailable (no admin) | symlink | symlink | symlink |
-| LaunchServices approval check | n/a | `~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/Preferences/com.apple.launchservices.schemeapproval.plist` (read-only; advisory) | n/a | n/a |
-| Pitfall references | windows#1, #12, #15, #17, #18, #19, #20 | mac#1, #6, #7 | both | windows#15 |
+| Concern                                    | Windows + Android                                          | macOS + iOS Sim                                                                                                                                 | macOS + Android          | Linux + Android          |
+| ------------------------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------ |
+| Device discovery                           | `adb devices`                                              | `xcrun simctl list devices booted`                                                                                                              | `adb devices`            | `adb devices`            |
+| Pick device                                | `MAESTRO_DEVICE` env, else first non-`offline` line        | `MAESTRO_DEVICE` env, else first booted UDID                                                                                                    | same as win              | same as win              |
+| App reinstall                              | `adb shell pm clear <id>`                                  | `xcrun simctl uninstall booted <id>` + reinstall from `.app`                                                                                    | `adb shell pm clear`     | `adb shell pm clear`     |
+| Re-establish networking after device reset | `adb reverse tcp:8081/8787/8790/9000` (Pitfall windows#20) | n/a — simulator shares host loopback                                                                                                            | `adb reverse`            | `adb reverse`            |
+| Orphan process scan                        | `psutil` filter on `java.exe` cmdline ~ `maestro.jar`      | `psutil` filter on `java`, `maestro-driver-ios`                                                                                                 | both                     | `java`, `idb_companion`  |
+| Process spawn flags                        | `CREATE_NEW_PROCESS_GROUP \| DETACHED_PROCESS`             | `start_new_session=True`                                                                                                                        | `start_new_session=True` | `start_new_session=True` |
+| Log file path separators                   | `pathlib.Path` everywhere; never raw `/`                   | same                                                                                                                                            | same                     | same                     |
+| Symlink for `maestro-latest.log`           | Falls back to copy if symlinks unavailable (no admin)      | symlink                                                                                                                                         | symlink                  | symlink                  |
+| LaunchServices approval check              | n/a                                                        | `~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/Preferences/com.apple.launchservices.schemeapproval.plist` (read-only; advisory) | n/a                      | n/a                      |
+| Pitfall references                         | windows#1, #12, #15, #17, #18, #19, #20                    | mac#1, #6, #7                                                                                                                                   | both                     | windows#15               |
 
 ### 5.2 Things we deliberately don't do
 
@@ -263,12 +267,12 @@ All under `tmp/` (already `.gitignore`d).
 
 ### 6.2 PID-file lifecycle
 
-| Event | Action |
-|---|---|
-| `mo run` starts | Write `maestro.pid` atomically (write to `.tmp`, then rename). |
+| Event                                 | Action                                                                                                                                                          |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mo run` starts                       | Write `maestro.pid` atomically (write to `.tmp`, then rename).                                                                                                  |
 | `mo run` called while PID-file exists | Check `psutil.pid_exists(pid)` AND `Process.create_time()` ≈ file's recorded `started`. Both match → refuse. PID gone or recycled → delete stale file, proceed. |
-| Maestro exits normally | PID file is **not** auto-cleaned by `mo run` (parent already returned). Next `mo run` clears stale entry. `mo journey --watch` also clears it on observed exit. |
-| `mo kill` | `terminate()`, wait 2 s, then `psutil.Process.kill()`. Deletes PID file. |
+| Maestro exits normally                | PID file is **not** auto-cleaned by `mo run` (parent already returned). Next `mo run` clears stale entry. `mo journey --watch` also clears it on observed exit. |
+| `mo kill`                             | `terminate()`, wait 2 s, then `psutil.Process.kill()`. Deletes PID file.                                                                                        |
 
 ### 6.3 Race handling
 
@@ -346,12 +350,12 @@ Pydantic-validated. Unknown keys warn but don't fail.
 
 ### 8.3 Auto-detection
 
-| Setting | If unset, derive from |
-|---|---|
-| `MAESTRO_APP_ID` | Parse `apps/mobile/app.config.ts` (regex on `bundleIdentifier:`) using `APP_VARIANT` env (default `development` → `com.harpa.pro.dev`). Don't `import`; read as text. |
-| `MAESTRO_DEVICE` | Android: first non-offline from `adb devices`. iOS: first booted UDID from `xcrun simctl list devices booted`. |
-| `HARPA_PROJECT_ROOT` | Walk up from `cwd` for `pnpm-workspace.yaml`. |
-| Platform | `platform.system()`: Darwin → ios, Windows/Linux → android. Overrideable. |
+| Setting              | If unset, derive from                                                                                                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MAESTRO_APP_ID`     | Parse `apps/mobile/app.config.ts` (regex on `bundleIdentifier:`) using `APP_VARIANT` env (default `development` → `com.harpa.pro.dev`). Don't `import`; read as text. |
+| `MAESTRO_DEVICE`     | Android: first non-offline from `adb devices`. iOS: first booted UDID from `xcrun simctl list devices booted`.                                                        |
+| `HARPA_PROJECT_ROOT` | Walk up from `cwd` for `pnpm-workspace.yaml`.                                                                                                                         |
+| Platform             | `platform.system()`: Darwin → ios, Windows/Linux → android. Overrideable.                                                                                             |
 
 If multiple devices and `MAESTRO_DEVICE` unset, `mo doctor` fails with "set MAESTRO_DEVICE or pass --device" rather than guess.
 
@@ -361,17 +365,17 @@ If multiple devices and `MAESTRO_DEVICE` unset, `mo doctor` fails with "set MAES
 
 ### 9.1 Unit tests (pytest)
 
-| Module | Tests | How |
-|---|---|---|
-| `config` | Three-tier resolution, config-file parsing, autodiscovery walk | Monkeypatch env + `Path.cwd`; fixture files |
-| `host` | Platform detection branches | Monkeypatch `platform.system()` |
-| `procs` | Stale-PID detection, file-locking, terminate-with-grace | Spawn `python -c "time.sleep(30)"` |
-| `logs` | Latest-log resolution, rotation cap, byte-correct `--tail` | Synthesise `runs/` dir with fake mtimes/sizes |
-| `reset` | SQL composition, command argv | Don't run docker; assert `subprocess.run` args |
-| `doctor` | Each check in isolation | `pytest-mock` for subprocess + httpx |
-| `devices.android` | `adb` argv, parsing of `adb devices` / `reverse --list` | Canned output fixtures |
-| `devices.ios` | `xcrun simctl` argv, JSON output parsing | Canned `simctl list -j` fixtures |
-| CLI surface | `mo --help`, exit codes for malformed input | `typer.testing.CliRunner` |
+| Module            | Tests                                                          | How                                            |
+| ----------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| `config`          | Three-tier resolution, config-file parsing, autodiscovery walk | Monkeypatch env + `Path.cwd`; fixture files    |
+| `host`            | Platform detection branches                                    | Monkeypatch `platform.system()`                |
+| `procs`           | Stale-PID detection, file-locking, terminate-with-grace        | Spawn `python -c "time.sleep(30)"`             |
+| `logs`            | Latest-log resolution, rotation cap, byte-correct `--tail`     | Synthesise `runs/` dir with fake mtimes/sizes  |
+| `reset`           | SQL composition, command argv                                  | Don't run docker; assert `subprocess.run` args |
+| `doctor`          | Each check in isolation                                        | `pytest-mock` for subprocess + httpx           |
+| `devices.android` | `adb` argv, parsing of `adb devices` / `reverse --list`        | Canned output fixtures                         |
+| `devices.ios`     | `xcrun simctl` argv, JSON output parsing                       | Canned `simctl list -j` fixtures               |
+| CLI surface       | `mo --help`, exit codes for malformed input                    | `typer.testing.CliRunner`                      |
 
 Target: **≥ 80% line coverage** on `src/mo/`. Shell-out boundaries mocked; only `_shell.py` runs `python --version` for real.
 
@@ -394,14 +398,14 @@ Matrix: `{ os: [ubuntu-latest, macos-14, windows-latest], python: ["3.11", "3.12
 
 ### 10.1 Replaces
 
-| Existing | Replaced by | When |
-|---|---|---|
-| `scripts/maestro/reset-db.sh` | `mo reset --seed legacy` (preserves Alice/Bob seed for `p3-report-wiring.yaml`); plain `mo reset` for the modern journey | Phase 3c |
-| Hand-typed `docker exec … TRUNCATE …` | `mo reset` | 3c |
-| Hand-typed `adb -s … shell pm clear …` | `mo reset` | 3c |
-| Hand-typed `adb -s … reverse tcp:8081 …` × 2 | `mo reset` (always) + `mo doctor --fix` | 3c |
-| Hand-typed `Start-Process maestro -ArgumentList "test …" … > tmp/maestro-jX.log` | `mo run` | 3c |
-| `Get-Process java`, `Get-Content -Tail`, ad-hoc `taskkill` | `mo logs`, `mo kill` | 3c |
+| Existing                                                                         | Replaced by                                                                                                              | When     |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------- |
+| `scripts/maestro/reset-db.sh`                                                    | `mo reset --seed legacy` (preserves Alice/Bob seed for `p3-report-wiring.yaml`); plain `mo reset` for the modern journey | Phase 3c |
+| Hand-typed `docker exec … TRUNCATE …`                                            | `mo reset`                                                                                                               | 3c       |
+| Hand-typed `adb -s … shell pm clear …`                                           | `mo reset`                                                                                                               | 3c       |
+| Hand-typed `adb -s … reverse tcp:8081 …` × 2                                     | `mo reset` (always) + `mo doctor --fix`                                                                                  | 3c       |
+| Hand-typed `Start-Process maestro -ArgumentList "test …" … > tmp/maestro-jX.log` | `mo run`                                                                                                                 | 3c       |
+| `Get-Process java`, `Get-Content -Tail`, ad-hoc `taskkill`                       | `mo logs`, `mo kill`                                                                                                     | 3c       |
 
 ### 10.2 Unchanged
 
@@ -441,12 +445,12 @@ Matrix: `{ os: [ubuntu-latest, macos-14, windows-latest], python: ["3.11", "3.12
 
 ## Appendix: Existing helper inventory
 
-Snapshot from `test/e2e-maestro-coverage` (Phase 3b). *Dispositions are recommendations — final calls happen as each subcommand lands.*
+Snapshot from `test/e2e-maestro-coverage` (Phase 3b). _Dispositions are recommendations — final calls happen as each subcommand lands._
 
 ### `scripts/maestro/`
 
-| File | Purpose | Called by | Disposition |
-|---|---|---|---|
+| File          | Purpose                                                                                                                                                                                                                                                                                                               | Called by                                                                                                                                           | Disposition                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `reset-db.sh` | `docker exec` -> TRUNCATE all `app.*` + better-auth `public."user"/"session"/"account"/"verification"` tables on `harpa-pro-pg`, then re-INSERT seeded `test@harpapro.com` (with seeded project + draft report + 1 text note) and `test2@harpapro.com`, then run `db:seed-test-account` to create credential accounts | `.maestro/core-end-to-end.yaml`, `.maestro/legacy/*`, `.maestro/pending/*`, `README.md`, `pitfalls-windows#15` (inlined as raw `docker exec` there) | **absorb into `mo reset`** as default + `--seed legacy` variant; keep file until all callers migrated, delete in 3c |
 
 The dir contains **only** `reset-db.sh`. Notably:
@@ -456,99 +460,99 @@ The dir contains **only** `reset-db.sh`. Notably:
 
 ### `scripts/` (E2E-adjacent, top level)
 
-| File | Purpose | Called by | Disposition |
-|---|---|---|---|
-| `check-maestro-testids.sh` | Greps every `id:` token in `.maestro/modules/`, `.maestro/helpers/`, and `regression-journey.yaml` against `apps/mobile/**/*.{ts,tsx}`. Honours `KNOWN_TEMPLATE_IDS` allowlist for template-resolved IDs (`picker-member-role-editor/viewer`). Treats `*.` and `${` as prefix-match. Exits 1 on miss. | `.github/workflows/e2e-maestro-testid-gate.yml` (PR + push to dev/main, gated on `apps/mobile/` changes) | **keep, called by `mo`** — wire into `mo doctor` and pre-`mo run` check. CI workflow stays the source of truth. |
-| `check-maestro-appid.sh` | Greps `.maestro/**/*.yaml` for the literal `com.harpa.pro`, fails if found. Enforces use of `${MAESTRO_APP_ID}`. | root `package.json` → `lint` script (chained via `&&`) | **keep standalone** — pure lint, not orchestrator-shaped. `mo run` still sets `MAESTRO_APP_ID` correctly from the build variant. |
-| `check-no-maestro-point-taps.sh` | Greps `.maestro/**/*.yaml` / `.yml` for `point:` keys, fails if found. Enforces semantic taps by text, accessibility labels, or testIDs instead of device-dependent coordinates. | root `package.json` → `lint` script (chained via `&&`); self-tested by `scripts/ci/__tests__/check-no-maestro-point-taps.test.sh` | **keep standalone** — pure lint. `mo run` should inherit the same rule before launching device flows. |
+| File                             | Purpose                                                                                                                                                                                                                                                                                               | Called by                                                                                                                         | Disposition                                                                                                                      |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `check-maestro-testids.sh`       | Greps every `id:` token in `.maestro/modules/`, `.maestro/helpers/`, and `regression-journey.yaml` against `apps/mobile/**/*.{ts,tsx}`. Honours `KNOWN_TEMPLATE_IDS` allowlist for template-resolved IDs (`picker-member-role-editor/viewer`). Treats `*.` and `${` as prefix-match. Exits 1 on miss. | `.github/workflows/e2e-maestro-testid-gate.yml` (PR + push to dev/main, gated on `apps/mobile/` changes)                          | **keep, called by `mo`** — wire into `mo doctor` and pre-`mo run` check. CI workflow stays the source of truth.                  |
+| `check-maestro-appid.sh`         | Greps `.maestro/**/*.yaml` for the literal `com.harpa.pro`, fails if found. Enforces use of `${MAESTRO_APP_ID}`.                                                                                                                                                                                      | root `package.json` → `lint` script (chained via `&&`)                                                                            | **keep standalone** — pure lint, not orchestrator-shaped. `mo run` still sets `MAESTRO_APP_ID` correctly from the build variant. |
+| `check-no-maestro-point-taps.sh` | Greps `.maestro/**/*.yaml` / `.yml` for `point:` keys, fails if found. Enforces semantic taps by text, accessibility labels, or testIDs instead of device-dependent coordinates.                                                                                                                      | root `package.json` → `lint` script (chained via `&&`); self-tested by `scripts/ci/__tests__/check-no-maestro-point-taps.test.sh` | **keep standalone** — pure lint. `mo run` should inherit the same rule before launching device flows.                            |
 
 No other top-level scripts are Maestro/E2E/device related.
 
 ### `.maestro/` (top-level configs only)
 
-| File | Purpose | Disposition |
-|---|---|---|
-| `regression-journey.yaml` | Orchestrator flow: modules 01 → 17, voice/photo/generate-finalize/report-debug/project-delete/profile/account/usage/sign-out. | **target of `mo journey full`** — input config unchanged |
-| `core-end-to-end.yaml` | Older P3-exit-gate single-file journey. Depends on `reset-db.sh` (seeded Bob for invite). | **target of `mo journey legacy`** or `mo run core-end-to-end` |
-| `modules/15-usage.yaml` | Normal-regression usage screen and free-plan limits-card coverage, replacing the old P3.14a standalone flow. | **target of `mo journey full`** |
-| `pending/usage-limit-dialog.yaml` | Placeholder — requires non-existent `reset-db.sh --seed-at-limit`. | **needs `mo reset --seed at-limit`** before runnable |
-| `pending/usage-near-limit-toast.yaml` | Placeholder — depends on near-limit toast UI + a `report_generate` cap seed. | **blocked on UI + seed** — out of scope for `mo` initial cut |
-| `legacy/p3-15-voice-record.yaml` | Legacy seeded voice flow, superseded by module 09. | **historical debugging only** |
-| `legacy/p3-15-upload.yaml` | Legacy seeded photo flow, superseded by modules 10a/10b/10c. | **historical debugging only** |
-| `README.md` | Documents `MAESTRO_APP_ID`, setup, run commands, iOS sim quirks (gtimeout + handle orphan `maestro-driver-ios` PIDs). | **edit in 3c** to point at `mo` |
+| File                                  | Purpose                                                                                                                       | Disposition                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `regression-journey.yaml`             | Orchestrator flow: modules 01 → 17, voice/photo/generate-finalize/report-debug/project-delete/profile/account/usage/sign-out. | **target of `mo journey full`** — input config unchanged      |
+| `core-end-to-end.yaml`                | Older P3-exit-gate single-file journey. Depends on `reset-db.sh` (seeded Bob for invite).                                     | **target of `mo journey legacy`** or `mo run core-end-to-end` |
+| `modules/15-usage.yaml`               | Normal-regression usage screen and free-plan limits-card coverage, replacing the old P3.14a standalone flow.                  | **target of `mo journey full`**                               |
+| `pending/usage-limit-dialog.yaml`     | Placeholder — requires non-existent `reset-db.sh --seed-at-limit`.                                                            | **needs `mo reset --seed at-limit`** before runnable          |
+| `pending/usage-near-limit-toast.yaml` | Placeholder — depends on near-limit toast UI + a `report_generate` cap seed.                                                  | **blocked on UI + seed** — out of scope for `mo` initial cut  |
+| `legacy/p3-15-voice-record.yaml`      | Legacy seeded voice flow, superseded by module 09.                                                                            | **historical debugging only**                                 |
+| `legacy/p3-15-upload.yaml`            | Legacy seeded photo flow, superseded by modules 10a/10b/10c.                                                                  | **historical debugging only**                                 |
+| `README.md`                           | Documents `MAESTRO_APP_ID`, setup, run commands, iOS sim quirks (gtimeout + handle orphan `maestro-driver-ios` PIDs).         | **edit in 3c** to point at `mo`                               |
 
 `.maestro/modules/` (17 files) and `.maestro/helpers/` (5 files: `sign-in`, `sign-out`, `pick-country-us`, `dismiss-open-dialog`, `open-project`) are flow content, untouched by `mo`.
 
 ### Root `package.json` scripts (E2E-relevant)
 
-| Script | Command | Disposition |
-|---|---|---|
-| `lint` | `turbo run lint && bash scripts/check-no-supabase.sh && … && bash scripts/check-maestro-appid.sh && bash scripts/check-no-maestro-point-taps.sh && …` | keep — Maestro app-id and no-point-tap checks chained in |
-| `android` | `expo run:android` | keep — `mo run` will not own native builds |
-| `ios` | `expo run:ios` | keep — same |
+| Script    | Command                                                                                                                                               | Disposition                                              |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `lint`    | `turbo run lint && bash scripts/check-no-supabase.sh && … && bash scripts/check-maestro-appid.sh && bash scripts/check-no-maestro-point-taps.sh && …` | keep — Maestro app-id and no-point-tap checks chained in |
+| `android` | `expo run:android`                                                                                                                                    | keep — `mo run` will not own native builds               |
+| `ios`     | `expo run:ios`                                                                                                                                        | keep — same                                              |
 
 No `maestro:*` / `e2e:*` entries at root. **Gap:** no `pnpm` entry to launch Maestro — every invocation is hand-typed. `mo run` becomes the canonical entry; we may add root alias `"maestro": "mo"` once installed.
 
 ### `apps/mobile/package.json` (E2E-relevant)
 
-| Script | Command | Disposition |
-|---|---|---|
-| `ios:mock` | `EXPO_PUBLIC_USE_FIXTURES=true expo run:ios` | keep — `mo` orchestrates Maestro, not native rebuilds |
-| `bundle:smoke` | `bash scripts/bundle-smoke.sh` | unrelated to Maestro, keep |
+| Script         | Command                                      | Disposition                                           |
+| -------------- | -------------------------------------------- | ----------------------------------------------------- |
+| `ios:mock`     | `EXPO_PUBLIC_USE_FIXTURES=true expo run:ios` | keep — `mo` orchestrates Maestro, not native rebuilds |
+| `bundle:smoke` | `bash scripts/bundle-smoke.sh`               | unrelated to Maestro, keep                            |
 
 ### `docker-compose.yml` (DB-reset surface)
 
-| Service | Role for E2E |
-|---|---|
-| `pg` (Postgres 16, `harpa-pro-pg`, host `:5433`) | Target of `reset-db.sh`. `mo reset` needs the container name `harpa-pro-pg` and the same `psql -U postgres -d harpa` invocation. |
-| `migrate` | One-shot drizzle migration runner; `mo reset` after `compose down -v` must wait for `migrate` to exit cleanly. |
-| `api` | Hono fixture-mode API on `:8787`. `DISABLE_RATE_LIMIT=1` set here so the regression journey can sign Alice/Bob in/out repeatedly. `mo doctor` should verify the API responds and that this env var is set. |
-| `minio` + `minio-init` | R2-compatible storage on `:9000` / console `:9001`; bucket `harpa-pro` created by `minio-init`. `mo doctor` should curl `:9000/minio/health/live` and confirm bucket exists. |
-| `adminer` | Browser SQL UI on `:8080`. Not used by E2E directly. |
+| Service                                          | Role for E2E                                                                                                                                                                                               |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pg` (Postgres 16, `harpa-pro-pg`, host `:5433`) | Target of `reset-db.sh`. `mo reset` needs the container name `harpa-pro-pg` and the same `psql -U postgres -d harpa` invocation.                                                                           |
+| `migrate`                                        | One-shot drizzle migration runner; `mo reset` after `compose down -v` must wait for `migrate` to exit cleanly.                                                                                             |
+| `api`                                            | Hono fixture-mode API on `:8787`. `DISABLE_RATE_LIMIT=1` set here so the regression journey can sign Alice/Bob in/out repeatedly. `mo doctor` should verify the API responds and that this env var is set. |
+| `minio` + `minio-init`                           | R2-compatible storage on `:9000` / console `:9001`; bucket `harpa-pro` created by `minio-init`. `mo doctor` should curl `:9000/minio/health/live` and confirm bucket exists.                               |
+| `adminer`                                        | Browser SQL UI on `:8080`. Not used by E2E directly.                                                                                                                                                       |
 
 ### `apps/mobile/app.config.ts` — bundle ID
 
-| `APP_VARIANT` | App name | Bundle ID (iOS + Android `package`) |
-|---|---|---|
-| `production` | `Harpa Pro` | `com.harpa.pro` |
-| `preview` | `Harpa Pro Dev` | `com.harpa.pro.dev` |
-| `development` (default) | `Harpa Pro Dev` | `com.harpa.pro.dev` |
+| `APP_VARIANT`           | App name        | Bundle ID (iOS + Android `package`) |
+| ----------------------- | --------------- | ----------------------------------- |
+| `production`            | `Harpa Pro`     | `com.harpa.pro`                     |
+| `preview`               | `Harpa Pro Dev` | `com.harpa.pro.dev`                 |
+| `development` (default) | `Harpa Pro Dev` | `com.harpa.pro.dev`                 |
 
 `mo run` resolves `MAESTRO_APP_ID` from `APP_VARIANT` using this table (or explicit `--variant`, defaulting to `development` → `com.harpa.pro.dev`).
 
 ### `.github/workflows/` (Maestro-relevant)
 
-| File | Trigger | What it runs |
-|---|---|---|
+| File                          | Trigger                                                                                                             | What it runs                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `e2e-maestro-testid-gate.yml` | `pull_request` + push to `dev`/`main`; `./.github/actions/changed-paths` skips when `apps/mobile/` unchanged on PRs | `bash scripts/check-maestro-testids.sh` only |
 
 No workflow currently runs Maestro itself. A future `e2e-maestro-run.yml` (Mac runner) would call `mo run` directly.
 
 ### Git hooks
 
-| Hook | E2E-relevant lines |
-|---|---|
+| Hook              | E2E-relevant lines                                                                                                                                                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.husky/pre-push` | `pnpm lint` (chains `check-maestro-appid.sh` and `check-no-maestro-point-taps.sh`); `pnpm typecheck`; `pnpm test`; fixture-hash check; `db:check`; `check-secrets.sh` (skippable via `SKIP_SECRET_CHECK=1` — pitfall-windows#18). **Does not run Maestro.** |
 
 ### Pitfalls → `mo` subcommand mapping
 
-| Snippet (paraphrased) | Pitfall | Subsumed by |
-|---|---|---|
-| `docker exec -i harpa-pro-pg psql ... TRUNCATE app.* public."user"/"session"/"account"/"verification" RESTART IDENTITY CASCADE` | win-15 | `mo reset` |
-| `adb -s <serial> shell pm clear com.harpa.pro.dev` | win-15 | `mo reset` (Android) |
-| `adb -s <serial> reverse tcp:8081 tcp:8081 && … tcp:8787 tcp:8787 && tcp:8790 tcp:8790 && tcp:9000 tcp:9000` | win-20 | `mo doctor` + `mo run` precondition |
-| `adb -s <serial> reverse --list` | win-20 | `mo doctor` |
-| Loop terminating leftover `maestro-driver-ios` processes | mac-README + win-runbook | `mo kill` |
-| `gtimeout 240s maestro test …` wrapper loop | README + win-12 | `mo run --retries N --timeout 240` |
-| Redirect `… > tmp/maestro-jX.log 2> tmp/maestro-jX.err.log` + poll `Get-Content -Tail 50` | win-1, win-12 | `mo run` (managed log files) + `mo logs --tail` |
-| `Get-Process java` (alive check) | win-1 | `mo run` (managed PID + status) |
-| `git checkout -- .` (clean CRLF phantoms before rebase) | win-19 | out of scope (general git hygiene) |
-| `xcrun simctl privacy booted grant {microphone,camera} $MAESTRO_APP_ID` | README setup | `mo doctor --fix` (iOS) |
-| `/usr/libexec/PlistBuddy … schemeapproval.plist add … harpa string com.harpa.pro.dev` | mac-1 (better solution) | `mo doctor --fix` (iOS, Mac-only branch) |
-| `xcrun simctl erase` (re-trigger Open-in dialog) | mac-6 | `mo reset --hard` (iOS) |
-| `MAESTRO_APP_ID=com.harpa.pro.dev maestro test …` | mac-7 | `mo run` (auto-resolved from variant) |
-| `docker compose down -v && docker compose up -d` (fresh DB) | regression-journey.yaml pre-condition | `mo reset --hard` |
-| `simctl uninstall` (companion to clearState) | mac-6 | `mo reset` (iOS) |
+| Snippet (paraphrased)                                                                                                           | Pitfall                               | Subsumed by                                     |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------- |
+| `docker exec -i harpa-pro-pg psql ... TRUNCATE app.* public."user"/"session"/"account"/"verification" RESTART IDENTITY CASCADE` | win-15                                | `mo reset`                                      |
+| `adb -s <serial> shell pm clear com.harpa.pro.dev`                                                                              | win-15                                | `mo reset` (Android)                            |
+| `adb -s <serial> reverse tcp:8081 tcp:8081 && … tcp:8787 tcp:8787 && tcp:8790 tcp:8790 && tcp:9000 tcp:9000`                    | win-20                                | `mo doctor` + `mo run` precondition             |
+| `adb -s <serial> reverse --list`                                                                                                | win-20                                | `mo doctor`                                     |
+| Loop terminating leftover `maestro-driver-ios` processes                                                                        | mac-README + win-runbook              | `mo kill`                                       |
+| `gtimeout 240s maestro test …` wrapper loop                                                                                     | README + win-12                       | `mo run --retries N --timeout 240`              |
+| Redirect `… > tmp/maestro-jX.log 2> tmp/maestro-jX.err.log` + poll `Get-Content -Tail 50`                                       | win-1, win-12                         | `mo run` (managed log files) + `mo logs --tail` |
+| `Get-Process java` (alive check)                                                                                                | win-1                                 | `mo run` (managed PID + status)                 |
+| `git checkout -- .` (clean CRLF phantoms before rebase)                                                                         | win-19                                | out of scope (general git hygiene)              |
+| `xcrun simctl privacy booted grant {microphone,camera} $MAESTRO_APP_ID`                                                         | README setup                          | `mo doctor --fix` (iOS)                         |
+| `/usr/libexec/PlistBuddy … schemeapproval.plist add … harpa string com.harpa.pro.dev`                                           | mac-1 (better solution)               | `mo doctor --fix` (iOS, Mac-only branch)        |
+| `xcrun simctl erase` (re-trigger Open-in dialog)                                                                                | mac-6                                 | `mo reset --hard` (iOS)                         |
+| `MAESTRO_APP_ID=com.harpa.pro.dev maestro test …`                                                                               | mac-7                                 | `mo run` (auto-resolved from variant)           |
+| `docker compose down -v && docker compose up -d` (fresh DB)                                                                     | regression-journey.yaml pre-condition | `mo reset --hard`                               |
+| `simctl uninstall` (companion to clearState)                                                                                    | mac-6                                 | `mo reset` (iOS)                                |
 
 ### Notable findings
 

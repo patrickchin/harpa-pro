@@ -1,6 +1,7 @@
 # Design — Admin service monitoring
 
-**Status:** Approved for implementation by the 2026-08-04 request
+**Status:** Implemented on `dev`; not yet promoted to production as of
+2026-08-04.
 
 ## Goal
 
@@ -10,10 +11,11 @@ console without maintaining a separate bookmark collection.
 
 ## First cut
 
-Publish `https://admin.harpapro.com/operations` and link it from the existing
-business-activity page. The page uses the existing dedicated administrator
-session. A direct unauthenticated visit exposes no service links and points the
-operator to the established sign-in flow at `/`.
+The `apps/admin` workspace contains `/operations` and links it from the
+business-activity page. The page uses the dedicated administrator session. A
+direct unauthenticated visit exposes no service links and points the operator
+to the established sign-in flow at `/`. Production returns 404 until the
+change is promoted from `dev`.
 
 The page performs two explicit, manually refreshable checks:
 

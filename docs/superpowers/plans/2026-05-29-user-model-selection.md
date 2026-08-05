@@ -1,5 +1,9 @@
 # User Model Selection Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Wire the mobile model picker to actually drive `/reports/.../generate` and `/voice/summarize` via the existing `app.user_settings` row, replace the broken catalogue (Kimi IDs that don't exist on our account, deprecated 4o) with a single-vendor GPT-4.1 family, and bump the live-mode default from `gpt-4o`/`gpt-4o-mini` to `gpt-4.1-mini`.
@@ -14,19 +18,19 @@
 
 ## File Structure
 
-| File | Responsibility |
-| --- | --- |
-| `packages/api-contract/src/schemas/settings.ts` | `AI_MODELS` whitelist (single source of truth for vendor + model IDs + picker metadata); nullable `aiSettings` shape; vendor/model pair validator |
-| `packages/api/src/services/settings.ts` | `getAiSettings` returns `{vendor: null, model: null}` when row absent (no DEFAULTS fallback); `updateAiSettings` validates patch against `AI_MODELS`; clears row on `{vendor: null, model: null}` |
-| `packages/api/src/services/ai.ts` | New `LIVE_DEFAULT_MODELS = { report: 'gpt-4.1-mini', summarize: 'gpt-4.1-mini' }`; `generateReport` and `summarize` accept `userVendor`/`userModel`; live mode picks user value or live default; replay still pins canonical |
-| `packages/api/src/routes/reports.ts` | Pass `settings.model` (in addition to `settings.vendor`) into `generateReport` |
-| `packages/api/src/routes/voice.ts` | Fetch `getAiSettings`, pass `vendor`/`model` into `aiSummarize` |
-| `apps/mobile/lib/ai/useAiProvider.ts` | TanStack Query against `/settings/ai`; expose `selection` (server state) + `setSelection`; "Default" entry maps to `{vendor: null, model: null}`; AsyncStorage code deleted |
-| `apps/mobile/app/(app)/developer.tsx` | Adapt to new hook API (no `provider`/`model` strings — `selection` object); render picker rows from imported `AI_MODELS` |
-| `packages/api/src/__tests__/settings.integration.test.ts` | Update existing tests for new shape (nulls) + new whitelist (drop kimi tests, add 4.1 family) |
-| `packages/api/src/__tests__/reports.integration.test.ts` | Add: assert `generateReport` receives user-picked model in live mode (via stub) |
-| `packages/api/src/__tests__/live/reportGeneration.live.test.ts` | Add 4th scenario: user_settings = `{openai, gpt-4.1-nano}` → `result.model === 'gpt-4.1-nano'` (default-wiring per AGENTS.md pitfall #13) |
-| `apps/mobile/lib/ai/useAiProvider.test.tsx` | Rewrite for server-backed source |
+| File                                                            | Responsibility                                                                                                                                                                                                               |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/api-contract/src/schemas/settings.ts`                 | `AI_MODELS` whitelist (single source of truth for vendor + model IDs + picker metadata); nullable `aiSettings` shape; vendor/model pair validator                                                                            |
+| `packages/api/src/services/settings.ts`                         | `getAiSettings` returns `{vendor: null, model: null}` when row absent (no DEFAULTS fallback); `updateAiSettings` validates patch against `AI_MODELS`; clears row on `{vendor: null, model: null}`                            |
+| `packages/api/src/services/ai.ts`                               | New `LIVE_DEFAULT_MODELS = { report: 'gpt-4.1-mini', summarize: 'gpt-4.1-mini' }`; `generateReport` and `summarize` accept `userVendor`/`userModel`; live mode picks user value or live default; replay still pins canonical |
+| `packages/api/src/routes/reports.ts`                            | Pass `settings.model` (in addition to `settings.vendor`) into `generateReport`                                                                                                                                               |
+| `packages/api/src/routes/voice.ts`                              | Fetch `getAiSettings`, pass `vendor`/`model` into `aiSummarize`                                                                                                                                                              |
+| `apps/mobile/lib/ai/useAiProvider.ts`                           | TanStack Query against `/settings/ai`; expose `selection` (server state) + `setSelection`; "Default" entry maps to `{vendor: null, model: null}`; AsyncStorage code deleted                                                  |
+| `apps/mobile/app/(app)/developer.tsx`                           | Adapt to new hook API (no `provider`/`model` strings — `selection` object); render picker rows from imported `AI_MODELS`                                                                                                     |
+| `packages/api/src/__tests__/settings.integration.test.ts`       | Update existing tests for new shape (nulls) + new whitelist (drop kimi tests, add 4.1 family)                                                                                                                                |
+| `packages/api/src/__tests__/reports.integration.test.ts`        | Add: assert `generateReport` receives user-picked model in live mode (via stub)                                                                                                                                              |
+| `packages/api/src/__tests__/live/reportGeneration.live.test.ts` | Add 4th scenario: user_settings = `{openai, gpt-4.1-nano}` → `result.model === 'gpt-4.1-nano'` (default-wiring per AGENTS.md pitfall #13)                                                                                    |
+| `apps/mobile/lib/ai/useAiProvider.test.tsx`                     | Rewrite for server-backed source                                                                                                                                                                                             |
 
 ---
 
@@ -56,6 +60,7 @@ Expected: green. If anything fails here, stop — fix the baseline before contin
 ## Task 1: Add `AI_MODELS` whitelist to the contract
 
 **Files:**
+
 - Modify: `packages/api-contract/src/schemas/settings.ts`
 - Test: `packages/api-contract/src/__tests__/settings.test.ts` (NEW)
 
@@ -77,11 +82,7 @@ import {
 describe('AI_MODELS', () => {
   it('lists only openai with the GPT-4.1 family', () => {
     expect(Object.keys(AI_MODELS)).toEqual(['openai']);
-    expect(AI_MODELS.openai.map((m) => m.id)).toEqual([
-      'gpt-4.1-nano',
-      'gpt-4.1-mini',
-      'gpt-4.1',
-    ]);
+    expect(AI_MODELS.openai.map((m) => m.id)).toEqual(['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1']);
   });
 
   it('every entry has tagline + latencyMs + costPerReport', () => {
@@ -272,6 +273,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 2: Settings service returns nulls + validates
 
 **Files:**
+
 - Modify: `packages/api/src/services/settings.ts`
 - Test: `packages/api/src/__tests__/settings.integration.test.ts` (modify existing)
 
@@ -467,6 +469,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3: AI service accepts user pick + live default
 
 **Files:**
+
 - Modify: `packages/api/src/services/ai.ts`
 
 Add `LIVE_DEFAULT_MODELS` (gpt-4.1-mini for both ops). Wire `userVendor`/`userModel` through `generateReport` and `summarize`. Replay still pins `FIXTURE_CANONICALS` (so existing fixtures keep working — no re-record).
@@ -524,17 +527,15 @@ export async function summarize(input: SummarizeInput): Promise<SummarizeOutput>
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     FIXTURE_CANONICALS.summarize.defaultScenario;
-  const fixtureName =
-    input.fixtureName ?? FIXTURE_CANONICALS.summarize.name(scenario);
+  const fixtureName = input.fixtureName ?? FIXTURE_CANONICALS.summarize.name(scenario);
 
   // Replay must use canonicals so the recorded hash matches.
   // Live: user pick > caller default > live default.
   const vendor: Vendor =
     mode === 'replay'
       ? FIXTURE_CANONICALS.summarize.vendor
-      : input.userVendor ?? input.vendor ?? LIVE_DEFAULT_MODELS.summarize.vendor;
-  const liveModel =
-    input.userModel ?? input.model ?? LIVE_DEFAULT_MODELS.summarize.model;
+      : (input.userVendor ?? input.vendor ?? LIVE_DEFAULT_MODELS.summarize.vendor);
+  const liveModel = input.userModel ?? input.model ?? LIVE_DEFAULT_MODELS.summarize.model;
   const canonicalModel = FIXTURE_CANONICALS.summarize.model;
   const req =
     mode === 'replay'
@@ -580,24 +581,21 @@ Find the `GenerateReportInput` interface (around line 410-438). Add these fields
 In `generateReport()` (around line 465-490), replace the `providerVendor` / `canonicalModel` block with:
 
 ```ts
-  const canonicals = FIXTURE_CANONICALS.report;
-  const isUpdate = input.existingBody != null;
-  const mode = pickMode(input.fixtureName);
-  const scenario =
-    (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
-    canonicals.defaultScenario;
-  const fixtureName = input.fixtureName ?? canonicals.name(scenario);
+const canonicals = FIXTURE_CANONICALS.report;
+const isUpdate = input.existingBody != null;
+const mode = pickMode(input.fixtureName);
+const scenario =
+  (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ?? canonicals.defaultScenario;
+const fixtureName = input.fixtureName ?? canonicals.name(scenario);
 
-  // Replay pins canonicals (vendor + model) so the recorded hash
-  // matches. Live picks: user override > LIVE_DEFAULT_MODELS.
-  // The legacy `input.vendor` field remains accepted but is ignored
-  // for routing — it never affected anything in replay and is shadowed
-  // by the user pick path in live mode.
-  const providerVendor: Vendor =
-    mode === 'replay'
-      ? canonicals.vendor
-      : input.userVendor ?? LIVE_DEFAULT_MODELS.report.vendor;
-  const liveModel = input.userModel ?? LIVE_DEFAULT_MODELS.report.model;
+// Replay pins canonicals (vendor + model) so the recorded hash
+// matches. Live picks: user override > LIVE_DEFAULT_MODELS.
+// The legacy `input.vendor` field remains accepted but is ignored
+// for routing — it never affected anything in replay and is shadowed
+// by the user pick path in live mode.
+const providerVendor: Vendor =
+  mode === 'replay' ? canonicals.vendor : (input.userVendor ?? LIVE_DEFAULT_MODELS.report.vendor);
+const liveModel = input.userModel ?? LIVE_DEFAULT_MODELS.report.model;
 ```
 
 - [ ] **Step 7: Update the `req` object inside `generateReport()` to use `liveModel`**
@@ -607,20 +605,20 @@ Find the `const req = mode === 'replay' ? { ... } : { ... }` block (around line 
 The block should read:
 
 ```ts
-  const req =
-    mode === 'replay'
-      ? {
-          model: canonicals.model,
-          systemPrompt: canonicals.systemPrompt,
-          userPrompt: canonicals.userPrompt(scenario),
-          responseFormat: 'json_object' as const,
-        }
-      : {
-          model: liveModel,
-          systemPrompt: liveSystemPrompt,
-          userPrompt: liveUserPrompt,
-          responseFormat: 'json_object' as const,
-        };
+const req =
+  mode === 'replay'
+    ? {
+        model: canonicals.model,
+        systemPrompt: canonicals.systemPrompt,
+        userPrompt: canonicals.userPrompt(scenario),
+        responseFormat: 'json_object' as const,
+      }
+    : {
+        model: liveModel,
+        systemPrompt: liveSystemPrompt,
+        userPrompt: liveUserPrompt,
+        responseFormat: 'json_object' as const,
+      };
 ```
 
 (`canonicalModel` is no longer referenced anywhere — remove its declaration. The diff for the surrounding rewrite is already in Step 6.)
@@ -652,6 +650,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4: Routes pass user model into AI service
 
 **Files:**
+
 - Modify: `packages/api/src/routes/reports.ts`
 - Modify: `packages/api/src/routes/voice.ts`
 
@@ -688,14 +687,14 @@ async function runGenerate(
 Find the `await aiGenerateReport({ ... })` call inside `runGenerate` (around line 346-352). Replace the `vendor,` line with:
 
 ```ts
-  const out = await aiGenerateReport({
-    notes,
-    existingBody,
-    fixtureName,
-    userVendor,
-    userModel,
-    usageContext: { db, userId, projectId: report.projectId, reportId: report.id },
-  });
+const out = await aiGenerateReport({
+  notes,
+  existingBody,
+  fixtureName,
+  userVendor,
+  userModel,
+  usageContext: { db, userId, projectId: report.projectId, reportId: report.id },
+});
 ```
 
 - [ ] **Step 4: Update both call sites of `runGenerate`**
@@ -703,16 +702,16 @@ Find the `await aiGenerateReport({ ... })` call inside `runGenerate` (around lin
 Find the two `runGenerate` calls (around lines 406 and 433). Change each:
 
 ```ts
-    const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(
-      db,
-      userId,
-      report,
-      body.fixtureName,
-      settings.vendor,
-      settings.model,
-      { mode: 'generate' },
-    );
+const settings = await db((d) => getAiSettings(d, userId));
+const result = await runGenerate(
+  db,
+  userId,
+  report,
+  body.fixtureName,
+  settings.vendor,
+  settings.model,
+  { mode: 'generate' },
+);
 ```
 
 (And the same with `mode: 'regenerate'` for the second call site.)
@@ -722,7 +721,7 @@ Find the two `runGenerate` calls (around lines 406 and 433). Change each:
 In `packages/api/src/routes/voice.ts`, find the POST `/voice/summarize` handler (around line 234). Inside the handler body, before the `await aiSummarize({ ... })` call (around line 254), add:
 
 ```ts
-    const settings = await db((d) => getAiSettings(d, userId));
+const settings = await db((d) => getAiSettings(d, userId));
 ```
 
 And add `getAiSettings` to the imports at the top of the file:
@@ -734,11 +733,11 @@ import { getAiSettings } from '../services/settings.js';
 Then update the `aiSummarize` call inside the POST handler to pass user pick:
 
 ```ts
-    const out = await aiSummarize({
-      // ...existing fields...
-      userVendor: settings.vendor,
-      userModel: settings.model,
-    });
+const out = await aiSummarize({
+  // ...existing fields...
+  userVendor: settings.vendor,
+  userModel: settings.model,
+});
 ```
 
 (Keep all existing fields — `systemPrompt`, `userPrompt`, etc. — exactly as they were. Only `userVendor` + `userModel` are added.)
@@ -780,6 +779,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 5: Live default-wiring test (AGENTS.md hard rule #5)
 
 **Files:**
+
 - Modify: `packages/api/src/__tests__/live/reportGeneration.live.test.ts`
 
 Per AGENTS.md: every collaborator factory needs a live integration test that exercises the route without stubbing it, asserting the real side-effect. The user-model path qualifies — we add a scenario that PATCHes `/settings/ai`, calls `generateReport()`, and asserts the response model matches.
@@ -848,6 +848,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6: Mobile picker — server-backed via TanStack Query
 
 **Files:**
+
 - Replace: `apps/mobile/lib/ai/useAiProvider.ts`
 - Modify: `apps/mobile/app/(app)/developer.tsx`
 - Replace: `apps/mobile/lib/ai/useAiProvider.test.tsx`
@@ -887,7 +888,10 @@ function withQueryClient(client: QueryClient) {
 }
 
 function jsonResponse(body: unknown) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 describe('useAiProvider', () => {
@@ -1159,6 +1163,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 7: Document + open PR
 
 **Files:**
+
 - Modify: `docs/bugs/README.md`
 - Create: `docs/bugs/2026-05-29-mobile-model-picker-dead-wired.md`
 

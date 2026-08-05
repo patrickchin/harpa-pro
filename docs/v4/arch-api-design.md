@@ -1,285 +1,294 @@
 # API design
 
-> Companion: [`arch-auth-and-rls.md`](arch-auth-and-rls.md),
-> [`arch-ai-fixtures.md`](arch-ai-fixtures.md),
-> [`arch-storage.md`](arch-storage.md).
+> Status: implemented. The route modules and the generated OpenAPI document
+> are the executable sources of truth.
 >
-> Lessons applied: [Pitfall 1](pitfalls.md#pitfall-1--p1-done-without-real-api-tests),
-> [Pitfall 4](pitfalls.md#pitfall-4--big-features-stubbed-then-forgotten),
-> [Pitfall 7](pitfalls.md#pitfall-7--date--time-formatting-bugs-in-production).
+> Companions: [`arch-auth-and-rls.md`](arch-auth-and-rls.md),
+> [`arch-ai-fixtures.md`](arch-ai-fixtures.md),
+> [`arch-rate-limiting.md`](arch-rate-limiting.md), and
+> [`arch-storage.md`](arch-storage.md).
 
 ## Stack
 
-- **Hono** for routing.
-- **Zod** for request/response validation; the same Zod schemas live
-  in `packages/api-contract` and are re-exported to the mobile client.
-- **Drizzle ORM** with the per-request scope wrapper (see
-  [arch-auth-and-rls.md](arch-auth-and-rls.md)).
-- **OpenAPI 3.1** spec generated from `@hono/zod-openapi` route
-  definitions. `api-contract` runs `openapi-typescript` against it
-  to produce `generated/types.ts` consumed by the mobile client.
+- Hono handles HTTP routing.
+- `@hono/zod-openapi` validates documented route inputs and generates
+  OpenAPI 3.1.
+- Zod schemas in `packages/api-contract` define shared wire types.
+- Drizzle runs typed SQL through the scoped database accessor.
+- Better Auth owns the `/api/auth/*` route family.
 
-## Endpoint inventory
+## Route inventory
 
-Frozen at the start of P1. New endpoints require an architecture
-update.
+The committed OpenAPI document is `packages/api-contract/openapi.json`.
+Better Auth routes and the legacy programmatic admin routes are mounted at
+runtime but are not part of that document.
 
-### Auth (`/api/auth/*`, public — handled by better-auth)
+### System and public routes
 
-| Method | Path                                        | Purpose                                                                                                                                    |
-| ------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| POST   | `/api/auth/email-otp/send-verification-otp` | Send email OTP via Resend                                                                                                                  |
-| POST   | `/api/auth/sign-in/email-otp`               | Verify six-digit OTP and issue session                                                                                                     |
-| POST   | `/api/auth/sign-in/email`                   | Test-account and demo-account password sign-in (allow-listed via `TEST_ACCOUNT_EMAILS` / `DEMO_ACCOUNT_EMAILS`)                            |
-| POST   | `/api/auth/sign-out`                        | Delete session                                                                                                                             |
-| GET    | `/me`                                       | Current user profile                                                                                                                       |
-| PATCH  | `/me`                                       | Update profile (name, company)                                                                                                             |
-| GET    | `/me/usage`                                 | Per-month report counts (for usage screen). Includes effective `plan` + `limits` array — see [arch-usage-limits.md](arch-usage-limits.md). |
-| GET    | `/me/limits`                                | Effective per-bucket caps + current usage. See [arch-usage-limits.md §5.4](arch-usage-limits.md).                                          |
+| Method | Path                                      | Purpose                                           |
+| ------ | ----------------------------------------- | ------------------------------------------------- |
+| `GET`  | `/healthz`                                | Process liveness and release identity             |
+| `GET`  | `/readyz`                                 | Application database and migration-head readiness |
+| `GET`  | `/admin/readyz`                           | Independent admin database readiness              |
+| `GET`  | `/openapi.json`                           | Generated OpenAPI document                        |
+| `GET`  | `/.well-known/apple-app-site-association` | Apple universal-link manifest                     |
+| `GET`  | `/.well-known/assetlinks.json`            | Android app-link manifest                         |
+| `POST` | `/waitlist`                               | Create or refresh a waitlist signup               |
+| `POST` | `/waitlist/confirm`                       | Confirm a waitlist token                          |
 
-### Projects (`/projects`, authed)
+### Application authentication
 
-| Method | Path                            | Purpose                         |
-| ------ | ------------------------------- | ------------------------------- |
-| GET    | `/projects`                     | List projects user is member of |
-| POST   | `/projects`                     | Create project                  |
-| GET    | `/projects/:id`                 | Get project + stats             |
-| PATCH  | `/projects/:id`                 | Update project                  |
-| DELETE | `/projects/:id`                 | Owner-only                      |
-| GET    | `/projects/:id/members`         | List members                    |
-| POST   | `/projects/:id/members`         | Invite by email                 |
-| DELETE | `/projects/:id/members/:userId` | Remove member                   |
+Better Auth mounts its handler at `/api/auth/*`. The application uses these
+routes directly:
 
-### Reports (`/projects/:id/reports`, authed)
+| Method | Path                                        | Purpose                                      |
+| ------ | ------------------------------------------- | -------------------------------------------- |
+| `POST` | `/api/auth/email-otp/send-verification-otp` | Send an email OTP                            |
+| `POST` | `/api/auth/sign-in/email-otp`               | Verify an OTP and create a session           |
+| `POST` | `/api/auth/sign-in/email`                   | Sign in an allow-listed test or demo account |
+| `POST` | `/api/auth/sign-out`                        | Revoke the current session                   |
 
-| Method | Path                                     | Purpose                               |
-| ------ | ---------------------------------------- | ------------------------------------- |
-| GET    | `/projects/:id/reports`                  | List                                  |
-| POST   | `/projects/:id/reports`                  | Create draft                          |
-| GET    | `/reports/:reportId`                     | Get with notes                        |
-| PATCH  | `/reports/:reportId`                     | Update fields                         |
-| DELETE | `/reports/:reportId`                     | Delete                                |
-| POST   | `/reports/:reportId/generate`            | LLM generate report from notes        |
-| POST   | `/reports/:reportId/finalize`            | Finalize (frozen)                     |
-| POST   | `/reports/:reportId/regenerate`          | Regenerate report body                |
-| POST   | `/reports/:reportId/pdf`                 | Render PDF (returns signed URL)       |
-| GET    | `/projects/:id/reports/:number/comments` | List finalized-report review comments |
-| POST   | `/projects/:id/reports/:number/comments` | Add a finalized-report review comment |
+Better Auth can expose supporting plugin routes. Do not infer that every
+library route is a supported product API.
 
-### Notes (`/reports/:reportId/notes`, authed)
+### Current user
 
-| Method | Path                       | Purpose                      |
-| ------ | -------------------------- | ---------------------------- |
-| GET    | `/reports/:reportId/notes` | Timeline                     |
-| POST   | `/reports/:reportId/notes` | Create text/voice/image note |
-| PATCH  | `/notes/:noteId`           | Edit text body               |
-| DELETE | `/notes/:noteId`           | Delete                       |
+| Method   | Path                   | Purpose                                 |
+| -------- | ---------------------- | --------------------------------------- |
+| `GET`    | `/me`                  | Read the current profile                |
+| `PATCH`  | `/me`                  | Update profile fields                   |
+| `GET`    | `/me/deletion-preview` | Preview account-deletion effects        |
+| `DELETE` | `/me`                  | Delete the current account              |
+| `GET`    | `/me/usage`            | Read monthly usage summaries            |
+| `GET`    | `/me/usage/events`     | Read paginated usage events             |
+| `GET`    | `/me/limits`           | Read effective limits and current usage |
 
-### Files (`/files`, authed)
+### Projects and members
 
-| Method | Path             | Purpose                            |
-| ------ | ---------------- | ---------------------------------- |
-| POST   | `/files/presign` | Mint R2 signed PUT                 |
-| POST   | `/files`         | Register uploaded file (after PUT) |
-| GET    | `/files/:id/url` | Signed GET URL                     |
+`{project}` is the `prj_*` project ID. `{user}` is the `usr_*` user ID.
 
-### Voice (`/voice`, authed)
+| Method   | Path                                 | Purpose                           |
+| -------- | ------------------------------------ | --------------------------------- |
+| `GET`    | `/projects`                          | List visible projects             |
+| `POST`   | `/projects`                          | Create a project                  |
+| `GET`    | `/projects/{project}`                | Read a project and its statistics |
+| `PATCH`  | `/projects/{project}`                | Update project metadata           |
+| `DELETE` | `/projects/{project}`                | Delete a project                  |
+| `GET`    | `/projects/{project}/members`        | List members                      |
+| `POST`   | `/projects/{project}/members`        | Add an existing user by email     |
+| `PATCH`  | `/projects/{project}/members/{user}` | Change a member role              |
+| `DELETE` | `/projects/{project}/members/{user}` | Remove a member                   |
 
-| Method | Path                | Purpose                           |
-| ------ | ------------------- | --------------------------------- |
-| POST   | `/voice/transcribe` | Transcribe (file id → transcript) |
-| POST   | `/voice/summarize`  | Summarise transcript → note body  |
+See [`arch-project-members.md`](arch-project-members.md) for role behavior.
 
-### Settings (`/settings`, authed)
+### Reports and review comments
 
-| Method | Path           | Purpose                         |
-| ------ | -------------- | ------------------------------- |
-| GET    | `/settings/ai` | Per-user AI provider preference |
-| PATCH  | `/settings/ai` | Update                          |
+`{number}` is the report number within one project. It is not a report ID.
 
-### Admin browser authentication (`/admin/auth`, dedicated)
+| Method   | Path                                               | Purpose                                    |
+| -------- | -------------------------------------------------- | ------------------------------------------ |
+| `GET`    | `/projects/{project}/reports`                      | List project reports                       |
+| `POST`   | `/projects/{project}/reports`                      | Create a draft                             |
+| `GET`    | `/projects/{project}/reports/{number}`             | Read a report                              |
+| `GET`    | `/projects/{project}/reports/{number}/debug`       | Read the last generation inputs and output |
+| `PATCH`  | `/projects/{project}/reports/{number}`             | Update the draft date or body              |
+| `PATCH`  | `/projects/{project}/reports/{number}/attachments` | Place a note attachment in the report body |
+| `DELETE` | `/projects/{project}/reports/{number}`             | Delete a draft report                      |
+| `GET`    | `/projects/{project}/reports/{number}/comments`    | List review comments                       |
+| `POST`   | `/projects/{project}/reports/{number}/comments`    | Add a review comment                       |
+| `POST`   | `/projects/{project}/reports/{number}/generate`    | Generate the report body                   |
+| `POST`   | `/projects/{project}/reports/{number}/regenerate`  | Replace the generated report body          |
+| `POST`   | `/projects/{project}/reports/{number}/finalize`    | Finalize a report                          |
+| `POST`   | `/projects/{project}/reports/{number}/unfinalize`  | Return a report to draft state             |
+| `POST`   | `/projects/{project}/reports/{number}/pdf`         | Render and store a PDF                     |
 
-These routes use the independent `harpa-pro-admin` Neon database. They do
-not use Better Auth or app user rows.
+### Notes
 
-| Method | Path                  | Purpose                                                                                     |
-| ------ | --------------------- | ------------------------------------------------------------------------------------------- |
-| POST   | `/admin/auth/login`   | Verify an explicitly provisioned `@harpapro.com` identity and issue an opaque admin cookie. |
-| GET    | `/admin/auth/session` | Validate the dedicated admin session.                                                       |
-| POST   | `/admin/auth/logout`  | Revoke the server-side session and clear the cookie.                                        |
+`{report}` is the `rpt_*` report ID. `{note}` is the `not_*` note ID.
 
-### Admin business activity (`/admin`, dedicated admin session)
+| Method   | Path                            | Purpose                                          |
+| -------- | ------------------------------- | ------------------------------------------------ |
+| `GET`    | `/reports/{report}/notes`       | List timeline notes                              |
+| `POST`   | `/reports/{report}/notes`       | Create a note                                    |
+| `POST`   | `/reports/{report}/notes/voice` | Transcribe, summarize, and create one voice note |
+| `POST`   | `/notes/{note}/files`           | Append files to an image note                    |
+| `PATCH`  | `/notes/{note}`                 | Update editable note fields                      |
+| `DELETE` | `/notes/{note}`                 | Delete a note                                    |
 
-| Method | Path              | Purpose                                                                                                       |
-| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------- |
-| GET    | `/admin/activity` | Paginated business activity feed. See [design-admin-business-activity.md](design-admin-business-activity.md). |
+### Files, voice, and settings
 
-`GET /admin/activity` authenticates through `withAdminSession()`, then reads
-`app.activity_events` from the application database. App bearer tokens and
-Better Auth cookies cannot authorize this route, including for an app user
-whose `public."user".is_admin` flag is true. The feed defaults to milestone
-events; callers may request detail or all events, select one exact event type,
-and exclude up to 20 actor IDs while retaining redacted actor rows.
+| Method  | Path                | Purpose                                   |
+| ------- | ------------------- | ----------------------------------------- |
+| `POST`  | `/files/presign`    | Create an upload lease and signed PUT URL |
+| `POST`  | `/files`            | Register an uploaded object               |
+| `GET`   | `/files/{id}/url`   | Create a signed GET URL                   |
+| `POST`  | `/voice/transcribe` | Transcribe a scratch voice file           |
+| `POST`  | `/voice/summarize`  | Summarize a transcript                    |
+| `GET`   | `/settings/ai`      | Read the current AI selection             |
+| `PATCH` | `/settings/ai`      | Update the AI selection                   |
 
-### Admin readiness
+### Short-link resolvers
 
-| Method | Path            | Purpose                                                             |
-| ------ | --------------- | ------------------------------------------------------------------- |
-| GET    | `/admin/readyz` | Check the admin database connection and independent migration head. |
+| Method | Path           | Purpose                      |
+| ------ | -------------- | ---------------------------- |
+| `GET`  | `/p/{project}` | Resolve a project short link |
+| `GET`  | `/r/{report}`  | Resolve a report short link  |
 
-This post-deploy probe is separate from Fly's application `/readyz` health
-check. An admin database incident must not remove the otherwise healthy
-mobile/product API from Fly routing.
+The resolver routes return scoped JSON, not an HTTP redirect. Project
+responses contain `{ type: "project", projectId }`. Report responses also
+contain `reportId` and `reportNumber`. A missing or cross-user target returns
+`404`, and mobile performs the canonical navigation.
 
-### Programmatic admin (`/admin`, app admin authorization)
+### Browser admin routes
 
-The existing non-browser admin routes temporarily retain Better Auth plus
-the app user's `public."user".is_admin` flag. They have app-user audit
-foreign keys and are outside the business-activity page cutover.
+The browser admin surface uses a dedicated admin identity and cookie.
 
-| Method | Path                               | Purpose                                                                       |
-| ------ | ---------------------------------- | ----------------------------------------------------------------------------- |
-| GET    | `/admin/waitlist.csv`              | Export waitlist (marketing P1).                                               |
-| PATCH  | `/admin/users/:id/plan`            | Change a user's plan tier. See [arch-usage-limits.md](arch-usage-limits.md).  |
-| PUT    | `/admin/users/:id/limit-overrides` | Upsert per-bucket override. See [arch-usage-limits.md](arch-usage-limits.md). |
-| DELETE | `/admin/users/:id/limit-overrides` | Drop the override row.                                                        |
+| Method | Path                  | Purpose                         |
+| ------ | --------------------- | ------------------------------- |
+| `POST` | `/admin/auth/login`   | Create an admin session         |
+| `GET`  | `/admin/auth/session` | Validate an admin session       |
+| `POST` | `/admin/auth/logout`  | Revoke an admin session         |
+| `GET`  | `/admin/activity`     | Read the business-activity feed |
 
-## Conventions
+The following programmatic routes still use an application Better Auth
+session plus `public.user.is_admin`. They are not part of the browser admin
+session boundary or the generated OpenAPI document.
 
-### Path identifiers
+| Method   | Path                                | Purpose                |
+| -------- | ----------------------------------- | ---------------------- |
+| `GET`    | `/admin/waitlist.csv`               | Export waitlist rows   |
+| `PATCH`  | `/admin/users/{id}/plan`            | Change a user plan     |
+| `PUT`    | `/admin/users/{id}/limit-overrides` | Set limit overrides    |
+| `DELETE` | `/admin/users/{id}/limit-overrides` | Remove limit overrides |
 
-From P3.0 onwards, path params use **prefixed slugs**
-(`prj_xxxxxx`, `rpt_xxxxxx`) instead of UUIDs. Reports also
-expose a per-project number for human-readable canonical URLs
-(`/projects/prj_xxxxxx/reports/42`). Two short-link routes
-(`/p/:projectSlug`, `/r/:reportSlug`) `308` to the canonical
-long URL. Full design in [arch-ids-and-urls.md](arch-ids-and-urls.md).
-The `:id` / `:reportId` paths in the route tables above are the
-pre-P3.0 shape and will be renamed by the P3.0 migration.
+## Wire conventions
 
-### Request / response shape
+### Identifiers and paths
 
-- All bodies are JSON.
-- All timestamps serialised as **ISO-8601 strings** via a shared
-  Zod transform. No raw PG textual timestamps. (Pitfall 7.)
-- All UUIDs serialised as RFC-4122 strings. (Pitfall 11.)
-- Pagination: cursor-based, `?cursor=<opaque>&limit=<n>`. Response
-  envelope: `{ items, nextCursor }`. No offset/limit anywhere.
-- Errors: `{ error: { code, message, details? } }`, HTTP status
-  matches semantically. `code` is a stable string enum
-  (`AUTH_INVALID_TOKEN`, `RATE_LIMITED`, `VALIDATION_FAILED`, …).
+Primary IDs are prefixed slugs such as `usr_*`, `prj_*`, `rpt_*`, and
+`not_*`. Reports also have a project-local integer number. Report detail and
+report action routes use the project ID plus that number.
+
+The file, note, and voice routes use entity IDs where the route tables show
+them. Do not substitute the retired `/reports/{reportId}/generate` shape for
+the current report action routes.
+
+### Bodies and timestamps
+
+Documented application bodies use JSON. Shared response schemas serialize
+timestamps as ISO-8601 strings. Each route defines its own pagination and
+response envelope in `packages/api-contract`.
 
 ### Authentication transport
 
-Expo and ordinary API clients use
-`Authorization: Bearer <better-auth session token>`.
+Mobile and CLI clients send a Better Auth token in:
 
-The browser admin surface uses a separate secure, HttpOnly, host-only
-`__Host-harpa_admin_session` cookie with `credentials: 'include'`. The raw
-opaque token exists only in the cookie; the admin database stores its
-SHA-256 hash. Credentialed CORS is restricted to exact
-`ADMIN_CORS_ORIGINS` entries on `/admin/*`. Better Auth's `/api/auth/*`
-routes are not exposed to the admin browser, and app sessions cannot be
-exchanged for an admin session.
+```http
+Authorization: Bearer <session-token>
+```
+
+The browser admin sends the host-only `__Host-harpa_admin_session` cookie in
+production. Local HTTP uses the unprefixed development cookie. The two
+session types are not interchangeable.
+
+### Authorization behavior
+
+Authenticated handlers use `withAuth()` and call the scoped accessor from
+`c.get('db')`. Content mutation routes commonly return `404` for a missing
+project, a non-member, or an insufficient project role. Member-management
+routes return `403` for an authenticated non-owner.
+
+See [`arch-auth-and-rls.md`](arch-auth-and-rls.md) for the database boundary.
 
 ### Rate limiting
 
-Full design in [arch-rate-limiting.md](arch-rate-limiting.md). In
-brief: `RateLimiter` abstraction with a `PostgresRateLimiter` backend
-in production (atomic counts across Fly machines) and a
-`MemoryRateLimiter` in dev/test. Three layers:
-
-- **Per-route budgets** declared on each route via `withRateLimit`
-  (keyed by user / ip / email — see the table in arch-rate-limiting.md).
-- **Shared per-user AI budget** of 60 RPM across `voice.*` and
-  `reports.generate`.
-- **Catch-all defaults** mounted globally: 600/min per user on authed
-  traffic, 120/min per IP on unauthed traffic. `/healthz` and
-  `/readyz` opt out via a static skip-list.
-
-Email-OTP abuse protection on `POST /api/auth/email-otp/send-verification-otp`
-and `POST /api/auth/sign-in/email-otp` (per-email + per-IP) is enforced
-by better-auth's built-in rate limiter; clients receive a 429 +
-`Retry-After` + `X-RateLimit-*` headers. Demo account password sign-in
-uses better-auth's email/password endpoint and does not alter the OTP
-route.
-
-Admin password login has independent IP, canonical-email, and short-burst
-budgets. Unknown email, wrong domain, disabled identity, and wrong password
-perform uniform password verification and return the same `401` response.
-See
-[design-separate-admin-auth.md](design-separate-admin-auth.md#abuse-and-csrf-controls).
+The API applies a global user or IP budget. AI, waitlist, and admin routes
+also apply route-specific budgets. See
+[`arch-rate-limiting.md`](arch-rate-limiting.md) for current values and
+known gaps.
 
 ### Idempotency
 
-- `POST /reports/.../{generate,regenerate}`, `POST /voice/transcribe`,
-  and `POST /reports/.../notes/voice` accept an `Idempotency-Key`.
-- Identity is scoped to route name, user, HTTP method, concrete path,
-  request-body SHA-256, and the client key. Reusing the same client key
-  for a different method, resource, or body starts an independent
-  operation; it never replays another request's response.
-- Production uses `app.idempotency_keys` (migration
-  `0021_idempotency_keys.sql`). One machine owns a renewable 30-second
-  lease while the handler runs. While that ownership remains healthy,
-  concurrent machines wait and replay the completed response. A
-  zero-row renewal or owner-token mismatch makes the original owner fail
-  with a lease-loss error instead of returning or caching success. A
-  thrown heartbeat query is ambiguous, so the guarded completion or
-  release determines ownership rather than deleting a valid claim.
-  Completed responses live for 24 hours. A 5xx or thrown handler
-  releases a claim it still owns so a later retry can run.
-- Dev and tests use `MemoryIdempotencyStore`, which applies the same
-  replay and in-flight coalescing semantics inside one process.
-- The mobile report client keeps one key and its original
-  generate/regenerate operation across ambiguous transport, 5xx, and
-  response-parse failures. It retires the key after a matching success
-  or definitive 4xx response. The CLI continues to send only an
-  explicitly supplied key.
+These routes use the `Idempotency-Key` header:
 
-This coalesces concurrent requests only while the owner retains its
-lease. It is not an exactly-once job system: process death, a long
-event-loop pause, suspension, or a DB outage/partition can let the lease
-expire and be reclaimed while the original provider call is still
-running. The original owner reports lease loss when it can observe it,
-but both provider calls may already have happened. Routes that require
-protection from this boundary must move the side effect behind a
-durable asynchronous job/outbox.
+- report generation and regeneration
+- voice transcription
+- the voice-note aggregator
 
-### OpenAPI strategy
+Production stores claims in `app.idempotency_keys`. Local and test processes
+can use the in-memory store. A completed response remains replayable for 24
+hours.
 
-- Routes declared with `@hono/zod-openapi` so the spec is generated
-  from the same Zod schemas the runtime validates with.
-- `pnpm spec:emit` writes `packages/api-contract/openapi.json`.
-- `pnpm spec:gen` runs `openapi-typescript` to produce
-  `packages/api-contract/src/generated/types.ts`.
-- A CI job (`p1-exit-gate`) runs both and `git diff --exit-code` —
-  the spec must be in sync with the code.
+The lease reduces duplicate work during retries. It is not an exactly-once
+job system. A process pause or network partition can still allow two external
+provider calls.
 
-### Error format consistency
+## Error envelopes
 
-A shared error mapper in `packages/api/src/lib/errors.ts` converts:
+The application error mapper is
+`packages/api/src/middleware/errorMapper.ts`. It returns this shape:
 
-- Zod errors → 400 `VALIDATION_FAILED` with field-level `details`.
-- `HTTPException` → its mapped code/message.
-- `db unique violation` → 409 `CONFLICT`.
-- Anything else → 500 `INTERNAL` with a request id, full stack
-  in Sentry breadcrumbs only.
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "Not found."
+  },
+  "requestId": "..."
+}
+```
 
-A property-based test (`fast-check`) runs the mapper against random
-inputs to guarantee the response always matches the error envelope.
+Current mapper codes are lowercase:
 
-## Test inventory (P1 exit gate)
+| Condition                       | Status | Code                   |
+| ------------------------------- | -----: | ---------------------- |
+| Zod error handled by the mapper |  `400` | `validation_error`     |
+| Other bad request               |  `400` | `bad_request`          |
+| Missing or invalid session      |  `401` | `unauthorized`         |
+| Authenticated but forbidden     |  `403` | `forbidden`            |
+| Monthly usage limit             |  `403` | `usage_limit_exceeded` |
+| Hidden or missing resource      |  `404` | `not_found`            |
+| Conflict                        |  `409` | `conflict`             |
+| Rate limit                      |  `429` | `rate_limited`         |
+| AI adapter failure              |  `502` | `ai_provider_error`    |
+| Unhandled error                 |  `500` | `internal_error`       |
 
-For each route:
+Better Auth owns its route responses. A Better Auth error does not
+necessarily use the application mapper envelope.
 
-1. **Validation tests** (Vitest) — happy + 3 invalid payloads.
-2. **Integration tests** (Testcontainers Postgres) —
-   covers happy path with two actors, both per-request scope tests
-   (own + cross), the contract test (response matches OpenAPI).
-3. **Idempotency test** for routes that declare it.
-4. **Rate-limit test** for routes that declare it.
-5. **Fixture test** for AI-touching routes — replay a recorded
-   fixture, assert the route response matches a snapshot.
+## OpenAPI and generated clients
 
-Coverage target: ≥ 90% line on `packages/api/src/`. CI publishes
-the coverage delta on every PR.
+Use these commands after a route or shared schema changes:
+
+```bash
+pnpm spec:emit
+pnpm --filter @harpa/api-contract gen:types
+pnpm --filter @harpa/mobile gen:hooks
+```
+
+`scripts/check-spec-drift.sh` regenerates these artifacts and fails on a
+diff. Commit all generated changes with the route change.
+
+`packages/api/src/__tests__/contract.test.ts` checks three properties:
+
+1. The generated document equals the committed document.
+2. Each documented method and path has a registered Hono handler.
+3. The document declares security schemes used by protected routes.
+
+The contract test does not validate every live response against its OpenAPI
+schema.
+
+## Test gates
+
+- `pnpm --filter @harpa/api test` runs unit tests.
+- `pnpm --filter @harpa/api test:integration` runs Testcontainers and scope
+  tests.
+- `pnpm --filter @harpa/api test:coverage` merges both lanes and enforces 90
+  percent line coverage.
+- `scripts/check-scope-tests.sh` checks that each protected route module has
+  a non-empty matching scope-test file. It does not inspect test behavior.
+- `.github/workflows/ai-live.yml` runs selected tests against live AI
+  providers. The ordinary API lanes use replay fixtures.
+
+When behavior and this document disagree, use the route, shared schema, and
+tests as evidence. Update the document in the same change.

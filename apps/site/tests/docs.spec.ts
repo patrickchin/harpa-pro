@@ -79,7 +79,7 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
   await expect(page.locator(".docs-guide-heading img")).toHaveCount(0);
 
   const screenshots = page.locator(".docs-step-media img");
-  await expect(screenshots).toHaveCount(3);
+  await expect(screenshots).toHaveCount(4);
   await expect(screenshots.first()).toHaveAttribute("alt", /\S+/);
   for (let index = 0; index < (await screenshots.count()); index += 1) {
     await expect(screenshots.nth(index)).toHaveAttribute("src", /^\/_astro\//);
@@ -88,7 +88,7 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
   const fullScreenshotLinks = page.getByRole("link", {
     name: /^View full screenshot for /,
   });
-  await expect(fullScreenshotLinks).toHaveCount(3);
+  await expect(fullScreenshotLinks).toHaveCount(4);
   for (let index = 0; index < (await fullScreenshotLinks.count()); index += 1) {
     await expect(fullScreenshotLinks.nth(index)).toHaveAttribute(
       "href",

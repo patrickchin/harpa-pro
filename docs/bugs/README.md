@@ -331,6 +331,15 @@ compatibility pins drift. If hoisted build code resolves a transitive package
 through the workspace root, declare that implementation directly in the
 affected workspace rather than relying on the hoister's choice.
 
+### R17 — Fixed timestamps age out of rolling-window tests
+
+An E2E fixture with an absolute timestamp can pass for days or weeks, then fail
+without a code change when a filter such as “Past week” computes its boundary
+from the real clock. The response is correct, but the test's seed data has aged
+out of its own scenario. Seed rolling-window fixtures relative to the database
+clock, preserve only the offsets needed for ordering, and keep the browser test
+on the real relative filter.
+
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)

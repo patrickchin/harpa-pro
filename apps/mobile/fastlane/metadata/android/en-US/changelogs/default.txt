@@ -1,1 +1,7 @@
-Initial Fastlane-managed metadata seed for Harpa Pro internal testing.
+More reliable report generation and uploads, with safer retries and account
+switching.
+
+Project permissions keep viewers read-only and reserve owner actions for
+project owners.
+
+This release also improves account-deletion cleanup, stability, and security.

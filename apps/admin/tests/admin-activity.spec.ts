@@ -342,7 +342,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
             {
               ...source,
               id: newEventId,
-              occurredAt: '2026-07-30T04:00:00.000Z',
+              occurredAt: new Date().toISOString(),
               subjectId: 'rpt_00000000',
               subjectLabel: 'Report #8',
               requestId: 'request-admin-activity-refresh-e2e',

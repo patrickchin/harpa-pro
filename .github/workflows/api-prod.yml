@@ -178,7 +178,10 @@ jobs:
       - name: Deploy to Fly.io
         # Migration application belongs exclusively to fly.toml's
         # release_command. Fly aborts the rollout if migration or seed
-        # fails, after the blocking snapshot above has succeeded.
+        # fails, after the blocking snapshot above has succeeded. The outer
+        # deadline catches provider operations that ignore their own timeout;
+        # lifecycle arming has its own shorter bounded retry budget.
+        timeout-minutes: 30
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: ./infra/fly/deploy.sh --remote-only

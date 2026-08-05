@@ -346,6 +346,11 @@ on the real relative filter.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — Native Cloudflare Pages builds queued for up to 47 minutes,
+  while exact-SHA verifiers stopped after 15 minutes and reported false red
+  checks before successful deployments. Fix: allow a 75-minute marker poll and
+  90-minute `dev`/preview jobs, with policy assertions for every affected job.
+  [detail](2026-08-05-cloudflare-pages-queue-timeout.md)
 - **2026-08-05** *(R5)* — In-process Hono requests represented a zero-byte JSON
   POST with a null body, while `@hono/node-server` exposed an empty stream, so
   deployed finalize/unfinalize returned 400 and hid cross-user 404s. Fix: cache

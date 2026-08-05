@@ -26,9 +26,9 @@ job_body() {
   ' "$repo_root/$path"
 }
 
-require_job() {
+require_job_line() {
   local path="$1" job="$2" needle="$3" description="$4"
-  if job_body "$path" "$job" | grep -Fq -- "$needle"; then
+  if job_body "$path" "$job" | grep -Fxq -- "$needle"; then
     echo "  ok   - $description"
   else
     echo "  FAIL - $description" >&2
@@ -98,14 +98,14 @@ require "$verifier" 'PAGES_VERIFY_TIMEOUT_SEC:-4500' \
   'verifier allows 75 minutes for provider queue latency'
 
 for workflow in site-preview admin-preview dashboard-preview; do
-  require_job ".github/workflows/$workflow.yml" deployment \
-    'timeout-minutes: 90' \
+  require_job_line ".github/workflows/$workflow.yml" deployment \
+    '    timeout-minutes: 90' \
     "$workflow deployment job keeps a 90-minute provider ceiling"
 done
 
 for workflow in site-dev admin-dev dashboard-dev; do
-  require_job ".github/workflows/$workflow.yml" verify \
-    'timeout-minutes: 90' \
+  require_job_line ".github/workflows/$workflow.yml" verify \
+    '    timeout-minutes: 90' \
     "$workflow verify job keeps a 90-minute provider ceiling"
 done
 

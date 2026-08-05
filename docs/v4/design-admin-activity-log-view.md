@@ -72,7 +72,9 @@ The `Time`, `Event`, `User`, and `Project` header buttons expose
 the header. The region is named for its column, for example `Time filter` or
 `User filter`. Opening another header button replaces the current region, so
 only one filter region exists at a time. Closing the region leaves its current
-selection active.
+selection active. The region is a full-width tray pinned to the visible feed
+scrollport, while the active header button identifies the column that owns it.
+This keeps the controls usable when the rows and header scroll horizontally.
 
 The attached regions contain:
 

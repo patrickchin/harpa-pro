@@ -114,6 +114,16 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   const desktopViewport = page.viewportSize();
   expect(desktopViewport).not.toBeNull();
   await page.setViewportSize({ width: 320, height: 800 });
+  const feedScroller = columnHeaders.locator('..');
+  const feedWidths = await feedScroller.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(feedWidths.scrollWidth).toBeGreaterThan(feedWidths.clientWidth);
+  await feedScroller.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(timeFilter).toBeVisible();
   const timePeriodScroller = page.getByTestId('time-period-options');
   const timePeriodWidths = await timePeriodScroller.evaluate((element) => ({
     clientWidth: element.clientWidth,
@@ -204,8 +214,9 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await page.getByRole('button', { name: 'Filter by user' }).click();
   const userFilter = page.getByRole('region', { name: 'User filter' });
   await userFilter.getByRole('searchbox', { name: 'Search users' }).fill('activity');
+  const onlyActorLabel = 'Only Admin Activity E2E — activity-actor@e2e.harpapro.com';
   const onlyActor = userFilter.getByRole('radio', {
-    name: 'Only Admin Activity E2E — activity-actor@e2e.harpapro.com',
+    name: onlyActorLabel,
   });
   const actorUserId = (await onlyActor.getAttribute('value'))!;
 
@@ -217,14 +228,15 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('actorUserId') === actorUserId
     );
   });
-  await onlyActor.click();
+  await userFilter.getByText(onlyActorLabel, { exact: true }).click();
   expect((await actorResponsePromise).status()).toBe(200);
 
   await page.getByRole('button', { name: 'Filter by project' }).click();
   const projectFilter = page.getByRole('region', { name: 'Project filter' });
   await projectFilter.getByRole('searchbox', { name: 'Search projects' }).fill('admin activity');
+  const onlyProjectLabel = 'Only Admin Activity E2E Project';
   const onlyProject = projectFilter.getByRole('radio', {
-    name: 'Only Admin Activity E2E Project',
+    name: onlyProjectLabel,
   });
   const projectId = (await onlyProject.getAttribute('value'))!;
   const projectResponsePromise = page.waitForResponse((response) => {
@@ -236,15 +248,16 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('projectId') === projectId
     );
   });
-  await onlyProject.click();
+  await projectFilter.getByText(onlyProjectLabel, { exact: true }).click();
   expect((await projectResponsePromise).status()).toBe(200);
 
   await page.getByRole('button', { name: 'Filter by user' }).click();
-  const actorExclusion = page
-    .getByRole('region', { name: 'User filter' })
-    .getByRole('checkbox', {
-      name: 'Exclude Admin Activity E2E — activity-actor@e2e.harpapro.com',
-    });
+  const reopenedUserFilter = page.getByRole('region', { name: 'User filter' });
+  const actorExclusionLabel =
+    'Exclude Admin Activity E2E — activity-actor@e2e.harpapro.com';
+  const actorExclusion = reopenedUserFilter.getByRole('checkbox', {
+    name: actorExclusionLabel,
+  });
   const exclusionResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
@@ -255,7 +268,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('excludeActorUserIds') === actorUserId
     );
   });
-  await actorExclusion.check();
+  await reopenedUserFilter.getByText(actorExclusionLabel, { exact: true }).click();
   expect((await exclusionResponsePromise).status()).toBe(200);
   await expect(page.getByText('No activity matches these filters.')).toBeVisible();
   await expect(page.getByTestId('activity-column-headers')).toBeVisible();
@@ -271,7 +284,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('excludeActorUserIds')
     );
   });
-  await actorExclusion.uncheck();
+  await reopenedUserFilter.getByText(actorExclusionLabel, { exact: true }).click();
   expect((await removeExclusionResponsePromise).status()).toBe(200);
   await expect(detailRows).toHaveCount(4);
 

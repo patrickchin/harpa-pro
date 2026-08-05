@@ -486,7 +486,9 @@ describe('AdminActivity', () => {
   });
 
   it('defaults to milestones from the past calendar month and offers simpler ranges', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => activityResponse([]));
     const user = userEvent.setup();
     const beforeRender = new Date();
 
@@ -547,7 +549,9 @@ describe('AdminActivity', () => {
   });
 
   it('switches between milestone, detailed, and all activity levels', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
@@ -573,7 +577,9 @@ describe('AdminActivity', () => {
   });
 
   it('does not expose or send an event-type filter', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
@@ -805,6 +811,7 @@ describe('AdminActivity', () => {
     await user.click(refresh);
     expect(refresh).toHaveProperty('disabled', true);
 
+    await user.click(screen.getByRole('button', { name: 'Filter by time' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Time period' })).getByRole('radio', {
         name: 'Past week',
@@ -832,6 +839,7 @@ describe('AdminActivity', () => {
     const user = userEvent.setup();
     render(<AdminActivity />);
 
+    await user.click(await screen.findByRole('button', { name: 'Filter by event' }));
     await user.click(
       within(await screen.findByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'Detailed activity',
@@ -881,6 +889,7 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     expect(await screen.findByRole('link', { name: 'Open as text' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Filter by time' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Time period' })).getByRole('radio', {
         name: 'Past week',

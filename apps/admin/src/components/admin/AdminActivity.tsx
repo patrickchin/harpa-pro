@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { activity as activitySchemas } from '@harpa/api-contract';
 import type { activity } from '@harpa/api-contract';
 import { adminAuthClient } from '../../lib/admin-auth';
@@ -9,6 +9,7 @@ import { getPublicEnv } from '../../lib/env';
 type FeedState = 'loading' | 'ready' | 'forbidden' | 'error';
 type ActivityLevel = 'milestone' | 'detail' | 'all';
 type TimePeriod = 'week' | 'month' | 'six_months' | 'year' | 'all';
+type HeaderFilter = 'time' | 'event' | 'user' | 'project';
 type SessionState =
   | { status: 'loading' }
   | { status: 'unavailable' }
@@ -51,12 +52,13 @@ const MAX_EXCLUDED_ACTORS = 20;
 
 const inputClass =
   'h-10 rounded-md border border-hairline bg-card px-3 text-sm text-ink outline-none ring-focus';
-const selectClass =
-  'peer h-10 w-full appearance-none rounded-lg border border-hairline bg-secondary/30 px-3 pr-9 text-sm font-medium text-ink shadow-sm outline-none transition hover:border-accent/40 hover:bg-secondary/60 focus:border-accent ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 const buttonClass =
   'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 const primaryButtonClass =
   'inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-60';
+const activityColumnsClass =
+  'grid w-full min-w-[920px] grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)] items-center gap-3 px-3';
+const FILTER_PANEL_ID = 'activity-header-filter-panel';
 
 const EVENT_LABELS = {
   'user.signed_up': 'Signed up',
@@ -94,16 +96,41 @@ function filterChoiceClass(selected: boolean): string {
   }`;
 }
 
-function StyledSelect({ className = '', children, ...props }: ComponentPropsWithoutRef<'select'>) {
+function filterListChoiceClass(selected: boolean): string {
+  return `flex min-h-9 w-full items-center rounded-md border px-3 py-2 text-left text-xs font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent ${
+    selected
+      ? 'border-accent/50 bg-accent/10 text-ink'
+      : 'border-hairline bg-card text-ink-soft hover:border-accent/30 hover:bg-secondary/60 hover:text-ink'
+  }`;
+}
+
+function HeaderFilterButton({
+  filter,
+  label,
+  openFilter,
+  onToggle,
+}: {
+  filter: HeaderFilter;
+  label: string;
+  openFilter: HeaderFilter | null;
+  onToggle: (filter: HeaderFilter) => void;
+}) {
+  const expanded = openFilter === filter;
   return (
-    <span className="relative block">
-      <select className={`${selectClass} ${className}`} {...props}>
-        {children}
-      </select>
+    <button
+      aria-controls={FILTER_PANEL_ID}
+      aria-expanded={expanded}
+      aria-label={`Filter by ${filter}`}
+      className={`inline-flex h-8 w-full items-center gap-1.5 rounded px-1 text-left transition ring-focus ${
+        expanded ? 'bg-accent/10 text-accent-ink' : 'hover:bg-card hover:text-ink'
+      }`}
+      type="button"
+      onClick={() => onToggle(filter)}
+    >
+      <span>{label}</span>
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft transition peer-disabled:opacity-40"
-        data-select-chevron
+        className="size-3 shrink-0"
         fill="none"
         focusable="false"
         stroke="currentColor"
@@ -112,9 +139,9 @@ function StyledSelect({ className = '', children, ...props }: ComponentPropsWith
         strokeWidth="2"
         viewBox="0 0 24 24"
       >
-        <path d="m6 9 6 6 6-6" />
+        <path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5Z" />
       </svg>
-    </span>
+    </button>
   );
 }
 
@@ -410,6 +437,9 @@ function ActivityFeed({
 }) {
   const { apiBaseUrl } = getPublicEnv();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [openFilter, setOpenFilter] = useState<HeaderFilter | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState('');
   const [items, setItems] = useState<activity.Event[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [state, setState] = useState<FeedState>('loading');
@@ -556,39 +586,42 @@ function ActivityFeed({
     [apiBaseUrl, filters, refetchSession, rememberFilterOptions],
   );
 
-  function addExcludedActor(actor: ActorExclusion) {
-    const add = (current: Filters): Filters => {
+  function selectIncludedActor(actorUserId: string) {
+    setFilters((current) => {
+      const excludedActors = actorUserId
+        ? current.excludedActors.filter((actor) => actor.id !== actorUserId)
+        : current.excludedActors;
       if (
-        current.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
-        current.excludedActors.some((excluded) => excluded.id === actor.id)
+        current.actorUserId === actorUserId &&
+        excludedActors.length === current.excludedActors.length
       ) {
         return current;
       }
+      return { ...current, actorUserId, excludedActors };
+    });
+  }
+
+  function toggleActorExclusion(actor: ActorExclusion, checked: boolean) {
+    setFilters((current) => {
+      const alreadyExcluded = current.excludedActors.some(
+        (excluded) => excluded.id === actor.id,
+      );
+      if (checked) {
+        if (alreadyExcluded || current.excludedActors.length >= MAX_EXCLUDED_ACTORS) {
+          return current;
+        }
+        return {
+          ...current,
+          actorUserId: current.actorUserId === actor.id ? '' : current.actorUserId,
+          excludedActors: [...current.excludedActors, actor],
+        };
+      }
+      if (!alreadyExcluded) return current;
       return {
         ...current,
-        excludedActors: [...current.excludedActors, actor],
+        excludedActors: current.excludedActors.filter((excluded) => excluded.id !== actor.id),
       };
-    };
-
-    setFilters(add);
-  }
-
-  function removeExcludedActor(actorUserId: string) {
-    const remove = (current: Filters): Filters => ({
-      ...current,
-      excludedActors: current.excludedActors.filter((actor) => actor.id !== actorUserId),
     });
-
-    setFilters(remove);
-  }
-
-  function clearExcludedActors() {
-    const clear = (current: Filters): Filters => ({
-      ...current,
-      excludedActors: [],
-    });
-
-    setFilters(clear);
   }
 
   useEffect(() => {
@@ -618,13 +651,18 @@ function ActivityFeed({
     };
   }, [selected]);
 
-  const availableActorExclusions = useMemo(
-    () =>
-      knownActors.filter(
-        (actor) => !filters.excludedActors.some((excluded) => excluded.id === actor.id),
-      ),
-    [filters.excludedActors, knownActors],
-  );
+  const visibleActors = useMemo(() => {
+    const query = userSearch.trim().toLocaleLowerCase();
+    if (!query) return knownActors;
+    return knownActors.filter((actor) =>
+      actorOptionLabel(actor).toLocaleLowerCase().includes(query),
+    );
+  }, [knownActors, userSearch]);
+  const visibleProjects = useMemo(() => {
+    const query = projectSearch.trim().toLocaleLowerCase();
+    if (!query) return knownProjects;
+    return knownProjects.filter((project) => project.label.toLocaleLowerCase().includes(query));
+  }, [knownProjects, projectSearch]);
   const textContents = useMemo(
     () => (state === 'ready' ? items.map(activityTextLine).join('\n') : ''),
     [items, state],
@@ -696,187 +734,12 @@ function ActivityFeed({
         </div>
       </div>
 
-      <section className="my-4 rounded-xl border border-hairline bg-card p-3">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(0,5fr)_auto]">
-          <fieldset className="grid min-w-0 gap-1">
-            <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-              Detail level
-            </legend>
-            <div className="overflow-x-auto rounded-lg" data-testid="detail-level-options">
-              <div className="grid min-w-[20rem] grid-cols-3 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
-                {DETAIL_LEVEL_OPTIONS.map((option) => {
-                  const selected = filters.level === option.value;
-                  return (
-                    <label className="block cursor-pointer" key={option.value}>
-                      <input
-                        checked={selected}
-                        className="peer sr-only"
-                        name="activity-detail-level"
-                        type="radio"
-                        value={option.value}
-                        onChange={() =>
-                          setFilters((current) =>
-                            current.level === option.value
-                              ? current
-                              : { ...current, level: option.value },
-                          )
-                        }
-                      />
-                      <span className={filterChoiceClass(selected)}>{option.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </fieldset>
-          <fieldset className="grid min-w-0 gap-1">
-            <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-              Time period
-            </legend>
-            <div className="overflow-x-auto rounded-lg" data-testid="time-period-options">
-              <div className="grid min-w-[31rem] grid-cols-5 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
-                {TIME_PERIOD_OPTIONS.map((option) => {
-                  const selected = filters.timePeriod === option.value;
-                  return (
-                    <label className="block cursor-pointer" key={option.value}>
-                      <input
-                        checked={selected}
-                        className="peer sr-only"
-                        name="activity-time-period"
-                        type="radio"
-                        value={option.value}
-                        onChange={() =>
-                          setFilters((current) =>
-                            current.timePeriod === option.value
-                              ? current
-                              : { ...current, timePeriod: option.value },
-                          )
-                        }
-                      />
-                      <span className={filterChoiceClass(selected)}>{option.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </fieldset>
-          <div className="flex items-end">
-            <button
-              className={buttonClass}
-              type="button"
-              onClick={() => setFilters({ ...EMPTY_FILTERS, excludedActors: [] })}
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 grid gap-3 border-t border-hairline pt-3 md:grid-cols-3">
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-            Filter actor
-            <StyledSelect
-              value={filters.actorUserId}
-              onChange={(event) => {
-                const actorUserId = event.target.value;
-                setFilters((current) =>
-                  current.actorUserId === actorUserId ? current : { ...current, actorUserId },
-                );
-              }}
-            >
-              <option value="">All actors</option>
-              {knownActors.map((actor) => (
-                <option key={actor.id} value={actor.id}>
-                  {actorOptionLabel(actor)}
-                </option>
-              ))}
-            </StyledSelect>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-            Exclude actor
-            <StyledSelect
-              disabled={
-                filters.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
-                availableActorExclusions.length === 0
-              }
-              value=""
-              onChange={(event) => {
-                const actor = knownActors.find((option) => option.id === event.target.value);
-                if (actor) addExcludedActor(actor);
-              }}
-            >
-              <option value="">Choose actor…</option>
-              {availableActorExclusions.map((actor) => (
-                <option key={actor.id} value={actor.id}>
-                  {actorOptionLabel(actor)}
-                </option>
-              ))}
-            </StyledSelect>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-            Filter project
-            <StyledSelect
-              value={filters.projectId}
-              onChange={(event) => {
-                const projectId = event.target.value;
-                setFilters((current) =>
-                  current.projectId === projectId ? current : { ...current, projectId },
-                );
-              }}
-            >
-              <option value="">All projects</option>
-              {knownProjects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.label}
-                </option>
-              ))}
-            </StyledSelect>
-          </label>
-        </div>
-
-        {filters.excludedActors.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-              Excluded actors
-            </span>
-            {filters.excludedActors.map((actor) => (
-              <span
-                className="inline-flex h-8 items-center gap-1 rounded-full border border-hairline bg-secondary pl-3 pr-1 text-xs font-medium text-ink"
-                key={actor.id}
-              >
-                {actor.label}
-                <button
-                  aria-label={`Remove ${actor.label} exclusion`}
-                  className="inline-flex size-6 items-center justify-center rounded-full text-ink-soft hover:bg-card hover:text-ink ring-focus"
-                  type="button"
-                  onClick={() => removeExcludedActor(actor.id)}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            <button
-              className="text-xs font-medium text-accent-ink underline underline-offset-4 ring-focus"
-              type="button"
-              onClick={clearExcludedActors}
-            >
-              Clear excluded actors
-            </button>
-          </div>
-        )}
-        <p className="mt-3 text-xs text-ink-soft">Selections apply immediately.</p>
-      </section>
-
       {refreshMessage && (
         <p className="mb-3 text-xs font-medium text-ink-soft" role="status">
           {refreshMessage}
         </p>
       )}
 
-      {state === 'loading' && (
-        <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
-          Loading activity…
-        </div>
-      )}
       {state === 'forbidden' && (
         <div className="rounded-xl border border-hairline bg-card p-10 text-center">
           <h2 className="font-semibold text-ink">This account is not an admin.</h2>
@@ -897,75 +760,374 @@ function ActivityFeed({
           </button>
         </div>
       )}
-      {state === 'ready' && items.length === 0 && (
-        <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
-          No activity matches these filters.
-        </div>
-      )}
-      {state === 'ready' && items.length > 0 && (
+      {(state === 'loading' || state === 'ready') && (
         <>
-          <div className="overflow-x-auto rounded-xl border border-hairline bg-card shadow-sm">
-            <ul aria-label="Activity events">
-              {items.map((event) => {
-                const isNew = newEventIds.has(event.id);
-                return (
-                  <li
-                    className={`border-b border-l-4 border-hairline last:border-b-0 ${EVENT_ROW_ACCENTS[event.eventType]} ${
-                      isNew ? 'bg-accent/10' : ''
-                    }`}
-                    key={event.id}
-                  >
-                    <button
-                      aria-label={activityRowLabel(event, isNew)}
-                      className="grid min-h-9 w-full min-w-[920px] grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)] items-center gap-3 whitespace-nowrap px-3 py-1.5 text-left text-xs transition hover:bg-secondary/70 ring-focus"
-                      data-testid={`activity-row-${event.id}`}
-                      type="button"
-                      onClick={(clickEvent) => {
-                        selectedTriggerRef.current = clickEvent.currentTarget;
-                        setSelected(event);
-                      }}
+          <div className="mt-4 overflow-x-auto rounded-xl border border-hairline bg-card shadow-sm">
+            <div
+              className={`${activityColumnsClass} min-h-10 border-b border-l-4 border-hairline border-l-transparent bg-secondary/40 text-[10px] font-bold uppercase tracking-wide text-ink-soft`}
+              data-testid="activity-column-headers"
+            >
+              <span className="inline-flex h-8 items-center">New</span>
+              <HeaderFilterButton
+                filter="time"
+                label="Time"
+                openFilter={openFilter}
+                onToggle={(filter) =>
+                  setOpenFilter((current) => (current === filter ? null : filter))
+                }
+              />
+              <HeaderFilterButton
+                filter="event"
+                label="Event"
+                openFilter={openFilter}
+                onToggle={(filter) =>
+                  setOpenFilter((current) => (current === filter ? null : filter))
+                }
+              />
+              <HeaderFilterButton
+                filter="user"
+                label="User"
+                openFilter={openFilter}
+                onToggle={(filter) =>
+                  setOpenFilter((current) => (current === filter ? null : filter))
+                }
+              />
+              <span className="inline-flex h-8 items-center">Subject</span>
+              <HeaderFilterButton
+                filter="project"
+                label="Project"
+                openFilter={openFilter}
+                onToggle={(filter) =>
+                  setOpenFilter((current) => (current === filter ? null : filter))
+                }
+              />
+            </div>
+            {openFilter && (
+              <section
+                aria-label={`${openFilter[0]?.toUpperCase()}${openFilter.slice(1)} filter`}
+                className="sticky left-0 border-b border-hairline bg-secondary/15 p-3"
+                id={FILTER_PANEL_ID}
+                role="region"
+              >
+                {openFilter === 'time' && (
+                  <fieldset className="grid min-w-0 gap-1">
+                    <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Time period
+                    </legend>
+                    <div
+                      className="overflow-x-auto rounded-lg"
+                      data-testid="time-period-options"
                     >
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-accent-ink">
-                        {isNew ? 'New' : ''}
-                      </span>
-                      <time
-                        className="font-mono text-[11px] tabular-nums text-ink-soft"
-                        dateTime={event.occurredAt}
+                      <div className="grid min-w-[31rem] grid-cols-5 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
+                        {TIME_PERIOD_OPTIONS.map((option) => {
+                          const optionSelected = filters.timePeriod === option.value;
+                          return (
+                            <label className="block cursor-pointer" key={option.value}>
+                              <input
+                                aria-label={option.label}
+                                checked={optionSelected}
+                                className="peer sr-only"
+                                name="activity-time-period"
+                                type="radio"
+                                value={option.value}
+                                onChange={() =>
+                                  setFilters((current) =>
+                                    current.timePeriod === option.value
+                                      ? current
+                                      : { ...current, timePeriod: option.value },
+                                  )
+                                }
+                              />
+                              <span className={filterChoiceClass(optionSelected)}>
+                                {option.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </fieldset>
+                )}
+
+                {openFilter === 'event' && (
+                  <fieldset className="grid min-w-0 gap-1">
+                    <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Detail level
+                    </legend>
+                    <div
+                      className="overflow-x-auto rounded-lg"
+                      data-testid="detail-level-options"
+                    >
+                      <div className="grid min-w-[20rem] grid-cols-3 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
+                        {DETAIL_LEVEL_OPTIONS.map((option) => {
+                          const optionSelected = filters.level === option.value;
+                          return (
+                            <label className="block cursor-pointer" key={option.value}>
+                              <input
+                                aria-label={option.label}
+                                checked={optionSelected}
+                                className="peer sr-only"
+                                name="activity-detail-level"
+                                type="radio"
+                                value={option.value}
+                                onChange={() =>
+                                  setFilters((current) =>
+                                    current.level === option.value
+                                      ? current
+                                      : { ...current, level: option.value },
+                                  )
+                                }
+                              />
+                              <span className={filterChoiceClass(optionSelected)}>
+                                {option.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </fieldset>
+                )}
+
+                {openFilter === 'user' && (
+                  <div className="grid gap-3">
+                    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Search users
+                      <input
+                        className={`${inputClass} w-full max-w-xl normal-case`}
+                        type="search"
+                        value={userSearch}
+                        onChange={(event) => setUserSearch(event.target.value)}
+                      />
+                    </label>
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <fieldset className="grid min-w-0 gap-1">
+                        <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                          Included users
+                        </legend>
+                        <div className="grid max-h-64 gap-1 overflow-y-auto rounded-lg bg-secondary/25 p-1">
+                          <label className="block cursor-pointer">
+                            <input
+                              aria-label="All users"
+                              checked={!filters.actorUserId}
+                              className="peer sr-only"
+                              name="activity-included-user"
+                              type="radio"
+                              value=""
+                              onChange={() => selectIncludedActor('')}
+                            />
+                            <span className={filterListChoiceClass(!filters.actorUserId)}>
+                              All users
+                            </span>
+                          </label>
+                          {visibleActors.map((actor) => {
+                            const optionSelected = filters.actorUserId === actor.id;
+                            return (
+                              <label className="block cursor-pointer" key={actor.id}>
+                                <input
+                                  aria-label={`Only ${actorOptionLabel(actor)}`}
+                                  checked={optionSelected}
+                                  className="peer sr-only"
+                                  name="activity-included-user"
+                                  type="radio"
+                                  value={actor.id}
+                                  onChange={() => selectIncludedActor(actor.id)}
+                                />
+                                <span className={filterListChoiceClass(optionSelected)}>
+                                  Only {actorOptionLabel(actor)}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                      <fieldset className="grid min-w-0 gap-1">
+                        <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                          Excluded users
+                        </legend>
+                        <div className="grid max-h-64 gap-1 overflow-y-auto rounded-lg bg-secondary/25 p-1">
+                          {visibleActors.map((actor) => {
+                            const optionSelected = filters.excludedActors.some(
+                              (excluded) => excluded.id === actor.id,
+                            );
+                            return (
+                              <label className="block cursor-pointer" key={actor.id}>
+                                <input
+                                  aria-label={`Exclude ${actorOptionLabel(actor)}`}
+                                  checked={optionSelected}
+                                  className="peer sr-only"
+                                  disabled={
+                                    !optionSelected &&
+                                    filters.excludedActors.length >= MAX_EXCLUDED_ACTORS
+                                  }
+                                  type="checkbox"
+                                  onChange={(event) =>
+                                    toggleActorExclusion(actor, event.target.checked)
+                                  }
+                                />
+                                <span className={filterListChoiceClass(optionSelected)}>
+                                  Exclude {actorOptionLabel(actor)}
+                                </span>
+                              </label>
+                            );
+                          })}
+                          {visibleActors.length === 0 && (
+                            <p className="px-3 py-2 text-xs text-ink-soft">
+                              No users match this search.
+                            </p>
+                          )}
+                        </div>
+                      </fieldset>
+                    </div>
+                    <p className="text-xs text-ink-soft">
+                      Choices apply immediately. You can exclude up to {MAX_EXCLUDED_ACTORS} users.
+                    </p>
+                  </div>
+                )}
+
+                {openFilter === 'project' && (
+                  <div className="grid gap-3">
+                    <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                      Search projects
+                      <input
+                        className={`${inputClass} w-full max-w-xl normal-case`}
+                        type="search"
+                        value={projectSearch}
+                        onChange={(event) => setProjectSearch(event.target.value)}
+                      />
+                    </label>
+                    <fieldset className="grid min-w-0 gap-1">
+                      <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                        Projects
+                      </legend>
+                      <div className="grid max-h-64 gap-1 overflow-y-auto rounded-lg bg-secondary/25 p-1 lg:grid-cols-2">
+                        <label className="block cursor-pointer">
+                          <input
+                            aria-label="All projects"
+                            checked={!filters.projectId}
+                            className="peer sr-only"
+                            name="activity-project"
+                            type="radio"
+                            value=""
+                            onChange={() =>
+                              setFilters((current) =>
+                                current.projectId ? { ...current, projectId: '' } : current,
+                              )
+                            }
+                          />
+                          <span className={filterListChoiceClass(!filters.projectId)}>
+                            All projects
+                          </span>
+                        </label>
+                        {visibleProjects.map((project) => {
+                          const optionSelected = filters.projectId === project.id;
+                          return (
+                            <label className="block cursor-pointer" key={project.id}>
+                              <input
+                                aria-label={`Only ${project.label}`}
+                                checked={optionSelected}
+                                className="peer sr-only"
+                                name="activity-project"
+                                type="radio"
+                                value={project.id}
+                                onChange={() =>
+                                  setFilters((current) =>
+                                    current.projectId === project.id
+                                      ? current
+                                      : { ...current, projectId: project.id },
+                                  )
+                                }
+                              />
+                              <span className={filterListChoiceClass(optionSelected)}>
+                                Only {project.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                        {visibleProjects.length === 0 && (
+                          <p className="px-3 py-2 text-xs text-ink-soft">
+                            No projects match this search.
+                          </p>
+                        )}
+                      </div>
+                    </fieldset>
+                    <p className="text-xs text-ink-soft">Choices apply immediately.</p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {state === 'loading' && (
+              <div className="p-10 text-center text-sm text-ink-soft">Loading activity…</div>
+            )}
+            {state === 'ready' && items.length === 0 && (
+              <div className="p-10 text-center text-sm text-ink-soft">
+                No activity matches these filters.
+              </div>
+            )}
+            {state === 'ready' && items.length > 0 && (
+              <ul aria-label="Activity events">
+                {items.map((event) => {
+                  const isNew = newEventIds.has(event.id);
+                  return (
+                    <li
+                      className={`border-b border-l-4 border-hairline last:border-b-0 ${EVENT_ROW_ACCENTS[event.eventType]} ${
+                        isNew ? 'bg-accent/10' : ''
+                      }`}
+                      key={event.id}
+                    >
+                      <button
+                        aria-label={activityRowLabel(event, isNew)}
+                        className={`${activityColumnsClass} min-h-9 whitespace-nowrap py-1.5 text-left text-xs transition hover:bg-secondary/70 ring-focus`}
+                        data-testid={`activity-row-${event.id}`}
+                        type="button"
+                        onClick={(clickEvent) => {
+                          selectedTriggerRef.current = clickEvent.currentTarget;
+                          setSelected(event);
+                        }}
                       >
-                        {displayTime(event.occurredAt)}
-                      </time>
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
-                        <ActivityIcon
-                          className={`size-3.5 shrink-0 ${EVENT_ICON_TONES[event.eventType]}`}
-                          name={EVENT_ICON_NAMES[event.eventType]}
-                          testId={`event-icon-${event.eventType}`}
-                        />
-                        {eventLabel(event.eventType)}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
-                        <ActivityIcon
-                          className="size-3.5 shrink-0 text-ink-soft"
-                          name="user"
-                          testId="actor-icon"
-                        />
-                        {event.actorLabel}
-                      </span>
-                      <span className="font-medium text-accent-ink">{event.subjectLabel}</span>
-                      <span className="inline-flex items-center gap-1.5 text-ink-soft">
-                        <ActivityIcon
-                          className="size-3.5 shrink-0"
-                          name="folder"
-                          testId="project-icon"
-                        />
-                        <span>{event.projectLabel ?? '—'}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-accent-ink">
+                          {isNew ? 'New' : ''}
+                        </span>
+                        <time
+                          className="font-mono text-[11px] tabular-nums text-ink-soft"
+                          dateTime={event.occurredAt}
+                        >
+                          {displayTime(event.occurredAt)}
+                        </time>
+                        <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
+                          <ActivityIcon
+                            className={`size-3.5 shrink-0 ${EVENT_ICON_TONES[event.eventType]}`}
+                            name={EVENT_ICON_NAMES[event.eventType]}
+                            testId={`event-icon-${event.eventType}`}
+                          />
+                          {eventLabel(event.eventType)}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
+                          <ActivityIcon
+                            className="size-3.5 shrink-0 text-ink-soft"
+                            name="user"
+                            testId="actor-icon"
+                          />
+                          {event.actorLabel}
+                        </span>
+                        <span className="font-medium text-accent-ink">{event.subjectLabel}</span>
+                        <span className="inline-flex items-center gap-1.5 text-ink-soft">
+                          <ActivityIcon
+                            className="size-3.5 shrink-0"
+                            name="folder"
+                            testId="project-icon"
+                          />
+                          <span>{event.projectLabel ?? '—'}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-          {nextCursor && (
+          {state === 'ready' && items.length > 0 && nextCursor && (
             <div className="mt-4 flex justify-center">
               <button
                 className={buttonClass}

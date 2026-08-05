@@ -17,6 +17,25 @@ require() {
   fi
 }
 
+job_body() {
+  local path="$1" job="$2"
+  awk -v header="  ${job}:" '
+    $0 == header { in_job = 1 }
+    in_job && $0 ~ /^  [^[:space:]][^:]*:$/ && $0 != header { exit }
+    in_job { print }
+  ' "$repo_root/$path"
+}
+
+require_job() {
+  local path="$1" job="$2" needle="$3" description="$4"
+  if job_body "$path" "$job" | grep -Fq -- "$needle"; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description" >&2
+    failures=$((failures + 1))
+  fi
+}
+
 forbid_tree() {
   local needle="$1" description="$2"
   if grep -R -Fq -- "$needle" "$repo_root/.github/workflows"; then
@@ -75,6 +94,20 @@ require "$verifier" '\"commit\":\"$expected_commit\"' \
   'verifier requires the expected commit marker'
 require "$verifier" '\"branch\":\"$expected_branch\"' \
   'verifier requires the expected branch marker'
+require "$verifier" 'PAGES_VERIFY_TIMEOUT_SEC:-4500' \
+  'verifier allows 75 minutes for provider queue latency'
+
+for workflow in site-preview admin-preview dashboard-preview; do
+  require_job ".github/workflows/$workflow.yml" deployment \
+    'timeout-minutes: 90' \
+    "$workflow deployment job keeps a 90-minute provider ceiling"
+done
+
+for workflow in site-dev admin-dev dashboard-dev; do
+  require_job ".github/workflows/$workflow.yml" verify \
+    'timeout-minutes: 90' \
+    "$workflow verify job keeps a 90-minute provider ceiling"
+done
 
 for workflow in \
   site-preview site-dev site-prod \

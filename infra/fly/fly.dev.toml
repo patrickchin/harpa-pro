@@ -28,7 +28,9 @@ primary_region = "fra"
 
 [processes]
   app = "pnpm --filter @harpa/api exec tsx src/server.ts"
-  storage-worker = "pnpm --filter @harpa/api storage:worker"
+  # Match production's single-process launcher and memory headroom so dev
+  # catches worker-runtime regressions before promotion.
+  storage-worker = "node --import tsx packages/api/src/workers/storage-delete.ts"
 
 [http_service]
   processes = ["app"]
@@ -67,4 +69,4 @@ primary_region = "fra"
 [[vm]]
   processes = ["storage-worker"]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"

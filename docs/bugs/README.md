@@ -346,6 +346,11 @@ on the real relative filter.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — Stacked Cloudflare Pages build waves kept an exact-SHA site
+  deployment incomplete beyond 75 minutes and the admin deployment beyond 90.
+  Fix: allow a 120-minute marker poll and 150-minute `dev`/preview jobs, with
+  assertions for every affected job.
+  [detail](2026-08-05-cloudflare-pages-queue-timeout.md)
 - **2026-08-05** *(R5)* — In-process Hono requests represented a zero-byte JSON
   POST with a null body, while `@hono/node-server` exposed an empty stream, so
   deployed finalize/unfinalize returned 400 and hid cross-user 404s. Fix: cache

@@ -18,6 +18,12 @@ const { image, focus } = docsScreenshot(screenshot);
   class="docs-step-media"
   href={image.src}
   aria-label={`View full screenshot for ${stepTitle}`}
+  data-docs-screenshot-trigger
+  data-docs-screenshot-src={image.src}
+  data-docs-screenshot-alt={alt}
+  data-docs-screenshot-title={stepTitle}
+  data-docs-screenshot-width={image.width}
+  data-docs-screenshot-height={image.height}
 >
   <span
     class="docs-step-media-crop"
@@ -36,6 +42,6 @@ const { image, focus } = docsScreenshot(screenshot);
   </span>
   <span class="docs-step-media-caption">
     <span>View full screenshot</span>
-    <span aria-hidden="true">↗</span>
+    <span aria-hidden="true">⛶</span>
   </span>
 </a>

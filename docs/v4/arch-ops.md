@@ -1,4 +1,4 @@
-# Observability + Ops
+# Observability and operations
 
 ## Hosting
 
@@ -13,21 +13,22 @@
   - `harpa-pro-api-pr-<n>` (per-PR preview) at
     `https://harpa-pro-api-pr-<n>.fly.dev` — created by
     `.github/workflows/pr-preview.yml` (job `fly-preview`) when the PR
-    changes API inputs or the admin browser app, destroyed on PR
+    changes API inputs, the admin browser app, or the office dashboard,
+    destroyed on PR
     close (job `fly-destroy`). Config:
     [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
     Single shared-cpu-1x machine, `min_machines_running = 0`,
     `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
     The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
-    branch. Admin previews use the matching Fly app so their exact browser
-    origin can be allowlisted. Mobile dev/preview builds can flip to a preview URL via
-    `setApiBaseUrlOverride`.
+    branch. Admin and dashboard previews use the matching Fly app so browser
+    auth and live journeys never mutate the shared dev database. Mobile
+    dev/preview builds can flip to a preview URL via `setApiBaseUrlOverride`.
 - **Databases**: two independent Neon projects:
   - the application project uses long-lived `main` (production) and `dev`
     branches plus per-PR `pr-<n>` branches; and
   - `harpa-pro-admin` uses database `harpa_admin`, with matching `main`,
-    long-lived `dev`, and matching per-PR `pr-<n>` branches for
-    API-changing previews.
+    long-lived `dev`, and matching per-PR `pr-<n>` branches for API, admin,
+    and dashboard previews.
     The separate projects give application and admin credentials independent
     restore timelines. See [arch-database.md](arch-database.md).
 - **Storage**: Cloudflare R2. Separate buckets per env
@@ -54,9 +55,26 @@
     monitoring; unknown browser paths return a static 404. `/admin/activity`
     remains an API resource path. Data requests require the dedicated API admin
     session. See [Separate admin site](design-separate-admin-site.md).
-  - Both static web workspaces use Astro 7 with Vite 8 and require Node
-    22.12.0 or newer. The current shared CI setup uses the Node 22 channel;
-    Node 24 standardization is tracked separately.
+- **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
+  and require Node 22.12.0 or newer. Shared CI currently uses the Node 22
+  channel. Node 24 standardization is tracked separately.
+- **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
+  Pages project `harpa-pro-dashboard`.
+  - React 19 builds with Vite 8 and Tailwind CSS 4. Vite 8 shares the static
+    web runtime's Node 22.12.0 minimum.
+  - Target production branch `main` → `harpa-pro-dashboard.pages.dev` against
+    the production API. `app.harpapro.com` is not yet attached.
+  - Dev branch `dev` → `dev.harpa-pro-dashboard.pages.dev` against the dev API.
+  - Pull request branch `pr-<n>` → the stable
+    `pr-<n>.harpa-pro-dashboard.pages.dev` alias against its matching isolated
+    Fly/Neon preview.
+  - GitHub verifies the alias serves the pull request head SHA before SPA and
+    live browser checks.
+  - On 2026-08-05, Cloudflare connected the existing Direct Upload project to
+    `patrickchin/harpa-pro` in place and preserved all seven preview
+    deployments. Automatic production deployments remain disabled. No custom
+    domain is attached. See
+    [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary
@@ -80,7 +98,9 @@
     Release operators run Fastlane from the repo root:
 
   ```sh
-  bundle install --path vendor/bundle
+  gem install bundler -v 2.6.9 --no-document
+  bundle _2.6.9_ config set --local path vendor/bundle
+  bundle _2.6.9_ install
   bundle exec fastlane doctor
   bundle exec fastlane screenshots_preview       # only after assets exist
   bundle exec fastlane app_privacy_preview       # only after review
@@ -107,7 +127,10 @@
   from authenticated local tools or environment variables. The first
   Play metadata upload may require an existing release on the target
   track; if `supply` reports an empty track, run the EAS submit lane
-  once for that track and re-run the metadata lane.
+  once for that track and re-run the metadata lane. Local release tooling
+  follows [`.ruby-version`](../../.ruby-version) (`3.4.10` today) and
+  Bundler `2.6.9`; the Gemfile stays compatible with the Ruby 3.2 runtime
+  on Expo's SDK 55 builders.
 
 ## Mobile store launch workflow
 
@@ -221,7 +244,9 @@ that might create noisy or disposable data.
 Internal QA flow:
 
 ```sh
-bundle install --path vendor/bundle
+gem install bundler -v 2.6.9 --no-document
+bundle _2.6.9_ config set --local path vendor/bundle
+bundle _2.6.9_ install
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane doctor
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane metadata_preview
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane beta
@@ -362,10 +387,11 @@ directly on Fly. CI control-plane credentials such as `NEON_API_KEY` and
 | `prd`          | prod Fly app + prod CI deploys          | `.env.prod`        |
 | `dev_personal` | per-developer overrides on top of `dev` | `.env.local`       |
 
-`.env.example` (committed) enumerates every var. The three live
-variants (`.env.local` / `.env.dev` / `.env.prod`) are gitignored and
-mirror Doppler except for deployment-resolved values such as
-`ADMIN_DATABASE_URL`.
+`.env.example` lists application variables and common deployment variables.
+Workspace-specific examples list additional test and tool values. The three
+live variants (`.env.local`, `.env.dev`, and `.env.prod`) are gitignored.
+Deployment-resolved values, such as `ADMIN_DATABASE_URL`, do not mirror
+Doppler.
 
 An administrator's login password is not a deployment secret. The
 `admin:set-password --password-stdin` command hashes it into the independent
@@ -448,14 +474,16 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 ```
 
 Deployment workflows use action releases that run on Node 24. Cloudflare Pages
-publishes the static browser applications through its GitHub App; GitHub
+publishes Git-connected browser applications through its GitHub App. GitHub
 Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
 credential.
 
-`--stage` defers activation; the subsequent `flyctl deploy` flips the
-secrets on — so code + secrets ship in a single transaction. To rotate
-a secret: edit it in Doppler, push to `dev` or `main`, deploy fires
-and picks up the new value.
+The root lint job runs `pnpm test:docs:links`. It checks repository Markdown
+links and local image references before merge.
+
+`--stage` defers activation. The subsequent `flyctl deploy` activates the
+secrets. To rotate a secret, edit Doppler and dispatch the matching API
+workflow. A normal code change follows the protected `dev` and `main` flow.
 
 The `DOPPLER_TOKEN_{DEV,PRD}` service tokens are created with
 `doppler configs tokens create ci-github --project harpa-pro --config <env>`
@@ -487,19 +515,20 @@ flags. Before importing, the workflow removes any legacy
 `ADMIN_CORS_ORIGINS` Fly secret so the checked-in Fly TOML value cannot remain
 shadowed.
 
-- `.env.example` at the repo root enumerates every
-  `EXPO_PUBLIC_*` var. The `lib/env.ts` Zod parse runs in CI
-  against a populated `.env.example` to catch missing entries
-  before merge.
+- `.env.example` lists every mobile `EXPO_PUBLIC_*` variable parsed by
+  `apps/mobile/lib/config/env.ts`.
 
 ## Observability
 
-- **Sentry** for crashes, both mobile and API. Same project,
-  different DSNs. Runtime vars:
+- **Sentry** for crashes in mobile, dashboard, and API. Runtime/build vars:
   - API: `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT`, and
     `SENTRY_TRACES_SAMPLE_RATE`.
   - Mobile: `EXPO_PUBLIC_SENTRY_DSN` at Metro/EAS build or OTA-update
     time.
+  - Dashboard: optional public `VITE_SENTRY_DSN` Cloudflare build variable.
+    The Pages build wrapper derives `VITE_SENTRY_ENVIRONMENT` from the branch
+    and `VITE_SENTRY_RELEASE` from `CF_PAGES_COMMIT_SHA`. When the DSN is
+    absent, the dashboard does not initialize telemetry.
   - Source maps/native build integration: `SENTRY_ORG`,
     `SENTRY_PROJECT`, optional `SENTRY_URL`, and `SENTRY_AUTH_TOKEN`
     with `project:write`.
@@ -510,18 +539,23 @@ shadowed.
     bundles receive the same values.
     The Expo plugin disables auto-upload when `SENTRY_AUTH_TOKEN` is not
     present so local prebuilds do not fail.
-- **Fly metrics** — built-in for API latency / 5xx rate.
-- **Logs** — Fly log shipping to Better Stack (free tier) for
-  search.
-- **Request id** — every API request gets `X-Request-Id` echoed
-  in responses; logged with the structured log entry; mobile
-  attaches it to Sentry breadcrumbs on error.
+- **Fly metrics** provide provider-side Machine and HTTP telemetry.
+- **Fly logs** capture application stdout and stderr. The repository has no
+  Better Stack drain or shipping configuration. Verify any external drain in
+  Fly before relying on it.
+- **Request ID** middleware returns `X-Request-Id` on every API response.
+  Error paths add it to console output and Sentry context. The API has no
+  global structured request-log middleware. `REQUEST_LOG` is parsed but has no
+  runtime consumer.
 
 ## Deploy flow
 
 > Detailed pipeline, migration apply, and rollback playbook in
 > [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md). The flow
 > below is the high-level summary.
+
+Feature pull requests target `dev`. Production promotions use a `dev` to
+`main` pull request. Do not merge a feature branch directly to `main`.
 
 The Fly release command applies migrations in this fixed order:
 
@@ -542,16 +576,19 @@ PR open / push
   ↳ Credential-free tests, builds, path checks, and migration guards
   ↳ Human-owned same-repository PRs only:
     ↳ exact Git ref pr-<n> mirrors the immutable PR head
-    ↳ Backend preview (API-changing PRs only):
+    ↳ Backend preview (API, admin-site, or dashboard changes):
       ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
       ↳ Admin Neon branch pr-<n> from admin dev
       ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-        ↳ release_command applies app migrations, then admin migrations
+        ↳ release_command applies app migrations, admin migrations, then
+          seeds configured test/demo password accounts
         ↳ /readyz verified
         ↳ /admin/readyz verified separately
         ↳ sticky PR comment with preview URL
-    ↳ Cloudflare Git builds public/admin previews from pr-<n>
-      ↳ GitHub verifies the stable aliases serve the exact PR SHA
+    ↳ Cloudflare Git builds public/admin/dashboard previews from pr-<n>
+      ↳ GitHub verifies the stable aliases serve the exact PR head SHA
+      ↳ dashboard-preview.yml verifies SPA routing and runs its deployed live
+         browser journey against the matching isolated API
     ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
       ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
         when the PR changes API inputs
@@ -571,8 +608,9 @@ Push to dev
   ↳ admin migrations applied to admin `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
     ↳ /readyz and /admin/readyz verified independently
-  ↳ Cloudflare Git deploys public/admin `dev` branches
-    ↳ site-dev.yml and admin-dev.yml verify exact SHA + routing
+  ↳ Cloudflare Git deploys public/admin/dashboard `dev` branches
+    ↳ site-dev.yml, admin-dev.yml, and dashboard-dev.yml verify exact SHA
+    ↳ dashboard-dev.yml also verifies SPA routing
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-dev calls OTA after deploy + journeys pass
@@ -585,18 +623,27 @@ PR to main (production gate)
   ↳ run stress/core/extended journeys against that exact dev deploy
 
 Push to main (production)
-  ↳ blocking snapshots of application and admin Neon `main` branches
+  ↳ blocking recovery branches of application and admin Neon `main` branches
   ↳ Fly deploy → harpa-pro-api
     ↳ release_command applies app migrations, then admin migrations
     ↳ /readyz and /admin/readyz verified independently
-  ↳ Cloudflare Git deploys public/admin production branches
+  ↳ Cloudflare Git deploys approved production branches
     ↳ site-prod.yml and admin-prod.yml verify exact SHA + custom domains
+    ↳ dashboard-prod.yml verifies the Pages hostname and any approved custom
+       domain after dashboard production activation
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass
     ↳ appVersion change: skip until the matching native build exists
   ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
+
+Use the protected GitHub workflows for normal deployment. The local
+`infra/fly/deploy.sh` helper always targets production through
+`infra/fly/fly.toml`; it does not read `FLY_APP`. It labels the image from
+local `HEAD` but does not prove that the checkout is clean or pushed. Before
+an approved emergency use, compare `git status --short`, the local SHA, and
+the remote branch SHA, then record the deployed image digest.
 
 ### Mobile OTA and native runtime ordering
 
@@ -693,7 +740,6 @@ flyctl secrets set --app harpa-pro-api-dev \
   TURNSTILE_LIVE=1 TURNSTILE_SECRET_KEY=... \
   RATE_LIMIT_BACKEND=postgres \
   WAITLIST_CORS_ORIGINS="https://dev.harpa-pro.pages.dev" \
-  TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
   R2_FIXTURE_MODE=live \
   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
   R2_BUCKET=harpa-pro-dev \
@@ -751,7 +797,7 @@ addition to the HTTP `app` group:
 
 - `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
   to suspend at zero;
-- `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
+- `storage-worker`: `shared-cpu-1x`, 512 MB, no service attachment,
   with its active Machine and stopped standby owned by Fly deploys.
 
 The active worker is not eligible for HTTP auto-stop, so both dev and
@@ -759,6 +805,16 @@ production carry one continuously billed worker Machine. Fly also preserves a
 stopped standby for deploys and restarts. This cost is required for delayed
 cleanup to run while the API is idle. PR previews do not provision workers;
 their account-deletion gate stays closed.
+
+The worker process launches Node with the `tsx` loader directly instead of
+keeping `pnpm` and the `tsx` CLI supervisor resident. The 512 MB allocation is
+intentional headroom: the former 256 MB Machine exposed only about 207 MiB to
+the guest and reached roughly 9 MiB available while its durable queue was
+empty, followed by four daily OOM/exit-137 restarts. A structured
+`storage_delete_worker_memory` log records process uptime, Node RSS/heap, and
+guest total/free memory at startup and hourly. Fly's built-in Machine memory
+metric remains the source for whole-VM saturation and should be checked after
+each rollout.
 
 The worker does not continuously pin Neon with five-second polling. It
 sleeps until the next known job is due, capped at ten minutes to discover
@@ -781,10 +837,20 @@ seconds is the late-PUT safety window.
 `infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
 known exact singleton states, verify at least one Machine has state
 `started` and metadata process group `storage-worker`, then arm by running the
-monotonic rollout command in that group. The command inherits the app's staged
-Fly secrets, so neither CI nor manual callers need the production
-`DATABASE_URL`. The shell policy test stubs external commands, executes this
-sequence, and forbids explicit `storage-worker` scale commands.
+monotonic rollout command on that exact Machine. Arming uses Fly Machine exec,
+whose per-attempt timeout is 120 seconds, for at most three attempts. A failed
+attempt is retried only after a fresh inventory proves the same worker id is
+still the sole started worker. This is safe when transport fails after the SQL
+commit because the database update uses `COALESCE` and boolean `OR`, so later
+attempts cannot reopen the grace or disable deletion. Success also requires the
+arming script's confirmation marker, not only a zero provider exit code.
+
+The command inherits the app's staged Fly secrets, so neither CI nor manual
+callers need the production `DATABASE_URL`. The GitHub deploy step has a
+30-minute outer timeout in case another provider operation ignores its own
+deadline. The shell policy test stubs external commands, executes this
+sequence, verifies the bounded retry budget, and forbids explicit
+`storage-worker` scale commands.
 
 The shared repair is a no-op only for an exact healthy pair: one
 current-release active worker and one current-release stopped, service-less
@@ -814,7 +880,17 @@ singleton started/no-standby retry clones it. Id, identity, service, standby, or
 topology drift during any pre-clone re-list or polling fails before cloning.
 
 The verifier remains diagnostic-only. The workflow calls it again after
-repair and before arming, so a green deploy proves a running executor exists.
+repair and before arming. This proves that a running executor exists. It does
+not by itself prove that lifecycle arming finished; rely on the arming
+command's confirmation marker and the rollout table below. If a deployment
+stalls before that marker is reported, treat the rollout state as unknown and
+inspect it before retrying:
+
+```sql
+SELECT armed_at, enforce_after, account_delete_enabled, updated_at
+FROM app.storage_lifecycle_rollout
+WHERE singleton = TRUE;
+```
 
 Fly can create a stopped standby for the service-less process group. An
 explicit `storage-worker=1` command therefore collapses the pair without
@@ -841,33 +917,39 @@ ORDER BY run_after;
 
 ### Burst scaling
 
-[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's
-proxy when to wake / start additional machines:
+[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's proxy when
+an existing Machine is too busy to receive more work:
 
-- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly
-  starts routing new connections to a second (or third…) machine.
+- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly routes
+  new connections to another available Machine.
 - `hard_limit = 50` — Fly stops sending to a machine entirely until
   it drains below the soft limit.
 
-Sized for the current node-postgres pool (`max: 10` per machine)
-plus headroom for non-DB-bound work (auth, validation, idle).
-
-**Set the max machine count out-of-band** (not in fly.toml):
+Concurrency settings do not create a maximum Machine count or add Machines.
+Capacity changes are explicit operations. Before changing the app process
+count, record the current process groups and worker topology:
 
 ```bash
-# Allow up to 6 machines in the primary region during a spike.
-fly scale count 6 --max-per-region 6 -a harpa-pro-api
+flyctl scale show --app harpa-pro-api
+flyctl machine list --app harpa-pro-api
 ```
 
-Steady-state Fly will keep `min_machines_running` hot (currently 0 for
-prod) and let the rest stop/suspend when traffic recedes.
+With owner approval, set only the HTTP process group to an exact count:
+
+```bash
+flyctl scale count <count> --process-group app --app harpa-pro-api
+```
+
+Do not omit `--process-group`. A broad scale command can also change the
+service-less `storage-worker` group. After a count change, rerun the Machine
+inventory and confirm the worker pair is unchanged. `--max-per-region` controls
+distribution of the requested count; it is not an autoscaling ceiling.
 
 ### Multi-region (future)
 
-`primary_region = "fra"` today. Adding read-replica regions is a
-single-step `fly regions add` once the user base demands it — Neon
-read replicas exist in multiple regions and the API has no
-sticky-session state. Not configured today; flag for P5+.
+`primary_region = "fra"` today. Multi-region placement is not configured.
+It requires an explicit Machine topology, database-latency design, failure
+policy, and verification plan. Do not treat it as a one-command change.
 
 ### Neon connection pooling
 
@@ -883,9 +965,9 @@ Neon's per-compute connection limit. Two safety nets:
    fly secrets list -a harpa-pro-api | grep DATABASE_URL  # shows digest only
    doppler secrets get DATABASE_URL --plain | grep -o '[^@]*$'  # full host
    ```
-2. **`pg.Pool.max = 10`** per machine. With 6 machines max that's 60
-   concurrent backend connections — well inside Neon's free-tier
-   limit (~100) and trivially inside paid plans.
+2. **`pg.Pool.max = 10`** per application Machine. Total possible client
+   connections grow with the active Machine count. Verify the current Neon
+   plan and endpoint limits before increasing Fly capacity.
 
 If the pooler hostname is missing, the API still works but Neon's
 compute will saturate well before Fly does and you'll see
@@ -904,22 +986,26 @@ variable.
 ### Verifying scale in prod
 
 ```bash
-fly status -a harpa-pro-api               # current machine count + state
-fly logs -a harpa-pro-api | grep started  # see auto-starts under load
-fly autoscale show -a harpa-pro-api       # current limits
+flyctl status --app harpa-pro-api
+flyctl scale show --app harpa-pro-api
+flyctl machine list --app harpa-pro-api
+flyctl logs --app harpa-pro-api
 ```
 
 ## Alerts
 
-- Fly app down → PagerDuty.
-- 5xx rate > 1% over 5 min → Slack.
-- Sentry new issue (crash) → Slack.
-- AI provider failure rate > 5% over 10 min → Slack.
+The repository configures Sentry capture, Fly health checks, and deployment
+smokes. It does not configure PagerDuty, Slack alert routes, or percentage
+thresholds. Treat those integrations as unknown until they are verified in
+the provider consoles. Record the destination, threshold, owner, and a test
+event when an external alert is enabled.
 
 ## Budget guards
 
 - AI: per-user monthly token budget enforced server-side; usage
   visible on the in-app `usage` screen.
-- R2: lifecycle rules cap orphan files (see [arch-storage.md](arch-storage.md)).
+- R2: application jobs remove expired uploads and account-owned objects. No
+  bucket-native R2 lifecycle policy is configured in this repository; see
+  [arch-storage.md](arch-storage.md).
 - Neon: application and admin PR branches auto-delete on PR close. CI also
-  prunes stale branches and per-deploy snapshots in both projects.
+  prunes stale branches and pre-deploy recovery branches in both projects.

@@ -1,5 +1,9 @@
 # Mobile Text & Label Audit Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Produce a docs-only audit of every user-facing label, header, button, body string, empty state, error message, toast, and accessibility label in `apps/mobile/`, plus a tone/voice style guide to anchor recommendations.
@@ -15,6 +19,7 @@
 ## Task 1: Sample baseline screens to ground the style guide
 
 **Files:**
+
 - Read (no edits): a representative cross-section of mobile screens and shared components.
 
 - [ ] **Step 1: Pick the sample set**
@@ -56,6 +61,7 @@ This task produces context only.
 ## Task 2: Write the style guide
 
 **Files:**
+
 - Create: `docs/v4/text-audit/style-guide.md`
 
 - [ ] **Step 1: Create the directory and file**
@@ -110,6 +116,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3: Create the audit-findings skeleton
 
 **Files:**
+
 - Create: `docs/v4/text-audit/audit-findings.md`
 
 This task lays down the section structure so subagent outputs in Task 4 drop into known slots.
@@ -124,6 +131,7 @@ Contents:
 > Style guide: [`style-guide.md`](./style-guide.md). Every recommendation in this doc cites a style-guide section by anchor.
 >
 > Format per file:
+>
 > - **Findings** — table with columns `Current` | `Recommended` | `Reason` (style-guide anchor).
 > - **Gaps** — bullet list. Flagged only when clearly missing: silent failure paths, icon-only controls without `accessibilityLabel`, lists without empty states, async UI without loading/error state, destructive actions without confirmation copy.
 > - "No findings" is a valid section body.
@@ -167,6 +175,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4: Run six parallel audit subagents
 
 **Files:**
+
 - Subagents READ: their assigned globs under `apps/mobile/`.
 - Subagents WRITE: nothing in the repo. Each returns a markdown chunk in its response.
 
@@ -174,7 +183,7 @@ All six subagents run in **one response** (parallel `task` calls). They share th
 
 ### Shared subagent prompt template
 
-````
+```
 You are auditing user-facing text in the mobile app. This is a docs-only review — do NOT edit any code.
 
 Style guide (read first): docs/v4/text-audit/style-guide.md
@@ -214,7 +223,7 @@ Rules:
 - Dev-only screens (developer.tsx, debug.tsx, e2e-password-login.tsx) get a `> Dev-only — lower priority` note above the Findings table.
 - Do NOT propose architectural changes, prop renames, or component refactors. Text only.
 - Return the assembled markdown for your area, ready to paste under the corresponding `## <SECTION_HEADING>` heading in audit-findings.md. Do NOT include the `## <SECTION_HEADING>` heading itself.
-````
+```
 
 ### Subagent assignments
 
@@ -257,6 +266,7 @@ The chunks live only in the conversation. Task 5 stitches them into the file.
 ## Task 5: Stitch subagent chunks into audit-findings.md
 
 **Files:**
+
 - Modify: `docs/v4/text-audit/audit-findings.md`
 
 - [ ] **Step 1: Paste each chunk under its assigned `## ` heading**
@@ -266,6 +276,7 @@ Replace the six `_To be filled by audit pass._` placeholders with the correspond
 - [ ] **Step 2: Normalize voice**
 
 Read every `Recommended` column cell. Subagents may diverge in phrasing — apply the style guide directly:
+
 - Sentence case
 - No trailing punctuation on buttons
 - No "Please" / "Oops" / "Sorry"
@@ -307,6 +318,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6: Final self-review pass
 
 **Files:**
+
 - Read-only verification of both `docs/v4/text-audit/*.md`.
 - Possible touch-ups to either doc.
 

@@ -7,6 +7,7 @@
 > Kept here for historical context — what was actually built and why.
 
 Cross-links:
+
 - Builds on [arch-batch-photo-notes.md](arch-batch-photo-notes.md)
   (`note_files`, `noteId` grouping).
 - Touches the report renderer covered by
@@ -76,22 +77,26 @@ to the same issue/section.
 ## Alternatives considered
 
 ### A. Drag-and-drop tiles between cards
+
 Rejected. Heavy gesture conflicts inside a `ScrollView`; not
 one-handed friendly; and Maestro can't drive a long-press-drag-drop
 across cards reliably enough to gate the feature on E2E.
 
 ### B. Multi-select + "Move N" toolbar
+
 Rejected for v1. Bulk move adds modal state and a selection mode
 that has no other use yet. Easy to add later because the underlying
 mutation is per-note already.
 
 ### C. Per-group "Place in…" chip → bottom-sheet picker (chosen)
+
 Tap-target only, no gestures, identical interaction whether the
 group is unplaced or already placed (single sheet handles place /
 move / remove). Maps cleanly to one PATCH per tap. Maestro driver
 trivial: tap → tap-row → assert.
 
 ### D. Stable handles by `index` vs. by title hash
+
 We pick **`index` with self-healing on drift** (option D1) over a
 synthetic title-hash key (option D2). Rationale:
 
@@ -142,7 +147,7 @@ JSON shape (single source of truth in `api-contract`):
 
 ```ts
 const placementSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('issue'),   index: z.number().int().nonnegative() }),
+  z.object({ kind: z.literal('issue'), index: z.number().int().nonnegative() }),
   z.object({ kind: z.literal('section'), index: z.number().int().nonnegative() }),
 ]);
 export type NotePlacement = z.infer<typeof placementSchema>;
@@ -152,7 +157,7 @@ export type NotePlacement = z.infer<typeof placementSchema>;
 Placement is 1:1 with `notes.id`, scoped per-report (queries already
 filter by `report_id`), never queried independently, and small
 (<40 bytes). A side table would add a join with no benefit.
-[Pitfall 6](pitfalls.md#pitfall-6) per-request scope is unaffected:
+[Pitfall 6](pitfalls.md#pitfall-6--per-request-db-scope-rls-replacement-added-late) per-request scope is unaffected:
 the column rides along with the existing notes RLS policy; no new
 policy required.
 
@@ -183,8 +188,9 @@ Returns: 200 { ...note, placement }
 ```
 
 Why a sub-resource and not extending `PATCH /notes/{note}`:
+
 - Existing `PATCH /notes/{note}` only accepts `{ body, title,
-  summary }` and explicitly rejects empty patches (route line 143
+summary }` and explicitly rejects empty patches (route line 143
   in `routes/notes.ts`). Adding an undefined-permitted field to
   the same handler muddies that contract.
 - Distinct OpenAPI route makes Maestro selectors / API-CLI calls
@@ -208,6 +214,7 @@ export async function updateNotePlacement(
 ```
 
 Behaviour:
+
 - 404 if note not visible under scope.
 - 400 (route layer) if note kind ≠ `image`.
 - Success: writes `placement` JSONB. **Does NOT call
@@ -226,10 +233,10 @@ Behaviour:
 ### Zod additions in `packages/api-contract`
 
 - Export `placementSchema` (above) and `notePlacementUpdate` (`{
-  placement: placementSchema.nullable() }`).
+placement: placementSchema.nullable() }`).
 - Extend `noteSchemas.note` with `placement: placementSchema.nullable()`.
 - Generated client gets `apiClient.notes.updatePlacement({ note,
-  body })`.
+body })`.
 
 ### Per-request scope tests (Pitfall 6)
 
@@ -248,6 +255,7 @@ route — the standard pitfall-6 negative.
 ### Default-wiring integration test (Pitfall 13)
 
 A single `notes.placement.integration.test.ts` that:
+
 - Creates a project + report + image note via the **real default
   factories** (no DI stubs), against Testcontainers Postgres.
 - PATCHes placement to `{ kind: 'issue', index: 0 }`.
@@ -274,7 +282,7 @@ apps/mobile/components/reports/photo-placement/
   `currentPlacement`, `onSelect(placement | null)`. Renders two
   scroll sections ("Issues", "Detailed sections"). Sheet uses the
   shared `AppDialogSheet` primitive — **no `Alert.alert`**
-  ([Pitfall 12](pitfalls.md#pitfall-12)). One row per target plus
+  ([Pitfall 12](pitfalls.md#pitfall-12--alertalert-used-for-app-dialogs)). One row per target plus
   a "Remove from current section" row when `currentPlacement` is
   set.
 - `PlacedPhotoGroup` — pure presentational: takes the same
@@ -285,7 +293,7 @@ apps/mobile/components/reports/photo-placement/
   `MapPin`-style) overlaid bottom-right of the photo grid; tap
   opens the sheet.
 
-Styling: NativeWind only ([Pitfall 3](pitfalls.md#pitfall-3)). No
+Styling: NativeWind only ([Pitfall 3](pitfalls.md#pitfall-3--mobile-shell-drifted-from-the-visual-design)). No
 hex literals in components.
 
 ### Mutation hook
@@ -315,7 +323,7 @@ interface ReportViewProps {
    * When omitted, the renderer behaves exactly as today.
    */
   placedPhotoGroups?: {
-    issues: Record<number, PlacedGroup>;     // index → group
+    issues: Record<number, PlacedGroup>; // index → group
     sections: Record<number, PlacedGroup>;
   };
   /** Callback to trigger the "Move" sheet for a placed group. */
@@ -368,15 +376,15 @@ including the self-healing branch (placement points past
 
 ## Edge cases
 
-| Case | Behaviour |
-|---|---|
-| Note deleted while placed | `notes` row gone → join in `listNotes` returns nothing → group disappears from card. No FK action needed. |
-| All photos in a group deleted | Same as above — note row deletes. |
-| Issue/section deleted from `report.body` so index out of range | Self-healing: UI ignores placement, fires `PATCH … { placement: null }`. Group reappears in bottom Photos card on next render. |
-| Issue/section reordered (rare; user edits in `ReportEditForm`) | Index points at a different target. Acceptable for v1 — user can re-place with one tap. Documented as a known limitation; revisit if reorder UX lands. |
-| Read-only project member | Chip not rendered (gated on the same `canEdit` flag the kebab uses for note-delete). API returns 404 for the PATCH under their scope as a defence-in-depth. |
-| Finalised report | Placement still editable. Finalisation is an immutable snapshot of `reports.body`, but `notes` (incl. `placement`) is the source-of-truth side table; placing a photo on a finalised report does not regenerate, only re-binds rendering. |
-| Voice / document / text note | Chip not rendered; PATCH returns 400 if attempted. |
+| Case                                                           | Behaviour                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Note deleted while placed                                      | `notes` row gone → join in `listNotes` returns nothing → group disappears from card. No FK action needed.                                                                                                                                 |
+| All photos in a group deleted                                  | Same as above — note row deletes.                                                                                                                                                                                                         |
+| Issue/section deleted from `report.body` so index out of range | Self-healing: UI ignores placement, fires `PATCH … { placement: null }`. Group reappears in bottom Photos card on next render.                                                                                                            |
+| Issue/section reordered (rare; user edits in `ReportEditForm`) | Index points at a different target. Acceptable for v1 — user can re-place with one tap. Documented as a known limitation; revisit if reorder UX lands.                                                                                    |
+| Read-only project member                                       | Chip not rendered (gated on the same `canEdit` flag the kebab uses for note-delete). API returns 404 for the PATCH under their scope as a defence-in-depth.                                                                               |
+| Finalised report                                               | Placement still editable. Finalisation is an immutable snapshot of `reports.body`, but `notes` (incl. `placement`) is the source-of-truth side table; placing a photo on a finalised report does not regenerate, only re-binds rendering. |
+| Voice / document / text note                                   | Chip not rendered; PATCH returns 400 if attempted.                                                                                                                                                                                        |
 
 ## Test plan
 
@@ -403,7 +411,7 @@ including the self-healing branch (placement points past
      renders inside the issue card.
 
   Driven against fixtures (no live LLM), per
-  [Pitfall 2](pitfalls.md#pitfall-2).
+  [Pitfall 2](pitfalls.md#pitfall-2--llm-fixtures-retrofitted-not-designed-in).
 
 ## Doc + plan updates
 
@@ -463,9 +471,9 @@ Recorded here so they cannot be silently lost:
 9. `test(maestro): place-photo-on-issue flow`
    — full E2E captured + replayed against fixtures.
 10. `docs: link design-photo-placement.md from architecture index +
-    plan-p3 + arch-batch-photo-notes`
+plan-p3 + arch-batch-photo-notes`
     — final cross-links land with the feature, per
-    [Pitfall 10](pitfalls.md#pitfall-10).
+    [Pitfall 10](pitfalls.md#pitfall-10--coverage--docs--tests-in-p5p6p7-instead-of-inline).
 
 ## Open questions
 

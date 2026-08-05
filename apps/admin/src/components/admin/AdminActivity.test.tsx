@@ -78,6 +78,21 @@ const secondReportEvent = {
   metadata: { reportNumber: 8 },
 } as unknown as activity.Event;
 
+const duplicateIdentityEvent = {
+  ...reportEvent,
+  id: 'aud_3456789abcdf',
+  occurredAt: '2026-07-29T00:30:00.000Z',
+  actorUserId: 'usr_abcdef012345',
+  actorLabel: 'Alice Activity',
+  actorEmail: null,
+  subjectId: 'rpt_23456789',
+  subjectLabel: 'Report #9',
+  projectId: 'prj_abcdef01',
+  projectLabel: 'Tower Refurbishment',
+  requestId: 'request-report-duplicate-identity',
+  metadata: { reportNumber: 9 },
+} as unknown as activity.Event;
+
 const projectEvent = {
   id: 'aud_789abcdef012',
   occurredAt: '2026-07-29T03:05:00.000Z',
@@ -439,7 +454,31 @@ describe('AdminActivity', () => {
     expect(entry.getAttribute('aria-label') ?? '').toContain(
       'Event: Report created. Actor: Alice Activity. Subject: Report #7. Project: Tower Refurbishment.',
     );
-    expect(screen.queryByRole('columnheader', { name: 'Actor' })).toBeNull();
+    const columnHeaders = screen.getByTestId('activity-column-headers');
+    expect(Array.from(columnHeaders.children, (header) => header.textContent?.trim())).toEqual([
+      'New',
+      'Time',
+      'Event',
+      'User',
+      'Subject',
+      'Project',
+    ]);
+    expect(columnHeaders.getAttribute('aria-hidden')).toBeNull();
+    expect(within(columnHeaders).queryByRole('button', { name: 'Filter by time' })).toBeNull();
+    expect(within(columnHeaders).queryByRole('button', { name: 'Filter by event' })).toBeNull();
+    for (const column of ['user', 'project']) {
+      const trigger = within(columnHeaders).getByRole('button', { name: `Filter by ${column}` });
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
+    }
+    expect(within(columnHeaders).queryByRole('button', { name: /new|time|event|subject/i })).toBeNull();
+    expect(columnHeaders.className).toContain(
+      'grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)]',
+    );
+    expect(entry.className).toContain(
+      'grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)]',
+    );
+    expect(screen.queryByRole('columnheader')).toBeNull();
     expect(screen.queryByLabelText('Event type')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
@@ -461,15 +500,18 @@ describe('AdminActivity', () => {
   });
 
   it('defaults to milestones from the past calendar month and offers simpler ranges', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => activityResponse([]));
     const user = userEvent.setup();
     const beforeRender = new Date();
 
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    const level = screen.getByRole('group', { name: 'Detail level' });
-    const period = screen.getByRole('group', { name: 'Time period' });
+    const toolbar = screen.getByRole('region', { name: 'Activity filters' });
+    const period = within(toolbar).getByRole('group', { name: 'Time period' });
+    const level = within(toolbar).getByRole('group', { name: 'Detail level' });
     expect(within(level).getByRole('radio', { name: 'Milestones' })).toHaveProperty(
       'checked',
       true,
@@ -478,6 +520,11 @@ describe('AdminActivity', () => {
       'checked',
       true,
     );
+    expect(screen.queryByRole('button', { name: 'Filter by time' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Filter by event' })).toBeNull();
+    expect(screen.queryByLabelText('Filter actor')).toBeNull();
+    expect(screen.queryByLabelText('Exclude actor')).toBeNull();
+    expect(screen.queryByLabelText('Filter project')).toBeNull();
     expect(screen.queryByLabelText('From')).toBeNull();
     expect(screen.queryByLabelText('To')).toBeNull();
 
@@ -515,7 +562,9 @@ describe('AdminActivity', () => {
   });
 
   it('switches between milestone, detailed, and all activity levels', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
@@ -538,7 +587,9 @@ describe('AdminActivity', () => {
   });
 
   it('does not expose or send an event-type filter', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
@@ -588,74 +639,155 @@ describe('AdminActivity', () => {
     ).toBe('file-text');
   });
 
-  it('keeps actor and project filters visible and applies actor choices without opening a row', async () => {
+  it('opens one non-modal header popup at a time without placing it inside the table', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByText('No activity matches these filters.');
+    const tableShell = screen.getByTestId('activity-table-shell');
+    const header = screen.getByTestId('activity-column-headers');
+    const userTrigger = within(header).getByRole('button', { name: 'Filter by user' });
+    const projectTrigger = within(header).getByRole('button', { name: 'Filter by project' });
+
+    await user.click(userTrigger);
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    expect(userPopup.getAttribute('aria-modal')).toBe('false');
+    expect(userPopup.style.position).toBe('fixed');
+    expect(tableShell.contains(userPopup)).toBe(false);
+    expect(userTrigger.getAttribute('aria-expanded')).toBe('true');
+
+    await user.click(projectTrigger);
+    expect(screen.queryByRole('dialog', { name: 'User filter' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Project filter' })).toBeTruthy();
+    expect(userTrigger.getAttribute('aria-expanded')).toBe('false');
+    expect(projectTrigger.getAttribute('aria-expanded')).toBe('true');
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Project filter' })).toBeNull();
+    expect(document.activeElement).toBe(projectTrigger);
+
+    await user.click(userTrigger);
+    expect(screen.getByRole('dialog', { name: 'User filter' })).toBeTruthy();
+    await user.click(screen.getByRole('heading', { name: 'Harpa Pro activity' }));
+    expect(screen.queryByRole('dialog', { name: 'User filter' })).toBeNull();
+  });
+
+  it('lists each user once, disambiguates duplicate names, and applies include/exclude choices', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockImplementation(async () => activityResponse([reportEvent, secondReportEvent]));
+      .mockImplementation(async () =>
+        activityResponse([reportEvent, secondReportEvent, duplicateIdentityEvent]),
+      );
     const user = userEvent.setup();
     render(<AdminActivity />);
 
     await screen.findByTestId(`activity-row-${reportEvent.id}`);
-    const actorFilter = screen.getByLabelText('Filter actor');
-    const projectFilter = screen.getByLabelText('Filter project');
-    const actorExclusion = screen.getByLabelText('Exclude actor');
+    await user.click(screen.getByRole('button', { name: 'Filter by user' }));
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    const search = within(userPopup).getByRole('searchbox', { name: 'Search users' });
+    const users = within(userPopup).getByRole('list', { name: 'Users' });
+    const aliceLabel = 'Alice Activity — alice@example.com';
+    const bobLabel = 'Bob Builder — bob@example.com';
+    const duplicateAliceLabel = 'Alice Activity — usr_abcdef012345';
 
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(actorFilter.className).toContain('appearance-none');
-    expect(document.querySelectorAll('[data-select-chevron]')).toHaveLength(3);
-    expect(
-      within(actorFilter).getByRole('option', {
-        name: 'Alice Activity — alice@example.com',
-      }),
-    ).toBeTruthy();
-    expect(within(projectFilter).getByRole('option', { name: 'Tower Refurbishment' })).toBeTruthy();
-
-    await user.selectOptions(actorFilter, reportEvent.actorUserId!);
-    await waitFor(() =>
-      expect(lastActivityUrl(fetchMock).searchParams.get('actorUserId')).toBe(
-        reportEvent.actorUserId,
-      ),
+    expect(within(userPopup).getByRole('radio', { name: 'Any user' })).toHaveProperty(
+      'checked',
+      true,
     );
+    expect(within(users).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(users).getAllByText('Alice Activity', { exact: true })).toHaveLength(2);
+    expect(within(users).getByText('alice@example.com', { exact: true })).toBeTruthy();
+    expect(within(users).getByText('usr_abcdef012345', { exact: true })).toBeTruthy();
+    expect(within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` })).toBeTruthy();
+    expect(within(userPopup).getByRole('checkbox', { name: `Exclude ${duplicateAliceLabel}` })).toBeTruthy();
 
-    await user.selectOptions(projectFilter, reportEvent.projectId!);
-    await waitFor(() =>
-      expect(lastActivityUrl(fetchMock).searchParams.get('projectId')).toBe(reportEvent.projectId),
-    );
+    const requestsBeforeSearch = fetchMock.mock.calls.length;
+    await user.type(search, 'usr_abcdef012345');
+    expect(within(users).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(requestsBeforeSearch);
+    await user.clear(search);
 
-    await user.selectOptions(actorExclusion, reportEvent.actorUserId!);
-    expect(
-      await screen.findByRole('button', { name: 'Remove Alice Activity exclusion' }),
-    ).toBeTruthy();
+    await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }));
     await waitFor(() =>
       expect(lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')).toBe(
         'usr_0123456789ab',
       ),
     );
+    const userTrigger = screen.getByRole('button', { name: 'Filter by user' });
+    const activeDescriptionId = userTrigger.getAttribute('aria-describedby');
+    expect(activeDescriptionId).not.toBeNull();
+    expect(document.getElementById(activeDescriptionId!)?.textContent?.trim()).toBe(
+      '1 active user filter',
+    );
 
-    await user.selectOptions(actorExclusion, secondReportEvent.actorUserId!);
-    expect(
-      await screen.findByRole('button', { name: 'Remove Bob Builder exclusion' }),
-    ).toBeTruthy();
+    await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${bobLabel}` }));
     await waitFor(() =>
       expect(
         lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')?.split(','),
       ).toEqual(['usr_0123456789ab', 'usr_123456789abc']),
     );
 
-    await user.click(screen.getByRole('button', { name: 'Remove Alice Activity exclusion' }));
+    await user.click(within(userPopup).getByRole('radio', { name: `Only ${aliceLabel}` }));
+    await waitFor(() => {
+      const url = lastActivityUrl(fetchMock);
+      expect(url.searchParams.get('actorUserId')).toBe(reportEvent.actorUserId);
+      expect(url.searchParams.get('excludeActorUserIds')).toBe(secondReportEvent.actorUserId);
+    });
+    expect(
+      within(userPopup).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }),
+    ).toHaveProperty('checked', false);
+
+    await user.click(within(userPopup).getByRole('checkbox', { name: `Exclude ${aliceLabel}` }));
+    await waitFor(() => {
+      const url = lastActivityUrl(fetchMock);
+      expect(url.searchParams.has('actorUserId')).toBe(false);
+      expect(url.searchParams.get('excludeActorUserIds')?.split(',').sort()).toEqual(
+        [reportEvent.actorUserId!, secondReportEvent.actorUserId!].sort(),
+      );
+    });
+    expect(within(userPopup).getByRole('radio', { name: 'Any user' })).toHaveProperty(
+      'checked',
+      true,
+    );
+  });
+
+  it('lists projects once, disambiguates duplicate names, and searches by project ID', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () =>
+        activityResponse([reportEvent, secondReportEvent, duplicateIdentityEvent]),
+      );
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByTestId(`activity-row-${reportEvent.id}`);
+    await user.click(screen.getByRole('button', { name: 'Filter by project' }));
+    const projectPopup = screen.getByRole('dialog', { name: 'Project filter' });
+    const search = within(projectPopup).getByRole('searchbox', { name: 'Search projects' });
+    const projects = within(projectPopup).getByRole('list', { name: 'Projects' });
+    expect(within(projects).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(projects).getAllByText('Tower Refurbishment', { exact: true })).toHaveLength(2);
+    expect(within(projects).getByText('prj_01234567', { exact: true })).toBeTruthy();
+    expect(within(projects).getByText('prj_abcdef01', { exact: true })).toBeTruthy();
+
+    const requestsBeforeSearch = fetchMock.mock.calls.length;
+
+    await user.type(search, 'prj_abcdef01');
+    expect(within(projects).getAllByRole('listitem')).toHaveLength(1);
+    const duplicateTower = within(projectPopup).getByRole('radio', {
+      name: 'Only Tower Refurbishment — prj_abcdef01',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(requestsBeforeSearch);
+
+    await user.click(duplicateTower);
     await waitFor(() =>
-      expect(lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')).toBe(
-        'usr_123456789abc',
+      expect(lastActivityUrl(fetchMock).searchParams.get('projectId')).toBe(
+        duplicateIdentityEvent.projectId,
       ),
     );
-    expect(screen.queryByRole('button', { name: 'Remove Alice Activity exclusion' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Remove Bob Builder exclusion' })).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: 'Clear excluded actors' }));
-    await waitFor(() =>
-      expect(lastActivityUrl(fetchMock).searchParams.has('excludeActorUserIds')).toBe(false),
-    );
-    expect(screen.queryByRole('button', { name: /exclusion$/ })).toBeNull();
   });
 
   it('marks only events discovered by a manual refresh as new in this browser session', async () => {
@@ -668,7 +800,8 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByTestId(`activity-row-${reportEvent.id}`);
-    expect(screen.queryByText('New')).toBeNull();
+    const feed = screen.getByRole('list', { name: 'Activity events' });
+    expect(within(feed).queryByText('New')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
@@ -688,7 +821,7 @@ describe('AdminActivity', () => {
     await waitFor(() =>
       expect(screen.getByRole('status').textContent).toBe('No new events since last refresh.'),
     );
-    expect(screen.queryByText('New')).toBeNull();
+    expect(within(feed).queryByText('New')).toBeNull();
   });
 
   it('reenables refresh when an automatic filter request supersedes it', async () => {

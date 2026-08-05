@@ -9,20 +9,21 @@ dashboard application.
 **Root cause.** The dormant dashboard Pages project remained Git-integrated
 with automatic preview builds enabled for `dev` and `pr-*`. GitHub mirrored an
 eligible pull request head to `pr-<number>`, so Cloudflare tried to build
-`apps/dashboard`; that path is absent from `dev` and exists only in
-[draft PR #211](https://github.com/patrickchin/harpa-pro/pull/211).
+`apps/dashboard`; at the time, that path was absent from `dev` and existed only
+in [PR #211](https://github.com/patrickchin/harpa-pro/pull/211).
 
-**Fix.** In Cloudflare, keep automatic production deployments disabled and set
-the preview branch policy to `None` while the dashboard application is absent.
-Re-enable an exact dashboard pull request ref only during a refreshed dashboard
-rollout, require exact-head green deployment checks, and expand preview branch
-coverage only after the application lands on `dev`.
+**Fix.** The immediate containment disabled preview branch deployments. During
+the refreshed dashboard rollout, previews were re-enabled only for the exact
+generated `pr-211` branch. After the application landed on `dev`, the target
+preview contract became custom branches `dev` and `pr-*`. The build watch
+include remains `*` so each allowed branch head produces its exact-SHA
+deployment marker. Automatic production deployments remain disabled.
 
-**Test.** Cloudflare's Branch control settings show automatic production
-deployments disabled and `Preview branch: None`. Provider configuration is not
-available to repository tests, so reactivation is fail-closed: the refreshed
-dashboard pull request must prove its exact head SHA through the deployment
-marker and dashboard checks before merge.
+**Test.** On 2026-08-05, the Cloudflare Pages project API returned automatic
+production deployments disabled, preview mode `custom`, preview includes `dev`
+and `pr-*`, no preview excludes, build watch include `*`, and no path excludes.
+Repository policy tests also require every dashboard pull request to prove its
+exact head SHA through the deployment marker and dashboard checks before merge.
 
 **Pattern.** This is a provider-state variant of stale CI scope: a configured
 deployment target outlived the source tree it expected.

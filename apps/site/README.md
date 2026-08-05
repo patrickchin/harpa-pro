@@ -1,10 +1,10 @@
 # @harpa/site
 
 Astro 7 + Tailwind v4 public site for `harpapro.com`, including marketing,
-legal, roadmap, and product-guide routes.
+privacy, roadmap, and product-guide routes.
 
-See [`docs/marketing/`](../../docs/marketing/) for the full plan
-(M0 → M3) and architecture.
+See [`docs/marketing/`](../../docs/marketing/) for current architecture and
+historical M0–M4 plans.
 
 ## Develop
 
@@ -14,6 +14,10 @@ pnpm --filter @harpa/site build
 pnpm --filter @harpa/site typecheck
 pnpm --filter @harpa/site test:e2e
 ```
+
+Copy `.env.example` to `.env` before local development. The shared header uses
+`PUBLIC_DASHBOARD_URL` for its dashboard action; local development normally
+points it at `http://localhost:3003`.
 
 ## Stack
 
@@ -43,8 +47,8 @@ practices/SEO ≥ 95.
 Guide content lives in `src/content/docs/`. Current mobile screenshots are
 copied from `apps/mobile/fastlane/screenshots/en-US/` into
 `src/assets/docs/`, then Astro emits responsive WebP variants during the static
-build. Keep the checked-in source images unchanged unless the mobile UI is
-recaptured and reviewed.
+build. `docs-content.test.ts` requires those checked-in copies to match the
+release captures exactly.
 
 Legacy `/guides/*` URLs and slugs from the first unified-site revision are
 preserved in `public/_redirects`.

@@ -89,10 +89,10 @@ least one section-header placeholder.
 
 ## Measurement
 
-`apps/mobile/lib/layout-shift-probe.ts` provides a dev-only probe.
+`apps/mobile/lib/util/layout-shift-probe.ts` provides a dev-only probe.
 
 ```ts
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 const onLayout = useLayoutShiftProbe('reports-list:first-row');
 return <Card onLayout={onLayout} ... />;
@@ -119,16 +119,16 @@ map that's only populated if a screen happens to call the hook.
 Use `id` strings of the form `screen-name:landmark`. Common
 landmarks per screen:
 
-| Screen | Landmarks |
-|---|---|
-| `projects-list` | `header`, `first-row` |
-| `project-overview` | `header`, `first-card`, `last-card` |
-| `reports-list` | `header`, `first-row` |
-| `report-detail` | `header`, `title-block`, `summary-card`, `workers-card` |
-| `project-members` | `header`, `first-row` |
-| `edit-project` | `header`, `first-field`, `last-field`, `submit` |
-| `account` | `info-notice`, `email-field`, `company-field` |
-| `image-note-card` | `slot` |
+| Screen             | Landmarks                                               |
+| ------------------ | ------------------------------------------------------- |
+| `projects-list`    | `header`, `first-row`                                   |
+| `project-overview` | `header`, `first-card`, `last-card`                     |
+| `reports-list`     | `header`, `first-row`                                   |
+| `report-detail`    | `header`, `title-block`, `summary-card`, `workers-card` |
+| `project-members`  | `header`, `first-row`                                   |
+| `edit-project`     | `header`, `first-field`, `last-field`, `submit`         |
+| `account`          | `info-notice`, `email-field`, `company-field`           |
+| `image-note-card`  | `slot`                                                  |
 
 Add a `testID="<screen-name>-skeleton"` on the skeleton's outer
 `View` so Maestro flows can wait for / screenshot it.

@@ -1,7 +1,7 @@
 # Design — Admin business activity
 
-Status: approved on 2026-07-29. The first detail-level expansion was approved
-on 2026-07-30. The separate admin-auth cutover is in progress; see
+Status: implemented and deployed. The first detail-level expansion was
+approved on 2026-07-30. The separate admin-auth boundary is live; see
 [Separate admin console authentication](design-separate-admin-auth.md).
 
 Implementation status:
@@ -10,7 +10,7 @@ Implementation status:
 - [x] Phase 2 — initial signup, project, and report event writers.
 - [x] Phase 3 — admin read API and credentialed browser CORS.
 - [x] Phase 4 — admin page.
-- [ ] Phase 5 — deployment.
+- [x] Phase 5 — deployment.
 - [x] Phase 6 — detail levels and advanced filtering.
 
 ## Problem
@@ -62,9 +62,9 @@ This design deliberately separates:
 Add an append-oriented `app.activity_events` table, a typed
 `GET /admin/activity` API, and an Astro page containing one React island.
 
-The page uses TanStack Table for table state and rendering. Filtering and
-pagination remain server-side. The API is the only data source; the browser
-never connects to Neon directly.
+The page renders a dense native list. Filtering and pagination remain
+server-side. The API is the only data source; the browser never connects to
+Neon directly. TanStack Table is not installed.
 
 Business events remain in the application Neon project. Administrator
 identities and sessions live in the independent `harpa-pro-admin` Neon
@@ -358,10 +358,18 @@ The presentation and interaction model is refined by
 [Dense admin activity log view](design-admin-activity-log-view.md). The page
 includes:
 
-- immediately applied button-style level and simple time-range filters, with no
-  separate event-type control;
-- always-visible actor, actor-exclusion, and project filters;
-- multiple removable excluded-actor chips;
+- `Time period` and `Detail level` controls in a filter region above the feed,
+  with no separate event-type control;
+- compact non-modal filter popups attached only to the `User` and `Project`
+  column headers, without changing table row positions;
+- immediately applied time, detail-level, included-user, multiple
+  excluded-user, and project choices;
+- one user list with an email or stable user ID for duplicate-name clarity;
+- project choices with stable project IDs for duplicate-name clarity;
+- local user and project choice search by name and displayed identifier, with
+  contradictory user inclusion and exclusion resolved before the request;
+- page and column-header filters that remain available when a query returns no
+  rows;
 - dense, non-wrapping log lines with clear information hierarchy;
 - local refresh baselines and `New` markers;
 - a browser-local plain-text view of the currently loaded rows;
@@ -432,9 +440,11 @@ explicit deployment choice after the password flow is verified.
 ### Admin site
 
 - Component tests cover password auth, loading, generic failure, empty,
-  populated, pagination, level and time presets, multiple actor exclusions,
-  immediate actor/project filters, refresh/new markers, plain-text output,
-  deleted entities, and the detail drawer.
+  populated, pagination, the above-feed time and detail controls, User and
+  Project header popups, local choice search, duplicate-name labels, immediate
+  requests, multiple user exclusions, include/exclude conflict resolution,
+  stable table geometry, refresh/new markers, plain-text output, deleted
+  entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).
 - Run the admin workspace typecheck, lint, unit, build, and focused Playwright
@@ -470,7 +480,7 @@ before being treated as complete.
 ### Phase 4 — Admin page
 
 - Add the dedicated admin-auth fetch client and password states.
-- Add TanStack Table and the activity island.
+- Add the dense activity-list island.
 - Add the Astro route, noindex/robots exclusions, tests, and responsive
   styling.
 
@@ -482,7 +492,7 @@ before being treated as complete.
 - Configure the production API origin allowlist and migrate the independent
   admin `main` database before provisioning production.
 - Attach `admin.harpapro.com` to the independent Pages project and verify the
-  root console plus legacy-path redirect.
+  root console and verify that unknown browser paths return 404.
 - Decide whether to enable Cloudflare Access.
 - Run a production smoke: sign up, create a project and report, add selected
   note kinds, and verify both milestone and detail rows with request IDs where

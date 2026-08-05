@@ -128,15 +128,15 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
          (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
           project_id, request_id, dedupe_key, metadata)
        VALUES
-         ($1, '2026-07-29T04:00:00Z', 'report.created', $2, 'report', $3,
+         ($1, CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'report.created', $2, 'report', $3,
           $4, 'request-admin-activity-e2e', $5, '{"reportNumber":7}'),
-         ($6, '2026-07-29T04:04:00Z', 'note.text_created', $2, 'note', $10,
+         ($6, CURRENT_TIMESTAMP - INTERVAL '1 minute', 'note.text_created', $2, 'note', $10,
           $4, 'request-note-text-e2e', $14, '{}'),
-         ($7, '2026-07-29T04:03:00Z', 'note.voice_created', $2, 'note', $11,
+         ($7, CURRENT_TIMESTAMP - INTERVAL '2 minutes', 'note.voice_created', $2, 'note', $11,
           $4, 'request-note-voice-e2e', $15, '{}'),
-         ($8, '2026-07-29T04:02:00Z', 'note.image_created', $2, 'note', $12,
+         ($8, CURRENT_TIMESTAMP - INTERVAL '3 minutes', 'note.image_created', $2, 'note', $12,
           $4, 'request-note-image-e2e', $16, '{}'),
-         ($9, '2026-07-29T04:01:00Z', 'note.document_created', $2, 'note', $13,
+         ($9, CURRENT_TIMESTAMP - INTERVAL '4 minutes', 'note.document_created', $2, 'note', $13,
           $4, 'request-note-document-e2e', $17, '{}')`,
       [
         reportEventId,

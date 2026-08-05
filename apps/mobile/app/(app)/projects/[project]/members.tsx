@@ -9,6 +9,7 @@ import {
   useProjectQuery,
   useProjectMembersQuery,
   useAddProjectMemberMutation,
+  useUpdateProjectMemberMutation,
   useRemoveProjectMemberMutation,
   useMeQuery,
 } from '@/lib/api/hooks';
@@ -43,6 +44,10 @@ export default function ProjectMembersRoute() {
   const add = useAddProjectMemberMutation({
     onSuccess: () => setAddSuccessNonce((n) => n + 1),
   });
+  const [updateRoleSuccessNonce, setUpdateRoleSuccessNonce] = useState(0);
+  const updateRole = useUpdateProjectMemberMutation({
+    onSuccess: () => setUpdateRoleSuccessNonce((n) => n + 1),
+  });
   const remove = useRemoveProjectMemberMutation();
 
   const { refreshing, onRefresh } = useRefresh([
@@ -51,13 +56,14 @@ export default function ProjectMembersRoute() {
   ]);
 
   const addError = add.error instanceof Error ? add.error.message : null;
+  const updateRoleError =
+    updateRole.error instanceof Error ? updateRole.error.message : null;
 
   return (
     <ProjectMembers
       members={members.data?.items ?? []}
       currentUserId={me.data?.user?.id ?? null}
       myRole={projectQuery.data?.myRole ?? 'viewer'}
-      ownerId={projectQuery.data?.ownerId ?? ''}
       isLoading={projectQuery.isLoading || members.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
@@ -71,6 +77,15 @@ export default function ProjectMembersRoute() {
       isAddPending={add.isPending}
       addError={addError}
       addSuccessNonce={addSuccessNonce}
+      onUpdateMemberRole={(userId, role) =>
+        updateRole.mutate({
+          params: { project: slug, user: userId },
+          body: { role },
+        })
+      }
+      isUpdateRolePending={updateRole.isPending}
+      updateRoleError={updateRoleError}
+      updateRoleSuccessNonce={updateRoleSuccessNonce}
       onRemoveMember={(userId) =>
         remove.mutate({ params: { project: slug, user: userId } })
       }

@@ -28,6 +28,7 @@ export default defineConfig({
       ? "corepack pnpm preview --host 127.0.0.1"
       : "PUBLIC_API_BASE_URL=http://localhost:8787 " +
         "PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA " +
+        "PUBLIC_DASHBOARD_URL=http://127.0.0.1:3003 " +
         "corepack pnpm build && corepack pnpm preview --host 127.0.0.1",
     url: "http://127.0.0.1:3002/docs",
     reuseExistingServer: !process.env.CI,

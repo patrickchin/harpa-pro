@@ -5,11 +5,13 @@
 
 ## Overview
 
-Mobile application auth is handled by
+Mobile application and office-dashboard auth is handled by
 **[better-auth](https://www.better-auth.com)** running inside the Hono API.
 The library manages session issuance, email-OTP sign-in, and (in future
-specs) SIWA + Google Sign-In. It writes into four `public.*` tables
-(`user`, `session`, `account`, `verification`) using a Drizzle adapter.
+specs) SIWA + Google Sign-In. Mobile sends a bearer session token, while
+the dashboard sends the Better Auth session cookie. Better Auth writes
+into four `public.*` tables (`user`, `session`, `account`,
+`verification`) using a Drizzle adapter.
 
 The browser admin console deliberately does not use Better Auth. Its
 explicitly provisioned identities and revocable sessions live in the
@@ -33,26 +35,31 @@ no joins or cross-database foreign keys.
 ```mermaid
 sequenceDiagram
   autonumber
-  participant App as Mobile (@better-auth/expo)
+  participant App as Mobile or dashboard
   participant API as Hono API (better-auth handler)
   participant R as Resend
   participant DB as Neon
 
   App->>API: POST /api/auth/email-otp/send-verification-otp { email }
-  API->>R: emails.send({ to: email, text: otp })
+  API->>R: emails.send({ to: email, text: otp }) when EMAIL_OTP_LIVE=1
   R-->>API: 200
   API-->>App: 200
 
   App->>API: POST /api/auth/sign-in/email-otp { email, otp }
   API->>DB: verify OTP, create user if new, create session
-  API-->>App: 200 { token, user }
+  API-->>App: 200 { token, user } + session cookie
 
-  App->>API: GET /me  (Authorization: Bearer <token>)
+  App->>API: GET /me (bearer token or session cookie)
   API->>API: auth.api.getSession({headers}) → { user, session }
   API->>DB: withScopedConnection(userId, sessionId, fn)
   DB-->>API: scoped result
   API-->>App: 200 { user }
 ```
+
+Mobile stores the bearer token in SecureStore through
+`@better-auth/expo`. The dashboard browser keeps the session in the
+better-auth `HttpOnly` cookie. Dashboard API requests include credentials.
+The dashboard does not copy the token into browser storage.
 
 ## better-auth server config
 
@@ -65,9 +72,21 @@ Key decisions (full rationale in the design spec):
   adapter uses the **unscoped** connection pool (`rawDb()`) — not
   `withScopedConnection` — because it needs to read sessions before it
   knows which user to scope to.
-- **`expo()` plugin** (`@better-auth/expo`) manages bearer-token
-  storage and `trustedOrigins` for the Expo client. Admin browser origins are
-  intentionally absent. No separate `bearer` plugin is needed.
+- **`expo()` plugin** (`@better-auth/expo`) supports Expo origins and
+  mobile session storage.
+- **`bearer()` plugin** accepts the mobile session token and the
+  password-login smoke-test token. It returns the `set-auth-token` header
+  used by mobile and smoke-test clients. The dashboard uses the standard
+  better-auth browser cookie instead.
+- **`trustedOrigins`** contains the mobile schemes and every parsed
+  `DASHBOARD_CORS_ORIGINS` entry. This includes the production dashboard,
+  Cloudflare Pages previews, and local dashboard development.
+- **`advanced.defaultCookieAttributes`** derives browser cookie settings
+  from `BETTER_AUTH_URL`. HTTPS uses `HttpOnly`, `Secure`,
+  `SameSite=None`, and `Partitioned`. Local HTTP development uses
+  `HttpOnly`, `SameSite=Lax`, and no `Secure` flag.
+- Admin browser origins are intentionally absent from Better Auth
+  `trustedOrigins`; admin authentication uses its isolated session system.
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
@@ -79,9 +98,9 @@ Key decisions (full rationale in the design spec):
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
   Only for test-account smoke tests and demo accounts; a `before` hook
   401s any email not in the union of `TEST_ACCOUNT_EMAILS` and
-  `DEMO_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
-  production too so smoke tests run against the live deploy; emails not
-  on the allowlist always fail before the hash compare.
+  `DEMO_ACCOUNT_EMAILS`. The deployment design supplies test accounts in
+  production so live smoke tests can sign in. Emails outside the configured
+  allowlist fail before the hash compare.
 - **`advanced.database.generateId({model})`** — mints `usr_…` /
   `ses_…` / `vrf_…` / `idn_…` slugs for each better-auth table via
   `newId()`. IDs are stored as bare `text`; slug format is enforced at
@@ -94,8 +113,10 @@ The dedicated browser-admin design is specified in
 
 ### Identity and password boundary
 
-- The Neon project is `harpa-pro-admin`; `main` serves production and the
-  long-lived `dev` branch serves development.
+- Repository workflows target the independent `harpa-pro-admin` Neon
+  project. They map `main` to production and the long-lived `dev` branch to
+  development. The current provider-side project, branch, and restore state
+  is **UNKNOWN** until it is verified through Neon.
 - `ADMIN_DATABASE_URL` points at database `harpa_admin`. In every
   environment it must not identify the same Postgres endpoint as
   `DATABASE_URL`.
@@ -150,10 +171,11 @@ foreign keys receive a separate design and migration.
 pnpm --filter @harpa/api auth:schema:generate
 ```
 
-Re-run whenever a better-auth plugin is added or removed. Commit the
-output. CI re-runs the generator and verifies no diff (`git diff
---exit-code`). Do not edit by hand — declare `additionalFields` in
-`auth.ts` and let the CLI pick them up.
+Re-run whenever a better-auth plugin is added or removed. Commit the output.
+Do not edit it by hand. Declare `additionalFields` in `auth.ts` and let the
+CLI pick them up. The dependency-policy test pins the related packages and
+checks the exact generation command. No current CI job regenerates the file
+and compares the result, so schema drift still needs a direct review check.
 
 The API and mobile manifests pin `better-auth`, `@better-auth/expo`, and the
 official `auth` CLI to the same exact stable release. Upgrade all of them
@@ -167,9 +189,8 @@ its own Zod 3 dependency. `apps/mobile/lib/auth/client.ts` also normalises the
 Expo plugin's generated `BetterFetch` generic signature at the plugin boundary;
 the adapter changes types only and preserves Expo's `getCookie` action.
 
-The file is imported by the Drizzle adapter and by the migration
-numbering tool; it is **not** imported directly by route handlers or
-the scope layer.
+The file is imported by the Drizzle adapter and re-exported by
+`packages/api/src/db/schema.ts`. Route handlers do not import it directly.
 
 ## Public schema layout
 
@@ -187,22 +208,22 @@ Better-auth tables live in `public` (Postgres default schema):
 The better-auth adapter queries these with the unscoped pool; RLS
 would block its own session lookups.
 
-**`public.user` does have an RLS policy** — see migration snippet
-below. Better-auth's adapter bypasses RLS by setting the unscoped
-role explicitly, but `app_authenticated` queries (i.e. anything that
-reaches `public.user` from a route handler through
-`withScopedConnection`) are restricted to the calling user's row.
-This means accidental `db.select().from(user)` in route code returns
-at most one row instead of leaking the whole user table.
+**`public.user` does have an RLS policy** — see the migration snippet
+below. Better Auth uses the raw application connection before a request has
+an app role or user scope. The configured database owner can bypass the
+owner-enforced policy. Queries through `withScopedConnection` switch to
+`app_authenticated`, so reads of `public.user` are restricted to the current
+user.
 
 Defence-in-depth controls for these tables:
 
-1. App code never imports `db/auth-schema.ts` directly — `no-restricted-
-imports` ESLint rule enforced.
+1. Route modules use the scoped database accessor. The current route-layer
+   ESLint rule blocks direct imports of `db/client` and `db/scope` in most
+   authenticated routes.
 2. `/me` reads the user from `auth.api.getSession()` (returns the user
    alongside the session), not from a raw `db.select()` call.
 3. The `public.user` RLS policy described above is the last-line
-   defence if (1) and (2) are bypassed.
+   defence for queries that run under `app_authenticated`.
 
 ## Per-request DB scope
 
@@ -211,15 +232,15 @@ imports` ESLint rule enforced.
 ```sql
 -- Application role (no login, no table grants by default).
 CREATE ROLE app_authenticated NOLOGIN;
-GRANT app_authenticated TO app_api;
+GRANT app_authenticated TO CURRENT_USER;
 
 GRANT USAGE ON SCHEMA app TO app_authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app
   TO app_authenticated;
 
 -- public.user gets RLS to limit app_authenticated reads to the
--- caller's own row. Better-auth's adapter uses the unscoped role
--- and bypasses these policies (BYPASSRLS not granted to that role).
+-- caller's own row. Better Auth uses the raw owner connection before
+-- an authenticated request scope exists.
 GRANT SELECT ON public.user TO app_authenticated;
 GRANT UPDATE (display_name, company_name, updated_at) ON public.user
   TO app_authenticated;
@@ -248,19 +269,27 @@ CREATE POLICY projects_member_read ON app.projects
 ```ts
 export async function withScopedConnection<T>(
   claims: { sub: string; sid: string },
-  fn: (tx: NodePgDatabase) => Promise<T>,
+  fn: (db: ScopedDb) => Promise<T>,
 ): Promise<T> {
+  assertId('usr', claims.sub, 'claims.sub');
+  assertId('ses', claims.sid, 'claims.sid');
+
+  const pool = getPool();
   const conn = await pool.connect();
   try {
     await conn.query('BEGIN');
     await conn.query(`SET LOCAL role app_authenticated`);
-    await conn.query(`SET LOCAL app.user_id = '${assertId('usr', claims.sub)}'`);
-    await conn.query(`SET LOCAL app.session_id = '${assertId('ses', claims.sid)}'`);
+    await conn.query(`SET LOCAL app.user_id = '${claims.sub}'`);
+    await conn.query(`SET LOCAL app.session_id = '${claims.sid}'`);
     const result = await fn(drizzle(conn, { schema }));
     await conn.query('COMMIT');
     return result;
   } catch (err) {
-    await conn.query('ROLLBACK');
+    try {
+      await conn.query('ROLLBACK');
+    } catch {
+      // Ignore a secondary rollback failure.
+    }
     throw err;
   } finally {
     conn.release();
@@ -279,7 +308,6 @@ export function withAuth(): MiddlewareHandler<AppEnv> {
     }
     c.set('userId', session.user.id);
     c.set('sessionId', session.session.id);
-    c.set('user', session.user);
     c.set('db', (fn) =>
       withScopedConnection({ sub: session.user.id, sid: session.session.id }, fn),
     );
@@ -291,36 +319,90 @@ export function withAuth(): MiddlewareHandler<AppEnv> {
 Route handlers use `c.get('db')(fn)`. The raw `db` import is ESLint-
 banned in the routes layer.
 
+## Dashboard origins and CORS
+
+`DASHBOARD_CORS_ORIGINS` is a comma-separated API allowlist. Its default
+value is:
+
+```text
+https://app.harpapro.com,https://harpa-pro-dashboard.pages.dev,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003,http://127.0.0.1:3003
+```
+
+The API uses this same list for better-auth `trustedOrigins` and Hono
+CORS. A `*` matches characters inside one origin and does not cross a
+`/`. This lets immutable Cloudflare Pages preview subdomains use browser
+sessions without allowing arbitrary origins.
+
+Cloudflare Pages previews and Fly API previews use different site domains.
+For an HTTPS `BETTER_AUTH_URL`, better-auth sets a partitioned,
+cross-site cookie with `SameSite=None` and `Secure`. The `Partitioned`
+flag isolates that cookie to the current top-level preview site. Local
+HTTP development keeps `SameSite=Lax` and omits `Secure`, so browsers can
+use the cookie on `localhost`.
+
+Allowed dashboard responses echo the matched origin and set
+`Access-Control-Allow-Credentials: true`. Preflight allows the normal
+HTTP methods plus `Authorization`, `Content-Type`, `Idempotency-Key`, and
+`X-Requested-With`. The API exposes `Set-Auth-Token` and
+`X-Usage-Warning`.
+
+The public `/waitlist` routes keep their separate,
+non-credentialed `WAITLIST_CORS_ORIGINS` policy. An unknown dashboard
+origin receives no dashboard CORS headers.
+
+## Project role RLS
+
+Migration `0027_project_write_roles.sql` adds
+`app.can_edit_project(project_id)`. It returns true only for the current
+project owner or editor. The project, report, note, note-file, and file
+write policies use this helper.
+
+Project membership still grants reads. Owners and editors can write
+project content. Viewers cannot update project metadata, reports, notes,
+note-file links, or ordinary project files. A note author can edit or
+delete their note only while they remain a project writer. Membership
+management and project deletion remain owner-only.
+
+Route role checks remain the first authorization boundary. The matching
+Postgres policies prevent a missing route check from granting a viewer
+write.
+
 ## Files: project-inherited RLS
 
-`app.files` allows project members (not just the owner) to SELECT
-and UPDATE attached files. Migration `0011_files_project_scope.sql`
-defines four discriminated policies:
+`app.files` lets every current project member read attached files.
+Migration `0027_project_write_roles.sql` narrows all other file actions:
 
-| Policy                | Action | Rule                                        |
-| --------------------- | ------ | ------------------------------------------- |
-| `files_member_read`   | SELECT | owner OR `app.is_member(project_id)`        |
-| `files_owner_insert`  | INSERT | `owner_id = current_setting('app.user_id')` |
-| `files_member_write`  | UPDATE | owner OR `app.is_member(project_id)`        |
-| `files_member_delete` | DELETE | owner OR `app.is_member(project_id)`        |
+| Action | Rule                                                                     |
+| ------ | ------------------------------------------------------------------------ |
+| SELECT | File owner or `app.is_member(project_id)`                                |
+| INSERT | Current owner of a personal file, or current owner/editor of the project |
+| UPDATE | Current owner of a personal file, or current owner/editor of the project |
+| DELETE | Current owner of a personal file, or current owner/editor of the project |
 
-Personal-scoped files (`project_id IS NULL`) collapse to owner-only
-because the membership branch short-circuits to false.
+PDF export is the only viewer write exception. A current member may insert
+a generated project PDF that they own. The security-definer function
+`app.attach_report_pdf(report_id, file_id)` then checks the exact member,
+project, report, file owner, and `pdf` kind before it changes only
+`reports.pdf_file_id`. It does not grant a viewer general report update
+access.
+
+Personal files (`project_id IS NULL`) remain owner-only.
 
 See [`arch-storage.md` §Security](arch-storage.md#security) and
-[`docs/bugs/README.md` R8](../bugs/README.md#bugs).
+[`docs/bugs/README.md`](../bugs/README.md).
 
-## Lint guards
+## Lint guard
 
-- `no-restricted-imports` for `@/db/client` outside `packages/api/src/db/`.
-- `no-restricted-imports` for `@/db/auth-schema` outside
-  `packages/api/src/auth/auth.ts`.
-- `no-restricted-syntax` for `.set('role'` outside the scope module.
-- `no-restricted-syntax` for `setTimeout` inside `apps/mobile/app/(auth)/`.
+`packages/api/.eslintrc.cjs` blocks direct imports of `db/client` and
+`db/scope` from most route modules. Public auth, health, waitlist, admin, and
+readiness routes are explicit exceptions because they cannot use an
+authenticated request scope. Tests are also excluded. The current config does
+not enforce import rules for `db/auth-schema`, direct SQL role changes, or
+mobile timers.
 
 ## Test gates
 
-For each authed route the integration suite ships **two paired tests**:
+Scope suites commonly pair an allowed request with a cross-user request:
 
 ```ts
 test('actor A reads their own project', async () => {
@@ -331,23 +413,29 @@ test('actor A cannot read actor B project', async () => {
 });
 ```
 
-Plus a **negative-control** test per resource that runs the same query
-without the scope wrapper and asserts it returns the other actor's row —
-proving the wrapper is what protects it. Lives in
-`packages/api/src/__tests__/scope/`. CI enforces coverage via
-`scripts/check-scope-tests.sh`.
+Some resource suites also include an unscoped negative control. Scope tests
+live under `packages/api/src/__tests__/scope/`.
+`scripts/check-scope-tests.sh` checks that each non-empty route source file has
+a non-empty test file with the expected name. It does not prove paired
+cross-user coverage or inspect assertions.
 
 Auth-specific test requirements (Pitfall 13 — test the **default
 wiring**, not a DI stub):
 
-- Email-OTP integration test runs against the **default**
-  `betterAuth({...})` instance with `EMAIL_OTP_LIVE=1`. The real
-  `sendVerificationOTP` callback executes and calls Resend; `nock` (or
-  equivalent) intercepts the outbound HTTPS request and asserts the
-  payload. The `sendVerificationOTP` function is **not** swapped out
-  via DI — that would test a stub, not the wiring.
+- Email-OTP journey tests use the default Better Auth instance and a real
+  database with fake delivery enabled. A focused unit test captures the
+  configured callback and checks redacted preview logging. There is no
+  current test that runs the default live callback through an intercepted
+  Resend request. That remains a default-wiring coverage gap.
 - Test-account password tests exercise the real better-auth password
   compare and real DB lookup — no DI stubs on the hot path.
+- Dashboard integration tests cover the production origin, an immutable
+  Cloudflare Pages preview origin, local email-OTP wiring, and an unknown
+  origin. Cookie tests cover the HTTPS cross-site attributes and local
+  HTTP fallback. The waitlist CORS tests protect its separate public
+  policy.
+- Project role scope tests run owner, editor, viewer, and non-member
+  writes against Postgres. Viewer denials do not rely only on hidden UI.
 
 ## Test-account password bypass
 
@@ -369,27 +457,33 @@ curl -X POST "$API/api/auth/sign-in/email" \
 
 Then use the returned `token` as `Authorization: Bearer …`.
 
-Env vars (Doppler `dev` and `prd`):
+Deployment configuration expects these variables in Doppler `dev` and `prd`.
+Their current provider-side values are **UNKNOWN** until Doppler and a live
+smoke test verify them.
 
 | Var                     | Purpose                                                                                            |
 | ----------------------- | -------------------------------------------------------------------------------------------------- |
 | `TEST_ACCOUNT_EMAILS`   | Comma-separated allowlist. Use `test@harpapro.com`, `test2@harpapro.com`, and `test3@harpapro.com` |
 | `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars                                                                      |
 
-Env-Zod enforces both-or-neither. `TEST_ACCOUNT_EMAILS` is set in
-both `dev` and `prd` so smoke-test logins keep working on live
-deployments; the before-hook still rejects any email not on the
-allowlist. The deploy seed is credential-level idempotent: if an
-allowlisted user already exists, it creates or refreshes that user's
+Env-Zod enforces both-or-neither. The deployment design configures both
+`dev` and `prd` so smoke-test logins work after deployment. Confirm that
+provider state before relying on it. The before-hook rejects any email not on
+the configured allowlist. The deploy seed is credential-level idempotent: if
+an allowlisted user already exists, it creates or refreshes that user's
 `credential` account password instead of assuming the user is ready.
 
 ## Demo account access
 
 Demo users, including App Store reviewers, use the normal email screen.
 When the email is one of `demo@harpapro.com`, `demo2@harpapro.com`, or
-`demo3@harpapro.com`, mobile skips requesting an OTP and the next screen
-accepts a password instead. There is no visible demo or reviewer-only
-button in the mobile app.
+`demo3@harpapro.com`, mobile and the office dashboard skip requesting an OTP
+and the next screen accepts a password instead. There is no visible demo or
+reviewer-only button in either client. The dashboard behavior is specified in
+[`design-dashboard-demo-password-sign-in.md`](design-dashboard-demo-password-sign-in.md).
+Because the server-side demo-password configuration is optional, the dashboard
+password screen also lets the user explicitly request a standard email OTP.
+No OTP is sent until the user selects that fallback.
 
 The production API may set:
 
@@ -413,6 +507,8 @@ authenticated API routes behave the same as they do for a regular user.
 Normal users still receive and enter six-digit email OTPs. The demo
 password path does not change the email-OTP route; if that route is
 called directly, better-auth still generates standard six-digit OTPs.
+The dashboard exposes that route as an explicit fallback from its demo
+password screen, so demo emails remain usable without password configuration.
 Demo password attempts are logged with `{email, outcome}` and never log
 the password.
 
@@ -432,11 +528,12 @@ introduces that data contract.
 | `ADMIN_MIGRATIONS_REQUIRED_HEAD` | API image | Admin migration filename expected by `/admin/readyz`                                 |
 | `RESEND_API_KEY`                 | API       | Resend transport for OTP emails                                                      |
 | `EMAIL_OTP_LIVE`                 | API       | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test)          |
-| `TEST_ACCOUNT_EMAILS`            | API       | Password-bypass allowlist (set in dev + prd)                                         |
-| `TEST_ACCOUNT_PASSWORD`          | API       | Shared smoke-test password (set in dev + prd)                                        |
+| `TEST_ACCOUNT_EMAILS`            | API       | Password-bypass allowlist                                                            |
+| `TEST_ACCOUNT_PASSWORD`          | API       | Shared smoke-test password                                                           |
 | `DEMO_ACCOUNT_EMAILS`            | API       | Comma-separated exact demo account emails                                            |
 | `DEMO_ACCOUNT_PASSWORD`          | API       | Server-only demo password                                                            |
-| `DATABASE_URL`                   | API       | Application Neon connection (pooled)                                                 |
+| `DASHBOARD_CORS_ORIGINS`         | API       | Credentialed office-dashboard origins trusted by Better Auth and Hono                |
+| `DATABASE_URL`                   | API       | Pooled application Neon Postgres connection                                          |
 | `EXPO_PUBLIC_API_URL`            | Mobile    | API base URL (validated by `lib/env.ts`)                                             |
 
 ## App session lifecycle
@@ -449,10 +546,15 @@ introduces that data contract.
   daily holds a rolling 7-day session; a user idle for 7+ days is
   signed out.
 - **Sign-out** (`POST /api/auth/sign-out`) deletes the session row;
-  the bearer token cannot be reused after.
+  the bearer token and browser session cookie cannot be reused after.
 - **`@better-auth/expo` client** persists the bearer token in
-  `expo-secure-store` (encrypted at rest on iOS/Android). The session
-  survives app restarts; force-quitting does not log the user out.
+  `expo-secure-store` on signed builds, so the session survives app restarts.
+  Development builds fall back to process-local memory when SecureStore fails
+  because the build lacks Keychain entitlement. That fallback does not survive
+  a restart.
+- **Dashboard browser client** sends the better-auth `HttpOnly` cookie
+  with `credentials: include`. Dashboard code does not persist the
+  session token in local storage.
 
 ## Admin session lifecycle
 
@@ -530,6 +632,8 @@ monotonic grace only after a successful deploy. Preview deployments
 enforce leases but leave account deletion disabled because they do not
 run the worker. See
 [`arch-storage.md`](arch-storage.md#account-deletion-cleanup).
+The current rollout row in any deployed database is **UNKNOWN** until a
+readiness check or direct operational query verifies it.
 
 ## Maestro password-login wiring
 

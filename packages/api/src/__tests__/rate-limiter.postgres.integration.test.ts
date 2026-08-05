@@ -8,15 +8,65 @@ const HOUR_MS = 60 * 60_000;
 let fx: PgFixture;
 let firstMachinePool: pg.Pool;
 let secondMachinePool: pg.Pool;
+let tearingDown = false;
+
+type PoolError = Error & { code?: string };
+type PoolSource = 'first-machine' | 'second-machine';
+
+function isExpectedTeardownError(error: PoolError, duringTeardown: boolean) {
+  return duringTeardown && error.code === '57P01';
+}
+
+function observePoolErrors(pool: pg.Pool, source: PoolSource) {
+  pool.on('error', (error) => {
+    const poolError = error as PoolError;
+    if (isExpectedTeardownError(poolError, tearingDown)) return;
+    throw Object.assign(new Error(`[${source}] unexpected test pool error: ${poolError.message}`), {
+      cause: poolError,
+      code: poolError.code,
+    });
+  });
+}
+
+async function endPoolAfterClientRemoval(pool: pg.Pool | undefined): Promise<void> {
+  if (!pool) return;
+
+  const expectedRemovals = pool.totalCount;
+  if (expectedRemovals === 0) {
+    await pool.end();
+    return;
+  }
+
+  const clientsRemoved = new Promise<void>((resolve) => {
+    let removals = 0;
+    const onRemove = () => {
+      removals += 1;
+      if (removals === expectedRemovals) {
+        pool.removeListener('remove', onRemove);
+        resolve();
+      }
+    };
+    pool.on('remove', onRemove);
+  });
+
+  await Promise.all([pool.end(), clientsRemoved]);
+}
 
 beforeAll(async () => {
+  tearingDown = false;
   fx = await startPg();
   firstMachinePool = new pg.Pool({ connectionString: fx.url });
   secondMachinePool = new pg.Pool({ connectionString: fx.url });
+  observePoolErrors(firstMachinePool, 'first-machine');
+  observePoolErrors(secondMachinePool, 'second-machine');
 }, 120_000);
 
 afterAll(async () => {
-  await Promise.all([firstMachinePool?.end(), secondMachinePool?.end()]);
+  tearingDown = true;
+  await Promise.all([
+    endPoolAfterClientRemoval(firstMachinePool),
+    endPoolAfterClientRemoval(secondMachinePool),
+  ]);
   await fx?.stop();
 }, 60_000);
 
@@ -25,6 +75,25 @@ beforeEach(async () => {
 });
 
 describe('PostgresRateLimiter', () => {
+  it('observes errors from both test-created pools', () => {
+    expect(firstMachinePool.listenerCount('error')).toBeGreaterThan(0);
+    expect(secondMachinePool.listenerCount('error')).toBeGreaterThan(0);
+  });
+
+  it('only tolerates administrator shutdown after teardown begins', () => {
+    const administratorShutdown = Object.assign(
+      new Error('terminating connection due to administrator command'),
+      { code: '57P01' },
+    );
+    const connectionReset = Object.assign(new Error('read ECONNRESET'), {
+      code: 'ECONNRESET',
+    });
+
+    expect(isExpectedTeardownError(administratorShutdown, false)).toBe(false);
+    expect(isExpectedTeardownError(administratorShutdown, true)).toBe(true);
+    expect(isExpectedTeardownError(connectionReset, true)).toBe(false);
+  });
+
   it('atomically enforces one budget across independent application instances', async () => {
     const firstMachine = new PostgresRateLimiter(firstMachinePool);
     const secondMachine = new PostgresRateLimiter(secondMachinePool);

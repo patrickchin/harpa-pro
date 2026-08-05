@@ -1,5 +1,9 @@
 # Report Meta Restoration Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Restore a `meta` envelope (title, summary, reportType, visitDate, location, projectPhase, riskLevel, tags) to `reportBody`, regenerate via LLM, surface across the mobile UI.
@@ -41,6 +45,7 @@
 ## Task 1: Contract — add `meta` envelope to `reportBody`
 
 **Files:**
+
 - Modify: `packages/api-contract/src/schemas/reports.ts`
 - Test: `packages/api-contract/src/schemas/reports.test.ts` (create if missing)
 
@@ -65,8 +70,12 @@ describe('reportBody with meta envelope', () => {
         riskLevel: 'medium',
         tags: ['rebar', 'wet weather'],
       },
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     });
     expect(result.success).toBe(true);
   });
@@ -74,12 +83,21 @@ describe('reportBody with meta envelope', () => {
   it('accepts all-null meta fields and empty tags', () => {
     const result = reportBody.safeParse({
       meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
-        riskLevel: null, tags: [],
+        title: null,
+        summary: null,
+        reportType: null,
+        visitDate: null,
+        location: null,
+        projectPhase: null,
+        riskLevel: null,
+        tags: [],
       },
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     });
     expect(result.success).toBe(true);
   });
@@ -87,12 +105,20 @@ describe('reportBody with meta envelope', () => {
   it('defaults tags to [] when omitted', () => {
     const result = reportBody.safeParse({
       meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
+        title: null,
+        summary: null,
+        reportType: null,
+        visitDate: null,
+        location: null,
+        projectPhase: null,
         riskLevel: null,
       },
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.meta.tags).toEqual([]);
@@ -101,13 +127,21 @@ describe('reportBody with meta envelope', () => {
   it('rejects more than 7 tags', () => {
     const result = reportBody.safeParse({
       meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
+        title: null,
+        summary: null,
+        reportType: null,
+        visitDate: null,
+        location: null,
+        projectPhase: null,
         riskLevel: null,
         tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
       },
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     });
     expect(result.success).toBe(false);
   });
@@ -116,12 +150,21 @@ describe('reportBody with meta envelope', () => {
     const result = reportBody.safeParse({
       visitDate: '2026-05-28T00:00:00Z',
       meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
-        riskLevel: null, tags: [],
+        title: null,
+        summary: null,
+        reportType: null,
+        visitDate: null,
+        location: null,
+        projectPhase: null,
+        riskLevel: null,
+        tags: [],
       },
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     });
     // strict-mode behaviour: passes (extra prop ignored). The
     // explicit assertion is that the data shape doesn't expose it.
@@ -138,6 +181,7 @@ describe('reportBody with meta envelope', () => {
 ```
 pnpm --filter @harpa/api-contract test reports.test.ts
 ```
+
 Expected: tests fail because `meta` doesn't exist on `reportBody`.
 
 - [ ] **Step 3: Edit `packages/api-contract/src/schemas/reports.ts`**
@@ -145,14 +189,19 @@ Expected: tests fail because `meta` doesn't exist on `reportBody`.
 Replace the body block (above `export const reportBody = z.object({…})`) with:
 
 ```ts
-const reportType = z.enum([
-  'site_visit', 'daily', 'inspection', 'safety', 'incident', 'progress',
-]);
+const reportType = z.enum(['site_visit', 'daily', 'inspection', 'safety', 'incident', 'progress']);
 export type ReportTypeValue = z.infer<typeof reportType>;
 
 const projectPhase = z.enum([
-  'planning', 'foundation', 'structure', 'envelope',
-  'services', 'interior', 'finishing', 'handover', 'other',
+  'planning',
+  'foundation',
+  'structure',
+  'envelope',
+  'services',
+  'interior',
+  'finishing',
+  'handover',
+  'other',
 ]);
 export type ProjectPhaseValue = z.infer<typeof projectPhase>;
 
@@ -160,50 +209,60 @@ const riskLevel = z.enum(['low', 'medium', 'high']);
 export type RiskLevelValue = z.infer<typeof riskLevel>;
 
 export const reportMeta = z.object({
-  title:        z.string().nullable(),
-  summary:      z.string().nullable(),
-  reportType:   reportType.nullable(),
-  visitDate:    isoDateTime.nullable(),
-  location:     z.string().nullable(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
+  reportType: reportType.nullable(),
+  visitDate: isoDateTime.nullable(),
+  location: z.string().nullable(),
   projectPhase: projectPhase.nullable(),
-  riskLevel:    riskLevel.nullable(),
-  tags:         z.array(z.string()).max(7).default([]),
+  riskLevel: riskLevel.nullable(),
+  tags: z.array(z.string()).max(7).default([]),
 });
 export type ReportMeta = z.infer<typeof reportMeta>;
 
 export const reportBody = z.object({
   meta: reportMeta,
-  weather: z.object({
-    condition: z.string().nullable(),
-    temperatureC: z.number().nullable(),
-    windKph: z.number().nullable(),
-    impact: z.string().nullable(),
-  }).nullable(),
-  workers: z.array(z.object({
-    role: z.string(),
-    count: z.number().int().nonnegative(),
-    hours: z.number().nonnegative().nullable(),
-    notes: z.string().nullable(),
-  })),
-  materials: z.array(z.object({
-    name: z.string(),
-    quantity: z.number().nullable(),
-    unit: z.string().nullable(),
-    status: z.string().nullable(),
-    condition: z.string().nullable(),
-    notes: z.string().nullable(),
-  })),
-  issues: z.array(z.object({
-    title: z.string(),
-    severity: z.enum(['low', 'medium', 'high']),
-    description: z.string().nullable(),
-    action: z.string().nullable(),
-  })),
+  weather: z
+    .object({
+      condition: z.string().nullable(),
+      temperatureC: z.number().nullable(),
+      windKph: z.number().nullable(),
+      impact: z.string().nullable(),
+    })
+    .nullable(),
+  workers: z.array(
+    z.object({
+      role: z.string(),
+      count: z.number().int().nonnegative(),
+      hours: z.number().nonnegative().nullable(),
+      notes: z.string().nullable(),
+    }),
+  ),
+  materials: z.array(
+    z.object({
+      name: z.string(),
+      quantity: z.number().nullable(),
+      unit: z.string().nullable(),
+      status: z.string().nullable(),
+      condition: z.string().nullable(),
+      notes: z.string().nullable(),
+    }),
+  ),
+  issues: z.array(
+    z.object({
+      title: z.string(),
+      severity: z.enum(['low', 'medium', 'high']),
+      description: z.string().nullable(),
+      action: z.string().nullable(),
+    }),
+  ),
   nextSteps: z.array(z.string()),
-  summarySections: z.array(z.object({
-    title: z.string(),
-    body: z.string(),
-  })),
+  summarySections: z.array(
+    z.object({
+      title: z.string(),
+      body: z.string(),
+    }),
+  ),
 });
 export type ReportBody = z.infer<typeof reportBody>;
 ```
@@ -215,6 +274,7 @@ The `report` object (`export const report = z.object({...})`) keeps its top-leve
 ```
 pnpm --filter @harpa/api-contract test reports.test.ts
 ```
+
 Expected: all 5 cases green.
 
 - [ ] **Step 5: Build the contract package + downstream type check**
@@ -223,6 +283,7 @@ Expected: all 5 cases green.
 pnpm --filter @harpa/api-contract build
 pnpm -w tsc --noEmit
 ```
+
 Expected: clean. Any `body.visitDate` reader in non-test code surfaces here; pause and fix it (the adapter will be fixed in Task 4, so an error there is expected — note it but don't fix yet).
 
 - [ ] **Step 6: Commit**
@@ -239,6 +300,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 2: Prompts — emit the meta envelope (cold-start + update)
 
 **Files:**
+
 - Modify: `packages/api/src/prompts/reportGeneration.ts`
 - Tests covered by Task 3 (drift guard) + Task 8 (live recorder).
 
@@ -289,7 +351,47 @@ Add these RULES (above the existing visitDate/weather/workers rules):
 Update the EXAMPLE JSON to match:
 
 ```json
-{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","reportType":"site_visit","visitDate":null,"location":"North site","projectPhase":"foundation","riskLevel":"medium","tags":["wet weather","rebar","delay"]},"weather":{"condition":"wet","temperatureC":20,"windKph":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":4,"hours":8,"notes":null}],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage."}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}
+{
+  "meta": {
+    "title": "Site Visit — Wet Weather",
+    "summary": "Wet conditions delayed concrete pour.",
+    "reportType": "site_visit",
+    "visitDate": null,
+    "location": "North site",
+    "projectPhase": "foundation",
+    "riskLevel": "medium",
+    "tags": ["wet weather", "rebar", "delay"]
+  },
+  "weather": {
+    "condition": "wet",
+    "temperatureC": 20,
+    "windKph": null,
+    "impact": "Pour delayed by 1 hour"
+  },
+  "workers": [{ "role": "Concrete worker", "count": 4, "hours": 8, "notes": null }],
+  "materials": [
+    {
+      "name": "Concrete",
+      "quantity": 50,
+      "unit": "m³",
+      "status": "delivered",
+      "condition": null,
+      "notes": null
+    }
+  ],
+  "issues": [
+    {
+      "title": "Wet ground",
+      "severity": "medium",
+      "description": "Overnight rain left site waterlogged.",
+      "action": "Reassess drainage."
+    }
+  ],
+  "nextSteps": ["Order rebar"],
+  "summarySections": [
+    { "title": "Foundation Work", "body": "Concrete pour started in zone A despite wet weather." }
+  ]
+}
 ```
 
 Also update the JSDoc header at the top of the file to mention the meta envelope (drop the "no meta field" comment shipped in PR #36).
@@ -308,6 +410,7 @@ In the same file, apply the same SCHEMA + RULES additions to the update prompt. 
 pnpm --filter @harpa/api build
 pnpm --filter @harpa/api lint
 ```
+
 Expected: clean (no behaviour change yet — tests follow in Task 3).
 
 - [ ] **Step 4: Commit**
@@ -330,6 +433,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3: Drift guard — require meta fields
 
 **Files:**
+
 - Modify: `packages/api/src/__tests__/reportPrompt.drift.test.ts`
 
 - [ ] **Step 1: Run the existing guard — confirm what fails after Task 2**
@@ -337,6 +441,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
 pnpm --filter @harpa/api test reportPrompt.drift
 ```
+
 Expected: failures on `does NOT contain v3 vocab "category"` if the new RULES mention the word, and on the `forbids the "report" wrapper` regex if you reworded that section. Note actual failures, fix prompt wording if needed before changing the guard.
 
 - [ ] **Step 2: Update `REQUIRED_FIELDS` to include meta keys**
@@ -347,7 +452,7 @@ Edit `packages/api/src/__tests__/reportPrompt.drift.test.ts` — add the meta ke
 const REQUIRED_FIELDS = [
   // meta
   'meta',
-  'title',      // already needed for issues.title — keep position
+  'title', // already needed for issues.title — keep position
   'summary',
   'reportType',
   'location',
@@ -366,9 +471,21 @@ Add the reportType / projectPhase / riskLevel enum literals to a new constant + 
 
 ```ts
 const META_ENUM_VALUES = [
-  '"site_visit"', '"daily"', '"inspection"', '"safety"', '"incident"', '"progress"',
-  '"planning"', '"foundation"', '"structure"', '"envelope"', '"services"',
-  '"interior"', '"finishing"', '"handover"', '"other"',
+  '"site_visit"',
+  '"daily"',
+  '"inspection"',
+  '"safety"',
+  '"incident"',
+  '"progress"',
+  '"planning"',
+  '"foundation"',
+  '"structure"',
+  '"envelope"',
+  '"services"',
+  '"interior"',
+  '"finishing"',
+  '"handover"',
+  '"other"',
 ];
 
 // inside the describe.each block:
@@ -382,6 +499,7 @@ it.each(META_ENUM_VALUES)('mentions meta enum literal %s', (lit) => {
 ```
 pnpm --filter @harpa/api test reportPrompt.drift
 ```
+
 Expected: all cases green for both prompts.
 
 - [ ] **Step 4: Commit**
@@ -398,6 +516,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4: Mobile adapter — read meta directly + legacy shim
 
 **Files:**
+
 - Modify: `apps/mobile/lib/reports/report-body-adapter.ts`
 - Modify: `apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx` (clean up the ad-hoc `meta?: { title?: string | null }` typing)
 - Test: `apps/mobile/lib/reports/report-body-adapter.test.ts`
@@ -411,15 +530,24 @@ import { describe, it, expect } from 'vitest';
 import { reportBodyToGeneratedReport } from './report-body-adapter';
 
 const emptyMeta = {
-  title: null, summary: null, reportType: null,
-  visitDate: null, location: null, projectPhase: null,
-  riskLevel: null, tags: [],
+  title: null,
+  summary: null,
+  reportType: null,
+  visitDate: null,
+  location: null,
+  projectPhase: null,
+  riskLevel: null,
+  tags: [],
 };
 
 const baseBody = {
   meta: emptyMeta,
-  weather: null, workers: [], materials: [], issues: [],
-  nextSteps: [], summarySections: [],
+  weather: null,
+  workers: [],
+  materials: [],
+  issues: [],
+  nextSteps: [],
+  summarySections: [],
 };
 
 describe('reportBodyToGeneratedReport — meta mapping', () => {
@@ -449,7 +577,7 @@ describe('reportBodyToGeneratedReport — meta mapping', () => {
 
   it('renders all-null meta as empty UI fields with empty tags', () => {
     const out = reportBodyToGeneratedReport(baseBody);
-    expect(out.report.meta.title).toBe('');         // trimmedString collapses null/missing
+    expect(out.report.meta.title).toBe(''); // trimmedString collapses null/missing
     expect(out.report.meta.summary).toBe('');
     expect(out.report.meta.reportType).toBe('site_visit'); // schema default
     expect(out.report.meta.location).toBeNull();
@@ -461,8 +589,12 @@ describe('reportBodyToGeneratedReport — meta mapping', () => {
   it('shims a legacy body with top-level visitDate', () => {
     const legacyBody: any = {
       visitDate: '2026-04-01T00:00:00Z',
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     };
     const out = reportBodyToGeneratedReport(legacyBody);
     expect(out.report.meta.visitDate).toBe('2026-04-01T00:00:00Z');
@@ -476,6 +608,7 @@ describe('reportBodyToGeneratedReport — meta mapping', () => {
 ```
 cd apps/mobile && pnpm test report-body-adapter
 ```
+
 Expected: failures because adapter still reads `body.visitDate` and ignores `meta`.
 
 - [ ] **Step 3: Update the adapter**
@@ -494,10 +627,14 @@ function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
   return {
     ...legacy,
     meta: {
-      title: null, summary: null, reportType: null,
+      title: null,
+      summary: null,
+      reportType: null,
       visitDate: legacy.visitDate ?? null,
-      location: null, projectPhase: null,
-      riskLevel: null, tags: [],
+      location: null,
+      projectPhase: null,
+      riskLevel: null,
+      tags: [],
     },
   };
 }
@@ -567,6 +704,7 @@ Also grep for `reportRow?.meta` and `reportRow.meta` in any other file in `apps/
 ```
 cd apps/mobile && pnpm test report-body-adapter && pnpm tsc --noEmit
 ```
+
 Expected: adapter tests green, tsc clean.
 
 - [ ] **Step 6: Commit**
@@ -583,6 +721,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 5: report-core — extend `GeneratedSiteReportMeta`
 
 **Files:**
+
 - Modify: `packages/report-core/src/generated-report.ts`
 - Test: `packages/report-core/src/generated-report.test.ts` (add if missing)
 
@@ -597,12 +736,21 @@ describe('GeneratedSiteReportSchema — meta extensions', () => {
     const out = normalizeGeneratedReportPayload({
       report: {
         meta: {
-          title: 'T', summary: 'S', reportType: 'site_visit', visitDate: null,
-          location: 'Site A', projectPhase: 'foundation', riskLevel: 'medium',
+          title: 'T',
+          summary: 'S',
+          reportType: 'site_visit',
+          visitDate: null,
+          location: 'Site A',
+          projectPhase: 'foundation',
+          riskLevel: 'medium',
           tags: ['a', 'b'],
         },
-        weather: null, workers: null, materials: [], issues: [],
-        nextSteps: [], sections: [],
+        weather: null,
+        workers: null,
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        sections: [],
       },
     });
     expect(out.report.meta.location).toBe('Site A');
@@ -615,8 +763,12 @@ describe('GeneratedSiteReportSchema — meta extensions', () => {
     const out = normalizeGeneratedReportPayload({
       report: {
         meta: { title: 'T', summary: '', reportType: 'site_visit', visitDate: null },
-        weather: null, workers: null, materials: [], issues: [],
-        nextSteps: [], sections: [],
+        weather: null,
+        workers: null,
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        sections: [],
       },
     });
     expect(out.report.meta.location).toBeNull();
@@ -630,6 +782,7 @@ describe('GeneratedSiteReportSchema — meta extensions', () => {
 ```
 pnpm --filter @harpa/report-core test generated-report
 ```
+
 Expected: failures because `location`/`tags` don't exist on the schema.
 
 - [ ] **Step 3: Extend the meta schema**
@@ -656,6 +809,7 @@ meta: z.object({
 ```
 pnpm --filter @harpa/report-core test generated-report && pnpm --filter @harpa/report-core build
 ```
+
 Expected: clean.
 
 - [ ] **Step 5: Commit**
@@ -672,6 +826,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6: Mobile — list-row pills (`reportType` + `riskLevel`)
 
 **Files:**
+
 - Create: `apps/mobile/components/reports/list/ReportListPills.tsx`
 - Modify: `apps/mobile/app/(app)/projects/[project]/reports/index.tsx` (or the row component it uses; find with `grep -n 'ReportListRow\|projects.*reports' apps/mobile/app/\(app\)/projects/\[project\]/reports/index.tsx`)
 - Test: `apps/mobile/app/(app)/projects/[project]/reports/index.test.tsx`
@@ -789,6 +944,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 7: Mobile — summary lead, StatBar additions, tag chips
 
 **Files:**
+
 - Create: `apps/mobile/components/reports/detail/SummaryLead.tsx`
 - Create: `apps/mobile/components/reports/detail/TagChips.tsx`
 - Modify: `apps/mobile/components/reports/detail/StatBar.tsx` (or current StatBar — locate with `grep -rn 'StatBar' apps/mobile`)
@@ -841,8 +997,18 @@ Test: empty array → renders nothing; populated → each tag with `#` prefix.
 Find StatBar (likely `apps/mobile/components/reports/detail/StatBar.tsx`). Add two new rows beneath `visitDate`:
 
 ```tsx
-{location ? <StatRow icon="map-pin" label="Location" value={location} /> : null}
-{projectPhase ? <StatRow icon="layers" label="Phase" value={PROJECT_PHASE_LABEL[projectPhase] ?? projectPhase} /> : null}
+{
+  location ? <StatRow icon="map-pin" label="Location" value={location} /> : null;
+}
+{
+  projectPhase ? (
+    <StatRow
+      icon="layers"
+      label="Phase"
+      value={PROJECT_PHASE_LABEL[projectPhase] ?? projectPhase}
+    />
+  ) : null;
+}
 ```
 
 Where `PROJECT_PHASE_LABEL` is a small const map (Planning, Foundation, Structure, etc.) declared at the top of the file. Read the new props off the parent.
@@ -871,6 +1037,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 8: Re-record fixtures
 
 **Files:**
+
 - Modify: `packages/ai-fixtures/transcripts/generate-report.*.json`
 
 - [ ] **Step 1: Make sure OPENAI_API_KEY is available**
@@ -878,6 +1045,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
 doppler run --project harpa-pro --config dev -- env | grep OPENAI_API_KEY
 ```
+
 Expected: a value. If absent, ask the user to fix Doppler before continuing.
 
 - [ ] **Step 2: Re-record**
@@ -885,6 +1053,7 @@ Expected: a value. If absent, ask the user to fix Doppler before continuing.
 ```
 doppler run --project harpa-pro --config dev -- pnpm --filter @harpa/ai-fixtures fixtures:record -- --pattern 'generate-report.*'
 ```
+
 Expected: each `generate-report.*.json` updated with new request hash + new response.text that includes the meta envelope.
 
 - [ ] **Step 3: Refresh stale hashes (if recorder skipped any)**
@@ -898,6 +1067,7 @@ pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts
 ```
 pnpm --filter @harpa/api test reports
 ```
+
 Expected: green. The recorded responses now feed the validator which now expects meta.
 
 - [ ] **Step 5: Commit**
@@ -918,6 +1088,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ```
 cd apps/mobile && pnpm test
 ```
+
 Expected: all green (the title-consistency snapshot from PR #90 may need refresh if the report view added the lead paragraph or tag row — update snapshots after manual review).
 
 - [ ] **Step 2: API test**
@@ -946,19 +1117,23 @@ pnpm --filter @harpa/api lint
 ```
 doppler run --project harpa-pro --config dev -- pnpm --filter @harpa/api test:live
 ```
+
 Expected: live OpenAI returns meta + passes schema. If this skews flaky, re-run once before flagging.
 
 - [ ] **Step 6: Doc updates**
 
 Update `docs/v4/arch-ai-fixtures.md`:
+
 - Note the meta envelope is now the contract.
 - Drop any phrasing about "v4 unwrapped, no meta".
 
 Update `docs/v4/design-report-title-consistency.md`:
+
 - In the per-surface table, change list row entry to include `reportType + riskLevel pills`.
 - Add a "Restored meta envelope" note at the bottom pointing to the new spec.
 
 Update `docs/bugs/README.md`:
+
 - Add an entry under "Prompt/schema drift" noting the inverse direction (meta dropped, restored in this work).
 
 ```bash

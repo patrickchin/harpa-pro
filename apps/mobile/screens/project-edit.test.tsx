@@ -15,6 +15,7 @@ const defaults = {
   isLoading: false,
   isUpdating: false,
   isDeleting: false,
+  canDelete: true,
   updateError: null,
   deleteError: null,
   onBack: vi.fn(),
@@ -77,5 +78,15 @@ describe('ProjectEdit', () => {
     const tree = render(<ProjectEdit {...defaults} />);
     act(() => tree.root.findByProps({ testID: 'btn-delete-project' }).props.onPress());
     expect(JSON.stringify(tree.toJSON())).toContain('Delete project');
+  });
+
+  it('hides project deletion controls from editors', () => {
+    const tree = render(<ProjectEdit {...defaults} canDelete={false} />);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-delete-project' }),
+    ).toHaveLength(0);
+    expect(JSON.stringify(tree.toJSON())).not.toContain(
+      'Deleting a project permanently removes',
+    );
   });
 });

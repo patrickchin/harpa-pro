@@ -79,24 +79,84 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   ).toEqual({ localStorage: 0, sessionStorage: 0 });
 
   await expect(page.getByRole('heading', { level: 1, name: 'Harpa Pro activity' })).toBeVisible();
-  await expect(page.getByRole('radio', { name: 'Milestones' })).toBeChecked();
-  await expect(page.getByRole('radio', { name: 'Past month' })).toBeChecked();
   await expect(page.getByLabel('Event type')).toHaveCount(0);
   await expect(page.getByLabel('From', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('To', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Apply filters' })).toHaveCount(0);
-  await expect(page.getByLabel('Filter actor')).toBeVisible();
-  await expect(page.getByLabel('Exclude actor')).toBeVisible();
-  await expect(page.getByLabel('Filter project')).toBeVisible();
-  await expect(page.getByLabel('Filter actor')).toHaveCSS('appearance', 'none');
-  await expect(page.locator('[data-select-chevron]')).toHaveCount(3);
+  await expect(page.getByLabel('Filter actor')).toHaveCount(0);
+  await expect(page.getByLabel('Exclude actor')).toHaveCount(0);
+  await expect(page.getByLabel('Filter project')).toHaveCount(0);
+  const activityFilters = page.getByRole('region', { name: 'Activity filters' });
+  await expect(activityFilters.getByRole('group', { name: 'Detail level' })).toBeVisible();
+  await expect(activityFilters.getByRole('group', { name: 'Time period' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open as text' })).toBeVisible();
 
+  const feed = page.getByRole('list', { name: 'Activity events' });
+  const columnHeaders = page.getByTestId('activity-column-headers');
+  await expect(columnHeaders).toBeVisible();
+  await expect(columnHeaders.locator(':scope > *')).toHaveText([
+    'New',
+    'Time',
+    'Event',
+    'User',
+    'Subject',
+    'Project',
+  ]);
+  await expect(page.getByRole('button', { name: 'Filter by time' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Filter by event' })).toHaveCount(0);
+  for (const column of ['user', 'project']) {
+    await expect(page.getByRole('button', { name: `Filter by ${column}` })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    await expect(page.getByRole('button', { name: `Filter by ${column}` })).toHaveAttribute(
+      'aria-haspopup',
+      'dialog',
+    );
+  }
+
+  await expect(
+    activityFilters.getByRole('radio', { name: 'Past month' }),
+  ).toBeChecked();
+
   const desktopViewport = page.viewportSize();
   expect(desktopViewport).not.toBeNull();
+  await page.setViewportSize({ width: 320, height: 480 });
+  const feedScroller = page.getByTestId('activity-table-scroller');
+  const feedWidths = await feedScroller.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(feedWidths.scrollWidth).toBeGreaterThan(feedWidths.clientWidth);
+  await feedScroller.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await page.getByRole('button', { name: 'Filter by project' }).click();
+  const mobileProjectPopup = page.getByRole('dialog', { name: 'Project filter' });
+  const mobilePopupBox = await mobileProjectPopup.boundingBox();
+  expect(mobilePopupBox).not.toBeNull();
+  expect(mobilePopupBox!.x).toBeGreaterThanOrEqual(0);
+  expect(mobilePopupBox!.x + mobilePopupBox!.width).toBeLessThanOrEqual(320);
+  await mobileProjectPopup
+    .getByRole('searchbox', { name: 'Search projects' })
+    .fill('no matching project');
+  await page.keyboard.press('Escape');
+  await expect(mobileProjectPopup).toHaveCount(0);
+  await page.getByRole('button', { name: 'Filter by project' }).click();
+  const resizedProjectPopup = page.getByRole('dialog', { name: 'Project filter' });
+  await resizedProjectPopup.getByRole('searchbox', { name: 'Search projects' }).fill('');
+  await expect
+    .poll(async () => {
+      const bounds = await resizedProjectPopup.boundingBox();
+      return bounds === null ? null : bounds.y + bounds.height;
+    })
+    .toBeLessThanOrEqual(480);
+  await page.keyboard.press('Escape');
+  await expect(resizedProjectPopup).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 800 });
   const timePeriodScroller = page.getByTestId('time-period-options');
+  await timePeriodScroller.scrollIntoViewIfNeeded();
   const timePeriodWidths = await timePeriodScroller.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -107,8 +167,6 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   });
   await expect(page.getByText('All time', { exact: true })).toBeInViewport();
   await page.setViewportSize(desktopViewport!);
-
-  const feed = page.getByRole('list', { name: 'Activity events' });
   const rows = feed.locator('[data-testid^="activity-row-"]');
   await expect(rows).toHaveCount(1);
   const row = rows.first();
@@ -150,10 +208,11 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('level') === 'detail'
     );
   });
-  await page.getByRole('radio', { name: 'Milestones' }).focus();
+  const detailLevel = activityFilters.getByRole('group', { name: 'Detail level' });
+  await detailLevel.getByRole('radio', { name: 'Milestones' }).focus();
   await page.keyboard.press('ArrowRight');
   expect((await detailResponsePromise).status()).toBe(200);
-  await expect(page.getByRole('radio', { name: 'Detailed activity' })).toBeChecked();
+  await expect(detailLevel.getByRole('radio', { name: 'Detailed activity' })).toBeChecked();
 
   const detailRows = feed.locator('[data-testid^="activity-row-"]');
   await expect(detailRows).toHaveCount(4);
@@ -178,19 +237,22 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.has('from')
     );
   });
-  await page.getByText('Past week', { exact: true }).click();
+  await activityFilters.getByText('Past week', { exact: true }).click();
   expect((await weekResponsePromise).status()).toBe(200);
 
-  const actorUserId = (await page
-    .getByLabel('Filter actor')
-    .locator('option')
-    .nth(1)
-    .getAttribute('value'))!;
-  const projectId = (await page
-    .getByLabel('Filter project')
-    .locator('option')
-    .nth(1)
-    .getAttribute('value'))!;
+  const rowYBeforePopup = (await row.boundingBox())?.y;
+  expect(rowYBeforePopup).toBeDefined();
+  await page.getByRole('button', { name: 'Filter by user' }).click();
+  const userFilter = page.getByRole('dialog', { name: 'User filter' });
+  await expect(userFilter).toHaveCSS('position', 'fixed');
+  await expect(userFilter).toHaveAttribute('aria-modal', 'false');
+  expect((await row.boundingBox())?.y).toBeCloseTo(rowYBeforePopup!, 0);
+  await userFilter.getByRole('searchbox', { name: 'Search users' }).fill('activity');
+  const onlyActorLabel = 'Only Admin Activity E2E — activity-actor@e2e.harpapro.com';
+  const onlyActor = userFilter.getByRole('radio', {
+    name: onlyActorLabel,
+  });
+  const actorUserId = (await onlyActor.getAttribute('value'))!;
 
   const actorResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -200,9 +262,17 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('actorUserId') === actorUserId
     );
   });
-  await page.getByLabel('Filter actor').selectOption(actorUserId);
+  await onlyActor.click();
   expect((await actorResponsePromise).status()).toBe(200);
 
+  await page.getByRole('button', { name: 'Filter by project' }).click();
+  await expect(userFilter).toHaveCount(0);
+  const projectFilter = page.getByRole('dialog', { name: 'Project filter' });
+  await projectFilter.getByRole('searchbox', { name: 'Search projects' }).fill('admin activity');
+  const onlyProject = projectFilter.getByRole('radio', {
+    name: /^Only Admin Activity E2E Project — prj_/,
+  });
+  const projectId = (await onlyProject.getAttribute('value'))!;
   const projectResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
@@ -212,36 +282,47 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('projectId') === projectId
     );
   });
-  await page.getByLabel('Filter project').selectOption(projectId);
+  await onlyProject.click();
   expect((await projectResponsePromise).status()).toBe(200);
 
+  await page.getByRole('button', { name: 'Filter by user' }).click();
+  const reopenedUserFilter = page.getByRole('dialog', { name: 'User filter' });
+  const actorExclusionLabel =
+    'Exclude Admin Activity E2E — activity-actor@e2e.harpapro.com';
+  const actorExclusion = reopenedUserFilter.getByRole('checkbox', {
+    name: actorExclusionLabel,
+  });
   const exclusionResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
       url.origin === API_BASE_URL &&
       url.pathname === '/admin/activity' &&
+      !url.searchParams.has('actorUserId') &&
+      url.searchParams.get('projectId') === projectId &&
       url.searchParams.get('excludeActorUserIds') === actorUserId
     );
   });
-  await page.getByLabel('Exclude actor').selectOption(actorUserId);
+  await actorExclusion.click();
   expect((await exclusionResponsePromise).status()).toBe(200);
   await expect(page.getByText('No activity matches these filters.')).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Remove Admin Activity E2E exclusion' }),
-  ).toBeVisible();
+  await expect(page.getByTestId('activity-column-headers')).toBeVisible();
+  await expect(actorExclusion).toBeChecked();
 
   const removeExclusionResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
       url.origin === API_BASE_URL &&
       url.pathname === '/admin/activity' &&
-      url.searchParams.get('actorUserId') === actorUserId &&
+      !url.searchParams.has('actorUserId') &&
+      url.searchParams.get('projectId') === projectId &&
       !url.searchParams.has('excludeActorUserIds')
     );
   });
-  await page.getByRole('button', { name: 'Remove Admin Activity E2E exclusion' }).click();
+  await actorExclusion.click();
   expect((await removeExclusionResponsePromise).status()).toBe(200);
   await expect(detailRows).toHaveCount(4);
+  await page.keyboard.press('Escape');
+  await expect(reopenedUserFilter).toHaveCount(0);
 
   const textLink = page.getByRole('link', { name: 'Open as text' });
   await expect(textLink).toHaveAttribute('target', '_blank');
@@ -265,7 +346,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('eventType')
     );
   });
-  await page.getByText('Milestones', { exact: true }).click();
+  await detailLevel.getByText('Milestones', { exact: true }).click();
   expect((await milestoneResponsePromise).status()).toBe(200);
 
   const existingRow = feed.locator('[data-testid^="activity-row-"]').first();
@@ -296,7 +377,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
             {
               ...source,
               id: newEventId,
-              occurredAt: '2026-07-30T04:00:00.000Z',
+              occurredAt: new Date().toISOString(),
               subjectId: 'rpt_00000000',
               subjectLabel: 'Report #8',
               requestId: 'request-admin-activity-refresh-e2e',

@@ -218,3 +218,17 @@ That made PR-to-main checks fail whenever the seeded Fly allowlist used
 different addresses. `main-gate.yml` now uses the same dev repo
 variables, and `api-prod.yml` requires prod-specific repo variables so
 the post-deploy journey target is explicit.
+
+## Followup #4 (2026-08-04) — dashboard preview identity drift
+
+PR #211's first deployed dashboard journey failed with `401 Invalid
+credentials` even though the Fly preview release seeded accounts
+successfully. The dashboard workflow had introduced a second source of truth by
+hardcoding `test@harpapro.com` and `test2@harpapro.com`; the current dev
+allowlist instead matched `TEST_ACCOUNT_EMAIL_DEV` and
+`TEST_ACCOUNT_EMAIL2_DEV`.
+
+The dashboard preview now reads those same repository variables, uses them to
+configure the deployed password form, and fails fast when either is absent. Any
+new browser or API journey must follow this mapping rather than embedding an
+email address.

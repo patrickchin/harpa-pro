@@ -1,5 +1,8 @@
 # Start marketing M1 — Waitlist
 
+> **Status: historical prompt.** M1 shipped. Use the current implementation,
+> tests, and repository instructions for new waitlist work.
+
 ## What this session is
 
 You are continuing work on the harpa-pro marketing site. **M0 is
@@ -16,7 +19,7 @@ The mobile app track (P2+) is **paused**. Do not touch
 
 ## Read these first (and only these)
 
-- [`AGENTS.md`](../../AGENTS.md) — repo-wide hard rules. Every rule
+- [`AGENTS.md`](../../../AGENTS.md) — repo-wide hard rules. Every rule
   applies to `apps/site/` and `packages/api/` changes
   (Conventional Commits, no Supabase, docs-in-same-PR, scope tests
   for every new table, TDD on API code).
@@ -28,8 +31,8 @@ The mobile app track (P2+) is **paused**. Do not touch
 - [`docs/v4/arch-auth-and-rls.md`](../../v4/arch-auth-and-rls.md) —
   per-request Postgres scope pattern. The `waitlist_signups` scope
   test in M1.1 follows this pattern exactly.
-- [`packages/api/AGENTS.md`](../../../packages/api/AGENTS.md) (if it
-  exists) — local API conventions.
+- [API instructions](../../../.github/instructions/api.instructions.md) —
+  current API conventions.
 
 **Do NOT read** in detail unless needed:
 
@@ -92,7 +95,7 @@ subagent can summarise.
   `packages/api-contract/` change. Failing test first, then minimal
   pass. Coverage gate for `packages/api` is ≥ 90% lines.
 - **`database-reviewer`** — **mandatory** for M1.1 (Drizzle schema
-  + SQL migration + scope test). Has to look at it before commit.
+  - SQL migration + scope test). Has to look at it before commit.
 - **`security-reviewer`** — **mandatory** for: M1.3 (Turnstile
   verification + enumeration safety + rate-limit), M1.4 (token
   compare + expiry + idempotency), M1.6 (admin gating), M1.8 (CORS

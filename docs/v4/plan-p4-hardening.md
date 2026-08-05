@@ -4,18 +4,15 @@
 > migration job + PITR drill. PDF export pipeline working
 > end-to-end. Performance targets met. Universal links live.
 >
+> **Status:** audited against the repository on 2026-08-04. Most wiring has
+> shipped. Unchecked items still require measured or external evidence.
+>
 > **Scope discipline:** P4 is hardening only — Sentry, perf,
 > prod-infra finishing, PDF export pipeline, load test, universal
 > links, bugs sweep. Pure feature completion that runs locally
 > belongs in [P3.15](plan-p3-feature-build.md#p315--feature-completion--upload-wiring).
->
-> **Backend-first ordering:** the prod migration job (P4.4 below)
-> is being pulled forward and shipped together with P3.15's API
-> work — see the
-> [P3.15 Backend-first track](plan-p3-feature-build.md#p315--feature-completion--upload-wiring).
-> Other P4 items stay here.
 
-## Already shipped (audited 2026-05-19)
+## Already shipped
 
 - [x] Fly prod config + deploy workflow — `infra/fly/fly.toml`,
       `.github/workflows/api-prod.yml`.
@@ -29,10 +26,14 @@
       `/.well-known/assetlinks.json`) — `packages/api/src/routes/well-known.ts`,
       env-driven (`IOS_APP_ID_PREFIX`, `IOS_BUNDLE_IDS`,
       `ANDROID_PACKAGE_NAMES`, `ANDROID_CERT_FINGERPRINTS_SHA256`),
-      404 when unconfigured. Mobile `associatedDomains` +
-      Android intent filters still pending in P4.6.
+      404 when unconfigured. Mobile `associatedDomains` and Android intent
+      filters are also configured.
 
-## Exit gate (`p4-exit-gate.yml`)
+## Exit evidence
+
+There is no standalone `p4-exit-gate.yml` workflow. Each unchecked item needs
+a linked test run, provider result, or dated manual verification before P4 can
+be called complete.
 
 - [ ] Sentry catches crashes in both API and mobile (test crash).
 - [x] PDF export works end-to-end on mobile (`expo-print` +
@@ -50,6 +51,7 @@
 ## Tasks
 
 ### P4.1 Sentry
+
 - [x] Wire on API (Hono middleware) with request id + structured tags.
       Replace `apps/mobile/lib/telemetry/SentryStub.tsx` no-op.
 - [x] Wire on mobile (`@sentry/react-native`).
@@ -61,6 +63,7 @@ behind unset DSNs. The remaining P4.1 acceptance step is CLI secret
 provisioning plus staging test-crash confirmation.
 
 ### P4.2 Performance pass
+
 - [ ] Mobile: `FlashList` audit (currently zero usage), `React.memo`
       audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3
       commit `dbaa4c1`).
@@ -70,15 +73,12 @@ provisioning plus staging test-crash confirmation.
 - [ ] Commit: `perf(mobile,api): cold-start + list virtualization + PG limits`.
 
 ### P4.3 PDF export pipeline
-- [x] Mobile PDF export: replace the stub
-      `apps/mobile/lib/export-report-pdf.ts` (currently throws
-      "Saving PDFs lands in P4 …") with real `expo-print` +
-      `expo-sharing` wiring. `saveReportPdf`, `exportReportPdf`,
+
+- [x] Mobile PDF export uses `expo-print` and `expo-sharing`.
+      `saveReportPdf`, `exportReportPdf`,
       `shareSavedReportPdf`, `openSavedReportPdf` all work against
       a real finalized report.
-- [x] Inline PDF rendering on mobile (`react-native-webview` or
-      `react-native-pdf`) for `PdfPreviewModal` — currently ships
-      modal chrome only.
+- [x] `PdfPreviewModal` renders the PDF inline on mobile.
 - [x] Visual review pass against mobile-old samples (manual diff —
       headings, layout, image placement). No byte-equivalence test.
 - [x] Vitest: export pipeline round-trips without throwing on a
@@ -86,18 +86,24 @@ provisioning plus staging test-crash confirmation.
 - [x] Commit: `feat(mobile): PDF export + inline preview wired`.
 
 ### P4.4 Neon prod migration + PITR
-- [ ] Add the `pnpm --filter @harpa/api db:migrate` step to
-      `.github/workflows/api-prod.yml` (currently only in dev
-      workflow at lines 63–66).
-- [ ] Document the PITR drill (branch from prod → verify → drop).
-- [ ] Commit: `chore(infra): Neon prod migration job + PITR drill`.
+
+- [x] Fly's production `release_command` applies application and admin
+      migrations before promotion. GitHub Actions does not connect directly to
+      production databases.
+- [x] Production deployment creates application and admin recovery branches
+      before Fly starts the release.
+- [x] The restore procedure is documented in
+      [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md#data-rollback-bad-migration-or-corrupting-code).
+- [ ] Run and record a production restore drill for both Neon projects.
 
 ### P4.5 Load test
+
 - [ ] Create `infra/loadtest/k6/*.js` scripts (directory does not exist).
 - [ ] Run against staging Fly machine.
 - [ ] Commit: `test(api): k6 load test scenarios`.
 
 ### P4.6 Universal links
+
 - [x] Serve `apple-app-site-association` from the API origin
       (`packages/api/src/routes/well-known.ts`, env-driven). Exempt
       from the global rate limiter
@@ -119,6 +125,7 @@ provisioning plus staging test-crash confirmation.
 - [ ] Commit: `feat(mobile,api): universal links + push deep-link routing`.
 
 ### P4.7 Bugs sweep
+
 - [ ] Triage `docs/bugs/README.md`.
 - [ ] All `// FIXME` resolved or filed.
 - [ ] Commit: `chore: bugs sweep + FIXME triage`.
@@ -136,13 +143,13 @@ Windows-host gotchas catalogued in
 [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
 
 Two-actor (`alice` owner + `bob` editor→viewer→removed) end-to-end
-journey that exercises every feature currently live on `dev`:
+journey that exercises the feature set recorded in the dated result below:
 projects CRUD, members invite/role-change/remove + visibility checks,
 reports CRUD, text notes (add + delete), generate → finalize →
 unfinalize, and a new **Report Debug** surface exposing prompt +
 notes + LLM response. Runs first in **local-fixture mode** against a
-fresh `docker compose` stack using the existing `TWILIO_LIVE=0`
-fake-OTP path, then against the **dev deployment** using the gated
+fresh `docker compose` stack using local email fixtures, then against the
+**dev deployment** using the gated
 test-account password bypass and non-destructive per-run cleanup.
 Full design + carve-outs + testID inventory + module breakdown:
 [`design-maestro-full-regression.md`](design-maestro-full-regression.md).
@@ -201,8 +208,8 @@ R2 PUT/GET traffic for voice and photos was observed through
 
 **Remaining:**
 
-- [ ] `scripts/check-maestro-testids.sh` CI grep gate.
-- [ ] `.github/workflows/e2e-maestro-testid-gate.yml` runs the testID gate on every PR.
+- [x] `scripts/check-maestro-testids.sh` CI grep gate.
+- [x] `.github/workflows/e2e-maestro-testid-gate.yml` runs the testID gate on every PR.
 - [ ] CI workflow that actually runs the journey (currently developer-driven on the real device — no CI matrix yet for the Android emulator leg).
 - [x] Dev-deployment E2E pass after local green: same coverage against `harpa-pro-api-dev` using the `POST /api/auth/sign-in/email` test-account bypass, dev Neon/R2, and non-destructive per-run cleanup.
 - [ ] `mo journey` / Maestro target support for `local` vs `dev`, with strict ordering so dev runs only after local passes. This should provide the password-login helper/setup hook for dev.

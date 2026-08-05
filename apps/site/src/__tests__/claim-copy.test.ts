@@ -15,15 +15,23 @@ describe('marketing claim copy', () => {
     const files = [
       'components/landing/Hero.astro',
       'components/landing/Header.astro',
+      'components/landing/Features.astro',
       'components/landing/WaitlistForm.astro',
       'components/landing/WaitlistFormIsland.tsx',
       'components/VoiceDemo.tsx',
       'components/landing/HowItWorks.astro',
+      'content/features/04-exports.mdx',
+      'content/features/05-jobsite.mdx',
+      'content/features/06-drafts.mdx',
       'content/faq/02-offline.mdx',
       'content/faq/03-voice-privacy.mdx',
       'content/faq/04-when.mdx',
+      'content/faq/05-cost.mdx',
+      'content/roadmap/00-ai-reports.mdx',
       'content/roadmap/01-android-pilot.mdx',
       'content.config.ts',
+      'layouts/Layout.astro',
+      'pages/index.astro',
       'pages/confirm.astro',
       'pages/roadmap.astro',
       'lib/links.ts',
@@ -52,11 +60,21 @@ describe('marketing claim copy', () => {
     expect(corpus).not.toContain('submitted to the App Store');
     expect(corpus).not.toContain('when iOS opens');
     expect(corpus).not.toContain('launch update');
+    expect(corpus).not.toMatch(/now available for iPhone/i);
+    expect(corpus).not.toMatch(/iPhone app is live/i);
+    expect(corpus).not.toMatch(/first iPhone release/i);
+    expect(corpus).not.toMatch(/after the iPhone launch/i);
+    expect(corpus).not.toMatch(/core iPhone workflow/i);
+    expect(corpus).not.toContain('Download iOS app');
+    expect(corpus).not.toMatch(/immediately generate/i);
+    expect(corpus).not.toMatch(/you approve/i);
+    expect(corpus).not.toMatch(/glove-friendly|without taking off your gloves/i);
+    expect(corpus).not.toContain('no formatting work');
     expect(corpus).not.toContain('status: z.enum(["pilot", "later"])');
     expect(corpus).not.toContain('status: "pilot"');
     expect(corpus).not.toContain('status: "later"');
     expect(corpus).toContain('https://apps.apple.com/us/app/harpa-pro/id6776759817');
-    expect(corpus).toContain('Download on the App Store');
+    expect(corpus).toContain('Get the app');
     expect(corpus).toContain('Product updates');
   });
 });

@@ -328,11 +328,17 @@ green. Both the poll loop and the surrounding job are bounded.
   and empty standbys. If clearing succeeds but later work fails, exact singleton
   stopped/no-standby and started/no-standby states are retry-safe; all other
   drift fails closed.
-- Run the read-only started-worker verifier again, then arm the monotonic
-  upload-lease rollout inside that process group. Arming inherits Fly's staged
-  `DATABASE_URL`, so the production URL remains out of GitHub Actions and
-  manual operator environments. Manual production deploys use the same
-  deploy-to-repair-to-verify-to-arm path as CI.
+- Run the read-only started-worker verifier again, then select the exact sole
+  started worker from a fresh inventory and arm the monotonic upload-lease
+  rollout through `flyctl machine exec`. Each of at most three attempts has a
+  120-second provider timeout. Before a retry, another fresh inventory must
+  prove the worker id has not changed; success requires the command's database
+  confirmation marker. A transport failure after commit is retry-safe because
+  the SQL cannot reopen the grace or turn account deletion back off. Arming
+  inherits Fly's staged `DATABASE_URL`, so the production URL remains out of
+  GitHub Actions and manual operator environments. Manual production deploys
+  use the same deploy-to-repair-to-verify-to-arm path as CI. The GitHub deploy
+  step also has a 30-minute outer timeout.
 
 ### `.github/workflows/api-prod.yml`
 

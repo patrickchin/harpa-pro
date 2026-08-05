@@ -132,8 +132,10 @@ does not replace or delay the core workflow links.
 When a guide step benefits from an image, the screenshot appears beside or
 below that step as a wide crop focused on the relevant control or content.
 Each crop links to the complete portrait capture with contextual accessible
-text. This full-image path uses a normal link and remains usable without
-JavaScript; the first revision does not add a modal or carousel.
+text. The link remains usable without JavaScript. With JavaScript available,
+the complete capture opens in the accessible dialog defined by
+[Documentation screenshot dialog](design-docs-screenshot-dialog.md) so the
+reader keeps their place in the guide. The docs do not add a carousel.
 
 The core content and navigation work without JavaScript. Search is a small
 client-side enhancement over a static build-time index. Search terms stay in

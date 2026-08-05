@@ -6,8 +6,10 @@ const API_BASE_URL = `http://localhost:${API_PORT}`;
 const ADMIN_ORIGIN = `http://localhost:${ADMIN_PORT}`;
 const ADMIN_EMAIL = 'admin-activity@harpapro.com';
 const ADMIN_PASSWORD = 'admin-activity-e2e-password';
+const FIXED_NOW = new Date('2026-07-30T04:05:00.000Z');
 
 test('signs in through the visible admin form and signs out', async ({ context, page }) => {
+  await page.clock.setFixedTime(FIXED_NOW);
   await page.goto('/');
 
   const email = page.getByLabel('Email');

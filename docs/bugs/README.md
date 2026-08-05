@@ -337,6 +337,10 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — Admin activity E2E seeded fixed July timestamps but
+  calculated relative filters from the live browser clock, so the fixtures
+  eventually fell outside Past week. Fix: freeze the browser clock beside the
+  fixed activity fixtures. [detail](2026-08-05-admin-activity-e2e-clock-drift.md)
 - **2026-08-05** — API integration intermittently failed after all 219
   integration tests passed because two rate-limiter test pools could re-emit
   PostgreSQL shutdown `57P01` while Testcontainers stopped. Fix: observe

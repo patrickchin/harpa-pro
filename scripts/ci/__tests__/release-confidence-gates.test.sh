@@ -43,6 +43,29 @@ require_fixed_count() {
   fi
 }
 
+require_dependabot_entry_fixed() {
+  local path="$1" ecosystem="$2" needle="$3" description="$4"
+  if [[ -f "$REPO_ROOT/$path" ]] && awk -v ecosystem="package-ecosystem: '$ecosystem'" -v needle="$needle" '
+    index($0, ecosystem) {
+      in_entry = 1
+      found_entry = 1
+      next
+    }
+    in_entry && index($0, "package-ecosystem:") {
+      in_entry = 0
+    }
+    in_entry && index($0, needle) {
+      found_setting = 1
+    }
+    END { exit found_entry && found_setting ? 0 : 1 }
+  ' "$REPO_ROOT/$path"; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 forbid_fixed() {
   local path="$1" needle="$2" description="$3"
   if [[ ! -f "$REPO_ROOT/$path" ]] || grep -Fq -- "$needle" "$REPO_ROOT/$path"; then
@@ -127,12 +150,90 @@ require_fixed ".github/dependabot.yml" \
 require_fixed ".github/dependabot.yml" \
   "package-ecosystem: 'github-actions'" \
   "Dependabot scans GitHub Actions"
+require_fixed ".github/dependabot.yml" \
+  "package-ecosystem: 'bundler'" \
+  "Dependabot scans the root Bundler graph"
 require_fixed_count ".github/dependabot.yml" \
-  "target-branch: 'dev'" 2 \
-  "routine dependency updates target dev"
+  "package-ecosystem:" 3 \
+  "Dependabot declares exactly the three intended ecosystems"
 require_fixed_count ".github/dependabot.yml" \
-  "interval: 'weekly'" 2 \
-  "dependency update checks use a controlled weekly cadence"
+  "target-branch: 'dev'" 3 \
+  "all three routine dependency update entries target dev"
+require_fixed_count ".github/dependabot.yml" \
+  "interval: 'weekly'" 3 \
+  "all three dependency update entries use a controlled weekly cadence"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "directory: '/'" \
+  "npm updates scan the root pnpm workspace"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "target-branch: 'dev'" \
+  "npm updates target dev"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "interval: 'weekly'" \
+  "npm updates retain the weekly cadence"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "day: 'monday'" \
+  "npm updates retain the Monday schedule"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "time: '09:00'" \
+  "npm updates retain the 09:00 schedule"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "timezone: 'Asia/Shanghai'" \
+  "npm updates retain the repository timezone"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "open-pull-requests-limit: 5" \
+  "npm updates retain the five-PR limit"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "npm" "prefix: 'chore(deps)'" \
+  "npm updates retain the dependency commit prefix"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "directory: '/'" \
+  "GitHub Actions updates scan the root workflow graph"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "target-branch: 'dev'" \
+  "GitHub Actions updates target dev"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "interval: 'weekly'" \
+  "GitHub Actions updates retain the weekly cadence"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "day: 'tuesday'" \
+  "GitHub Actions updates retain the Tuesday schedule"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "time: '09:00'" \
+  "GitHub Actions updates retain the 09:00 schedule"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "timezone: 'Asia/Shanghai'" \
+  "GitHub Actions updates retain the repository timezone"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "open-pull-requests-limit: 5" \
+  "GitHub Actions updates retain the five-PR limit"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "github-actions" "prefix: 'chore(ci)'" \
+  "GitHub Actions updates retain the CI commit prefix"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "directory: '/'" \
+  "Bundler updates scan the root Gemfile"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "target-branch: 'dev'" \
+  "Bundler updates target dev"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "interval: 'weekly'" \
+  "Bundler updates use the weekly cadence"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "day: 'wednesday'" \
+  "Bundler updates run on Wednesday"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "time: '09:00'" \
+  "Bundler updates retain the 09:00 schedule"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "timezone: 'Asia/Shanghai'" \
+  "Bundler updates use the repository timezone"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "open-pull-requests-limit: 2" \
+  "Bundler updates retain the two-PR limit"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "bundler" "prefix: 'chore(deps)'" \
+  "Bundler updates retain the dependency commit prefix"
 require_fixed ".github/dependabot.yml" \
   "production-patches:" \
   "unrelated production updates are grouped only at patch level"

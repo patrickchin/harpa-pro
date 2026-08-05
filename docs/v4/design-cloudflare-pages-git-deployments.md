@@ -102,7 +102,9 @@ password-account value stays dormant while production builds are disabled.
   post-deployment verification only.
 - `pages-preview-ref.yml` owns the exact `pr-<number>` Git ref lifecycle.
 - Cloudflare owns build, deployment, GitHub build status, branch aliasing, and
-  production rollback history.
+  production rollback history. Its GitHub integration also owns the single
+  Pages preview comment for each project. The verification workflows do not
+  post a duplicate link or request pull-request write permission.
 
 No Pages workflow may reference `CLOUDFLARE_API_TOKEN`,
 `CLOUDFLARE_ACCOUNT_ID`, `cloudflare/wrangler-action`, or a direct Pages

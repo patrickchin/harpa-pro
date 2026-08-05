@@ -126,9 +126,9 @@ require_before "$PREVIEW" \
   "bash scripts/ci/verify-dashboard-pages.sh" \
   "pnpm --filter @harpa/dashboard test:e2e:live" \
   "preview verifies SPA routing before live browser mutations"
-require_fixed "$PREVIEW" \
+forbid_fixed "$PREVIEW" \
   "uses: marocchino/sticky-pull-request-comment@v3" \
-  "preview maintains one stable PR comment"
+  "preview leaves the Pages deployment comment to Cloudflare"
 
 require_fixed "$DEV" "https://dev.harpa-pro-dashboard.pages.dev" \
   "dev verifies the stable Cloudflare Git alias"

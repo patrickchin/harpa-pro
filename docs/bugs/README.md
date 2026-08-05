@@ -337,10 +337,11 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
-- **2026-08-05** — The admin activity browser fixture used absolute July 29
-  timestamps, so the rolling Past week filter eventually hid every seeded row.
-  Fix: derive the ordered event times from the harness start and exercise the
-  rolling filter in Playwright. [detail](2026-08-05-admin-activity-e2e-fixed-dates.md)
+- **2026-08-05** — The admin Playwright seed used fixed July 29 activity
+  timestamps, so its `Past week` filter began returning zero rows on August 5
+  and blocked every unrelated API/admin PR. Fix: seed activity relative to the
+  database clock while preserving deterministic event order.
+  [detail](2026-08-05-admin-e2e-fixed-time-expiry.md)
 - **2026-08-05** — Attachment placement and PDF registration used direct
   database timestamps, so `updatedAt` could stay equal at millisecond wire
   precision or move backward under clock skew. Fix: apply the shared monotonic

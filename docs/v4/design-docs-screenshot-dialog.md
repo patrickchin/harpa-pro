@@ -18,6 +18,8 @@ page instead.
 The dialog must:
 
 - show the complete uncropped screenshot without navigating away;
+- preserve native link behavior for modified and non-primary clicks, including
+  opening the raw image in a new tab;
 - expose a contextual accessible name and preserve the image alt text;
 - provide a visible close button;
 - close with the `Escape` key or a backdrop click;
@@ -34,4 +36,5 @@ Playwright opens a guide screenshot, verifies that the guide URL does not
 change, checks the dialog image and accessible name, closes it through the
 button, and repeats the flow with `Escape`. Existing tests continue to assert
 that every trigger retains a valid full-image `href` for the no-JavaScript
-fallback.
+fallback. A modified-click test verifies that the browser can still open the
+raw image in a new tab without opening the dialog.

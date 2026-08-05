@@ -149,6 +149,32 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   await expect(trigger).toBeFocused();
 });
 
+test("keeps modified screenshot clicks as native new-tab links", async ({
+  page,
+}) => {
+  await page.goto("/docs/guides/generate-ai-report");
+
+  const trigger = page.getByRole("link", {
+    name: "View full screenshot for Start a report",
+  });
+  const screenshotUrl = await trigger.getAttribute("href");
+  expect(screenshotUrl).not.toBeNull();
+
+  const modifier: "Meta" | "Control" =
+    process.platform === "darwin" ? "Meta" : "Control";
+  const newPagePromise = page.context().waitForEvent("page", {
+    timeout: 3_000,
+  });
+  await trigger.click({ modifiers: [modifier] });
+  const imagePage = await newPagePromise;
+
+  await expect(imagePage).toHaveURL(
+    new URL(screenshotUrl ?? "", page.url()).href,
+  );
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await imagePage.close();
+});
+
 test("keeps tier navigation usable on a phone viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/docs/guides/generate-ai-report");

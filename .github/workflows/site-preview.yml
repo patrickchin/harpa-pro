@@ -1,8 +1,7 @@
 name: site-preview
 
 # Build and verify apps/site for every PR. Cloudflare Git publishes the exact
-# mirrored pr-N branch; human-owned same-repository PRs verify that deployment
-# and receive a stable preview comment.
+# mirrored pr-N branch; human-owned same-repository PRs verify that deployment.
 
 on:
   pull_request:
@@ -86,7 +85,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      pull-requests: write
     env:
       SITE_BRANCH: pr-${{ github.event.pull_request.number }}
       SITE_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro.pages.dev
@@ -101,25 +99,3 @@ jobs:
           --branch "$SITE_BRANCH"
           --redirect-path /guides/getting-started
           --redirect-suffix /docs/guides/getting-started
-
-      - name: Comment preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          header: site-preview
-          message: |
-            ### 🚧 Public site preview
-
-            **Preview URL:** ${{ env.SITE_PREVIEW_ORIGIN }}
-
-            Built from commit `${{ github.event.pull_request.head.sha }}`
-            through Cloudflare Git branch `${{ env.SITE_BRANCH }}`.
-
-            <details><summary>What this checks</summary>
-
-            - Site unit tests, lint, and Astro type checking pass
-            - Astro build of `apps/site` succeeds
-            - Playwright validates the task hierarchy, search, screenshot assets, links, and mobile layout
-            - Lighthouse CI thresholds pass
-            - Static output and legacy redirects work on Cloudflare Pages
-
-            </details>

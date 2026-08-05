@@ -103,6 +103,38 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
   await expect(page).toHaveURL(/\/docs\/guides\/export-share-pdf$/);
 });
 
+test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
+  await page.goto("/docs/guides/generate-ai-report");
+
+  const trigger = page.getByRole("link", {
+    name: "View full screenshot for Start a report",
+  });
+  const guideUrl = page.url();
+  const screenshotUrl = await trigger.getAttribute("href");
+
+  await trigger.click();
+
+  await expect(page).toHaveURL(guideUrl);
+  const dialog = page.getByRole("dialog", {
+    name: "Full screenshot for Start a report",
+  });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("img", {
+      name: "Harpa Pro Reports list with the New report button",
+    }),
+  ).toHaveAttribute("src", screenshotUrl ?? "");
+
+  await dialog.getByRole("button", { name: "Close full screenshot" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
 test("keeps tier navigation usable on a phone viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/docs/guides/generate-ai-report");

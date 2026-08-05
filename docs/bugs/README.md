@@ -337,6 +337,11 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** *(R5)* — In-process Hono requests represented a zero-byte JSON
+  POST with a null body, while `@hono/node-server` exposed an empty stream, so
+  deployed finalize/unfinalize returned 400 and hid cross-user 404s. Fix: cache
+  exact empty text as `{}` before validation and test through a real listener.
+  [detail](2026-08-05-node-http-empty-json-finalize.md)
 - **2026-08-05** — The admin Playwright seed used fixed July 29 activity
   timestamps, so its `Past week` filter began returning zero rows on August 5
   and blocked every unrelated API/admin PR. Fix: seed activity relative to the

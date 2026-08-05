@@ -74,6 +74,9 @@ A few API quirks the scripts intentionally assert as-is (rather than
 - Wrong HTTP method on an existing route returns 404, not 405.
 - Empty or malformed JSON sent to the email sign-in route returns 400; the
   stress journey also accepts 429 when the auth-route limiter wins the race.
+- Finalize and unfinalize calls intentionally send `application/json` with zero
+  body bytes. The API treats this older-client shape as `{}`; keep these calls
+  as deployed compatibility canaries.
 - Double finalize is idempotent (200); double unfinalize → 409.
 - Cross-user access returns 404, not 403 (RLS-style resource hiding).
 - Viewer project-content mutations return 404. Published-report review

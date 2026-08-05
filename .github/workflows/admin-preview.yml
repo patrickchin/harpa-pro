@@ -92,7 +92,6 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
-      pull-requests: write
     env:
       ADMIN_BRANCH: pr-${{ github.event.pull_request.number }}
       ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
@@ -108,20 +107,3 @@ jobs:
           --branch "$ADMIN_BRANCH"
           --title 'Business activity — Harpa Pro Admin'
           --missing-route /__missing_admin_route__
-
-      - name: Comment admin preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          header: admin-preview
-          message: |
-            ### Admin console preview
-
-            **Preview URL:** ${{ env.ADMIN_PREVIEW_ORIGIN }}
-
-            - API: ${{ env.API_PREVIEW_ORIGIN }}
-            - Cloudflare Git branch: `${{ env.ADMIN_BRANCH }}`
-            - Commit: `${{ github.event.pull_request.head.sha }}`
-
-            The matching `pr-preview` workflow provisions the Fly app and
-            isolated app/admin Neon branches. Browser authentication accepts
-            only the stable Pages branch origin linked above.

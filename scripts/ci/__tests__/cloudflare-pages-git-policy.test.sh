@@ -36,6 +36,16 @@ require_job_line() {
   fi
 }
 
+forbid() {
+  local path="$1" needle="$2" description="$3"
+  if grep -Fq -- "$needle" "$repo_root/$path"; then
+    echo "  FAIL - $description" >&2
+    failures=$((failures + 1))
+  else
+    echo "  ok   - $description"
+  fi
+}
+
 forbid_tree() {
   local needle="$1" description="$2"
   if grep -R -Fq -- "$needle" "$repo_root/.github/workflows"; then
@@ -116,6 +126,15 @@ for workflow in \
   require ".github/workflows/$workflow.yml" \
     'bash scripts/ci/verify-pages-deployment.sh' \
     "$workflow verifies the native Git deployment"
+done
+
+for workflow in site-preview admin-preview dashboard-preview; do
+  forbid ".github/workflows/$workflow.yml" \
+    'marocchino/sticky-pull-request-comment' \
+    "$workflow leaves the Pages preview comment to Cloudflare"
+  forbid ".github/workflows/$workflow.yml" \
+    'pull-requests: write' \
+    "$workflow does not request PR write permission"
 done
 
 echo

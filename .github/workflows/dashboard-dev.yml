@@ -1,0 +1,65 @@
+name: dashboard-dev
+
+# Cloudflare Git publishes the dashboard dev branch. GitHub verifies the
+# matching Fly API, exact Pages commit, and SPA fallback without credentials.
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/api-contract/**'
+      - 'packages/design-tokens/**'
+      - 'packages/report-core/**'
+      - '.github/workflows/dashboard-dev.yml'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-api-release.sh'
+      - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig*.json'
+  workflow_dispatch: {}
+
+concurrency:
+  group: dashboard-dev
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      DASHBOARD_ORIGIN: https://dev.harpa-pro-dashboard.pages.dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify compatible dev API
+        env:
+          API_HEALTH_URL: https://harpa-pro-api-dev.fly.dev/healthz
+          API_READY_URL: https://harpa-pro-api-dev.fly.dev/readyz
+          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|infra/neon/|scripts/journeys/|pnpm-lock\.yaml$|tsconfig.*\.json$|\.github/workflows/api-dev\.yml$)'
+          EXPECTED_GIT_COMMIT: ${{ github.sha }}
+          API_RELEASE_ATTEMPTS: 30
+          API_RELEASE_SLEEP: 10
+        run: bash scripts/ci/verify-api-release.sh
+
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "$DASHBOARD_ORIGIN"
+          --commit "${{ github.sha }}"
+          --branch dev
+          --title 'Harpa Pro Dashboard'
+
+      - name: Verify deployed dashboard SPA
+        env:
+          DASHBOARD_URL: ${{ env.DASHBOARD_ORIGIN }}
+        run: bash scripts/ci/verify-dashboard-pages.sh

@@ -62,6 +62,99 @@ afterAll(async () => {
 
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
 
+interface ReportSnapshot {
+  id: string;
+  number: number;
+  status: 'draft' | 'finalized';
+  visitDate: string | null;
+  body: { meta: { title: string | null } } | null;
+  finalizedAt: string | null;
+  updatedAt: string;
+}
+
+async function seedOwnedProject(projectId: string, ownerId: string) {
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  try {
+    await admin.query(
+      `INSERT INTO app.projects(id, name, owner_id)
+       VALUES ($1, 'Phase 0 test project', $2)`,
+      [projectId, ownerId],
+    );
+    await admin.query(
+      `INSERT INTO app.project_members(project_id, user_id, role)
+       VALUES ($1, $2, 'owner')`,
+      [projectId, ownerId],
+    );
+  } finally {
+    await admin.end();
+  }
+}
+
+async function createReportSnapshot(
+  projectSlug: string,
+  token: string,
+  input: Record<string, unknown> = {},
+): Promise<ReportSnapshot> {
+  const res = await createApp().request(`/projects/${projectSlug}/reports`, {
+    method: 'POST',
+    headers: headers(token),
+    body: JSON.stringify(input),
+  });
+  expect(res.status).toBe(201);
+  return (await res.json()) as ReportSnapshot;
+}
+
+async function getReportSnapshot(
+  projectSlug: string,
+  reportNumberValue: number,
+  token: string,
+): Promise<ReportSnapshot> {
+  const res = await createApp().request(`/projects/${projectSlug}/reports/${reportNumberValue}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as ReportSnapshot;
+}
+
+async function patchReportSnapshot(
+  projectSlug: string,
+  reportNumberValue: number,
+  token: string,
+  patch: Record<string, unknown>,
+): Promise<ReportSnapshot> {
+  const res = await createApp().request(`/projects/${projectSlug}/reports/${reportNumberValue}`, {
+    method: 'PATCH',
+    headers: headers(token),
+    body: JSON.stringify(patch),
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as ReportSnapshot;
+}
+
+function reportBodyWithTitle(title: string) {
+  return {
+    ...placementBody,
+    meta: { ...placementBody.meta, title },
+  };
+}
+
+function staleVersionOf(updatedAt: string) {
+  return new Date(new Date(updatedAt).getTime() - 1_000).toISOString();
+}
+
+async function readConflictReport(res: Response, current: ReportSnapshot): Promise<ReportSnapshot> {
+  expect(res.status).toBe(409);
+  const body = (await res.json()) as { report: ReportSnapshot };
+  expect(body.report).toMatchObject({
+    id: current.id,
+    number: current.number,
+    status: current.status,
+    updatedAt: current.updatedAt,
+  });
+  return body.report;
+}
+
 async function readDirty(reportId: string) {
   const c = await getPool().connect();
   try {
@@ -251,6 +344,245 @@ describe('reports CRUD', () => {
   });
 });
 
+describe('GET /projects/:project/reports status filter', () => {
+  let projectSlug: string;
+  let token: string;
+  let olderDraft: ReportSnapshot;
+  let finalized: ReportSnapshot;
+  let newerDraft: ReportSnapshot;
+
+  beforeAll(async () => {
+    projectSlug = makeProjectId();
+    token = await signTestToken(alice, aliceSid);
+    await seedOwnedProject(projectSlug, alice);
+
+    olderDraft = await createReportSnapshot(projectSlug, token);
+    finalized = await createReportSnapshot(projectSlug, token);
+    newerDraft = await createReportSnapshot(projectSlug, token);
+
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      await admin.query(
+        `UPDATE app.reports
+         SET created_at = $2::timestamptz, updated_at = $2::timestamptz
+         WHERE id = $1`,
+        [olderDraft.id, '2026-07-29T10:00:00.000Z'],
+      );
+      await admin.query(
+        `UPDATE app.reports
+         SET status = 'finalized',
+             finalized_at = $2::timestamptz,
+             created_at = $2::timestamptz,
+             updated_at = $2::timestamptz
+         WHERE id = $1`,
+        [finalized.id, '2026-07-29T10:01:00.000Z'],
+      );
+      await admin.query(
+        `UPDATE app.reports
+         SET created_at = $2::timestamptz, updated_at = $2::timestamptz
+         WHERE id = $1`,
+        [newerDraft.id, '2026-07-29T10:02:00.000Z'],
+      );
+    } finally {
+      await admin.end();
+    }
+  }, 30_000);
+
+  it('applies the status filter before cursor pagination', async () => {
+    const first = await createApp().request(
+      `/projects/${projectSlug}/reports?status=draft&limit=1`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(first.status).toBe(200);
+    const firstPage = (await first.json()) as {
+      items: ReportSnapshot[];
+      nextCursor: string | null;
+    };
+    expect(firstPage.items.map((report) => report.id)).toEqual([newerDraft.id]);
+    expect(firstPage.items.every((report) => report.status === 'draft')).toBe(true);
+    expect(firstPage.nextCursor).not.toBeNull();
+
+    const second = await createApp().request(
+      `/projects/${projectSlug}/reports?status=draft&limit=1&cursor=${encodeURIComponent(firstPage.nextCursor!)}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(second.status).toBe(200);
+    const secondPage = (await second.json()) as {
+      items: ReportSnapshot[];
+      nextCursor: string | null;
+    };
+    expect(secondPage.items.map((report) => report.id)).toEqual([olderDraft.id]);
+    expect(secondPage.items.every((report) => report.status === 'draft')).toBe(true);
+    expect(secondPage.nextCursor).toBeNull();
+
+    const finalizedOnly = await createApp().request(
+      `/projects/${projectSlug}/reports?status=finalized&limit=1`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(finalizedOnly.status).toBe(200);
+    const finalizedPage = (await finalizedOnly.json()) as {
+      items: ReportSnapshot[];
+    };
+    expect(finalizedPage.items.map((report) => report.id)).toEqual([finalized.id]);
+    expect(finalizedPage.items.every((report) => report.status === 'finalized')).toBe(true);
+  });
+
+  it('rejects an unknown status filter', async () => {
+    const res = await createApp().request(`/projects/${projectSlug}/reports?status=archived`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Phase 0 report mutation concurrency', () => {
+  let projectSlug: string;
+  let token: string;
+
+  beforeAll(async () => {
+    projectSlug = makeProjectId();
+    token = await signTestToken(alice, aliceSid);
+    await seedOwnedProject(projectSlug, alice);
+  });
+
+  it('PATCH returns 409 plus the current report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Saved by editor A'),
+    });
+
+    const res = await createApp().request(`/projects/${projectSlug}/reports/${created.number}`, {
+      method: 'PATCH',
+      headers: headers(token),
+      body: JSON.stringify({
+        body: reportBodyWithTitle('Overwritten by stale editor B'),
+        expectedUpdatedAt: staleVersionOf(current.updatedAt),
+      }),
+    });
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.body?.meta.title).toBe('Saved by editor A');
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.updatedAt).toBe(current.updatedAt);
+    expect(latest.body?.meta.title).toBe('Saved by editor A');
+  });
+
+  it('generate returns 409 plus the current report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      visitDate: '2026-07-29T11:00:00.000Z',
+    });
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/generate`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.body).toBeNull();
+    expect(conflict.visitDate).toBe('2026-07-29T11:00:00.000Z');
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.updatedAt).toBe(current.updatedAt);
+    expect(latest.body).toBeNull();
+  });
+
+  it('regenerate returns 409 plus the current report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Current manual draft'),
+    });
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/regenerate`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          fixtureName: 'generate-report.voice-4',
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.body?.meta.title).toBe('Current manual draft');
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.updatedAt).toBe(current.updatedAt);
+    expect(latest.body?.meta.title).toBe('Current manual draft');
+  });
+
+  it('finalize returns 409 plus the current draft for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Current draft'),
+    });
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.status).toBe('draft');
+    expect(conflict.finalizedAt).toBeNull();
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.status).toBe('draft');
+    expect(latest.updatedAt).toBe(current.updatedAt);
+  });
+
+  it('unfinalize returns 409 plus the current finalized report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Finalized report'),
+    });
+    const finalizedRes = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({}),
+      },
+    );
+    expect(finalizedRes.status).toBe(200);
+    const current = (
+      (await finalizedRes.json()) as {
+        report: ReportSnapshot;
+      }
+    ).report;
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/unfinalize`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.status).toBe('finalized');
+    expect(conflict.finalizedAt).toBe(current.finalizedAt);
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.status).toBe('finalized');
+    expect(latest.updatedAt).toBe(current.updatedAt);
+  });
+});
+
 describe('PATCH /projects/:project/reports/:number/attachments', () => {
   let reportId: string;
   let reportNumber: number;
@@ -367,6 +699,35 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
 
     const after = await readDirty(reportId);
     expect(after.changed_at?.getTime()).toBe(before.changed_at?.getTime());
+  });
+
+  it('advances updatedAt by a wire-visible millisecond for attachment placement', async () => {
+    const previousUpdatedAt = '2099-01-01T00:00:00.000Z';
+    await getPool().query(
+      `UPDATE app.reports SET updated_at = $1::timestamptz WHERE id = $2`,
+      [previousUpdatedAt, reportId],
+    );
+
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: { updatedAt: string } };
+    expect(new Date(body.report.updatedAt).getTime()).toBeGreaterThan(
+      new Date(previousUpdatedAt).getTime(),
+    );
   });
 
   it('moves the image note to a section exactly once', async () => {
@@ -542,6 +903,50 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
       await admin.end();
     }
   });
+
+  it('does not place attachments into a finalized report', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const finalize = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+      },
+    );
+    expect(finalize.status).toBe(200);
+    const frozen = (
+      (await finalize.json()) as {
+        report: { body: unknown; status: string; updatedAt: string };
+      }
+    ).report;
+    expect(frozen.status).toBe('finalized');
+
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const conflict = (await res.json()) as {
+      report: { body: unknown; status: string; updatedAt: string };
+    };
+    expect(conflict.report.status).toBe('finalized');
+    expect(conflict.report.updatedAt).toBe(frozen.updatedAt);
+    expect(conflict.report.body).toEqual(frozen.body);
+
+    const latest = await getReportSnapshot(aliceProjSlug, reportNumber, tok);
+    expect(latest.status).toBe('finalized');
+    expect(latest.updatedAt).toBe(frozen.updatedAt);
+    expect(latest.body).toEqual(frozen.body);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -688,6 +1093,22 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
+    const generated = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/generate`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({}),
+      },
+    );
+    expect(generated.status).toBe(200);
+
+    const previousUpdatedAt = '2099-01-02T00:00:00.000Z';
+    await getPool().query(
+      `UPDATE app.reports SET updated_at = $1::timestamptz WHERE id = $2`,
+      [previousUpdatedAt, reportId],
+    );
+
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/pdf`, {
       method: 'POST',
       headers: headers(tok),
@@ -703,8 +1124,9 @@ describe('reports AI/PDF', () => {
     const lifecycle = await getPool().query<{
       file_key: string;
       consumed_at: Date;
+      updated_at: Date;
     }>(
-      `SELECT f.file_key, lease.consumed_at
+      `SELECT f.file_key, lease.consumed_at, report.updated_at
        FROM app.reports report
        JOIN app.files f ON f.id = report.pdf_file_id
        JOIN app.file_upload_leases lease
@@ -718,6 +1140,9 @@ describe('reports AI/PDF', () => {
       `projects/${aliceProjSlug}/reports/`,
     );
     expect(lifecycle.rows[0]?.consumed_at).toBeInstanceOf(Date);
+    expect(lifecycle.rows[0]!.updated_at.getTime()).toBeGreaterThan(
+      new Date(previousUpdatedAt).getTime(),
+    );
   });
 
   it('keeps a durable PDF key when registration fails after the object write', async () => {
@@ -822,11 +1247,32 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/finalize is idempotent (200 on already-finalized)', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
+    const before = await getReportSnapshot(aliceProjSlug, reportNumber, tok);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(tok),
     });
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: ReportSnapshot };
+    expect(body.report.updatedAt).toBe(before.updatedAt);
+    expect(body.report.finalizedAt).toBe(before.finalizedAt);
+
+    const conditional = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ expectedUpdatedAt: before.updatedAt }),
+      },
+    );
+    expect(conditional.status).toBe(200);
+    const conditionalBody = (await conditional.json()) as { report: ReportSnapshot };
+    expect(conditionalBody.report.updatedAt).toBe(before.updatedAt);
+    expect(conditionalBody.report.finalizedAt).toBe(before.finalizedAt);
+
+    const after = await getReportSnapshot(aliceProjSlug, reportNumber, tok);
+    expect(after.updatedAt).toBe(before.updatedAt);
+    expect(after.finalizedAt).toBe(before.finalizedAt);
   });
 
   it('POST /reports/:id/regenerate 409 once finalized', async () => {

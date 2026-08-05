@@ -137,8 +137,21 @@ Each AI-touching route has a test that:
 - `apps/site/tests/docs.spec.ts` covers local search, empty results, guide
   traversal, responsive navigation, internal links, assets, duplicate ids,
   and the branded 404 against the production static build.
+- `apps/site/tests/header.spec.ts` checks the desktop and mobile dashboard
+  actions against the same `PUBLIC_DASHBOARD_URL` embedded in that build.
 - `site-preview.yml` also waits for the native Cloudflare Git deployment's
   exact-SHA marker and verifies one checked-in legacy redirect.
+
+### Dashboard (Playwright)
+
+- `test:e2e` keeps broad mock-backed browser coverage.
+- `test:e2e:live` runs one serial Chromium journey against the stable
+  `pr-<n>.harpa-pro-dashboard.pages.dev` alias and its isolated API.
+- The workflow first verifies the Fly API at GitHub's synthetic merge SHA.
+- It then verifies the Pages marker at the pull request head SHA and checks SPA
+  routing before the live journey starts.
+- The live lane uses public password-account email identities from the Pages
+  build. It loads the password from Doppler only after deployment.
 
 ## Test the default wiring
 
@@ -193,8 +206,14 @@ Active today:
 | `pages-preview-ref.yml`       | human-owned same-repo PR  | Mirror/delete the exact `pr-N` Git ref without checking out PR code                                    |
 | `mobile-ota-pr.yml`           | mobile-relevant PR        | Human-owned same-repo PR OTA publication                                                               |
 | `admin-preview.yml`           | admin-relevant PR         | Credential-free checks plus exact-SHA native Pages preview verification                                |
-| `site-prod.yml`               | push to `main`            | Verify exact native Pages deployment on every production hostname                                      |
+| `admin-dev.yml`               | push to `dev`             | Verify the exact SHA and routes on the native admin `dev` deployment                                   |
+| `admin-prod.yml`              | push to `main`            | Verify the exact SHA and routes on both native admin production hostnames                              |
 | `site-preview.yml`            | PR to `dev` or `main`     | Credential-free checks plus exact-SHA native Pages preview verification                                |
+| `site-dev.yml`                | push to `dev`             | Verify the exact SHA on the native public-site `dev` deployment                                        |
+| `site-prod.yml`               | push to `main`            | Verify the exact SHA on every native public-site production hostname                                   |
+| `dashboard-preview.yml`       | PR to `dev` or `main`     | Verify exact head-SHA Git preview, SPA routing, and live browser checks on the stable alias            |
+| `dashboard-dev.yml`           | push to `dev`             | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment                           |
+| `dashboard-prod.yml`          | push to `main`            | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
 
 ### Dependency security automation
 

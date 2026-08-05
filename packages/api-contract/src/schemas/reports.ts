@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isoDateTime, reportNumber } from './_shared.js';
+import { errorEnvelope, isoDateTime, reportNumber } from './_shared.js';
 import { noteId, projectId, reportCommentId, reportId, userId } from './ids.js';
 import { noteFile, noteKind } from './notes.js';
 
@@ -157,6 +157,9 @@ export const createReportCommentRequest = z.object({
 export const createReportRequest = z.object({
   visitDate: isoDateTime.optional(),
 });
+const reportMutationPrecondition = {
+  expectedUpdatedAt: isoDateTime.optional(),
+};
 export const updateReportRequest = z.object({
   visitDate: isoDateTime.nullable().optional(),
   // Manual edits from the Edit tab autosave. Persisted into the same
@@ -165,6 +168,7 @@ export const updateReportRequest = z.object({
   // never flip `needsRegeneration` to true. See
   // docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
   body: reportBody.nullable().optional(),
+  ...reportMutationPrecondition,
 });
 
 /**
@@ -182,6 +186,7 @@ const fixtureNameSchema = z
 
 export const generateReportRequest = z.object({
   fixtureName: fixtureNameSchema.optional(), // test-only fixture pin
+  ...reportMutationPrecondition,
 });
 export const generateReportDebug = z
   .object({
@@ -213,8 +218,14 @@ export type PlaceReportAttachmentRequest = z.infer<
 >;
 export const placeReportAttachmentResponse = z.object({ report });
 
+export const finalizeReportRequest = z.object(reportMutationPrecondition);
+export const unfinalizeReportRequest = finalizeReportRequest;
 export const finalizeReportResponse = z.object({ report });
 export const unfinalizeReportResponse = z.object({ report });
+export const reportMutationConflictResponse = z.union([
+  z.object({ report }),
+  errorEnvelope,
+]);
 
 export const renderPdfResponse = z.object({
   url: z.string().url(),

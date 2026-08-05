@@ -30,6 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      PUBLIC_DASHBOARD_URL: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
     steps:
       - uses: actions/checkout@v4
 

@@ -27,6 +27,8 @@ const KEYS = [
   'RESEND_LIVE',
   'RESEND_API_KEY',
   'RATE_LIMIT_BACKEND',
+  'DASHBOARD_CORS_ORIGINS',
+  'ADMIN_CORS_ORIGINS',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;

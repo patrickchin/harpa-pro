@@ -35,6 +35,7 @@ export type ProjectEditProps = {
   isLoading: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
+  canDelete: boolean;
   updateError: string | null;
   deleteError: string | null;
   onBack: () => void;
@@ -52,6 +53,7 @@ export function ProjectEdit({
   isLoading,
   isUpdating,
   isDeleting,
+  canDelete,
   updateError,
   deleteError,
   onBack,
@@ -75,7 +77,7 @@ export function ProjectEdit({
 
   // Surface delete errors via the dialog sheet.
   useEffect(() => {
-    if (deleteError) {
+    if (canDelete && deleteError) {
       setDialog({
         kind: 'error',
         ...getActionErrorDialogCopy({
@@ -85,7 +87,7 @@ export function ProjectEdit({
         }),
       });
     }
-  }, [deleteError]);
+  }, [canDelete, deleteError]);
 
   const confirmDelete = () => {
     setDialog({
@@ -181,25 +183,29 @@ export function ProjectEdit({
               <InlineNotice tone="danger">{errorMessage}</InlineNotice>
             ) : null}
 
-            <InlineNotice tone="warning" title="Heads up">
-              Deleting a project permanently removes the project and all reports.
-            </InlineNotice>
+            {canDelete ? (
+              <>
+                <InlineNotice tone="warning" title="Heads up">
+                  Deleting a project permanently removes the project and all reports.
+                </InlineNotice>
 
-            <Button
-              variant="destructive"
-              size="default"
-              className="self-start"
-              onPress={confirmDelete}
-              disabled={isDeleting}
-              testID="btn-delete-project"
-            >
-              <View className="flex-row items-center gap-2">
-                <Trash2 size={16} color={colors.danger.text} />
-                <Text className="text-base font-semibold text-danger-text">
-                  {isDeleting ? 'Deleting…' : 'Delete project'}
-                </Text>
-              </View>
-            </Button>
+                <Button
+                  variant="destructive"
+                  size="default"
+                  className="self-start"
+                  onPress={confirmDelete}
+                  disabled={isDeleting}
+                  testID="btn-delete-project"
+                >
+                  <View className="flex-row items-center gap-2">
+                    <Trash2 size={16} color={colors.danger.text} />
+                    <Text className="text-base font-semibold text-danger-text">
+                      {isDeleting ? 'Deleting…' : 'Delete project'}
+                    </Text>
+                  </View>
+                </Button>
+              </>
+            ) : null}
             <Button
               variant="hero"
               size="xl"
@@ -215,7 +221,7 @@ export function ProjectEdit({
         </View>
 
         <AppDialogSheet
-          visible={dialog !== null}
+          visible={canDelete && dialog !== null}
           title={dialog?.title ?? 'Project Action'}
           message={dialog?.message ?? ''}
           noticeTone={dialog?.tone ?? 'danger'}

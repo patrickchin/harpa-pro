@@ -1,0 +1,206 @@
+name: dashboard-preview
+
+# Test the office dashboard on every PR. Cloudflare Git publishes the mirrored
+# pr-N head while the Fly preview runs GitHub's synthetic merge commit.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/api/**'
+      - 'packages/api-contract/**'
+      - 'packages/ai-fixtures/**'
+      - 'packages/design-tokens/**'
+      - 'packages/report-core/**'
+      - '.github/actions/changed-paths/**'
+      - '.github/actions/setup-monorepo/**'
+      - '.github/workflows/dashboard-*.yml'
+      - '.github/workflows/pages-preview-ref.yml'
+      - '.github/workflows/pr-preview.yml'
+      - 'infra/fly/fly.preview.toml'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-api-release.sh'
+      - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - 'scripts/ci/__tests__/cloudflare-pages-build.test.sh'
+      - 'scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh'
+      - 'scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh'
+      - 'scripts/ci/__tests__/dashboard-pages-policy.test.sh'
+      - 'scripts/ci/__tests__/verify-dashboard-pages.test.sh'
+      - 'scripts/ci/__tests__/verify-pages-deployment.test.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig*.json'
+
+concurrency:
+  group: dashboard-preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-monorepo
+
+      - name: Test dashboard deployment policy
+        run: |
+          bash scripts/ci/__tests__/cloudflare-pages-build.test.sh
+          bash scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh
+          bash scripts/ci/__tests__/dashboard-pages-policy.test.sh
+          bash scripts/ci/__tests__/dashboard-live-e2e-policy.test.sh
+          bash scripts/ci/__tests__/verify-pages-deployment.test.sh
+          bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
+
+      - name: Test dashboard
+        run: pnpm --filter @harpa/dashboard test
+
+      - name: Lint dashboard
+        run: pnpm --filter @harpa/dashboard lint
+
+      - name: Typecheck dashboard
+        run: pnpm --filter @harpa/dashboard typecheck
+
+      - name: Install dashboard browser engines
+        run: pnpm --filter @harpa/dashboard exec playwright install --with-deps chromium firefox webkit msedge
+
+      - name: Test dashboard browser journeys
+        run: pnpm --filter @harpa/dashboard test:e2e
+
+      - name: Build dashboard
+        env:
+          VITE_API_BASE_URL: ${{ env.API_PREVIEW_ORIGIN }}
+          VITE_PASSWORD_ACCOUNT_EMAILS: '${{ vars.TEST_ACCOUNT_EMAIL_DEV }},${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}'
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}
+          VITE_SENTRY_ENVIRONMENT: preview
+          VITE_SENTRY_RELEASE: ${{ github.sha }}
+        run: pnpm --filter @harpa/dashboard build
+
+      - name: Assert Cloudflare Pages SPA artifact
+        shell: bash
+        run: |
+          test -f apps/dashboard/dist/index.html
+          if [[ -e apps/dashboard/dist/404.html ]]; then
+            echo "::error::A top-level 404.html disables Cloudflare Pages SPA routing"
+            exit 1
+          fi
+
+  deployment:
+    needs: verify
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      DASHBOARD_BRANCH: pr-${{ github.event.pull_request.number }}
+      DASHBOARD_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-monorepo
+
+      - name: Verify compatible preview API
+        env:
+          API_HEALTH_URL: ${{ env.API_PREVIEW_ORIGIN }}/healthz
+          API_READY_URL: ${{ env.API_PREVIEW_ORIGIN }}/readyz
+          API_PATH_PATTERN: '.*'
+          # pr-preview checks out GitHub's synthetic merge ref.
+          EXPECTED_GIT_COMMIT: ${{ github.sha }}
+          API_RELEASE_ATTEMPTS: 60
+          API_RELEASE_SLEEP: 10
+        run: bash scripts/ci/verify-api-release.sh
+
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "$DASHBOARD_PREVIEW_ORIGIN"
+          --commit "${{ github.event.pull_request.head.sha }}"
+          --branch "$DASHBOARD_BRANCH"
+          --title 'Harpa Pro Dashboard'
+
+      - name: Verify deployed dashboard SPA
+        env:
+          DASHBOARD_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
+        run: bash scripts/ci/verify-dashboard-pages.sh
+
+      - name: Install deployed-journey browser
+        run: pnpm --filter @harpa/dashboard exec playwright install --with-deps chromium
+
+      - name: Validate dashboard live identities
+        shell: bash
+        env:
+          DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
+        run: |
+          if [[ -z "$DASHBOARD_LIVE_OWNER_EMAIL" || -z "$DASHBOARD_LIVE_EDITOR_EMAIL" ]]; then
+            echo "::error::TEST_ACCOUNT_EMAIL_DEV and TEST_ACCOUNT_EMAIL2_DEV must match the Doppler test-account allowlist"
+            exit 1
+          fi
+
+      - uses: dopplerhq/cli-action@v4
+
+      - name: Load dashboard live credentials
+        shell: bash
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        run: |
+          set -euo pipefail
+          dashboard_live_password="$(doppler secrets get TEST_ACCOUNT_PASSWORD --plain)"
+          if [[ -z "$dashboard_live_password" ]]; then
+            echo "::error::TEST_ACCOUNT_PASSWORD is missing from Doppler dev"
+            exit 1
+          fi
+          echo "::add-mask::$dashboard_live_password"
+          echo "DASHBOARD_LIVE_PASSWORD=$dashboard_live_password" >> "$GITHUB_ENV"
+
+      - name: Test deployed dashboard live journeys
+        shell: bash
+        env:
+          DASHBOARD_LIVE_BASE_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
+          DASHBOARD_LIVE_API_URL: ${{ env.API_PREVIEW_ORIGIN }}
+          DASHBOARD_LIVE_OWNER_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
+          DASHBOARD_LIVE_RUN_ID: pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: pnpm --filter @harpa/dashboard test:e2e:live
+
+      - name: Upload live journey failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-live-e2e-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
+          path: apps/dashboard/test-results-live/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Comment dashboard preview URL on PR
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: dashboard-preview
+          message: |
+            ### Office dashboard preview
+
+            - **Dashboard:** ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
+            - **API:** ${{ env.API_PREVIEW_ORIGIN }}
+            - **Cloudflare Git branch:** `${{ env.DASHBOARD_BRANCH }}`
+            - **Pages head:** `${{ github.event.pull_request.head.sha }}`
+            - **Tested API merge:** `${{ github.sha }}`
+
+            The stable dashboard alias passed the exact-SHA marker and
+            client-side SPA route checks. The deployed Chromium journey also
+            exercised real auth, Fly, Neon, and one live AI generation against
+            the isolated pull-request API.

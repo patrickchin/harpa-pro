@@ -15,9 +15,9 @@ pnpm --filter @harpa/site typecheck
 pnpm --filter @harpa/site test:e2e
 ```
 
-Copy `.env.example` to `.env` before local development. The shared header uses
-`PUBLIC_DASHBOARD_URL` for its dashboard action; local development normally
-points it at `http://localhost:3003`.
+Copy `.env.example` to `.env` before local development.
+`PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
+the current shared header does not expose the dashboard.
 
 ## Stack
 

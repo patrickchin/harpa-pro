@@ -1,12 +1,14 @@
-# Dashboard dev activation and public entry
+# Dashboard dev activation and deferred public entry
 
-**Status:** Implemented on 2026-08-05; dev deployment verification pending
+**Status:** Dashboard dev deployment implemented; public entry deferred on
+2026-08-05
 
 ## Problem
 
-The office dashboard is available on the pull-request Pages branch, but the
-public site has no obvious account entry. The dashboard Pages project also
-limits previews to `pr-211` while the application is absent from `dev`.
+The office dashboard is available on Cloudflare Pages, but it is not ready for
+public discovery from the marketing and documentation site. Its deployment
+and test infrastructure must remain available without advertising the product
+to public-site visitors.
 
 The implementation closes two release blockers before the dashboard merges:
 
@@ -19,13 +21,12 @@ The implementation closes two release blockers before the dashboard merges:
 
 ### Public-site entry
 
-The shared public-site header adds a `Dashboard` button as its final action on
-desktop and in the no-JavaScript mobile menu. It appears on marketing, roadmap,
-and documentation pages because the header is the consistent public-product
-navigation boundary. The existing App Store action and site styling remain
-unchanged.
+The shared public-site header does not render a `Dashboard` action on desktop
+or in the no-JavaScript mobile menu. This applies consistently to marketing,
+roadmap, and documentation pages. The existing App Store action and site
+styling remain unchanged.
 
-The button opens in the same tab. Its build-time URL follows the Pages branch:
+The reserved build-time URL continues to follow the Pages branch:
 
 | Site branch | Dashboard destination                          |
 | ----------- | ---------------------------------------------- |
@@ -34,12 +35,14 @@ The button opens in the same tab. Its build-time URL follows the Pages branch:
 | `main`      | `https://harpa-pro-dashboard.pages.dev`        |
 
 `app.harpapro.com` remains a later production custom-domain activation. The
-public site must not link to that hostname until Pages owns it and its TLS
-certificate is active.
+public site must not link to the dashboard until the product is approved for
+public discovery and the intended hostname is active.
 
 `PUBLIC_DASHBOARD_URL` is required by the typed public-site environment. The
 Cloudflare build wrapper derives it from `CF_PAGES_BRANCH`; local and CI builds
-provide it explicitly. No component reads raw environment variables.
+provide it explicitly. It is retained as dormant rollout configuration so the
+entry can be restored deliberately without changing deployment routing. No
+component reads raw environment variables.
 
 ### Password-account build contract
 
@@ -69,17 +72,17 @@ precondition reliable under same-millisecond writes and clock skew.
   future millisecond value, which also covers clock skew deterministically.
 - The Pages build-wrapper test pins all three public-site destinations and
   rejects a dashboard build without `VITE_PASSWORD_ACCOUNT_EMAILS`.
-- Site Playwright covers the desktop header, mobile menu, destination, and
-  horizontal overflow.
+- Site Playwright proves the dashboard is absent from the desktop header and
+  mobile menu while retaining the horizontal-overflow check.
 - The refreshed pull request must pass its mocked browser matrix, deployed
   live dashboard journey, API integration, and Android Maestro smoke.
 
 ## Rollout
 
 1. Keep dashboard production deployments disabled.
-2. Verify the refreshed `pr-211` dashboard and public-site previews.
-3. Expand dashboard preview branches to `dev` and `pr-*` immediately around
-   the normal pull-request merge so the merge commit receives a native build.
-4. Merge to `dev`, then verify the exact dashboard and site deployment markers,
-   SPA routing, the public-site button, and dashboard sign-in.
+2. Keep dashboard preview branches available for `dev` and `pr-*` testing.
+3. Do not expose a public-site dashboard action until product readiness is
+   approved separately.
+4. Before restoring the action, verify the exact dashboard deployment marker,
+   SPA routing, sign-in, and intended production hostname.
 5. Leave `main` and `app.harpapro.com` unchanged.

@@ -51,6 +51,9 @@ if ! grep -Fq "$ARM_CONFIRMATION_MARKER" "$ARM_ROLLOUT_SOURCE"; then
   echo "  FAIL - application arming command does not emit the deploy confirmation marker"
   exit 1
 fi
+# The grep pattern intentionally matches literal variable references in the
+# helper instead of expanding this test process's variables.
+# shellcheck disable=SC2016
 if ! grep -Fq "ARM_CONFIRMATION_MARKER='$ARM_CONFIRMATION_MARKER'" "$ARM_SCRIPT" ||
    ! grep -Fq '"$EXEC_OUTPUT" == *"$ARM_CONFIRMATION_MARKER"*' "$ARM_SCRIPT"; then
   echo "  FAIL - deploy helper does not use its pinned application confirmation marker"

@@ -10,7 +10,7 @@
 ```
                     ▲
                     │
-            Maestro (≈ 60 flows)
+                 Maestro flows
                     │
          API integration (Testcontainers)
                     │
@@ -27,9 +27,10 @@
 
 ### Vitest unit / behaviour
 
-- Run on every commit locally; required for merge in CI.
-- Mobile: MSW intercepts HTTP. AI fixture replay via the fake
-  client.
+- Run the relevant workspace suite locally. CI runs unit tests for
+  code changes and for pushes to `dev` or `main`.
+- Mobile tests mock hooks, native modules, and request boundaries per
+  test. The mobile workspace does not include an MSW harness.
 - API: in-process Hono `app.fetch()` calls; DB stubbed for pure
   unit tests, real DB for integration.
 
@@ -49,37 +50,45 @@
 
 ### Per-request scope tests
 
-Lives in `packages/api/src/__tests__/scope/`. For every authed
-table, three tests:
+Scope tests live in `packages/api/src/__tests__/scope/`. The intended
+route contract includes these cases:
 
 1. own-row read/write succeeds.
 2. cross-actor read returns empty / 404.
 3. cross-actor write returns 403/404.
 
-A grep-gate (`scripts/check-scope-tests.sh`) fails CI if a new
-authed route lacks the trio.
+`scripts/check-scope-tests.sh` checks that each authenticated route
+module has a non-empty matching scope-test file. It does not inspect
+the cases inside that file. Reviewers must verify the assertions.
 
 ### Contract tests
 
-- `packages/api/src/__tests__/contract/openapi.test.ts` runs every
-  route, captures real responses, validates them against the
-  generated Zod schemas. Drift fails the test.
+- `packages/api/src/__tests__/contract.test.ts` compares Hono's
+  generated OpenAPI document with the committed contract. It also
+  checks registered route patterns and authenticated security metadata.
+- Route integration tests validate response behavior. The contract
+  test does not execute every handler or validate captured responses.
 
 ### Fixture-replay tests for AI routes
 
 Each AI-touching route has a test that:
 
-1. Sends a request with `X-Fixture-Name: <name>`.
-2. The route picks up the fixture name (test mode only).
+1. Sends a JSON request body with `fixtureName: <name>`.
+2. The server uses the name only after it has selected replay mode.
 3. Asserts response matches the recorded fixture.
 
 ### Live AI regression lane
 
 - `ai-live.yml` runs the live provider tests when prompts, provider
-  wiring, report schemas, or the live-test harness changes.
+  wiring, report schemas, or the live-test harness changes. It also
+  supports manual dispatch.
 - Each real provider call has a 120-second test budget inside the
   workflow's 10-minute job budget. Provider timeouts still fail the
   lane; schema and model-routing assertions are never retried.
+- The workflow fetches provider keys from Doppler. Fork pull requests
+  skip the job because they cannot read the Doppler token.
+- Pull requests to `main` also run live-AI development journeys in
+  `main-gate.yml`.
 - Run it manually with
   `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`.
 
@@ -126,8 +135,8 @@ Each AI-touching route has a test that:
   documented world-readable/writable `/dev/kvm` udev rule so hosted
   Ubuntu uses hardware acceleration instead of falling back to
   `-accel off`.
-- AI calls go through replay mode automatically — `:mock` build
-  ships fixtures.
+- The launch smoke does not call AI routes. Its fixture-input flag
+  replaces native input where needed but does not control API mode.
 - Full regression and native-input flows remain explicit local /
   release checks; the PR smoke proves native build, Metro startup,
   installation, launch, and a rendered sign-in control.
@@ -191,29 +200,33 @@ Reviewer heuristic: if a PR adds a `setXClients(...)` call without
 adding a default-wiring test for the same surface, that's the
 review note.
 
-## CI workflows
+## Verification workflows
 
-Active today:
+These are the main test and review workflows. Deployment workflows are
+documented in [`arch-ops.md`](arch-ops.md).
 
-| Workflow                      | Trigger                   | Gate                                                                                                   |
-| ----------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `lint-typecheck.yml`          | every push                | ESLint + tsc clean across the workspace                                                                |
-| `unit.yml`                    | every push                | `pnpm test` green                                                                                      |
-| `api-integration.yml`         | every push                | Combined API unit + Testcontainers suite green at ≥ 90% line coverage                                  |
-| `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
-| `dependency-review.yml`       | every PR                  | Reject newly introduced high or critical dependency vulnerabilities                                    |
-| `pr-preview.yml`              | PR open / push            | Credential-free path/migration guards; human-owned PR preview lifecycle                                |
-| `pages-preview-ref.yml`       | human-owned same-repo PR  | Mirror/delete the exact `pr-N` Git ref without checking out PR code                                    |
-| `mobile-ota-pr.yml`           | mobile-relevant PR        | Human-owned same-repo PR OTA publication                                                               |
-| `admin-preview.yml`           | admin-relevant PR         | Credential-free checks plus exact-SHA native Pages preview verification                                |
-| `admin-dev.yml`               | push to `dev`             | Verify the exact SHA and routes on the native admin `dev` deployment                                   |
-| `admin-prod.yml`              | push to `main`            | Verify the exact SHA and routes on both native admin production hostnames                              |
-| `site-preview.yml`            | PR to `dev` or `main`     | Credential-free checks plus exact-SHA native Pages preview verification                                |
-| `site-dev.yml`                | push to `dev`             | Verify the exact SHA on the native public-site `dev` deployment                                        |
-| `site-prod.yml`               | push to `main`            | Verify the exact SHA on every native public-site production hostname                                   |
-| `dashboard-preview.yml`       | PR to `dev` or `main`     | Verify exact head-SHA Git preview, SPA routing, and live browser checks on the stable alias            |
-| `dashboard-dev.yml`           | push to `dev`             | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment                           |
-| `dashboard-prod.yml`          | push to `main`            | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
+| Workflow                      | Trigger                                                       | Gate                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, documentation links, removal gates, and CI policy tests                     |
+| `unit.yml`                    | Pull requests and pushes to `dev` or `main`, with path gating | `pnpm test`                                                                                            |
+| `api-integration.yml`         | API-relevant pull requests and pushes                         | Combined API unit and Testcontainers coverage at 90% lines                                             |
+| `cli.yml`                     | CLI-relevant pull requests and branch pushes                  | CLI typecheck, lint, tests, help drift, and integration journeys                                       |
+| `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push                                     | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
+| `dependency-review.yml`       | Pull requests                                                 | Reject newly introduced high or critical dependency vulnerabilities                                    |
+| `ai-live.yml`                 | Matching same-repository changes or manual dispatch           | Cost-bearing live report-model schema tests                                                            |
+| `main-gate.yml`               | Pull requests to `main`                                       | Exact development SHA and deployed journey checks, including live AI                                   |
+| `pr-preview.yml`              | PR open / push                                                | Credential-free path/migration guards; human-owned PR preview lifecycle                                |
+| `pages-preview-ref.yml`       | human-owned same-repo PR                                      | Mirror/delete the exact `pr-N` Git ref without checking out PR code                                    |
+| `mobile-ota-pr.yml`           | mobile-relevant PR                                            | Human-owned same-repo PR OTA publication                                                               |
+| `admin-preview.yml`           | admin-relevant PR                                             | Credential-free checks plus exact-SHA native Pages preview verification                                |
+| `admin-dev.yml`               | push to `dev`                                                 | Verify the exact SHA and routes on the native admin `dev` deployment                                   |
+| `admin-prod.yml`              | push to `main`                                                | Verify the exact SHA and routes on both native admin production hostnames                              |
+| `site-preview.yml`            | PR to `dev` or `main`                                         | Credential-free checks plus exact-SHA native Pages preview verification                                |
+| `site-dev.yml`                | push to `dev`                                                 | Verify the exact SHA on the native public-site `dev` deployment                                        |
+| `site-prod.yml`               | push to `main`                                                | Verify the exact SHA on every native public-site production hostname                                   |
+| `dashboard-preview.yml`       | PR to `dev` or `main`                                         | Verify exact head-SHA Git preview, SPA routing, and live browser checks on the stable alias            |
+| `dashboard-dev.yml`           | push to `dev`                                                 | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment                           |
+| `dashboard-prod.yml`          | push to `main`                                                | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
 
 ### Dependency security automation
 
@@ -260,11 +273,8 @@ and both paths need the workflow to be active first. Existing vulnerabilities
 are tracked by Dependabot alerts and security-update pull requests rather than
 failing every unrelated change.
 
-Deferred (add when the phase actually starts, not before):
-
-- `contract.yml` — OpenAPI regen + diff. Add in P1 once `spec:emit` is wired.
-- `visual-gate.yml` — screenshot diff. Add in P2 once shared primitives + first screens land.
-- Per-phase exit gates (`p1-exit-gate.yml`, etc.) — prefer GitHub branch-protection required checks over standalone workflows.
+There is no `contract.yml` or `visual-gate.yml`. The root lint command
+runs `scripts/check-spec-drift.sh`. Visual review remains manual.
 
 `scripts/ci/__tests__/release-confidence-gates.test.sh` statically
 pins these workflow contracts, including the explicit Bash boundary
@@ -286,7 +296,8 @@ ensures the legacy path is gone:
 - `check-no-unistyles.sh` — no `react-native-unistyles` anywhere
   in `apps/`, `packages/`, or `infra/`. Same rationale as above
   (covers non-JS files).
-- `check-scope-tests.sh` — every authed route has scope tests.
+- `check-scope-tests.sh` — every authenticated route module has a
+  non-empty matching scope-test file.
 - `check-spec-drift.sh` — regenerates the OpenAPI spec + types and
   fails if anything would change, keeping `api-contract` in sync
   with `packages/api/src/routes/`.
@@ -295,6 +306,8 @@ ensures the legacy path is gone:
 - `check-no-maestro-point-taps.sh` — Maestro flows must tap text,
   accessibility labels, or testIDs rather than device-dependent
   `point:` coordinates.
+- `check-native-input-smoke.sh` — native input coverage cannot rely on
+  the fixture recorder.
 - `check-no-process-env-r2.sh` — R2 config is read through
   `env.R2_*` only (Pitfall 13 — no `process.env.R2_*` escape
   hatches that bypass DI).
@@ -304,12 +317,11 @@ ensures the legacy path is gone:
   has the limit middleware actually mounted (Pitfall 13 — DI stubs
   must not become the spec).
 
-The full list runs from the root `lint` script in `package.json`
-and is enforced by `lint-typecheck.yml`. On Windows, root lint runs
-the shell gates through `scripts/run-bash-checks.cjs`, which selects
-Git Bash instead of WSL so the checks reuse the Windows `node_modules`
-tree. Keep new shell gates in that wrapper rather than chaining raw
-`bash` from `package.json`.
+The root `lint` script runs the gates listed above through
+`scripts/run-bash-checks.cjs`. `lint-typecheck.yml` also runs
+`check-mobile-lib-flat.sh`, while the Maestro workflow runs
+`check-maestro-testids.sh`. On Windows, the wrapper selects Git Bash
+so the checks reuse the Windows `node_modules` tree.
 
 The following gates were migrated to ESLint rules in
 [`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs) so
@@ -318,7 +330,7 @@ they surface as editor squiggles, not just CI failures:
 - `Alert.alert` outside `lib/dialogs/` → `no-restricted-imports` on
   `react-native#Alert` (Pitfall 12 / AGENTS.md hard rule #4).
 - `process.env.EXPO_PUBLIC_*` reads (and `!` non-null assertions)
-  outside `lib/env.ts` → `no-restricted-syntax` (Pitfall 5).
+  outside `lib/config/env.ts` → `no-restricted-syntax` (Pitfall 5).
 - Hex color literals (`#abc` / `#abcdef`) under `components/**` →
   `no-restricted-syntax` on `Literal` + `TemplateElement`
   (Pitfall 3).

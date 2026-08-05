@@ -11,8 +11,8 @@ preview deployments. No project deletion or recreation occurred.
 
 The project has no production deployment or custom domain. Its production
 branch is `main`, but automatic production deployments remain disabled.
-The initial connection limited previews to `pr-211`. Dev activation expands
-the custom preview branches to `dev` and `pr-*` without enabling production.
+The initial connection limited previews to `pr-211`. After dev activation, the
+custom preview branches are `dev` and `pr-*`; production remains disabled.
 
 ## Target deployment topology
 
@@ -43,12 +43,12 @@ The verified project configuration is:
 4. Production branch: `main`.
 5. Automatic production deployments: disabled.
 6. Preview branch mode: custom branches.
-7. Initial preview custom branch during the draft rollout: `pr-211`.
+7. Preview custom branches: `dev` and `pr-*`.
 8. Build watch include: `*`.
 
-For dev activation, expand preview custom branches to `dev` and `pr-*`. Keep
-the build watch include at `*`. Every allowed branch commit must produce the
-exact-SHA marker expected by the verification workflow.
+The draft rollout initially allowed only `pr-211`; that temporary restriction
+ended after the application landed on `dev`. Every allowed branch commit must
+produce the exact-SHA marker expected by the verification workflow.
 
 ## Public-site dashboard entry
 

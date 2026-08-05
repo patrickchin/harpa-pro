@@ -1,5 +1,9 @@
 # Mobile structure simplification — implementation plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reorganise `apps/mobile/` so `features/` only holds state machines + adapters, `components/` only holds presentational UI, and `lib/` is grouped into subfolders (no flat files at root).
@@ -52,6 +56,7 @@ apps/mobile/
 ```
 
 After the plan:
+
 - `apps/mobile/lib/*.{ts,tsx}` (root level glob) returns **nothing**.
 - `apps/mobile/features/voice/` contains no `Voice*.tsx` or `voiceNoteCardHeader*`.
 
@@ -73,6 +78,7 @@ After the plan:
 ## Task 1: Create `lib/util/` and move utilities
 
 **Files:**
+
 - Move: `apps/mobile/lib/date.ts` → `apps/mobile/lib/util/date.ts`
 - Move: `apps/mobile/lib/date.test.ts` → `apps/mobile/lib/util/date.test.ts`
 - Move: `apps/mobile/lib/utils.ts` → `apps/mobile/lib/util/utils.ts`
@@ -116,6 +122,7 @@ for name in date utils uuid use-clipboard use-refresh layout-shift-probe; do
     echo "STALE: ${name}" || true
 done
 ```
+
 Expected: no lines printed (other than the `|| true` no-ops).
 
 - [ ] **Step 4: Typecheck + test**
@@ -124,6 +131,7 @@ Expected: no lines printed (other than the `|| true` no-ops).
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 5: Commit**
@@ -140,6 +148,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 2: Create `lib/config/` and move env/build/flags
 
 **Files:**
+
 - Move: `apps/mobile/lib/env.ts` → `apps/mobile/lib/config/env.ts`
 - Move: `apps/mobile/lib/env.test.ts` → `apps/mobile/lib/config/env.test.ts`
 - Move: `apps/mobile/lib/build-info.ts` → `apps/mobile/lib/config/build-info.ts`
@@ -173,6 +182,7 @@ for name in env build-info dev-flags; do
     && echo "STALE: ${name}" || true
 done
 ```
+
 Expected: no real matches.
 
 - [ ] **Step 4: Typecheck + test**
@@ -181,6 +191,7 @@ Expected: no real matches.
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 5: Commit**
@@ -197,6 +208,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3: Create `lib/phone/` and move phone/countries
 
 **Files:**
+
 - Move: `apps/mobile/lib/phone.ts` → `apps/mobile/lib/phone/phone.ts`
 - Move: `apps/mobile/lib/phone.test.ts` → `apps/mobile/lib/phone/phone.test.ts`
 - Move: `apps/mobile/lib/countries.ts` → `apps/mobile/lib/phone/countries.ts`
@@ -228,6 +240,7 @@ done
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 4: Commit**
@@ -244,6 +257,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4: Move auth-adjacent files into existing `lib/auth/`
 
 **Files:**
+
 - Move: `apps/mobile/lib/login-phone-hint.ts` → `apps/mobile/lib/auth/login-phone-hint.ts`
 - Move: `apps/mobile/lib/login-phone-hint.test.ts` → `apps/mobile/lib/auth/login-phone-hint.test.ts`
 - Move: `apps/mobile/lib/remembered-login.ts` → `apps/mobile/lib/auth/remembered-login.ts`
@@ -278,6 +292,7 @@ done
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 4: Commit**
@@ -294,6 +309,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 5: Create `lib/reports/` and rename `mobile-ui.ts` → `report-ui.ts`
 
 **Files:**
+
 - Move: `apps/mobile/lib/export-report-pdf.ts` → `apps/mobile/lib/reports/export-report-pdf.ts`
 - Move: `apps/mobile/lib/generate-report-ui.ts` → `apps/mobile/lib/reports/generate-report-ui.ts`
 - Rename + move: `apps/mobile/lib/mobile-ui.ts` → `apps/mobile/lib/reports/report-ui.ts`
@@ -350,6 +366,7 @@ for name in export-report-pdf generate-report-ui mobile-ui report-body-adapter \
     && echo "STALE: ${name}" || true
 done
 ```
+
 Expected: no real matches.
 
 - [ ] **Step 4: Typecheck + test**
@@ -358,6 +375,7 @@ Expected: no real matches.
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 5: Commit**
@@ -374,6 +392,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6: Create `lib/projects/` and move project helpers
 
 **Files:**
+
 - Move: `apps/mobile/lib/project-members-layout.ts` → `apps/mobile/lib/projects/project-members-layout.ts`
 - Move: `apps/mobile/lib/project-overview.ts` → `apps/mobile/lib/projects/project-overview.ts`
 - Move: `apps/mobile/lib/project-reports-list.ts` → `apps/mobile/lib/projects/project-reports-list.ts`
@@ -403,6 +422,7 @@ done
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 4: Commit**
@@ -419,6 +439,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 7: Move remaining flat files (`note-entry`, `image-cache`, `camera-session-registry`)
 
 **Files:**
+
 - Move: `apps/mobile/lib/note-entry.ts` → `apps/mobile/lib/notes/note-entry.ts`
 - Move: `apps/mobile/lib/image-cache.ts` → `apps/mobile/lib/files/image-cache.ts`
 - Move: `apps/mobile/lib/camera-session-registry.ts` → `apps/mobile/lib/camera/camera-session-registry.ts`
@@ -453,6 +474,7 @@ grep -rl --include='*.ts' --include='*.tsx' "from '@/lib/camera-session-registry
 ```bash
 ls apps/mobile/lib/*.ts apps/mobile/lib/*.tsx 2>/dev/null
 ```
+
 Expected: no output (the glob matches nothing).
 
 - [ ] **Step 4: Typecheck + test**
@@ -461,6 +483,7 @@ Expected: no output (the glob matches nothing).
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: both pass.
 
 - [ ] **Step 5: Commit**
@@ -479,6 +502,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 8: Move `GenerateReportProvider` → `features/generate/`
 
 **Files:**
+
 - Move: `apps/mobile/components/reports/generate/GenerateReportProvider.tsx` → `apps/mobile/features/generate/GenerateReportProvider.tsx`
 - Update imports in (4 files):
   - `apps/mobile/screens/generate-notes.tsx`
@@ -511,6 +535,7 @@ grep -rn "from '@/components/reports/generate/GenerateReportProvider'" \
   apps/mobile --include='*.ts' --include='*.tsx' \
   && echo "STALE" || true
 ```
+
 Expected: no real matches.
 
 - [ ] **Step 4: Typecheck + test (run the generate tests explicitly too)**
@@ -519,6 +544,7 @@ Expected: no real matches.
 pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile test -- generate
 ```
+
 Expected: both pass.
 
 - [ ] **Step 5: Commit**
@@ -539,12 +565,14 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 9: Move voice card pieces → `components/notes/`
 
 **Files moved:**
+
 - `apps/mobile/features/voice/VoiceNoteCard.tsx` → `apps/mobile/components/notes/VoiceNoteCard.tsx`
 - `apps/mobile/features/voice/VoiceCardShell.tsx` → `apps/mobile/components/notes/VoiceCardShell.tsx`
 - `apps/mobile/features/voice/voiceNoteCardHeader.ts` → `apps/mobile/components/notes/voiceNoteCardHeader.ts`
 - `apps/mobile/features/voice/voiceNoteCardHeader.test.ts` → `apps/mobile/components/notes/voiceNoteCardHeader.test.ts`
 
 **Files updated (importers):**
+
 - `apps/mobile/components/notes/NoteTimeline.tsx`
 - `apps/mobile/components/notes/NoteOptionsSheet.tsx`
 - `apps/mobile/components/reports/detail/VoiceNoteRow.tsx`
@@ -576,6 +604,7 @@ grep -rn "from '@/features/voice/\(VoiceNoteCard\|VoiceCardShell\|voiceNoteCardH
   apps/mobile --include='*.ts' --include='*.tsx' && echo "STALE" || true
 ls apps/mobile/features/voice/
 ```
+
 Expected: no stale matches. `ls` output: `InlineVoiceRecorder.tsx`, `expoAudioRecorder.ts`, `fixtureRecorder.ts`, `fixtureRecorder.test.ts`, `pickRecorder.ts`, `recorder-types.ts`, `useInlineRecorder.ts`, `useInlineRecorder.test.ts`, `useVoiceNotePipeline.ts`, `useVoiceNotePipeline.test.ts` (no `Voice*Card*` / `voiceNoteCardHeader*`).
 
 - [ ] **Step 4: Typecheck + test (run note + voice suites explicitly)**
@@ -586,6 +615,7 @@ pnpm --filter @harpa/mobile test -- notes
 pnpm --filter @harpa/mobile test -- voice
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: all pass.
 
 - [ ] **Step 5: Commit**
@@ -606,6 +636,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 10: Add folder READMEs
 
 **Files created:**
+
 - `apps/mobile/components/README.md`
 - `apps/mobile/features/README.md`
 - `apps/mobile/lib/README.md`
@@ -619,11 +650,13 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 **Presentational UI only**, grouped by domain.
 
 Goes here:
+
 - React components that render UI.
 - Domain-named widgets (note cards, report cards, file previews).
 - Components owned by primitives/ (Card, Button, Input, …).
 
 Does NOT go here:
+
 - State machines, reducers, or Context providers with non-trivial
   logic → `features/<domain>/`.
 - Cross-cutting utilities (date, env, api client) → `lib/<group>/`.
@@ -640,10 +673,12 @@ See `docs/v4/arch-mobile.md` for the full folder rule.
 non-trivial Context+reducer provider, or a native/external adapter.
 
 Goes here:
+
 - Recorder / pipeline / adapter bundles (e.g. `voice/`).
 - Providers + reducers (e.g. `generate/GenerateReportProvider`).
 
 Does NOT go here:
+
 - Plain presentational UI — even domain-named like `VoiceNoteCard`
   → those belong in `components/<domain>/`.
 - Generic utilities → `lib/<group>/`.
@@ -660,16 +695,19 @@ See `docs/v4/arch-mobile.md` for the full folder rule.
 Nothing flat at the `lib/` root — a CI guard enforces this.
 
 Subfolders:
+
 - `api/`, `auth/`, `audio/`, `camera/`, `config/`, `dialogs/`,
   `files/`, `nav/`, `native/`, `notes/`, `phone/`, `projects/`,
   `reports/`, `telemetry/`, `uploads/`, `util/`, plus
   `ai/`, `design-tokens/`, `dev-fixtures/`.
 
 Goes here:
+
 - Pure helpers, hooks without their own UI, type definitions,
   client wrappers (api, dialogs).
 
 Does NOT go here:
+
 - Presentational UI → `components/<domain>/`.
 - Anything with significant stateful coordination → `features/<domain>/`.
 
@@ -721,7 +759,6 @@ OTP). Pure presentational UI — even when domain-named
 by concern; no flat files at the `lib/` root (enforced in CI).
 `screens/` holds props-driven screen bodies; `app/` holds expo-router
 route files that wire data into screens.
-
 ```
 
 - [ ] **Step 2: Replace the "Directory structure" code block body**
@@ -795,6 +832,7 @@ grep -n "VoiceNoteCard" docs/v4/arch-mobile.md
 grep -n "GenerateReportProvider" docs/v4/arch-mobile.md
 grep -n "^## Folder rule" docs/v4/arch-mobile.md
 ```
+
 Expected: `VoiceNoteCard` appears under `components/notes/`, `GenerateReportProvider` appears under `features/generate/`, the "Folder rule" heading exists.
 
 - [ ] **Step 4: Commit**
@@ -814,6 +852,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 12: Add CI guard for flat `lib/` files
 
 **Files:**
+
 - Create: `scripts/check-mobile-lib-flat.sh`
 - Modify: `.github/workflows/lint-typecheck.yml` (add one line to the "Removal verification gates" step)
 
@@ -855,6 +894,7 @@ chmod +x scripts/check-mobile-lib-flat.sh
 ```bash
 bash scripts/check-mobile-lib-flat.sh
 ```
+
 Expected output: `apps/mobile/lib/ is subfolder-only ✓`
 
 - [ ] **Step 3: Wire it into `.github/workflows/lint-typecheck.yml`**
@@ -862,22 +902,22 @@ Expected output: `apps/mobile/lib/ is subfolder-only ✓`
 In `.github/workflows/lint-typecheck.yml`, locate the existing block:
 
 ```yaml
-      - name: Removal verification gates
-        run: |
-          bash scripts/check-no-supabase.sh
-          bash scripts/check-no-unistyles.sh
-          bash scripts/check-scope-tests.sh
+- name: Removal verification gates
+  run: |
+    bash scripts/check-no-supabase.sh
+    bash scripts/check-no-unistyles.sh
+    bash scripts/check-scope-tests.sh
 ```
 
 and append one line so it becomes:
 
 ```yaml
-      - name: Removal verification gates
-        run: |
-          bash scripts/check-no-supabase.sh
-          bash scripts/check-no-unistyles.sh
-          bash scripts/check-scope-tests.sh
-          bash scripts/check-mobile-lib-flat.sh
+- name: Removal verification gates
+  run: |
+    bash scripts/check-no-supabase.sh
+    bash scripts/check-no-unistyles.sh
+    bash scripts/check-scope-tests.sh
+    bash scripts/check-mobile-lib-flat.sh
 ```
 
 - [ ] **Step 4: Sanity-check the guard fails when it should**
@@ -888,6 +928,7 @@ bash scripts/check-mobile-lib-flat.sh && echo "BAD: guard did not fail" || echo 
 rm apps/mobile/lib/should-fail.ts
 bash scripts/check-mobile-lib-flat.sh
 ```
+
 Expected: first run prints `OK: guard correctly failed`; second run prints the success line.
 
 - [ ] **Step 5: Commit**
@@ -925,6 +966,7 @@ grep -q "VoiceNoteCard.tsx                # ← lives here" docs/v4/arch-mobile.
 # CI guard exists and passes
 bash scripts/check-mobile-lib-flat.sh
 ```
+
 Expected: every echo is `OK`, guard prints its success line.
 
 - [ ] **Step 2: Full mobile gate**
@@ -934,4 +976,5 @@ pnpm --filter @harpa/mobile typecheck
 pnpm --filter @harpa/mobile lint
 pnpm --filter @harpa/mobile test
 ```
+
 Expected: all green.

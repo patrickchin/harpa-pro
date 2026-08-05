@@ -1,306 +1,264 @@
 # CLI (`apps/cli`)
 
-> **Purpose:** Debug / API testing / LLM-driven usage tool for the harpa-pro v4 API.
+> **Purpose:** Debug, test, and automate supported Harpa Pro API routes.
 >
-> Lessons applied: [Pitfall 1](pitfalls.md#pitfall-1--p1-done-without-real-api-tests) (tests ship with commands), [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken) (test the default wiring).
+> This design applies [Pitfall 1](pitfalls.md#pitfall-1--p1-done-without-real-api-tests)
+> and [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken).
 
 ## Scope
 
-- API debugging during development, automated route smoke testing, LLM-driven workflows (`--json` mode).
-- **Not** a mobile-app replacement. Stateless / env-only / 12-factor in v1 — no config files, no keychain, no shell completion.
+- The CLI supports common auth, profile, project, report, note, file,
+  voice, and AI-settings operations.
+- It supports scripts through JSON output and stable exit codes.
+- It does not expose every API route. The current command tree in
+  `apps/cli/src/commands/` is authoritative.
+- It is stateless. It does not load config files, store credentials,
+  or replace the mobile app.
 
 ## Stack
 
-- **Framework:** `citty` (chosen over commander/yargs/oclif for ESM-first, TS-native, minimal deps).
-- **HTTP client:** `openapi-fetch` typed from `@harpa/api-contract` (drift = compile error).
-- **Env:** Zod via `lib/env.ts`.
-- **Output:** `chalk` for human, raw JSON for `--json`.
-- **Testing:** Vitest + Testcontainers (reuses `packages/api/__tests__/setup-pg.ts`).
+- **Commands:** `citty`.
+- **Typed API client:** `openapi-fetch` with types from
+  `@harpa/api-contract`.
+- **Environment:** Zod in `src/lib/env.ts`.
+- **Output:** `chalk` for human output and plain JSON for scripts.
+- **Tests:** Vitest and Testcontainers.
 
 ## Layout
 
-```
+```text
 apps/cli/
-  package.json          # bin: { harpa: "./dist/index.js" }
+  package.json
   src/
-    index.ts            # citty root, mounts subcommands
+    index.ts
     lib/
-      env.ts            # Zod schema for HARPA_*
-      client.ts         # typed openapi-fetch factory
-      render.ts         # human-readable formatters
-      error.ts          # exit-code mapping + stderr formatter
-    commands/           # auth, me, projects, members, reports, reports-ai,
-                        # notes, files, voice, settings, health
-    __tests__/          # one *.integration.test.ts per command group + unit tests
+      env.ts
+      env-runtime.ts
+      client.ts
+      render.ts
+      error.ts
+      run.ts
+    commands/
+    __tests__/
+  scripts/
 ```
 
-## Env contract (`lib/env.ts`)
+## Environment contract
 
-```ts
-const CliEnv = z.object({
-  HARPA_API_URL: z.string().url(),
-  HARPA_TOKEN: z.string().optional(),
-  HARPA_DEBUG: z.enum(['0', '1']).default('0'),
-  HARPA_IDEMPOTENCY_KEY: z.string().uuid().optional(),
-});
-export const env = CliEnv.parse(process.env);
-```
+| Variable                | Required                  | Purpose                                                    |
+| ----------------------- | ------------------------- | ---------------------------------------------------------- |
+| `HARPA_API_URL`         | Yes for command execution | API origin, such as `http://localhost:8787`.               |
+| `HARPA_TOKEN`           | Authenticated commands    | Better Auth bearer token.                                  |
+| `HARPA_DEBUG`           | No                        | Set to `1` to include response details on errors.          |
+| `HARPA_IDEMPOTENCY_KEY` | No                        | Non-empty idempotency header value for typed API requests. |
 
-Parsed at top of `src/index.ts` — fails fast on missing/invalid env. Commands needing `HARPA_TOKEN` exit `3` with a clear message if absent. All groups except `auth otp start|verify` require the token.
+`getEnv()` parses the environment on the first command execution.
+`harpa --help` and `harpa --version` do not require environment values.
+Commands fail before their request when the environment is invalid.
 
-## Typed HTTP client (`lib/client.ts`)
+Health and email-OTP start or verify do not require `HARPA_TOKEN`.
+`auth logout` and all other authenticated commands require it.
 
-```ts
-export function createApiClient(token?: string) {
-  return createClient<paths>({
-    baseUrl: env.HARPA_API_URL,
-    headers: {
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(env.HARPA_IDEMPOTENCY_KEY ? { 'idempotency-key': env.HARPA_IDEMPOTENCY_KEY } : {}),
-    },
-  });
-}
-```
+## HTTP clients
+
+The Better Auth routes under `/api/auth/**` are not part of the generated
+OpenAPI contract. Auth commands use raw `fetch` through one wrapper.
+
+All other commands use `createApiClient(env, options)`. The client reads
+the API URL, bearer token, and optional idempotency key from parsed env.
+Integration tests can override the fetch function without replacing the
+typed client.
 
 ## Output contract
 
-- **Default:** human-readable via `lib/render.ts` (chalk).
-- **`--json` (global):** raw API JSON to stdout, no progress logs, errors still to stderr.
-- **`--verbose` (global):** prints `x-request-id`, `idempotent-replay`, `x-ratelimit-*`, duration after the result.
-- **`--debug` (via `HARPA_DEBUG=1`):** also prints response headers + raw body on error.
+- The default format is human-readable.
+- `--json` writes the API JSON result to stdout. Errors stay on stderr.
+- `--verbose` writes available request ID, replay, and rate-limit headers
+  to stderr.
+- `HARPA_DEBUG=1` also writes response headers and the raw error body.
 
-### Error format (stderr)
+The human error format is:
 
-```
-Error: <http-code> <error.code>
-<error.message>
+```text
+Error: <http-status> <error-code>
+<error-message>
 
-Request ID: <requestId>
+Request ID: <request-id>
 ```
 
 ### Exit codes
 
-| HTTP status | Exit | Meaning |
-|---|---|---|
-| 2xx | 0 | Success |
-| 400, 422 | 2 | Validation error |
-| 401, 403 | 3 | Auth error |
-| 404 | 4 | Not found |
-| 429 | 5 | Rate limited |
-| 5xx | 6 | Server error |
-| Network / parse | 7 | Transport error |
-
-```ts
-export function mapStatusToExitCode(status: number): number {
-  if (status >= 200 && status < 300) return 0;
-  if (status === 400 || status === 422) return 2;
-  if (status === 401 || status === 403) return 3;
-  if (status === 404) return 4;
-  if (status === 429) return 5;
-  if (status >= 500) return 6;
-  return 1;
-}
-```
+| Result                                 | Exit code |
+| -------------------------------------- | --------- |
+| Success                                | 0         |
+| Other client error, including HTTP 409 | 1         |
+| HTTP 400 or 422 validation error       | 2         |
+| HTTP 401, HTTP 403, or missing token   | 3         |
+| HTTP 404                               | 4         |
+| HTTP 429                               | 5         |
+| HTTP 5xx                               | 6         |
+| Network or response-parse error        | 7         |
 
 ## Command surface
 
-Every API route has a CLI command. `apps/cli/src/commands/` is the source of truth; flags use kebab-case, positional args where sensible.
+Flags use kebab case. Project identifiers are slugs such as
+`prj_xxxxxxxx`. Reports use a project slug and the report number.
 
-### Auth (`commands/auth.ts`)
+### Health and auth
 
-| API route | CLI command | Notes |
-|---|---|---|
-| `POST /api/auth/email-otp/send-verification-otp` | `harpa auth otp start <email>` | |
-| `POST /api/auth/sign-in/email-otp` | `harpa auth otp verify <email> <code>` | `--raw` prints just the token |
-| `POST /api/auth/sign-out` | `harpa auth logout` | |
+| API route                                        | CLI command                                    |
+| ------------------------------------------------ | ---------------------------------------------- |
+| `GET /healthz`                                   | `harpa health`                                 |
+| `POST /api/auth/email-otp/send-verification-otp` | `harpa auth otp start <email>`                 |
+| `POST /api/auth/sign-in/email-otp`               | `harpa auth otp verify <email> <code> [--raw]` |
+| `POST /api/auth/sign-out`                        | `harpa auth logout`                            |
+
+Use `--raw` to print only the bearer token:
 
 ```bash
-export HARPA_TOKEN=$(curl -sX POST "$API/api/auth/sign-in/email" \
-  -H 'content-type: application/json' \
-  -d "{\"email\":\"test@harpapro.com\",\"password\":\"$TEST_ACCOUNT_PASSWORD\"}" \
-  | jq -r .token)
+OTP_CODE=123456 # Replace with the code from the email.
+export HARPA_TOKEN="$(harpa auth otp verify user@example.com "$OTP_CODE" --raw)"
 ```
 
-### Me (`commands/me.ts`)
+### Profile
 
-| API route | CLI command |
-|---|---|
-| `GET /me` | `harpa me get` |
-| `PATCH /me` | `harpa me update --display-name <n> --company-name <n>` |
-| `GET /me/usage` | `harpa me usage` |
+| API route       | CLI command                                                       |
+| --------------- | ----------------------------------------------------------------- |
+| `GET /me`       | `harpa me get`                                                    |
+| `PATCH /me`     | `harpa me update [--display-name <name>] [--company-name <name>]` |
+| `GET /me/usage` | `harpa me usage`                                                  |
 
-### Projects (`commands/projects.ts`)
+### Projects and members
 
-| API route | CLI command |
-|---|---|
-| `GET /projects` | `harpa projects list [--cursor <c>] [--limit <n>]` |
-| `POST /projects` | `harpa projects create --name --client-name --address` |
-| `GET /projects/:id` | `harpa projects get <id>` |
-| `PATCH /projects/:id` | `harpa projects update <id> [--name --client-name --address]` |
-| `DELETE /projects/:id` | `harpa projects delete <id>` |
-| `GET /projects/:id/members` | `harpa projects members list <projectId>` |
-| `POST /projects/:id/members` | `harpa projects members add <projectId> --email <e>` |
-| `DELETE /projects/:id/members/:userId` | `harpa projects members remove <projectId> <userId>` |
+| API route                                   | CLI command                                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /projects`                             | `harpa projects list [--cursor <cursor>] [--limit <count>]`                                    |
+| `POST /projects`                            | `harpa projects create --name <name> [--client-name <name>] [--address <address>]`             |
+| `GET /projects/{project}`                   | `harpa projects get <project>`                                                                 |
+| `PATCH /projects/{project}`                 | `harpa projects update <project> [--name <name>] [--client-name <name>] [--address <address>]` |
+| `DELETE /projects/{project}`                | `harpa projects delete <project>`                                                              |
+| `GET /projects/{project}/members`           | `harpa projects members list <project>`                                                        |
+| `POST /projects/{project}/members`          | `harpa projects members add <project> --email <email> [--role <role>]`                         |
+| `DELETE /projects/{project}/members/{user}` | `harpa projects members remove <project> <email>`                                              |
 
-### Reports (`commands/reports.ts`)
+The remove command resolves the email to a user ID from the member list.
+The CLI does not currently expose the member-role update route.
 
-| API route | CLI command |
-|---|---|
-| `GET /projects/:id/reports` | `harpa reports list <projectId> [--cursor --limit]` |
-| `POST /projects/:id/reports` | `harpa reports create <projectId> --title` |
-| `GET /reports/:reportId` | `harpa reports get <reportId>` |
-| `PATCH /reports/:reportId` | `harpa reports update <reportId> [--title --weather]` |
-| `DELETE /reports/:reportId` | `harpa reports delete <reportId>` |
-| `POST /reports/:reportId/generate` | `harpa reports generate <reportId> [--idempotency-key]` |
-| `POST /reports/:reportId/finalize` | `harpa reports finalize <reportId>` |
-| `POST /reports/:reportId/regenerate` | `harpa reports regenerate <reportId> [--idempotency-key]` |
-| `POST /reports/:reportId/pdf` | `harpa reports pdf <reportId>` |
+### Reports
 
-`--idempotency-key` overrides `HARPA_IDEMPOTENCY_KEY`. No auto-generation — user is responsible for idempotency.
+| API route                                     | CLI command                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `GET /projects/{project}/reports`             | `harpa reports list <project> [--cursor <cursor>] [--limit <count>]`                       |
+| `POST /projects/{project}/reports`            | `harpa reports create <project> [--visit-date <date>]`                                     |
+| `GET /projects/{project}/reports/{number}`    | `harpa reports get <project> <number>`                                                     |
+| `PATCH /projects/{project}/reports/{number}`  | `harpa reports update <project> <number> [--visit-date <date>]`                            |
+| `DELETE /projects/{project}/reports/{number}` | `harpa reports delete <project> <number>`                                                  |
+| `POST .../generate`                           | `harpa reports generate <project> <number> [--fixture <name>] [--idempotency-key <key>]`   |
+| `POST .../regenerate`                         | `harpa reports regenerate <project> <number> [--fixture <name>] [--idempotency-key <key>]` |
+| `POST .../finalize`                           | `harpa reports finalize <project> <number>`                                                |
+| `POST .../unfinalize`                         | `harpa reports unfinalize <project> <number>`                                              |
+| `POST .../pdf`                                | `harpa reports pdf <project> <number>`                                                     |
 
-### Notes (`commands/notes.ts`)
+### Notes
 
-| API route | CLI command |
-|---|---|
-| `GET /reports/:reportId/notes` | `harpa notes list <reportId>` |
-| `POST /reports/:reportId/notes` | `harpa notes create <reportId> --kind <text\|voice\|image> [--body --file-id]` |
-| `PATCH /notes/:noteId` | `harpa notes update <noteId> --body` |
-| `DELETE /notes/:noteId` | `harpa notes delete <noteId>` |
+| API route                      | CLI command                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `GET /reports/{report}/notes`  | `harpa notes list <project> <report-number> [--cursor <cursor>] [--limit <count>]`                                  |
+| `POST /reports/{report}/notes` | `harpa notes create <project> <report-number> --kind <kind> [--body <text>] [--file-id <id>] [--transcript <text>]` |
+| `PATCH /notes/{note}`          | `harpa notes update <note-id> --body <text>`                                                                        |
+| `DELETE /notes/{note}`         | `harpa notes delete <note-id>`                                                                                      |
 
-### Files (`commands/files.ts`)
+The list and create commands resolve the report UUID from the project slug
+and report number. Supported note kinds are `text`, `voice`, `image`, and
+`document`.
 
-| API route | CLI command |
-|---|---|
-| `POST /files/presign` | `harpa files presign --kind --content-type --size` |
-| `POST /files` | `harpa files register --kind --file-key --size` |
-| `GET /files/:id/url` | `harpa files url <fileId>` |
+### Files
 
-`harpa files upload --file <path> --kind <k>` chains presign → streaming PUT → register.
+| API route             | CLI command                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `POST /files/presign` | `harpa files presign --kind <kind> --content-type <type> --size <bytes>`                   |
+| `POST /files`         | `harpa files register --kind <kind> --file-key <key> --content-type <type> --size <bytes>` |
+| `GET /files/{id}/url` | `harpa files url <file-id>`                                                                |
 
-### Voice (`commands/voice.ts`)
+`harpa files upload --file <path> --kind <kind>` performs presign, a
+streaming PUT, and registration. It accepts an optional `--content-type`.
 
-| API route | CLI command |
-|---|---|
-| `POST /voice/transcribe` | `harpa voice transcribe (--file-id \| --file <path>)` |
-| `POST /voice/summarize` | `harpa voice summarize --transcript <text>` |
+### Voice and settings
 
-### Settings (`commands/settings.ts`)
+| API route                | CLI command                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| `POST /voice/transcribe` | `harpa voice transcribe --file-id <id> [--fixture <name>] [--idempotency-key <key>]`     |
+| `POST /voice/summarize`  | `harpa voice summarize --transcript <text> [--fixture <name>] [--idempotency-key <key>]` |
+| `GET /settings/ai`       | `harpa settings ai get`                                                                  |
+| `PATCH /settings/ai`     | `harpa settings ai set --vendor openai --model <model>`                                  |
+| `PATCH /settings/ai`     | `harpa settings ai set --clear`                                                          |
 
-| API route | CLI command |
-|---|---|
-| `GET /settings/ai` | `harpa settings ai get` |
-| `PATCH /settings/ai` | `harpa settings ai update --provider` |
+The current settings contract accepts the `openai` vendor only.
 
-## Idempotency + rate limiting
+## Idempotency and rate limits
 
-- `HARPA_IDEMPOTENCY_KEY` (env) sent on every idempotent route; `--idempotency-key` flag overrides per-call.
-- `Idempotent-Replay: true` → `(replayed from cache)` in human mode; surfaced via `--verbose`.
-- 429: human mode prints `Retry after <n> seconds`; no automatic retry.
+`HARPA_IDEMPOTENCY_KEY` adds the header to typed API requests. The server
+uses it only on routes with idempotency middleware. The report AI and voice
+commands also accept `--idempotency-key`, which overrides the env value.
+
+The CLI does not generate keys or retry HTTP 429 responses. `--verbose`
+shows replay and rate-limit headers when the server returns them.
 
 ## Testing
 
-### Unit
+Unit tests cover env parsing, the typed client, rendering, error mapping,
+and the serialized command tree.
 
-- `env.test.ts`: Zod parse cases.
-- `render.test.ts`: snapshot per renderer.
-- `error.test.ts`: exit-code mapping, stderr format.
+Integration tests import
+`packages/api/src/__tests__/setup-pg.ts`, start real Postgres, and mount the
+Hono app in-process. They sign in through Better Auth email OTP, then read
+the test OTP directly from the verification table. Typed commands use the
+real `createApiClient()` with an `app.fetch` adapter.
 
-### Integration (Testcontainers)
+AI and R2 use replay in the CLI integration workflow. Run the suites with:
 
-One file per command group. Each test:
-
-1. Spins up Postgres via `setup-pg.ts`.
-2. Boots the API in-process via `createApp()`.
-3. Mints a test token via `signTestToken(userId, sessionId)`.
-4. Calls the command handler directly (no `spawn`) with mocked `console.log` / `console.error`.
-5. Asserts exit code, stdout shape, and DB side-effects.
-
-**Default-wiring rule (Pitfall 13):** at least one happy-path test per group runs through the real `createApiClient()` with no stubs, proving openapi-fetch + `@harpa/api-contract` types + the route handler hang together.
-
-```ts
-it('projects list (default HTTP client)', async () => {
-  const client = createApiClient(testToken);
-  const res = await client.GET('/projects', {});
-  expect(res.response.status).toBe(200);
-  expect(res.data?.items).toBeInstanceOf(Array);
-});
+```bash
+pnpm --filter @harpa/cli test
+pnpm --filter @harpa/cli test:integration
 ```
 
-### Help-text drift gate
+`src/__tests__/help.test.ts` snapshots command metadata and arguments. It is
+a proxy for the help surface, not a snapshot of rendered terminal output.
+CI runs `bash scripts/check-cli-help-drift.sh` as a separate step.
 
-`help.test.ts` snapshots `harpa --help` and `harpa <group> --help`. CI fails on drift; `scripts/check-cli-help-drift.sh` is wired into `pnpm lint`.
+## Build and development
 
-### Fixture mode
-
-Integration tests inherit `AI_FIXTURE_MODE=replay` and `R2_FIXTURE_MODE=replay`. Auth helpers either seed verification rows directly for OTP-specific tests or use the test-account password path.
-
-## Build & dev
-
-```json
-// apps/cli/package.json (excerpt)
-{
-  "name": "@harpa/cli",
-  "type": "module",
-  "bin": { "harpa": "./dist/index.js" },
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc --project tsconfig.json",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@harpa/api-contract": "workspace:*",
-    "@unjs/citty": "^0.1.6",
-    "chalk": "^5.3.0",
-    "openapi-fetch": "^0.12.2",
-    "zod": "^3.23.8"
-  }
-}
+```bash
+pnpm --filter @harpa/cli dev -- <command>
+pnpm --filter @harpa/cli build
+pnpm harpa <command>
 ```
 
-Root alias: `pnpm harpa <args>` runs `pnpm --filter @harpa/cli dev`.
+The workspace `dev` script runs `tsx src/index.ts`; it is not a watcher.
+The build uses `tsc -b` and writes the executable to `dist/index.js`.
 
-Production: `pnpm --filter @harpa/cli build` → `dist/index.js` shebang `#!/usr/bin/env node`.
+`.github/workflows/cli.yml` runs these checks:
 
-## CI
+1. Typecheck.
+2. Lint.
+3. Unit tests.
+4. Help-command drift check.
+5. Testcontainers integration tests.
 
-- `pnpm test:cli` (unit + integration) in `.github/workflows/cli.yml` (or `unit.yml`).
-- Coverage gate: ≥ 80% on `apps/cli/src/`.
-- Help-drift gate via `scripts/check-cli-help-drift.sh`, wired into `pnpm lint`.
+The CLI currently has no enforced coverage threshold and no root
+`pnpm test:cli` alias.
 
-## Risk register
+## Historical implementation record
 
-| Risk | Mitigation |
-|---|---|
-| OTP requires real Resend in dev | OTP-specific tests seed `public.verification` directly; smoke tests use the test-account password path. |
-| Large file uploads timeout | `files upload` uses streaming PUT (`fs.createReadStream`). |
-| `openapi-fetch` types drift | `@harpa/api-contract` workspace dep → compile-time error. |
-| `--json` polluted by progress logs | All `console.log` progress gated on `!options.json`. |
-| Missing token UX | Check at command entry, exit 3 with example auth flow. |
-
-## Phased implementation
-
-> **Status (CLI.1 → CLI.12): all phases complete on `feat/cli`.** Implementation at `apps/cli/`. CI wired via `.github/workflows/cli.yml`; help/command-tree drift gated by `scripts/check-cli-help-drift.sh`.
-
-12 commits, each = one route group + tests + docs. Ordered core-first so AI + reports flow works early:
-
-1. **CLI.1** — Scaffold (env, client, error, root command).
-2. **CLI.2** — Auth (`otp start`, `otp verify --raw`, `logout`).
-3. **CLI.3** — Me + renderers + `--json` global flag.
-4. **CLI.4** — Projects CRUD + pagination + default-wiring test.
-5. **CLI.5** — Project members.
-6. **CLI.6** — Reports CRUD.
-7. **CLI.7** — Report AI (generate, finalize, regenerate, pdf) + idempotency.
-8. **CLI.8** — Notes.
-9. **CLI.9** — Files + `upload` helper.
-10. **CLI.10** — Voice + `transcribe --file` helper.
-11. **CLI.11** — Settings.
-12. **CLI.12** — CI, root alias, help-drift gate, docs.
+The original CLI.1 through CLI.12 sequence delivered the scaffold, auth,
+profile, projects, members, reports, notes, files, voice, settings, tests,
+and CI. Those phase labels are historical. Current behavior comes from the
+command implementation and tests, not from the original branch plan.
 
 ## Decisions
 
-- **No auto-generated idempotency keys.** Hides retry semantics from the user.
-- **No progress bars.** Breaks `--json`.
-- **No stdin JSON input.** Flags suffice for all 37 routes.
-- **Direct function imports in tests.** One `execSync` smoke test in `help.test.ts` proves bin wiring.
-- **No default `HARPA_API_URL`.** Fail-fast per AGENTS.md rule #1.
-- **Import `setup-pg.ts` directly** via `@harpa/api` devDependency. No vendoring.
+- Do not generate idempotency keys automatically.
+- Do not print progress bars because they pollute script output.
+- Do not accept arbitrary stdin JSON. Use the typed command flags.
+- Do not provide a default `HARPA_API_URL`.
+- Parse env lazily so help remains available without configuration.

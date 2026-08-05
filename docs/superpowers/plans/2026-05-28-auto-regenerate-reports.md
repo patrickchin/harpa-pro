@@ -1,10 +1,15 @@
 # Auto-Regenerate Reports Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Auto-regenerate the report whenever notes change, persist the dirty state across app restarts, and replace the racy counter with a `notes_changed_at` / `generated_at` timestamp pair surfaced as a `needsRegeneration: boolean`.
 
 **Architecture:**
+
 - Server: **expand-contract** — PR A adds nullable `reports.notes_changed_at timestamptz` and keeps `reports.notes_since_last_generation`. Note mutations dual-write both columns. Reads derive `needsRegeneration` from `notes_changed_at` when set, falling back to the legacy counter (`notes_since_last_generation > 0`) for rows not yet touched by new code. `runGenerate` captures a pre-call snapshot, sets `generated_at = GREATEST(now(), snapshot_ts)`, and also resets the counter to `0` (dual-write clean state). Contract/drop cleanup (backfill + `DROP COLUMN`) ships in a later release. Expose `needsRegeneration` as a derived boolean in the API contract.
 - Mobile: new `useAutoRegenerate` hook on the generate screen — fires `handleRegenerate` when `needsRegeneration` is true, status is `draft`, no in-flight generation, and no error. Queue-of-one is implicit via React Query invalidation; error gate is the existing `generationError` setter.
 
@@ -19,6 +24,7 @@
 ### Task 1: Migration `0011_notes_changed_at.sql`
 
 **Files:**
+
 - Create: `packages/api/migrations/0011_notes_changed_at.sql`
 
 - [ ] **Step 1: Add the migration**
@@ -64,6 +70,7 @@ git commit -m "feat(api): migration 0011 — add notes_changed_at (expand step; 
 ### Task 2: Drizzle schema reflects the column swap
 
 **Files:**
+
 - Modify: `packages/api/src/db/schema.ts:98-124`
 
 - [ ] **Step 1: Write the failing schema check (existing tests catch the drift)**
@@ -103,6 +110,7 @@ git commit -m "feat(api): add notesChangedAt to reports schema (expand step)"
 ### Task 3: Service layer — bump helper + read mapping
 
 **Files:**
+
 - Modify: `packages/api/src/services/reports.ts:37-83` (types + `mapReport`)
 - Modify: `packages/api/src/services/reports.ts:101-394` (every SELECT/UPDATE list)
 - Modify: `packages/api/src/services/notes.ts:175-363` (calls bump helper)
@@ -245,7 +253,7 @@ export interface ReportRow {
   status: ReportStatus;
   visitDate: string | null;
   body: ReportBody | null;
-  notesSinceLastGeneration: number;   // kept for dual-read during expand window
+  notesSinceLastGeneration: number; // kept for dual-read during expand window
   notesChangedAt: string | null;
   generatedAt: string | null;
   finalizedAt: string | null;
@@ -266,7 +274,7 @@ interface RawReport {
   status: ReportStatus;
   visit_date: Date | null;
   body: ReportBody | null;
-  notes_since_last_generation: number;   // kept for dual-read during expand window
+  notes_since_last_generation: number; // kept for dual-read during expand window
   notes_changed_at: Date | null;
   generated_at: Date | null;
   finalized_at: Date | null;
@@ -287,7 +295,7 @@ function mapReport(r: RawReport): ReportRow {
     status: r.status,
     visitDate: r.visit_date ? new Date(r.visit_date).toISOString() : null,
     body: r.body,
-    notesSinceLastGeneration: Number(r.notes_since_last_generation),   // expand window
+    notesSinceLastGeneration: Number(r.notes_since_last_generation), // expand window
     notesChangedAt: r.notes_changed_at ? new Date(r.notes_changed_at).toISOString() : null,
     generatedAt: r.generated_at ? new Date(r.generated_at).toISOString() : null,
     finalizedAt: r.finalized_at ? new Date(r.finalized_at).toISOString() : null,
@@ -396,13 +404,13 @@ Then replace the existing counter updates in this file:
   (dual-write during the expand window):
 
 ```ts
-  await db.execute(sql`
+await db.execute(sql`
     UPDATE app.reports
     SET notes_since_last_generation = notes_since_last_generation + 1,
         updated_at = now()
     WHERE id = ${reportId}
   `);
-  await bumpNotesChangedAt(db, reportId);
+await bumpNotesChangedAt(db, reportId);
 ```
 
 - Lines 313–318 (inside `createVoiceNote`) — same dual-write pattern.
@@ -454,6 +462,7 @@ git commit -m "feat(api): bump notes_changed_at on add/edit/delete (race-safe)"
 ### Task 4: Wire `snapshotTs` through `runGenerate`
 
 **Files:**
+
 - Modify: `packages/api/src/routes/reports.ts:311-369`
 - Create test additions in: `packages/api/src/__tests__/reports.generate.integration.test.ts` (if it exists; otherwise add to the closest existing reports-generate test).
 
@@ -489,22 +498,16 @@ it('keeps notes_changed_at > generated_at when a note arrives mid-generate', asy
   const future = new Date(Date.now() + 60_000).toISOString();
   const c = await getPool().connect();
   try {
-    await c.query(
-      `UPDATE app.reports SET notes_changed_at = $1 WHERE id = $2`,
-      [future, report],
-    );
+    await c.query(`UPDATE app.reports SET notes_changed_at = $1 WHERE id = $2`, [future, report]);
   } finally {
     c.release();
   }
 
-  const gen = await app.request(
-    `/projects/${projectSlug}/reports/1/generate`,
-    {
-      method: 'POST',
-      headers: headers(tok),
-      body: JSON.stringify({ fixtureName: 'minimal' }),
-    },
-  );
+  const gen = await app.request(`/projects/${projectSlug}/reports/1/generate`, {
+    method: 'POST',
+    headers: headers(tok),
+    body: JSON.stringify({ fixtureName: 'minimal' }),
+  });
   expect(gen.status).toBe(200);
   const after = await readDirty(report);
   expect(new Date(after.changed_at!).getTime()).toBeGreaterThan(
@@ -526,22 +529,22 @@ Expected: fail (current code resets without GREATEST clamp behaviour — but sna
 In `packages/api/src/routes/reports.ts`, modify `runGenerate` (~line 311). Right after the `enforceUsageLimit` call (line 326), capture:
 
 ```ts
-  const snapshotTs = report.notesChangedAt;
+const snapshotTs = report.notesChangedAt;
 ```
 
 Then change the `setReportBody` call (line 357) from:
 
 ```ts
-  const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration));
+const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration));
 ```
 
 to:
 
 ```ts
-  const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration, snapshotTs));
+const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration, snapshotTs));
 ```
 
-Update the surrounding doc comment (lines 300–310) to drop the "reset notes_since_last_generation" sentence and replace it with: *"Both replace `body` and capture `notes_changed_at` BEFORE the AI call so a concurrent note bump remains visible afterwards."*
+Update the surrounding doc comment (lines 300–310) to drop the "reset notes*since_last_generation" sentence and replace it with: *"Both replace `body` and capture `notes_changed_at` BEFORE the AI call so a concurrent note bump remains visible afterwards."\_
 
 - [ ] **Step 5: Re-run the race test**
 
@@ -577,6 +580,7 @@ git commit -m "feat(api): race-safe regenerate via notes_changed_at snapshot"
 ### Task 5: Add `needsRegeneration` to the API contract
 
 **Files:**
+
 - Modify: `packages/api-contract/src/schemas/reports.ts:60-73`
 - Regenerate: `packages/api-contract/openapi.json` and `packages/api-contract/src/generated/types.ts` via `pnpm --filter @harpa/api-contract gen:types`
 - Modify: `packages/api/src/services/reports.ts` (every place that mapped → contract goes through `mapReport`; nothing else to touch here since the contract field is derived in the route layer — see step 3).
@@ -593,11 +597,11 @@ Replace `notesSinceLastGeneration: z.number().int().nonnegative(),` on line 67 o
 Also remove the now-stale comment block on lines 81–86 referencing the counter and replace with:
 
 ```ts
-  // Manual edits from the Edit tab autosave. Persisted into the same
-  // `reports.body` column the AI writes — single source of truth. The
-  // autosave path does NOT touch `notes_changed_at`, so manual edits
-  // never flip `needsRegeneration` to true. See
-  // docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
+// Manual edits from the Edit tab autosave. Persisted into the same
+// `reports.body` column the AI writes — single source of truth. The
+// autosave path does NOT touch `notes_changed_at`, so manual edits
+// never flip `needsRegeneration` to true. See
+// docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
 ```
 
 - [ ] **Step 2: Regenerate types**
@@ -678,6 +682,7 @@ git commit -m "feat(api-contract): expose needsRegeneration + notesChangedAt"
 ### Task 6: Add `needsRegeneration` to optimistic + types
 
 **Files:**
+
 - Modify: `apps/mobile/lib/api/optimistic.ts:357-370` (optimistic shape)
 - Modify: `apps/mobile/lib/api/optimistic.test.tsx:328-362` (test fixture shape)
 
@@ -695,8 +700,8 @@ In `apps/mobile/lib/api/optimistic.ts`, replace `notesSinceLastGeneration: 0,` (
 In `apps/mobile/lib/api/optimistic.test.tsx`, replace `notesSinceLastGeneration: number;` (line 335) with:
 
 ```ts
-  notesChangedAt: string | null;
-  needsRegeneration: boolean;
+notesChangedAt: string | null;
+needsRegeneration: boolean;
 ```
 
 …and the seed (line 356):
@@ -726,6 +731,7 @@ git commit -m "feat(mobile): swap counter for needsRegeneration in optimistic ca
 ### Task 7: `useAutoRegenerate` hook (TDD)
 
 **Files:**
+
 - Create: `apps/mobile/features/generate/useAutoRegenerate.ts`
 - Create: `apps/mobile/features/generate/useAutoRegenerate.test.tsx`
 
@@ -751,14 +757,10 @@ const base = {
 describe('useAutoRegenerate', () => {
   it('fires onRegenerate when needsRegeneration flips true', () => {
     const onRegenerate = vi.fn();
-    const tree = TestRenderer.create(
-      <Harness {...base} onRegenerate={onRegenerate} />,
-    );
+    const tree = TestRenderer.create(<Harness {...base} onRegenerate={onRegenerate} />);
     expect(onRegenerate).not.toHaveBeenCalled();
     act(() => {
-      tree.update(
-        <Harness {...base} needsRegeneration onRegenerate={onRegenerate} />,
-      );
+      tree.update(<Harness {...base} needsRegeneration onRegenerate={onRegenerate} />);
     });
     expect(onRegenerate).toHaveBeenCalledTimes(1);
   });
@@ -766,12 +768,7 @@ describe('useAutoRegenerate', () => {
   it('does not fire while isGenerating', () => {
     const onRegenerate = vi.fn();
     TestRenderer.create(
-      <Harness
-        {...base}
-        needsRegeneration
-        isGenerating
-        onRegenerate={onRegenerate}
-      />,
+      <Harness {...base} needsRegeneration isGenerating onRegenerate={onRegenerate} />,
     );
     expect(onRegenerate).not.toHaveBeenCalled();
   });
@@ -779,12 +776,7 @@ describe('useAutoRegenerate', () => {
   it('does not fire when generationError is set', () => {
     const onRegenerate = vi.fn();
     TestRenderer.create(
-      <Harness
-        {...base}
-        needsRegeneration
-        generationError="boom"
-        onRegenerate={onRegenerate}
-      />,
+      <Harness {...base} needsRegeneration generationError="boom" onRegenerate={onRegenerate} />,
     );
     expect(onRegenerate).not.toHaveBeenCalled();
   });
@@ -792,22 +784,12 @@ describe('useAutoRegenerate', () => {
   it('resumes after generationError clears', () => {
     const onRegenerate = vi.fn();
     const tree = TestRenderer.create(
-      <Harness
-        {...base}
-        needsRegeneration
-        generationError="boom"
-        onRegenerate={onRegenerate}
-      />,
+      <Harness {...base} needsRegeneration generationError="boom" onRegenerate={onRegenerate} />,
     );
     expect(onRegenerate).not.toHaveBeenCalled();
     act(() => {
       tree.update(
-        <Harness
-          {...base}
-          needsRegeneration
-          generationError={null}
-          onRegenerate={onRegenerate}
-        />,
+        <Harness {...base} needsRegeneration generationError={null} onRegenerate={onRegenerate} />,
       );
     });
     expect(onRegenerate).toHaveBeenCalledTimes(1);
@@ -816,12 +798,7 @@ describe('useAutoRegenerate', () => {
   it('does not fire for finalized reports', () => {
     const onRegenerate = vi.fn();
     TestRenderer.create(
-      <Harness
-        {...base}
-        needsRegeneration
-        status="finalized"
-        onRegenerate={onRegenerate}
-      />,
+      <Harness {...base} needsRegeneration status="finalized" onRegenerate={onRegenerate} />,
     );
     expect(onRegenerate).not.toHaveBeenCalled();
   });
@@ -829,23 +806,13 @@ describe('useAutoRegenerate', () => {
   it('queue-of-one: re-fires when flag stays true after an in-flight resolves', () => {
     const onRegenerate = vi.fn();
     const tree = TestRenderer.create(
-      <Harness
-        {...base}
-        needsRegeneration
-        isGenerating
-        onRegenerate={onRegenerate}
-      />,
+      <Harness {...base} needsRegeneration isGenerating onRegenerate={onRegenerate} />,
     );
     expect(onRegenerate).not.toHaveBeenCalled();
     act(() => {
       // In-flight resolves; React Query refetch shows the flag is still true.
       tree.update(
-        <Harness
-          {...base}
-          needsRegeneration
-          isGenerating={false}
-          onRegenerate={onRegenerate}
-        />,
+        <Harness {...base} needsRegeneration isGenerating={false} onRegenerate={onRegenerate} />,
       );
     });
     expect(onRegenerate).toHaveBeenCalledTimes(1);
@@ -926,6 +893,7 @@ git commit -m "feat(mobile): useAutoRegenerate hook (TDD)"
 ### Task 8: Replace counter in provider + action row + route
 
 **Files:**
+
 - Modify: `apps/mobile/features/generate/GenerateReportProvider.tsx` (every `notesSinceLastGeneration` site — lines 96, 269–270, 392, 735, 816)
 - Modify: `apps/mobile/components/reports/generate/GenerateReportActionRow.tsx` (lines 10, 24, 37)
 - Modify: `apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx` (lines 160, 546 + add hook call)
@@ -935,8 +903,8 @@ git commit -m "feat(mobile): useAutoRegenerate hook (TDD)"
 
 In `GenerateReportProvider.tsx`:
 
-- Line 96 — replace `notesSinceLastGeneration?: number;` with `needsRegeneration?: boolean;`. Update the prop doc above it to: *"Whether the report's notes have changed since the last successful generation. Drives the auto-regenerate effect."*
-- Line 269–270 — in the `GenerationSurface` interface, replace `notesSinceLastGeneration: number;` with `needsRegeneration: boolean;` and update its doc comment to: *"True when notes have changed since last generation. The Action Row uses this to switch label."*
+- Line 96 — replace `notesSinceLastGeneration?: number;` with `needsRegeneration?: boolean;`. Update the prop doc above it to: _"Whether the report's notes have changed since the last successful generation. Drives the auto-regenerate effect."_
+- Line 269–270 — in the `GenerationSurface` interface, replace `notesSinceLastGeneration: number;` with `needsRegeneration: boolean;` and update its doc comment to: _"True when notes have changed since last generation. The Action Row uses this to switch label."_
 - Line 392 — replace default `notesSinceLastGeneration = 0,` with `needsRegeneration = false,`.
 - Line 735 (inside `generation: { … }`) — replace `notesSinceLastGeneration,` with `needsRegeneration,`.
 - Line 816 (deps array) — replace `notesSinceLastGeneration,` with `needsRegeneration,`.
@@ -972,13 +940,13 @@ In `apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx`:
 - Right before the `return` block (around line 525), add:
 
 ```ts
-  useAutoRegenerate({
-    needsRegeneration: reportRow?.needsRegeneration ?? false,
-    status: reportRow?.status ?? 'draft',
-    isGenerating,
-    generationError: combinedError,
-    onRegenerate: handleRegenerate,
-  });
+useAutoRegenerate({
+  needsRegeneration: reportRow?.needsRegeneration ?? false,
+  status: reportRow?.status ?? 'draft',
+  isGenerating,
+  generationError: combinedError,
+  onRegenerate: handleRegenerate,
+});
 ```
 
 …and add the import at the top of the file:
@@ -1029,6 +997,7 @@ git commit -m "feat(mobile): drive auto-regen from needsRegeneration"
 ### Task 9: Route-level integration test exercises the real hook
 
 **Files:**
+
 - Modify: `apps/mobile/screens/generate-report-tab.test.tsx`
 
 The default-wiring rule (AGENTS.md #5) requires at least one test that exercises `useAutoRegenerate` without a DI stub.
@@ -1092,6 +1061,7 @@ git commit -m "test(mobile): default-wiring case for useAutoRegenerate"
 ### Task 10: New arch doc + pitfall + finishing sweep
 
 **Files:**
+
 - Create: `docs/v4/arch-report-auto-regen.md`
 - Modify: `docs/v4/pitfalls.md`
 - Search-and-update: any other doc referencing `notes_since_last_generation` or "Update report (N)".
@@ -1116,11 +1086,12 @@ Two timestamps on `app.reports`:
   `notes_changed_at` captured BEFORE the AI call.
 
 Derived:
-
 ```
+
 needs_regeneration =
-  notes_changed_at IS NOT NULL
-  AND (generated_at IS NULL OR notes_changed_at > generated_at)
+notes_changed_at IS NOT NULL
+AND (generated_at IS NULL OR notes_changed_at > generated_at)
+
 ```
 
 The API exposes this as a boolean `needsRegeneration` on every

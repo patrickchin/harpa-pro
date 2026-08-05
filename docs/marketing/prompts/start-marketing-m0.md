@@ -1,5 +1,8 @@
 # Start the marketing site (M0 → M3)
 
+> **Status: historical prompt.** M0–M2 shipped, and the repository now uses
+> Astro 7. Do not use this prompt as a current startup procedure.
+
 ## What this session is
 
 You are starting work on **`apps/site`** — a new mostly-static
@@ -12,7 +15,7 @@ aggressively to keep this main thread's context small.
 
 ## Read these first (and only these)
 
-- [`AGENTS.md`](../../AGENTS.md) — repo-wide hard rules. Note: `apps/site/` is a new
+- [`AGENTS.md`](../../../AGENTS.md) — repo-wide hard rules. Note: `apps/site/` is a new
   workspace, but every hard rule still applies (Conventional Commits,
   no Supabase, NativeWind only in mobile, docs-in-same-PR, etc.).
 - [`docs/marketing/README.md`](../README.md) — architecture summary,

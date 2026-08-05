@@ -1,5 +1,9 @@
 # Maestro-on-Mac / iOS-Simulator pitfalls
 
+> **Status: historical.** Several examples use the removed phone-auth routes
+> and helpers. Use the current email-auth flows under `.maestro/` for active
+> test work. Keep this file as an incident record.
+
 This document catalogs pitfalls hit while pushing E2E coverage with
 Maestro on **macOS** driving the **iOS Simulator** (iPhone 17 Pro,
 iOS 18.x) with a dev-client build of the mobile app. Companion to
@@ -50,9 +54,9 @@ dismissal (open issue:
     timeout: 3000
 - runFlow:
     when:
-      visible: "Open"
+      visible: 'Open'
     commands:
-      - tapOn: "Open"
+      - tapOn: 'Open'
       - waitForAnimationToEnd
 ```
 
@@ -146,17 +150,17 @@ introduction flow.
 ```yaml
 - runFlow:
     when:
-      visible: "Continue"
+      visible: 'Continue'
     commands:
       - tapOn:
-          text: "Continue"
+          text: 'Continue'
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "Close"
+      visible: 'Close'
     commands:
       - tapOn:
-          text: "Close"
+          text: 'Close'
       - waitForAnimationToEnd
 ```
 
@@ -280,10 +284,10 @@ for the full investigation.
 
 ## Quick reference: cross-platform helpers
 
-| Helper | Purpose | Notes |
-|---|---|---|
-| `dismiss-open-dialog.yaml` | iOS SpringBoard "Open in X?" dismissal | No-op on Android |
-| `pick-country-us.yaml` | Ensure phone-input country is US | Both platforms |
-| `sign-in.yaml` (`PHONE` env) | Sign in as any user | Both platforms |
-| `sign-out.yaml` | Profile → sign out | Both platforms |
-| `open-project.yaml` | Open the regression-journey project | Both platforms |
+| Helper                       | Purpose                                | Notes            |
+| ---------------------------- | -------------------------------------- | ---------------- |
+| `dismiss-open-dialog.yaml`   | iOS SpringBoard "Open in X?" dismissal | No-op on Android |
+| `pick-country-us.yaml`       | Ensure phone-input country is US       | Both platforms   |
+| `sign-in.yaml` (`PHONE` env) | Sign in as any user                    | Both platforms   |
+| `sign-out.yaml`              | Profile → sign out                     | Both platforms   |
+| `open-project.yaml`          | Open the regression-journey project    | Both platforms   |

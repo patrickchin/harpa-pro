@@ -4,20 +4,17 @@
 
 ## Goals
 
-1. **No real LLM calls in CI**, ever.
-2. **Easy to record a new fixture** when a new endpoint or prompt
-   is added (`pnpm fixtures:record <name>`).
-3. **Deterministic replay** in tests + `:mock` builds — same input
-   always produces the same fixture output.
-4. **Provider-agnostic API design.** Currently implemented for
-   OpenAI (chat / report generation), Groq (transcription via
-   whisper-large-v3-turbo) and Kimi/Moonshot (chat, OpenAI-compatible
-   REST at `https://api.moonshot.cn/v1` — selected per-user via the
-   `AiVendor` preference). Anthropic, Google, Z.AI and DeepSeek are
-   intentionally deferred — the per-user `AiVendor` preference will
-   widen once those adapters land.
-5. **Redacted by default** — no PII / no API keys in committed
-   fixtures.
+1. **Keep normal CI deterministic.** Unit and integration lanes use
+   replay. Explicit live-AI lanes are cost-bearing exceptions.
+2. **Keep runtime mode server-owned.** Request data can select a
+   replay scenario, but it cannot switch provider mode.
+3. **Fail on fixture drift.** Replay rejects missing files and request
+   hash mismatches.
+4. **Keep provider access behind one boundary.** The package includes
+   OpenAI chat, Groq transcription, and Kimi chat adapters. Current user
+   settings expose OpenAI models only.
+5. **Redact fixture writes.** Remove known secrets and personal-data
+   patterns before a fixture reaches the repository.
 
 ## Layout
 
@@ -47,9 +44,10 @@ representative construction-site voice memo. `voice-1` is the rich
 default; `voice-4` is the sparse case (empty `workers`/`materials`,
 one summary section) exercised by the regenerate test. Per-vendor
 fixture variants were removed: a single set of OpenAI fixtures covers
-every scenario in replay mode. The per-user `AiVendor` preference is
-still tracked for live-mode routing and accounting; it no longer
-steers fixture selection.
+every scenario in replay mode. Current user settings whitelist only
+OpenAI, so ordinary API traffic cannot select the retained Kimi
+adapter. The per-user OpenAI model preference does not steer fixture
+selection.
 
 ## Modes
 
@@ -58,32 +56,30 @@ type FixtureMode = 'replay' | 'record' | 'live';
 
 const provider = createProvider({
   vendor: 'openai',
-  fixtureMode: env.AI_FIXTURE_MODE as FixtureMode,
+  fixtureMode: 'replay',
   fixtureName: 'transcribe.basic', // declared by caller
 });
 ```
 
-| Mode | Behaviour |
-|---|---|
-| `replay` | Look up `fixtures/<name>.json`. Hash the request body; if hash matches `fixture.requestHash`, return `fixture.response`. If missing or mismatched, throw `FixtureMissError`. **Default in CI + tests + `:mock`.** |
-| `record` | Hit the real provider, redact, write to `fixtures/<name>.json`, then return the response. Used by humans running `pnpm fixtures:record <name>` once per new endpoint. |
-| `live` | Hit the real provider with no fixture interaction. **Only enabled when `AI_LIVE=1`.** Production deploys set this. |
+These modes belong to the provider package:
 
-CI asserts `AI_FIXTURE_MODE=replay` and `AI_LIVE` unset.
+| Mode     | Behavior                                                                                                                           |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `replay` | Read `fixtures/<name>.json`. Return the response only when the canonical request hash matches. Otherwise throw `FixtureMissError`. |
+| `record` | Call an injected real provider, redact the request and response, then write the named fixture. The API does not select this mode.  |
+| `live`   | Call the real provider without fixture access. `createProvider` rejects this mode unless `AI_LIVE=1`.                              |
 
 The API service owns this mode decision. `env.AI_LIVE === '1'`
-always selects `live`, even if an authenticated request contains a
-`fixtureName`. A fixture name selects a deterministic scenario only
-after the server has selected replay mode; request data cannot
-downgrade a live deployment to checked-in replay.
+selects `live`; every other value selects `replay`. The API currently
+does not use `AI_FIXTURE_MODE` for this decision. A request-body
+`fixtureName` selects a scenario only after replay is active. It cannot
+downgrade a live deployment.
 
 ## Hashing
 
-Fixture lookup uses a canonical-JSON hash of:
-
-- model id,
-- system + user messages (post-prompt-build),
-- temperature, max_tokens, etc.
+Fixture lookup uses a canonical-JSON hash of the operation kind,
+vendor, and normalized request fields. For chat, these fields include
+the model, prompts, output format, temperature, and token limit.
 
 The hash is included in the fixture file so a stale fixture (prompt
 template changed) fails loudly with a clear error pointing at the
@@ -91,9 +87,10 @@ fixture name to re-record.
 
 ## Redaction (`src/redact.ts`)
 
-Before writing a fixture:
+Before writing a fixture, the redactor:
 
-- Strip API keys, bearer tokens, and any header.
+- Redacts known API keys, bearer tokens, and authentication header
+  fields.
 - Replace phone numbers with `+10000000000`.
 - Replace email addresses with `redacted@example.com`.
 - Replace UUIDs in user content with `00000000-0000-0000-0000-000000000000`.
@@ -118,7 +115,7 @@ A fixture file:
   "fixtureName": "transcribe.voice-1",
   "recordedAt": "2026-05-12T00:00:00Z",
   "requestHash": "sha256:a7c3…",
-  "request": { "...redacted summary..." : true },
+  "request": { "...redacted summary...": true },
   "response": {
     "text": "I just arrived at the site, so the construction site…",
     "usage": { "input": 12, "output": 88 }
@@ -140,27 +137,11 @@ Route handlers may forward a fixture name from the test harness.
 has selected replay mode. In live mode the real request body flows to
 the provider and no fixture store read occurs.
 
-## Recording a new fixture
-
-```bash
-# 1. Set creds, set mode, run a single test that exercises the path.
-AI_FIXTURE_MODE=record OPENAI_API_KEY=… pnpm test:api -- transcribe.voice-1
-
-# 2. Inspect the redacted request and response, then commit.
-rg -n -i 'customer-name|site-address' packages/ai-fixtures/fixtures
-git add packages/ai-fixtures/fixtures/transcribe.voice-1.json
-git commit -m "test(ai-fixtures): record transcribe.voice-1"
-```
-
-Pre-commit hook checks fixture files for un-redacted strings
-matching API key patterns or +1[0-9]{10} phone numbers other than
-`+10000000000`.
-
-### `generate-report.*` — dedicated recorder
+## Recording report fixtures
 
 The report fixtures have a custom recorder
 (`packages/ai-fixtures/scripts/record.ts`, exposed as
-`pnpm --filter @harpa/ai-fixtures record`) because their request
+`pnpm fixtures:record`) because their request
 hash depends on the API's `REPORT_SYSTEM_PROMPT`. Every time that
 prompt changes the fixtures go stale; the recorder regenerates them
 in one pass, using the recorded `transcribe.voice-N.json`
@@ -175,12 +156,19 @@ not persisted in the report fixture.
 
 ```bash
 AI_LIVE=1 OPENAI_API_KEY=sk-… pnpm --filter @harpa/ai-fixtures record
-# optionally restrict to one scenario:
+# Restrict the write to one scenario.
 AI_LIVE=1 OPENAI_API_KEY=sk-… pnpm --filter @harpa/ai-fixtures record -- --scenario voice-3
 ```
 
 The recorder refuses to run without `AI_LIVE=1` so it cannot
 silently clobber fixtures from an unrelated test or script import.
+It records only `generate-report.voice-1` through `voice-5`. There is
+no generic `pnpm fixtures:record <name>` command for transcription or
+summary fixtures.
+
+Review every changed fixture before commit. The pre-push hook checks
+fixture hashes and scans common secret formats. It does not replace a
+content review for names, addresses, or other personal data.
 
 ## Usage accounting (`app.llm_usage_events`)
 
@@ -190,10 +178,10 @@ Every call routed through `services/ai.ts` lands one row in
 Token-count conventions per operation — full doc lives on
 `RecordLlmUsageParams` in `services/ai-usage.ts`:
 
-| `operation`        | `input_tokens`    | `output_tokens`   | `cached_tokens`           | `input_seconds`           |
-|--------------------|-------------------|-------------------|---------------------------|---------------------------|
-| `chat` / `generate_report` | prompt tokens | completion tokens | subset of input that hit the provider's prompt cache (0 if vendor does not report) | `NULL` |
-| `transcribe`       | `0`               | `0`               | `0`                       | audio duration in seconds (numeric(10,3)) |
+| `operation`                | `input_tokens` | `output_tokens`   | `cached_tokens`                                                                    | `input_seconds`                           |
+| -------------------------- | -------------- | ----------------- | ---------------------------------------------------------------------------------- | ----------------------------------------- |
+| `chat` / `generate_report` | prompt tokens  | completion tokens | subset of input that hit the provider's prompt cache (0 if vendor does not report) | `NULL`                                    |
+| `transcribe`               | `0`            | `0`               | `0`                                                                                | audio duration in seconds (numeric(10,3)) |
 
 `input_seconds` lives in its own column (migration
 `0008_llm_usage_input_seconds.sql`) so the `sum(input_tokens)`
@@ -206,7 +194,7 @@ defence-in-depth.
 Vendor extraction (live mode):
 
 - **OpenAI** — `response.usage.{prompt_tokens, completion_tokens,
-  prompt_tokens_details.cached_tokens}`.
+prompt_tokens_details.cached_tokens}`.
 - **Kimi (Moonshot)** — same shape; Moonshot's REST API is
   OpenAI-compatible.
 - **Groq (Whisper-class transcription)** — bills by audio seconds, no
@@ -230,16 +218,16 @@ generateReport"**.
 
 Three guards run at three layers:
 
-| Lane | When | What it catches |
-| --- | --- | --- |
-| **Offline drift guard** (`packages/api/src/__tests__/reportPrompt.drift.test.ts`) | Every PR, in the unit lane | Prompt text no longer mentions every required `reportBody` field (including the `meta` envelope keys), or has re-acquired v3 vocabulary (`"report":` wrapper, `quantityUnit`, `actionRequired`, `totalWorkers`, `"category"`). |
-| **Replay integration** (`reports.integration.test.ts`) | Every PR | The fixture-driven happy path still produces a schema-valid `reportBody` end-to-end. |
-| **Live-LLM** (`.github/workflows/ai-live.yml` → `pnpm --filter @harpa/api test:live`) | Weekly schedule, manual dispatch, push/PR touching prompts / `services/ai.ts` / `schemas/reports.ts` / providers / `generate-report.*.json` | The real model, with the real prompt, still returns a payload that parses against `reportBody`. |
+| Lane                                                                                  | When                                                                                            | What it catches                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Offline drift guard** (`packages/api/src/__tests__/reportPrompt.drift.test.ts`)     | Every PR, in the unit lane                                                                      | Prompt text no longer mentions every required `reportBody` field (including the `meta` envelope keys), or has re-acquired v3 vocabulary (`"report":` wrapper, `quantityUnit`, `actionRequired`, `totalWorkers`, `"category"`). |
+| **Replay integration** (`reports.integration.test.ts`)                                | Every PR                                                                                        | The fixture-driven happy path still produces a schema-valid `reportBody` end-to-end.                                                                                                                                           |
+| **Live LLM** (`.github/workflows/ai-live.yml` → `pnpm --filter @harpa/api test:live`) | Manual dispatch, matching pushes to `dev` or `main`, and matching same-repository pull requests | The real report model still returns a payload that parses against `reportBody`.                                                                                                                                                |
 
-The live lane is opt-in by file path so we don't burn OpenAI
-budget on every PR. It needs the `OPENAI_API_KEY` repo secret
-(and `GROQ_API_KEY` once the transcribe path is added). Fork PRs
-are skipped automatically because they can't read secrets.
+The live workflow uses a Doppler development token to fetch provider
+keys. Fork pull requests skip the live job because they cannot read the
+token. A pull request to `main` also runs the deployed development
+journeys through `main-gate.yml`; those journeys use live AI.
 
 When the live lane fails, the next step is almost always:
 
@@ -248,12 +236,18 @@ When the live lane fails, the next step is almost always:
    `ai_provider_error … issues=<path>:<code>, …`.
 2. Update `packages/api/src/prompts/reportGeneration.ts` to match
    the schema (or update the schema if the contract is changing).
-3. Re-record fixtures: `pnpm --filter @harpa/ai-fixtures record`.
+3. Re-record report fixtures with
+   `pnpm --filter @harpa/ai-fixtures record`.
 
-## Mobile `:mock` build
+## Mobile fixture-input build
 
-The `:mock` build sets `EXPO_PUBLIC_USE_FIXTURES=true`, which makes
-the API client always send `X-Fixture-Mode: replay` and pick a
-predictable fixture name based on the screen flow being demoed
-(e.g. recording a voice note in `:mock` always replays
-`transcribe.voice-1` then `summarize.voice-1`).
+`pnpm --filter @harpa/mobile ios:mock` sets
+`EXPO_PUBLIC_USE_FIXTURES=true` at bundle time. This swaps the native
+audio recorder for the checked-in `voice-sample.m4a` input and enables
+selected display fallbacks.
+
+The mobile API client sends no fixture-mode header and does not add a
+fixture name to AI requests. The target API still decides between live
+and replay. For a cost-free run, use an API with `AI_LIVE=0`. Do not
+point a fixture-input build at production and assume it disables live
+provider calls.

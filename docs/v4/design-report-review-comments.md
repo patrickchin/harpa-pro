@@ -1,14 +1,15 @@
 # Design — Published report review comments
 
-Status: approved for implementation.
+> **Status: implemented.** Migration `0020_report_review_comments.sql`,
+> the two report-comment routes, the finalized `Report` and `Review`
+> tabs, and the wrapping report title are in the current code. This
+> document records the shipped product decisions.
 
 ## Problem
 
-Finalized reports currently remove the tab bar and show only the report.
-Project members need a separate place to review the published report and leave
-feedback without changing the report body or its source notes. The report
-header also keeps its title in the same row as navigation controls, truncating
-long titles on a phone.
+Finalized reports originally showed only the report. The review-comments
+feature added a separate discussion without changing the report body or its
+source notes. It also moved long report titles below the navigation controls.
 
 ## User journeys
 
@@ -36,12 +37,12 @@ long titles on a phone.
 
 ## API contract
 
-Add two authenticated endpoints under the canonical report path:
+The API exposes two authenticated endpoints under the canonical report path:
 
-| Method | Path | Result |
-|---|---|---|
-| `GET` | `/projects/{project}/reports/{number}/comments` | `{ items: ReportComment[] }` in oldest-first order |
-| `POST` | `/projects/{project}/reports/{number}/comments` | Creates one comment and returns it with `201` |
+| Method | Path                                            | Result                                             |
+| ------ | ----------------------------------------------- | -------------------------------------------------- |
+| `GET`  | `/projects/{project}/reports/{number}/comments` | `{ items: ReportComment[] }` in oldest-first order |
+| `POST` | `/projects/{project}/reports/{number}/comments` | Creates one comment and returns it with `201`      |
 
 `ReportComment` contains `id`, `reportId`, `authorId`,
 `authorDisplayName`, `body`, and `createdAt`. The create body is
@@ -58,7 +59,7 @@ the `reportComments` query key.
 
 ## Database and access control
 
-Migration `0020_report_review_comments.sql` adds:
+Migration `0020_report_review_comments.sql` added:
 
 - the `app.rcm_id` prefixed-ID domain;
 - `app.report_comments(id, report_id, author_id, body, created_at)`;

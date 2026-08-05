@@ -103,6 +103,78 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
   await expect(page).toHaveURL(/\/docs\/guides\/export-share-pdf$/);
 });
 
+test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
+  await page.goto("/docs/guides/generate-ai-report");
+
+  const trigger = page.getByRole("link", {
+    name: "View full screenshot for Start a report",
+  });
+  const guideUrl = page.url();
+  const screenshotUrl = await trigger.getAttribute("href");
+
+  await trigger.click();
+
+  await expect(page).toHaveURL(guideUrl);
+  const dialog = page.getByRole("dialog", {
+    name: "Full screenshot for Start a report",
+  });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("img", {
+      name: "Harpa Pro Reports list with the New report button",
+    }),
+  ).toHaveAttribute("src", screenshotUrl ?? "");
+  await expect(dialog.getByText("Start a report", { exact: true })).toBeVisible();
+
+  const bounds = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  expect(bounds).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(
+    Math.abs(
+      (bounds?.x ?? 0) + (bounds?.width ?? 0) / 2 - (viewport?.width ?? 0) / 2,
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(bounds?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    viewport?.height ?? 0,
+  );
+
+  await dialog.getByRole("button", { name: "Close full screenshot" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
+test("keeps modified screenshot clicks as native new-tab links", async ({
+  page,
+}) => {
+  await page.goto("/docs/guides/generate-ai-report");
+
+  const trigger = page.getByRole("link", {
+    name: "View full screenshot for Start a report",
+  });
+  const screenshotUrl = await trigger.getAttribute("href");
+  expect(screenshotUrl).not.toBeNull();
+
+  const modifier: "Meta" | "Control" =
+    process.platform === "darwin" ? "Meta" : "Control";
+  const newPagePromise = page.context().waitForEvent("page", {
+    timeout: 3_000,
+  });
+  await trigger.click({ modifiers: [modifier] });
+  const imagePage = await newPagePromise;
+
+  await expect(imagePage).toHaveURL(
+    new URL(screenshotUrl ?? "", page.url()).href,
+  );
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await imagePage.close();
+});
+
 test("keeps tier navigation usable on a phone viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/docs/guides/generate-ai-report");

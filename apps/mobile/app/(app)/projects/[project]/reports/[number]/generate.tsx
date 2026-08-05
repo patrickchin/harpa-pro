@@ -14,7 +14,7 @@
  * registerFile → createNote) and the notes query is invalidated so
  * image notes appear in the timeline immediately.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   useFocusEffect,
   useLocalSearchParams,
@@ -45,6 +45,7 @@ import {
 } from '@/lib/api/optimistic';
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
 import { useReportBodyAutosave } from '@/lib/reports/use-report-body-autosave';
+import { reportMutationInput } from '@/lib/reports/report-mutation-input';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { env } from '@/lib/config/env';
@@ -183,6 +184,7 @@ export default function GenerateReportRoute() {
         notesSinceLastGeneration?: number;
         needsRegeneration?: boolean;
         generatedAt?: string | null;
+        updatedAt?: string;
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
@@ -334,6 +336,22 @@ export default function GenerateReportRoute() {
   // the diff was always non-zero and produced a stuck "Saving…" label
   // + a PATCH-spam loop).
   const [userDirty, setUserDirty] = useState(false);
+  // Keep the newest server version returned by this screen's own writes so
+  // a fast autosave → finalize sequence cannot conflict with itself while
+  // React Query is still refetching. Never advance it from a background
+  // refetch while local edits are dirty.
+  const expectedUpdatedAtRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const serverUpdatedAt = reportRow?.updatedAt;
+    if (!serverUpdatedAt || userDirty) return;
+    if (
+      expectedUpdatedAtRef.current === null ||
+      serverUpdatedAt > expectedUpdatedAtRef.current
+    ) {
+      expectedUpdatedAtRef.current = serverUpdatedAt;
+    }
+  }, [reportRow?.updatedAt, userDirty]);
 
   const placePhotoGroupMutation = usePlaceAttachment();
   const handlePlacePhotoGroup = useCallback(
@@ -393,7 +411,8 @@ export default function GenerateReportRoute() {
     setUserDirty(true);
   }, []);
 
-  const handleAutoSaved = useCallback(() => {
+  const handleAutoSaved = useCallback((updatedAt: string) => {
+    expectedUpdatedAtRef.current = updatedAt;
     setUserDirty(false);
   }, []);
 
@@ -475,6 +494,8 @@ export default function GenerateReportRoute() {
     slug,
     number: reportNumber,
     report: localReport,
+    expectedUpdatedAt:
+      expectedUpdatedAtRef.current ?? reportRow?.updatedAt ?? null,
     dirty: userDirty,
     onSaved: handleAutoSaved,
     paused: isGenerating || finalizeMutation.isPending,
@@ -482,6 +503,9 @@ export default function GenerateReportRoute() {
 
   const handleRegenerate = useCallback(() => {
     if (!slug || reportNumber === null) return;
+    const expectedUpdatedAt =
+      expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
+    if (!expectedUpdatedAt) return;
     setGenerationError(null);
     const attempt = generationIdempotency.attempt(
       currentReport ? 'regenerate' : 'generate',
@@ -492,8 +516,7 @@ export default function GenerateReportRoute() {
         : generateMutation;
     mutation.mutate(
       {
-        params: { project: slug, number: reportNumber },
-        body: {},
+        ...reportMutationInput(slug, reportNumber, expectedUpdatedAt),
         headers: { 'Idempotency-Key': attempt.key },
       },
       {
@@ -504,7 +527,10 @@ export default function GenerateReportRoute() {
             () => {
               const payload = data as
                 | {
-                    report?: { body?: reports.ReportBody | null };
+                    report?: {
+                      body?: reports.ReportBody | null;
+                      updatedAt?: string;
+                    };
                     debug?: {
                       systemPrompt?: string;
                       userPrompt?: string;
@@ -517,6 +543,9 @@ export default function GenerateReportRoute() {
               const nextBody = payload?.report?.body ?? null;
               if (nextBody) {
                 setLocalReport(reportBodyToGeneratedReport(nextBody));
+              }
+              if (payload?.report?.updatedAt) {
+                expectedUpdatedAtRef.current = payload.report.updatedAt;
               }
               if (payload?.debug) {
                 setLastGeneration({
@@ -544,6 +573,7 @@ export default function GenerateReportRoute() {
   }, [
     slug,
     reportNumber,
+    reportRow?.updatedAt,
     currentReport,
     generateMutation,
     regenerateMutation,
@@ -577,9 +607,12 @@ export default function GenerateReportRoute() {
 
   const handleFinalize = useCallback(() => {
     if (!slug || reportNumber === null) return;
+    const expectedUpdatedAt =
+      expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
+    if (!expectedUpdatedAt) return;
     setFinalizeError(null);
     finalizeMutation.mutate(
-      { params: { project: slug, number: reportNumber } },
+      reportMutationInput(slug, reportNumber, expectedUpdatedAt),
       {
         onSuccess: () => {
           router.replace(
@@ -591,7 +624,13 @@ export default function GenerateReportRoute() {
         },
       },
     );
-  }, [slug, reportNumber, finalizeMutation, router]);
+  }, [
+    slug,
+    reportNumber,
+    reportRow?.updatedAt,
+    finalizeMutation,
+    router,
+  ]);
 
   // Delete-draft handler. Routes back to the reports list on success so
   // the deleted draft isn't in nav history (would 404 on swipe-back).

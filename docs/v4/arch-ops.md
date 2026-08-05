@@ -13,21 +13,22 @@
   - `harpa-pro-api-pr-<n>` (per-PR preview) at
     `https://harpa-pro-api-pr-<n>.fly.dev` — created by
     `.github/workflows/pr-preview.yml` (job `fly-preview`) when the PR
-    changes API inputs or the admin browser app, destroyed on PR
+    changes API inputs, the admin browser app, or the office dashboard,
+    destroyed on PR
     close (job `fly-destroy`). Config:
     [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
     Single shared-cpu-1x machine, `min_machines_running = 0`,
     `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
     The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
-    branch. Admin previews use the matching Fly app so their exact browser
-    origin can be allowlisted. Mobile dev/preview builds can flip to a preview URL via
-    `setApiBaseUrlOverride`.
+    branch. Admin and dashboard previews use the matching Fly app so browser
+    auth and live journeys never mutate the shared dev database. Mobile
+    dev/preview builds can flip to a preview URL via `setApiBaseUrlOverride`.
 - **Databases**: two independent Neon projects:
   - the application project uses long-lived `main` (production) and `dev`
     branches plus per-PR `pr-<n>` branches; and
   - `harpa-pro-admin` uses database `harpa_admin`, with matching `main`,
-    long-lived `dev`, and matching per-PR `pr-<n>` branches for
-    API-changing previews.
+    long-lived `dev`, and matching per-PR `pr-<n>` branches for API, admin,
+    and dashboard previews.
     The separate projects give application and admin credentials independent
     restore timelines. See [arch-database.md](arch-database.md).
 - **Storage**: Cloudflare R2. Separate buckets per env
@@ -54,9 +55,26 @@
     monitoring; unknown browser paths return a static 404. `/admin/activity`
     remains an API resource path. Data requests require the dedicated API admin
     session. See [Separate admin site](design-separate-admin-site.md).
-  - Both static web workspaces use Astro 7 with Vite 8 and require Node
-    22.12.0 or newer. The current shared CI setup uses the Node 22 channel;
-    Node 24 standardization is tracked separately.
+- **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
+  and require Node 22.12.0 or newer. Shared CI currently uses the Node 22
+  channel. Node 24 standardization is tracked separately.
+- **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
+  Pages project `harpa-pro-dashboard`.
+  - React 19 builds with Vite 8 and Tailwind CSS 4. Vite 8 shares the static
+    web runtime's Node 22.12.0 minimum.
+  - Target production branch `main` → `harpa-pro-dashboard.pages.dev` against
+    the production API. `app.harpapro.com` is not yet attached.
+  - Dev branch `dev` → `dev.harpa-pro-dashboard.pages.dev` against the dev API.
+  - Pull request branch `pr-<n>` → the stable
+    `pr-<n>.harpa-pro-dashboard.pages.dev` alias against its matching isolated
+    Fly/Neon preview.
+  - GitHub verifies the alias serves the pull request head SHA before SPA and
+    live browser checks.
+  - On 2026-08-05, Cloudflare connected the existing Direct Upload project to
+    `patrickchin/harpa-pro` in place and preserved all seven preview
+    deployments. Automatic production deployments remain disabled. No custom
+    domain is attached. See
+    [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary
@@ -448,7 +466,7 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 ```
 
 Deployment workflows use action releases that run on Node 24. Cloudflare Pages
-publishes the static browser applications through its GitHub App; GitHub
+publishes Git-connected browser applications through its GitHub App. GitHub
 Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
 credential.
 
@@ -494,12 +512,15 @@ shadowed.
 
 ## Observability
 
-- **Sentry** for crashes, both mobile and API. Same project,
-  different DSNs. Runtime vars:
+- **Sentry** for crashes in mobile, dashboard, and API. Runtime/build vars:
   - API: `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT`, and
     `SENTRY_TRACES_SAMPLE_RATE`.
   - Mobile: `EXPO_PUBLIC_SENTRY_DSN` at Metro/EAS build or OTA-update
     time.
+  - Dashboard: optional public `VITE_SENTRY_DSN` Cloudflare build variable.
+    The Pages build wrapper derives `VITE_SENTRY_ENVIRONMENT` from the branch
+    and `VITE_SENTRY_RELEASE` from `CF_PAGES_COMMIT_SHA`. When the DSN is
+    absent, the dashboard does not initialize telemetry.
   - Source maps/native build integration: `SENTRY_ORG`,
     `SENTRY_PROJECT`, optional `SENTRY_URL`, and `SENTRY_AUTH_TOKEN`
     with `project:write`.
@@ -542,16 +563,19 @@ PR open / push
   ↳ Credential-free tests, builds, path checks, and migration guards
   ↳ Human-owned same-repository PRs only:
     ↳ exact Git ref pr-<n> mirrors the immutable PR head
-    ↳ Backend preview (API-changing PRs only):
+    ↳ Backend preview (API, admin-site, or dashboard changes):
       ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
       ↳ Admin Neon branch pr-<n> from admin dev
       ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-        ↳ release_command applies app migrations, then admin migrations
+        ↳ release_command applies app migrations, admin migrations, then
+          seeds configured test/demo password accounts
         ↳ /readyz verified
         ↳ /admin/readyz verified separately
         ↳ sticky PR comment with preview URL
-    ↳ Cloudflare Git builds public/admin previews from pr-<n>
-      ↳ GitHub verifies the stable aliases serve the exact PR SHA
+    ↳ Cloudflare Git builds public/admin/dashboard previews from pr-<n>
+      ↳ GitHub verifies the stable aliases serve the exact PR head SHA
+      ↳ dashboard-preview.yml verifies SPA routing and runs its deployed live
+         browser journey against the matching isolated API
     ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
       ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
         when the PR changes API inputs
@@ -571,8 +595,9 @@ Push to dev
   ↳ admin migrations applied to admin `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
     ↳ /readyz and /admin/readyz verified independently
-  ↳ Cloudflare Git deploys public/admin `dev` branches
-    ↳ site-dev.yml and admin-dev.yml verify exact SHA + routing
+  ↳ Cloudflare Git deploys public/admin/dashboard `dev` branches
+    ↳ site-dev.yml, admin-dev.yml, and dashboard-dev.yml verify exact SHA
+    ↳ dashboard-dev.yml also verifies SPA routing
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-dev calls OTA after deploy + journeys pass
@@ -589,8 +614,10 @@ Push to main (production)
   ↳ Fly deploy → harpa-pro-api
     ↳ release_command applies app migrations, then admin migrations
     ↳ /readyz and /admin/readyz verified independently
-  ↳ Cloudflare Git deploys public/admin production branches
+  ↳ Cloudflare Git deploys approved production branches
     ↳ site-prod.yml and admin-prod.yml verify exact SHA + custom domains
+    ↳ dashboard-prod.yml verifies the Pages hostname and any approved custom
+       domain after dashboard production activation
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass

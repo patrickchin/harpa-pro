@@ -15,6 +15,10 @@ pnpm --filter @harpa/site typecheck
 pnpm --filter @harpa/site test:e2e
 ```
 
+Copy `.env.example` to `.env` before local development. The shared header uses
+`PUBLIC_DASHBOARD_URL` for its dashboard action; local development normally
+points it at `http://localhost:3003`.
+
 ## Stack
 
 - Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)

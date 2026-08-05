@@ -39,8 +39,34 @@ const DEMO_ACCOUNT_EMAILS = (env.DEMO_ACCOUNT_EMAILS ?? '')
 
 const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...DEMO_ACCOUNT_EMAILS]);
 
+const DASHBOARD_ORIGINS = env.DASHBOARD_CORS_ORIGINS.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
 const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
+
+/**
+ * Cloudflare Pages previews and Fly previews have different site domains, so
+ * their browser session cookie must be explicitly cross-site. Keep localhost
+ * usable over HTTP while production-like HTTPS deployments use a partitioned,
+ * secure cookie.
+ */
+export function cookieAttributesForAuthUrl(authUrl: string) {
+  if (new URL(authUrl).protocol === 'https:') {
+    return {
+      httpOnly: true,
+      partitioned: true,
+      sameSite: 'none' as const,
+      secure: true,
+    };
+  }
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: false,
+  };
+}
 
 const resend = createResendClient();
 
@@ -112,10 +138,12 @@ export const auth = betterAuth({
   trustedOrigins: [
     'harpa://',
     'harpa://*',
+    ...DASHBOARD_ORIGINS,
     ...(env.NODE_ENV === 'development' ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**'] : []),
   ],
 
   advanced: {
+    defaultCookieAttributes: cookieAttributesForAuthUrl(env.BETTER_AUTH_URL),
     database: {
       generateId: ({ model }) => {
         if (model === 'user') return newId('usr');

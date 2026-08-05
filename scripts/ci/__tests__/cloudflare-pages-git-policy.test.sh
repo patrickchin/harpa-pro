@@ -63,6 +63,10 @@ require "$builder" 'https://harpa-pro-api-dev.fly.dev' \
   'builder declares the development API'
 require "$builder" 'https://harpa-pro-api-pr-${pr_number}.fly.dev' \
   'builder derives the exact PR API'
+require "$builder" 'VITE_API_BASE_URL="$api_origin"' \
+  'dashboard receives its Vite API variable'
+require "$builder" 'VITE_SENTRY_RELEASE="$commit"' \
+  'dashboard telemetry records the Cloudflare Git commit'
 require "$builder" '_cf-pages-deployment.json' \
   'builder publishes an exact-SHA marker'
 
@@ -72,7 +76,10 @@ require "$verifier" '\"commit\":\"$expected_commit\"' \
 require "$verifier" '\"branch\":\"$expected_branch\"' \
   'verifier requires the expected branch marker'
 
-for workflow in site-preview site-dev site-prod admin-preview admin-dev admin-prod; do
+for workflow in \
+  site-preview site-dev site-prod \
+  admin-preview admin-dev admin-prod \
+  dashboard-preview dashboard-dev dashboard-prod; do
   require ".github/workflows/$workflow.yml" \
     'bash scripts/ci/verify-pages-deployment.sh' \
     "$workflow verifies the native Git deployment"

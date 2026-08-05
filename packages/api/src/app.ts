@@ -63,8 +63,39 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // routes. Per-route + shared-AI buckets remain on the relevant routes.
   app.use('*', globalRateLimit());
 
+  const dashboardOriginPatterns = env.DASHBOARD_CORS_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const dashboardCors = cors({
+    origin: (origin) =>
+      dashboardOriginPatterns.some((pattern) => originMatchesPattern(origin, pattern))
+        ? origin
+        : null,
+    allowMethods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Requested-With'],
+    exposeHeaders: ['Set-Auth-Token', 'X-Usage-Warning'],
+    credentials: true,
+    maxAge: 86400,
+  });
+  app.use('*', async (c, next) => {
+    // Public waitlist and admin routes keep their own narrower allowlists below.
+    const hasDedicatedCors =
+      c.req.path === '/waitlist' ||
+      c.req.path.startsWith('/waitlist/') ||
+      c.req.path === '/admin' ||
+      c.req.path.startsWith('/admin/');
+    if (hasDedicatedCors) {
+      return next();
+    }
+    const origin = c.req.header('origin') ?? '';
+    const isDashboardOrigin = dashboardOriginPatterns.some((pattern) =>
+      originMatchesPattern(origin, pattern),
+    );
+    return isDashboardOrigin ? dashboardCors(c, next) : next();
+  });
+
   // Public, non-credentialed CORS for marketing waitlist submissions.
-  // Credentialed auth/admin CORS is configured separately below.
+  // Credentialed dashboard and admin CORS is configured separately.
   const allowedOrigins = env.WAITLIST_CORS_ORIGINS.split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -163,4 +194,13 @@ export function createApp(): OpenAPIHono<AppEnv> {
   });
 
   return app;
+}
+
+function originMatchesPattern(origin: string, pattern: string): boolean {
+  if (!origin || !pattern) return false;
+  const escaped = pattern
+    .split('*')
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[^/]*');
+  return new RegExp(`^${escaped}$`).test(origin);
 }

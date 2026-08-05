@@ -63,8 +63,11 @@ rules. Summary below.
 - Application SQL lives under `packages/api/migrations` and is applied with
   `pnpm --filter @harpa/api db:migrate` against `DATABASE_URL`.
   Drizzle Kit generation starts with
-  `pnpm --filter @harpa/api db:generate`; committed files follow the
-  repository's numeric-prefix naming convention.
+  `pnpm --filter @harpa/api db:generate`; policy-only and data migrations
+  can use reviewed hand-written SQL. Committed files use
+  `<digits>_<slug>.sql`. The current sequence uses four-digit prefixes,
+  such as `0028_report_version_monotonic.sql`, while the loader also accepts
+  older numeric timestamp prefixes.
 - Admin SQL lives under `packages/api/admin-migrations` and is applied with
   `pnpm --filter @harpa/api db:migrate:admin` against
   `ADMIN_DATABASE_URL`.
@@ -74,9 +77,10 @@ rules. Summary below.
 - Both streams are forward-only. Never run an admin migration through the
   application loader or edit an applied migration.
 - An application migration MUST be paired with:
-  - the Drizzle schema change in `packages/api/src/db/schema/*.ts`,
-  - a per-request scope test in `__tests__/scope/` if the new
-    table is user-owned (Pitfall 6).
+  - the matching file in `packages/api/src/db/schema/*.ts` when a table
+    or column shape changes;
+  - a per-request scope test in `__tests__/scope/` when a user-owned
+    table or policy changes (Pitfall 6).
 - An admin migration must be paired with the isolated Drizzle mirror in
   `packages/api/src/db/admin-schema.ts` and a fresh-database integration
   test. It must not create objects in the application database.
@@ -194,14 +198,68 @@ migrator.
 
 ## RLS policies
 
-Every `app.*` user-owned table has RLS enabled and at least:
+Every `app.*` user-owned table has RLS enabled. The common rules are:
 
 - `SELECT` policy gating to project membership.
-- `INSERT` policy checking `user_id = current_setting('app.user_id')`.
-- `UPDATE` / `DELETE` policy checking ownership / role.
+- `INSERT` policy checking the current user and project role.
+- `UPDATE` and `DELETE` policies checking ownership and project role.
 
-Policies live alongside the migration that creates the table — never
-in a separate "policies" migration after the fact.
+Create the baseline policies in the migration that creates a table. If a
+role contract changes later, add a forward-only policy migration. Never
+edit a migration that has shipped.
+
+### Project write roles
+
+Migration `0027_project_write_roles.sql` adds
+`app.can_edit_project(project_id)`. The helper checks the current
+`app.user_id` and returns true for owners and editors.
+
+The migration keeps project content readable by all members and narrows
+writes:
+
+- owners and editors can update project metadata;
+- owners and editors can create, update, and delete reports;
+- owners and editors can create notes;
+- a note author can update or delete the note while they remain a writer;
+- owners and editors can change project-scoped files;
+- viewers remain read-only, except for the narrow PDF export path.
+
+Project deletion and membership changes remain owner-only. A current
+member can render a PDF. The `app.attach_report_pdf` security-definer
+function validates the exact report and generated file before it changes
+only `reports.pdf_file_id`.
+
+### Report concurrency and filtering
+
+Report body and state mutations accept an optional
+`expectedUpdatedAt` ISO timestamp during the mobile compatibility
+window. Dashboard and updated mobile clients send the `updatedAt` value
+they read. The SQL `UPDATE` includes that timestamp in its predicate.
+A stale write changes no row, and the API returns `409` with the current
+report.
+
+The precondition applies to report `PATCH`, generate, regenerate,
+finalize, and unfinalize. The generate path checks it before the AI call
+and again in the final `UPDATE`, so an edit during generation cannot be
+overwritten. Attachment placement keeps its existing
+`expectedBodyVersion` precondition.
+
+The API serializes `updated_at` at millisecond precision, so every report-row
+writer must advance that value by at least one millisecond. Report service
+writes use the later of the millisecond-truncated database clock and the
+stored value plus one millisecond. Attachment placement uses that shared
+expression. Migration `0028_report_version_monotonic.sql` replaces
+`app.attach_report_pdf()` so PDF registration follows the same rule.
+
+The monotonic rule also handles a database clock behind the stored value. An
+integration test sets a future version before each write and requires the
+returned value to be later. See the
+[recurring-bug entry](../bugs/2026-08-05-report-version-millisecond-collision.md).
+
+`GET /projects/{project}/reports` accepts `status=draft` or
+`status=finalized`. The database applies the status predicate before
+cursor pagination. An invalid status fails request validation with
+`400`.
 
 ## Backups
 

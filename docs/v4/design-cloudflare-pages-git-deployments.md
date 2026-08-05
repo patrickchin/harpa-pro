@@ -59,11 +59,14 @@ Cloudflare invokes `scripts/ci/build-cloudflare-pages.sh <application>`. The
 script fails closed for an unexpected branch and selects build-time public
 configuration as follows:
 
-| Branch        | Public site API | Admin/dashboard API  | Public header dashboard                             |
+| Branch        | Public site API | Admin/dashboard API  | Reserved dashboard URL                              |
 | ------------- | --------------- | -------------------- | --------------------------------------------------- |
 | `main`        | production      | production           | `https://harpa-pro-dashboard.pages.dev`             |
 | `dev`         | development     | development          | `https://dev.harpa-pro-dashboard.pages.dev`         |
 | `pr-<number>` | production      | matching Fly preview | `https://pr-<number>.harpa-pro-dashboard.pages.dev` |
+
+The public header does not render the reserved dashboard URL while the product
+is not ready for public discovery.
 
 Every successful build writes a non-sensitive deployment marker containing
 `CF_PAGES_COMMIT_SHA` and `CF_PAGES_BRANCH`. Verification workflows poll the

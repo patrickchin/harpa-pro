@@ -146,8 +146,9 @@ Each AI-touching route has a test that:
 - `apps/site/tests/docs.spec.ts` covers local search, empty results, guide
   traversal, responsive navigation, internal links, assets, duplicate ids,
   and the branded 404 against the production static build.
-- `apps/site/tests/header.spec.ts` checks the desktop and mobile dashboard
-  actions against the same `PUBLIC_DASHBOARD_URL` embedded in that build.
+- `apps/site/tests/header.spec.ts` proves the unreleased dashboard is absent
+  from desktop and mobile public navigation and retains the mobile-overflow
+  check.
 - `site-preview.yml` also waits for the native Cloudflare Git deployment's
   exact-SHA marker and verifies one checked-in legacy redirect.
 - `scripts/ci/verify-pages-deployment.sh` allows 7,200 seconds for the native

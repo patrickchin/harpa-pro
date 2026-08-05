@@ -135,8 +135,9 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
       (project connection, build settings, preview branches, and domains).
 - [x] GitHub Action `.github/workflows/site-preview.yml`: - Triggers on PR to `dev` or `main`, path filter `apps/site/**`
       (+ `pnpm-lock.yaml` + the workflow itself). - Cancels stale preview builds via `concurrency`. - Installs dependencies, tests, builds, and verifies the native
-      Cloudflare Git deployment at the exact PR SHA. - Posts (or sticky-updates) a comment on the PR with the
-      preview URL via `marocchino/sticky-pull-request-comment@v3`.
+      Cloudflare Git deployment at the exact PR SHA. - Reports verification through its GitHub Actions check. The native
+      Cloudflare integration owns the Pages preview comment, status, URL, and
+      deployment-log link.
 - [x] GitHub Action `.github/workflows/site-prod.yml`: - Triggers on push to `main` (default branch, per AGENTS.md
       hard rule #7) + manual `workflow_dispatch`. - Verifies the native Git deployment on the Pages hostname and both
       production custom domains at the exact pushed SHA. - `concurrency: cancel-in-progress: false` so prod deploys

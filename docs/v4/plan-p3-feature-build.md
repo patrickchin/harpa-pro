@@ -1,5 +1,11 @@
 # P3 — Feature Build
 
+> **Historical delivery plan.** P3 features shipped and continued to
+> change during hardening and store release. The unchecked phase gates
+> below record work that was not closed under the original P3 tag.
+> They are not the current backlog. Use the linked architecture docs,
+> current implementation, and tests for present behavior.
+
 > Goal: full feature build across mobile + API — generate, list,
 > view, edit, share reports with voice + photo capture, account /
 > usage / limits, LLM token accounting.
@@ -14,7 +20,7 @@
 
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [x] Mobile coverage ≥ 80% lines. (Gate wired via `vitest run
-      --coverage` in `apps/mobile/vitest.config.ts`. Baseline:
+--coverage` in `apps/mobile/vitest.config.ts`. Baseline:
       lines 81.84%, statements 81.84%, branches 79.41%, functions 73%.
       Auto-generated `lib/api/hooks.ts` and native shims excluded —
       they're verified by the spec-drift gate and Maestro respectively.)
@@ -38,8 +44,8 @@ maps a screen specification to its v4 destination
 - generate — notes / report / edit tabs (the big one)
 - saved report + actions menu + PDF preview
 - files — no standalone screen in the v4 spec (see P3.11), marked N/A
-- camera  ✅ shipped (P3.12)
-- profile / account / usage  ✅ shipped (P3.13)
+- camera ✅ shipped (P3.12)
+- profile / account / usage ✅ shipped (P3.13)
 - feature completion + upload wiring (P3.15)
 
 ## Shared report components
@@ -48,22 +54,22 @@ All shared report components live under `apps/mobile/components/`.
 NativeWind classes and shared primitives remain consistent across
 screens. Do not introduce Unistyles (Pitfall 3). Component locations:
 
-| Component | Current location |
-|---|---|
-| `StatBar` | `apps/mobile/components/reports/StatBar.tsx` |
-| `WeatherStrip` | `apps/mobile/components/reports/WeatherStrip.tsx` |
-| `SummarySectionCard` | `apps/mobile/components/reports/SummarySectionCard.tsx` |
-| `IssuesCard` | `apps/mobile/components/reports/IssuesCard.tsx` |
-| `WorkersCard` | `apps/mobile/components/reports/WorkersCard.tsx` |
-| `MaterialsCard` | `apps/mobile/components/reports/MaterialsCard.tsx` |
-| `NextStepsCard` | `apps/mobile/components/reports/NextStepsCard.tsx` |
-| `CompletenessCard` | `apps/mobile/components/reports/CompletenessCard.tsx` |
-| `ReportView` | `apps/mobile/components/reports/ReportView.tsx` |
-| `PdfPreviewModal` | `apps/mobile/components/reports/PdfPreviewModal.tsx` |
-| `ReportActionsMenu` | `apps/mobile/components/reports/detail/ReportActionsMenu.tsx` |
-| `SavedReportSheet` | `apps/mobile/components/reports/detail/SavedReportSheet.tsx` |
-| `ReportDetailTabBar` | `apps/mobile/components/reports/detail/ReportDetailTabBar.tsx` |
-| `useReportPdfActions` | `apps/mobile/lib/reports/use-report-pdf-actions.ts` |
+| Component             | Current location                                               |
+| --------------------- | -------------------------------------------------------------- |
+| `StatBar`             | `apps/mobile/components/reports/StatBar.tsx`                   |
+| `WeatherStrip`        | `apps/mobile/components/reports/WeatherStrip.tsx`              |
+| `SummarySectionCard`  | `apps/mobile/components/reports/SummarySectionCard.tsx`        |
+| `IssuesCard`          | `apps/mobile/components/reports/IssuesCard.tsx`                |
+| `WorkersCard`         | `apps/mobile/components/reports/WorkersCard.tsx`               |
+| `MaterialsCard`       | `apps/mobile/components/reports/MaterialsCard.tsx`             |
+| `NextStepsCard`       | `apps/mobile/components/reports/NextStepsCard.tsx`             |
+| `CompletenessCard`    | `apps/mobile/components/reports/CompletenessCard.tsx`          |
+| `ReportView`          | `apps/mobile/components/reports/ReportView.tsx`                |
+| `PdfPreviewModal`     | `apps/mobile/components/reports/PdfPreviewModal.tsx`           |
+| `ReportActionsMenu`   | `apps/mobile/components/reports/detail/ReportActionsMenu.tsx`  |
+| `SavedReportSheet`    | `apps/mobile/components/reports/detail/SavedReportSheet.tsx`   |
+| `ReportDetailTabBar`  | `apps/mobile/components/reports/detail/ReportDetailTabBar.tsx` |
+| `useReportPdfActions` | `apps/mobile/lib/reports/use-report-pdf-actions.ts`            |
 
 ## Maestro gate (all sections and subsections)
 
@@ -191,13 +197,14 @@ Shipped: `lib/report-edit-helpers.ts` (slice patches + whole-array
 setters + blank-row factories, all immutable, new wrapper + inner refs
 per call) with 23 test cases. `ReportEditForm.tsx` implemented
 (7 section cards + shared `Field` / `AddRowButton` / `RemoveRowButton`
-+ `AppDialogSheet` destructive confirm — Pitfall: no `Alert.alert`);
-`EditTabPane` (empty state + inline form + autosave status row);
-provider extended with `onSetReport` / `setReport` no-op fallback /
-lazy-seed via `createEmptyReport()` from both `tabs.openEdit()` and
-`tabs.editManually()`; dev mirror `(dev)/generate-edit.tsx`; Vitest
-coverage per state + onSetReport propagation + lazy-seed path. Commit:
-`feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
+
+- `AppDialogSheet` destructive confirm — Pitfall: no `Alert.alert`);
+  `EditTabPane` (empty state + inline form + autosave status row);
+  provider extended with `onSetReport` / `setReport` no-op fallback /
+  lazy-seed via `createEmptyReport()` from both `tabs.openEdit()` and
+  `tabs.editManually()`; dev mirror `(dev)/generate-edit.tsx`; Vitest
+  coverage per state + onSetReport propagation + lazy-seed path. Commit:
+  `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
 
 ### P3.x — Update / Finalize flow polish (✅ shipped)
 
@@ -356,7 +363,7 @@ artifacts before tagging `v0.3.0-features`).
 - **Upload**: presign → R2 PUT → registerFile → createNote
   (always — Pitfall 8). Tested for image/voice/document via
   `upload-creates-timeline-note.test.ts`.
-- **Voice note**: record → live interim transcript → upload →
+- **Voice note**: record → upload →
   transcribe (fixture) → summarise (fixture) → createNote.
   Tested via `voice-note-pipeline.test.ts`.
 - **Camera**: capture → session → commit to report. Tested via
@@ -382,17 +389,17 @@ they're picked up.
 > **Order:**
 >
 > 1. [x] **`useReportUnfinalize` route** — `POST /reports/{id}/unfinalize`
->    RLS-scoped; flips `finalized_at` to NULL; integration test covers
->    member-can / non-member-can't + 409 already-draft.
+>        RLS-scoped; flips `finalized_at` to NULL; integration test covers
+>        member-can / non-member-can't + 409 already-draft.
 > 2. [x] **LLM token accounting** — the whole of P3.15.5
->    (`llm_usage_events` table + `recordLlmUsage` service +
->    instrumentation of `services/ai.ts` chat / transcribe /
->    generateReport via `withUsageAccounting`).
+>        (`llm_usage_events` table + `recordLlmUsage` service +
+>        instrumentation of `services/ai.ts` chat / transcribe /
+>        generateReport via `withUsageAccounting`).
 > 3. [x] **`/me/usage` extension** — `months[].tokens`, `byModel[]`,
->    `totals.tokens` aggregated from `llm_usage_events`.
+>        `totals.tokens` aggregated from `llm_usage_events`.
 > 4. [x] **Neon prod migration job** — `pnpm --filter @harpa/api db:migrate`
->    runs against the Doppler `prd` `DATABASE_URL` before the Fly
->    deploy in `.github/workflows/api-prod.yml`.
+>        runs against the Doppler `prd` `DATABASE_URL` before the Fly
+>        deploy in `.github/workflows/api-prod.yml`.
 >
 > The paginated `GET /me/usage/events`, Sentry API middleware,
 > PG `statement_timeout`, universal-link manifests, and k6 load
@@ -408,6 +415,7 @@ token-level usage UI in P3.15.4 — land it before extending
 `/me/usage`.
 
 #### P3.15.1 — Mobile R2 upload orchestration
+
 - [x] `useFileUpload` hook: presign → R2 PUT → `registerFile` →
       `createNote`, with retry + progress + an in-memory queue.
       API routes (`POST /files/presign`, `POST /files`,
@@ -421,6 +429,7 @@ token-level usage UI in P3.15.4 — land it before extending
 - [x] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
 
 #### P3.15.2 — Camera Done handoff
+
 - [x] `(camera)/capture.tsx` Done drains the session registry into
       the upload queue (`useFocusEffect` in the caller, per current
       `TODO(P4)` in `capture.tsx`).
@@ -430,6 +439,7 @@ token-level usage UI in P3.15.4 — land it before extending
 - [x] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
 
 #### P3.15.3 — Saved-report wiring completion
+
 - [x] `useReportUnfinalize` route — `POST /reports/{number}/unfinalize`
       (RLS-scoped; 409 on non-finalized; 404 hides cross-project rows).
 - [x] `useReportUnfinalize` mobile hook (consumes the route above).
@@ -444,6 +454,7 @@ token-level usage UI in P3.15.4 — land it before extending
 - [x] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
 
 #### P3.15.4 — Account / Profile / Usage wiring
+
 - [x] Inline editor + optimistic update for display name + company
       name via `useUpdateMeMutation`.
 - [x] `AvatarUploader` component (depends on P3.15.1).
@@ -452,15 +463,12 @@ token-level usage UI in P3.15.4 — land it before extending
       Sourced from the `llm_usage_events` table (P3.15.5).
       _(Shipped by backend; mobile now consumes the generated
       `usageResponse` schema from `@harpa/api-contract` directly.)_
-- [x] `UsageBarChart` + per-model breakdown rendered in
-      `screens/usage.tsx` (chart-slot placeholder removed; chart
-      renders inline when ≥2 months have token data).
-- [x] `useAiProvider` AsyncStorage round-trip + `useAvailableProviders`
-      (static "all available" until the API exposes a probe — marked
-      `TODO(P3.15.4-contract)`). Profile route now passes the canonical
-      catalogue + `showDeveloperSection`.
-- [x] Add a nav entry to the v4 tab bar for Profile (Projects +
-      Profile visible; Account / Usage hidden via `href: null`).
+- [x] Per-model usage and expandable monthly rows render in
+      `screens/usage.tsx`. The optional chart slot is currently null.
+- [x] `useAiProvider` reads and writes `/settings/ai` through TanStack
+      Query. The Developer screen owns the picker.
+- [x] Add the Profile shortcut through `AppHeaderActions`. The current
+      app shell uses a Stack, not a tab bar.
 - [x] Maestro flow: tab → profile → edit name → sign out; usage
       month switch + chart (`.maestro/p3-13-profile-usage.yaml`).
 - [x] Commit: `feat(mobile): account editing + AvatarUploader + token-level usage + AI provider persistence`.
@@ -483,22 +491,24 @@ route.
       (`packages/api/migrations/0005_llm_usage_events.sql`.)
 - [x] RLS / scoped role: `llm_usage_events_self_read` +
       `llm_usage_events_self_insert` enforce `user_id =
-      current_setting('app.user_id')`. INSERT goes through the
+current_setting('app.user_id')`. INSERT goes through the
       per-request scoped accessor; no mobile-side writes.
 - [x] Each vendor adapter returns `{ output, usage }` where `usage`
       is `{ inputTokens, outputTokens, cachedTokens? }`. Extract from
       the SDK response per vendor:
-      - OpenAI: `response.usage.{prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens}`
-      - Kimi: equivalent fields per its SDK.
-      - Transcribe (Whisper-class): audio duration → `inputTokens =
-        ceil(durationSec)` (documented convention in
-        `services/ai-usage.ts` so the unified `input_tokens` column
-        carries non-zero observability for every call).
-      Shipped in P3.15.5 close-out: OpenAI adapter reads
-      `prompt_tokens_details.cached_tokens`; new Kimi live adapter
-      (`packages/ai-fixtures/src/providers/kimi.ts`, Moonshot REST,
-      OpenAI-compatible); `services/ai.ts::transcribe()` derives
-      input tokens from the provider-reported `durationSec`.
+  - OpenAI: `response.usage.{prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens}`.
+  - Kimi: equivalent fields from its SDK.
+  - Transcribe (Whisper-class): audio duration becomes
+    `inputTokens = ceil(durationSec)`, a convention documented in
+    `services/ai-usage.ts` so the unified `input_tokens` column
+    carries non-zero observability for every call.
+
+    Shipped in P3.15.5 close-out: OpenAI adapter reads
+    `prompt_tokens_details.cached_tokens`; new Kimi live adapter
+    (`packages/ai-fixtures/src/providers/kimi.ts`, Moonshot REST,
+    OpenAI-compatible); `services/ai.ts::transcribe()` derives
+    input tokens from the provider-reported `durationSec`.
+
 - [x] Fixture replays return canonical `usage` values stored
       alongside the fixture payload (so replay-mode tests have
       deterministic token counts). `packages/ai-fixtures` already
@@ -545,14 +555,10 @@ phase; checkboxes here mirror the phase boundaries.
       `packages/api-contract/src/schemas/notes.ts`;
       `voice-aggregator.integration.test.ts` + scope test (Pitfall 13:
       real fixture providers, no aggregator collaborator stubs).
-- [x] **Phase C** — `pnpm --filter @harpa/mobile add expo-audio`;
-      `features/voice/` directory; `VoiceRecorderModal` mounted by
-      `GenerateReportProvider` (full-screen modal with permission gate
-      via `AppDialogSheet`, record/pause/resume/stop, amplitude meter,
-      elapsed counter, discard sheet, save action); mic button on
-      `GenerateReportInputBar` opens the modal; fixture-mode stub
-      bypasses the recorder and emits
-      `apps/mobile/assets/fixtures/voice-sample.m4a`.
+- [x] **Phase C** — add Expo Audio and the recorder adapters. The
+      first modal implementation was later replaced by the current
+      inline recorder with start, waveform, send, and cancel controls.
+      Fixture mode uses `apps/mobile/assets/fixtures/voice-sample.m4a`.
 - [x] **Phase D** — `useVoiceNotePipeline({ reportId })` state machine
       (`idle → uploading → transcribing → saved | failed(step)`);
       `useCreateVoiceNoteMutation`; `GenerateReportProvider.voice` wires
@@ -564,22 +570,18 @@ phase; checkboxes here mirror the phase boundaries.
       preview, transcript expander, retry on `failed`); wired into
       `NoteTimeline` (draft) and `ReportNotesPane` (saved); `noteToEntry`
       surfaces `summary` + `transcript` separately.
-- [~] **Phase F** — AsyncStorage queue persistence + rehydrate
-      (landed); `AbortSignal` plumbed through `putToR2` and the
-      voice pipeline forwards a `clientId` dedupe key (landed);
-      client-side 16 kHz mono m4a normalisation **deferred**
-      (requires `ffmpeg-kit` native module); optional
-      `useLiveTranscript` via `expo-speech-recognition`
-      **deferred** (requires native module + permission flow). See
-      `arch-voice-pipeline.md §D9` for deferral rationale.
-- [x] **Phase G** — `.maestro/modules/09-voice-notes.yaml` records via
-      the fixture stub and asserts a `VoiceNoteCard` row with
-      transcript expander; `core-end-to-end.yaml` voice step now
-      drives the recorder modal Start → Save (replaces the prior
-      double-tap on `btn-record-start` that left the recorder stuck
-      open); `arch-mobile.md` drift fixed (legend-state → hand-rolled
-      `UploadQueue`; `features/voice/` directory matches what
-      shipped); AGENTS.md fixture-stub language already accurate.
+- [~] **Phase F** — MMKV queue persistence + rehydrate
+  (landed); `AbortSignal` plumbed through `putToR2` and the
+  voice pipeline forwards a `clientId` dedupe key (landed);
+  client-side 16 kHz mono m4a normalisation **deferred**
+  (requires `ffmpeg-kit` native module); optional
+  `useLiveTranscript` via `expo-speech-recognition`
+  **deferred** (requires native module + permission flow). See
+  `arch-voice-pipeline.md §D9` for deferral rationale.
+- [x] **Phase G** — `.maestro/modules/09-voice-notes.yaml` drives the
+      fixture recorder and asserts the resulting `VoiceNoteCard`.
+      Current coverage uses the inline recorder rather than the old
+      modal flow.
 
 **Out of scope** (kept disabled or absent until product asks):
 notifications row (stays `disabled`-styled), language / locale
@@ -606,13 +608,14 @@ Tracked end-to-end in
       (`arch-storage.md`, `pitfalls.md` Pitfall 13 sub-bullet,
       `docs/bugs/README.md` `pickStorage` trapdoor entry).
 - Document / PDF note UI remains **deferred** by design — the queue
-  + server-side pipeline accept the kind; only the mobile UI is
-  out of scope for this slice.
+  - server-side pipeline accept the kind; only the mobile UI is
+    out of scope for this slice.
 
-## P3 exit
+## Historical P3 exit
+
 - [ ] All boxes ticked (P3.0 – P3.15). Tag `v0.3.0-features`.
 - [ ] `pnpm --filter @harpa/mobile bundle:smoke` green on the tag SHA
-  (see `overnight-protocol.md` §5 — also run per-commit through P3).
+      (see `overnight-protocol.md` §5 — also run per-commit through P3).
 
 ### Follow-up: photo placement UI
 

@@ -1,5 +1,10 @@
 # Plan: Complete the Camera Capture & Upload Pipeline
 
+> **Historical delivery plan.** The pipeline shipped. Current behavior
+> lives in `lib/camera/`, `lib/uploads/`, and the report routes. The
+> original problem and phases below describe the pre-implementation
+> state. The policy notes after the status section supersede them.
+
 ## Problem
 
 The 4-step upload pipeline (presign → R2 PUT → register → createNote) is
@@ -80,8 +85,8 @@ Make the success path visible and the queue controllable.
   switch so `source === 'image'` no longer falls back to text.
 - **`PendingPhotoCard`**: optimistic row driven by an upload job
   before the note exists. Shows local URI thumbnail + progress bar
-  + per-job retry/cancel. Reconciles with the real note row on
-  `reportNotes` invalidation.
+  - per-job retry/cancel. Reconciles with the real note row on
+    `reportNotes` invalidation.
 - **`UploadQueueStrip`** (small footer on the report screen):
   consumes `useFileUpload` → `activeJobs` (progress) + `failedJobs`
   (retry/dismiss). Hidden when both lists are empty.
@@ -91,7 +96,7 @@ Make the success path visible and the queue controllable.
   (rename to `enqueueImageUris` if it makes the call sites cleaner).
 - **Queue persistence with MMKV.**
   - Add `react-native-mmkv` to `apps/mobile` (`pnpm --filter mobile
-    add react-native-mmkv`), expo prebuild config plugin if needed.
+add react-native-mmkv`), expo prebuild config plugin if needed.
   - Persist `UploadJob` records (sourceUri, kind, contentType,
     sizeBytes, reportId, attempt count, status) to MMKV on every
     state transition.
@@ -156,6 +161,14 @@ Shipped end-to-end. All 15 todos landed across 15 Conventional
 Commits with same-PR doc updates (Pitfall 8). See
 [`plan-p3-feature-build.md` → P3.15.6](plan-p3-feature-build.md#p3156--camera-upload-pipeline-close-out).
 
+The current gallery policy differs by platform. Android permits the
+multi-select photo-library flow. iOS temporarily hides and rejects
+photo-library picking because the production binary requests add-only
+library access. Camera capture and optional camera-roll saves remain
+available on iOS. See
+`apps/mobile/lib/camera/photo-library-policy.ts` and
+`apps/mobile/app.config.ts`.
+
 ## 2026-05-27 — UI redesign
 
 Unified `PhotoTile` + always-grid `PhotoBatchGrid` replace
@@ -170,8 +183,6 @@ Spec: [docs/superpowers/specs/2026-05-27-photo-upload-pipeline-ui-design.md](../
 
 ## Out of scope
 
-- Document / PDF note rendering (explicitly deferred).
+- Document or PDF note picking and rendering.
 - Video capture.
 - Server-side image processing / thumbnail derivatives.
-- Offline-first capture queueing across multiple reports (only
-  in-flight per-app-launch resumption is in scope).

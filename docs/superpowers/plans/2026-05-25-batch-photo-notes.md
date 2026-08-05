@@ -1,5 +1,9 @@
 # Batch Photo Notes Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** One note = many photos. Gallery picks and camera sessions create a single note with a `note_files` join table, rendered as a 3×3 thumbnail grid card.
@@ -13,52 +17,57 @@
 ## File Structure
 
 ### API / Backend
-| Action | Path | Responsibility |
-|--------|------|----------------|
-| Create | `packages/api/migrations/0010_note_files.sql` | DDL + backfill |
-| Modify | `packages/api-contract/src/schemas/ids.ts` | Add `nfl` prefix for note-file ids |
-| Modify | `packages/api-contract/src/schemas/notes.ts` | `noteFile` schema, update `createNoteRequest`, add `appendFilesRequest` |
-| Modify | `packages/api/src/services/notes.ts` | `listNotes` joins `note_files`; `createNote` writes `note_files`; new `appendFiles` |
-| Modify | `packages/api/src/routes/notes.ts` | New `POST /reports/{report}/notes/{note}/files` route |
-| Create | `packages/api/src/__tests__/note-files.integration.test.ts` | Integration tests |
+
+| Action | Path                                                        | Responsibility                                                                      |
+| ------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Create | `packages/api/migrations/0010_note_files.sql`               | DDL + backfill                                                                      |
+| Modify | `packages/api-contract/src/schemas/ids.ts`                  | Add `nfl` prefix for note-file ids                                                  |
+| Modify | `packages/api-contract/src/schemas/notes.ts`                | `noteFile` schema, update `createNoteRequest`, add `appendFilesRequest`             |
+| Modify | `packages/api/src/services/notes.ts`                        | `listNotes` joins `note_files`; `createNote` writes `note_files`; new `appendFiles` |
+| Modify | `packages/api/src/routes/notes.ts`                          | New `POST /reports/{report}/notes/{note}/files` route                               |
+| Create | `packages/api/src/__tests__/note-files.integration.test.ts` | Integration tests                                                                   |
 
 ### Mobile — Upload Queue
-| Action | Path | Responsibility |
-|--------|------|----------------|
-| Modify | `apps/mobile/lib/uploads/types.ts` | Add `batchKey` to `EnqueueInput` |
-| Create | `apps/mobile/lib/uploads/batch-coordinator.ts` | Batch state + create-vs-append logic |
-| Create | `apps/mobile/lib/uploads/batch-coordinator.test.ts` | Unit tests |
-| Modify | `apps/mobile/lib/uploads/run-upload.ts` | Batch-aware `createNote` step |
-| Modify | `apps/mobile/lib/uploads/queue.ts` | `enqueueBatch()` method |
-| Modify | `apps/mobile/lib/uploads/index.ts` | Re-export `enqueueBatch` |
-| Modify | `apps/mobile/lib/uploads/useFileUpload.ts` | Expose `enqueueBatch` |
-| Modify | `apps/mobile/lib/camera/use-camera-uploads.ts` | Switch to `enqueueBatch` |
-| Modify | `apps/mobile/lib/camera/pick-and-enqueue-gallery-images.ts` | Pass through batch |
+
+| Action | Path                                                        | Responsibility                       |
+| ------ | ----------------------------------------------------------- | ------------------------------------ |
+| Modify | `apps/mobile/lib/uploads/types.ts`                          | Add `batchKey` to `EnqueueInput`     |
+| Create | `apps/mobile/lib/uploads/batch-coordinator.ts`              | Batch state + create-vs-append logic |
+| Create | `apps/mobile/lib/uploads/batch-coordinator.test.ts`         | Unit tests                           |
+| Modify | `apps/mobile/lib/uploads/run-upload.ts`                     | Batch-aware `createNote` step        |
+| Modify | `apps/mobile/lib/uploads/queue.ts`                          | `enqueueBatch()` method              |
+| Modify | `apps/mobile/lib/uploads/index.ts`                          | Re-export `enqueueBatch`             |
+| Modify | `apps/mobile/lib/uploads/useFileUpload.ts`                  | Expose `enqueueBatch`                |
+| Modify | `apps/mobile/lib/camera/use-camera-uploads.ts`              | Switch to `enqueueBatch`             |
+| Modify | `apps/mobile/lib/camera/pick-and-enqueue-gallery-images.ts` | Pass through batch                   |
 
 ### Mobile — Data Layer
-| Action | Path | Responsibility |
-|--------|------|----------------|
-| Modify | `apps/mobile/lib/note-entry.ts` | Add `files[]` + `pendingFiles[]` |
-| Modify | `apps/mobile/lib/uploads/usePhotoUploadEntries.ts` | Group by `batchKey` |
+
+| Action | Path                                               | Responsibility                   |
+| ------ | -------------------------------------------------- | -------------------------------- |
+| Modify | `apps/mobile/lib/note-entry.ts`                    | Add `files[]` + `pendingFiles[]` |
+| Modify | `apps/mobile/lib/uploads/usePhotoUploadEntries.ts` | Group by `batchKey`              |
 
 ### Mobile — UI Components
-| Action | Path | Responsibility |
-|--------|------|----------------|
-| Create | `apps/mobile/components/notes/PhotoBatchGrid.tsx` | 3×3 grid with +N overflow |
-| Create | `apps/mobile/components/notes/PhotoBatchGrid.test.tsx` | Snapshot tests |
-| Modify | `apps/mobile/components/notes/PhotoNoteCard.tsx` | Use `PhotoBatchGrid` for `files[]` |
-| Create | `apps/mobile/components/notes/PendingPhotoBatchCard.tsx` | In-flight batch card |
-| Modify | `apps/mobile/components/reports/detail/PhotoNoteRow.tsx` | Batch-aware saved-report row |
-| Modify | `apps/mobile/components/reports/detail/ReportPhotos.tsx` | Group-by-note with stack badge |
-| Modify | `apps/mobile/components/reports/detail/ReportNotesPane.tsx` | Pass `files[]` to `PhotoNoteRow` |
-| Modify | `apps/mobile/components/reports/generate/GenerateReportProvider.tsx` | Wire batch photo gallery |
-| Modify | `apps/mobile/components/notes/NoteTimeline.tsx` | Render batch cards + pending batches |
+
+| Action | Path                                                                 | Responsibility                       |
+| ------ | -------------------------------------------------------------------- | ------------------------------------ |
+| Create | `apps/mobile/components/notes/PhotoBatchGrid.tsx`                    | 3×3 grid with +N overflow            |
+| Create | `apps/mobile/components/notes/PhotoBatchGrid.test.tsx`               | Snapshot tests                       |
+| Modify | `apps/mobile/components/notes/PhotoNoteCard.tsx`                     | Use `PhotoBatchGrid` for `files[]`   |
+| Create | `apps/mobile/components/notes/PendingPhotoBatchCard.tsx`             | In-flight batch card                 |
+| Modify | `apps/mobile/components/reports/detail/PhotoNoteRow.tsx`             | Batch-aware saved-report row         |
+| Modify | `apps/mobile/components/reports/detail/ReportPhotos.tsx`             | Group-by-note with stack badge       |
+| Modify | `apps/mobile/components/reports/detail/ReportNotesPane.tsx`          | Pass `files[]` to `PhotoNoteRow`     |
+| Modify | `apps/mobile/components/reports/generate/GenerateReportProvider.tsx` | Wire batch photo gallery             |
+| Modify | `apps/mobile/components/notes/NoteTimeline.tsx`                      | Render batch cards + pending batches |
 
 ---
 
 ## Task 1: Migration — `app.note_files` table
 
 **Files:**
+
 - Create: `packages/api/migrations/0010_note_files.sql`
 
 - [ ] **Step 1: Write the migration SQL**
@@ -117,6 +126,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 2: Contract — `noteFile` schema + request updates
 
 **Files:**
+
 - Modify: `packages/api-contract/src/schemas/ids.ts`
 - Modify: `packages/api-contract/src/schemas/notes.ts`
 
@@ -151,12 +161,14 @@ export type NoteFile = z.infer<typeof noteFile>;
 ```
 
 Update `note` schema — add:
+
 ```ts
 /** Present for image kind; empty array for non-image. */
 files: z.array(noteFile).default([]),
 ```
 
 Update `createNoteRequest` — add:
+
 ```ts
 /** Required for image kind: at least one file entry. */
 files: z.array(z.object({
@@ -166,12 +178,17 @@ files: z.array(z.object({
 ```
 
 Add new request schema:
+
 ```ts
 export const appendFilesRequest = z.object({
-  files: z.array(z.object({
-    fileId: fileId,
-    thumbnailFileId: fileId.nullable().optional(),
-  })).min(1),
+  files: z
+    .array(
+      z.object({
+        fileId: fileId,
+        thumbnailFileId: fileId.nullable().optional(),
+      }),
+    )
+    .min(1),
 });
 export type AppendFilesRequest = z.infer<typeof appendFilesRequest>;
 ```
@@ -190,6 +207,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3: Service — `listNotes` joins `note_files`, `createNote` writes batch, new `appendFiles`
 
 **Files:**
+
 - Modify: `packages/api/src/services/notes.ts`
 
 - [ ] **Step 1: Add `NoteFileRow` type and mapping**
@@ -231,14 +249,15 @@ After fetching the note rows, do a second query for the page's note ids:
 
 ```ts
 const noteIds = slice.map((r) => r.id);
-const filesResult = noteIds.length > 0
-  ? await db.execute<RawNoteFile>(sql`
+const filesResult =
+  noteIds.length > 0
+    ? await db.execute<RawNoteFile>(sql`
       SELECT id, note_id, file_id, thumbnail_file_id, position, caption
       FROM app.note_files
       WHERE note_id = ANY(${noteIds}::text[])
       ORDER BY position ASC
     `)
-  : { rows: [] };
+    : { rows: [] };
 
 const filesByNote = new Map<string, NoteFileRow[]>();
 for (const r of filesResult.rows) {
@@ -253,6 +272,7 @@ Then in `mapNote`, merge: `files: filesByNote.get(r.id) ?? []`.
 - [ ] **Step 3: Update `createNote` — image kind writes to `note_files`**
 
 When `input.kind === 'image'` and `input.files` is provided:
+
 - Don't write `file_id`/`thumbnail_file_id` on the note row
 - After inserting the note, insert into `app.note_files` for each file entry
 
@@ -322,6 +342,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4: Route — `POST /reports/{report}/notes/{note}/files`
 
 **Files:**
+
 - Modify: `packages/api/src/routes/notes.ts`
 
 - [ ] **Step 1: Add the append-files route**
@@ -345,10 +366,22 @@ noteRoutes.openapi(
       body: { content: { 'application/json': { schema: noteSchemas.appendFilesRequest } } },
     },
     responses: {
-      200: { description: 'Files appended.', content: { 'application/json': { schema: noteSchemas.note } } },
-      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
-      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      200: {
+        description: 'Files appended.',
+        content: { 'application/json': { schema: noteSchemas.note } },
+      },
+      400: {
+        description: 'Bad request.',
+        content: { 'application/json': { schema: errorEnvelope } },
+      },
+      401: {
+        description: 'Unauthorized.',
+        content: { 'application/json': { schema: errorEnvelope } },
+      },
+      404: {
+        description: 'Not found.',
+        content: { 'application/json': { schema: errorEnvelope } },
+      },
     },
   }),
   async (c) => {
@@ -381,11 +414,13 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 5: API integration tests
 
 **Files:**
+
 - Create: `packages/api/src/__tests__/note-files.integration.test.ts`
 
 - [ ] **Step 1: Write integration tests**
 
 Tests should cover:
+
 1. `POST /reports/{report}/notes` with `kind: 'image', files: [{fileId, thumbnailFileId}]` → 201, response has `files[0]`
 2. `POST /reports/{report}/notes/{note}/files` appends → 200, response has all files in position order
 3. `GET /reports/{report}/notes` → image notes have `files[]` populated, `fileId` is null
@@ -414,6 +449,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6: Upload queue — batch coordinator
 
 **Files:**
+
 - Create: `apps/mobile/lib/uploads/batch-coordinator.ts`
 - Create: `apps/mobile/lib/uploads/batch-coordinator.test.ts`
 
@@ -496,6 +532,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 7: Upload queue — `enqueueBatch` + batch-aware `createNote` step
 
 **Files:**
+
 - Modify: `apps/mobile/lib/uploads/types.ts`
 - Modify: `apps/mobile/lib/uploads/run-upload.ts`
 - Modify: `apps/mobile/lib/uploads/queue.ts`
@@ -505,6 +542,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 - [ ] **Step 1: Add `batchKey` to `EnqueueInput`**
 
 In `types.ts`, add to `EnqueueInput`:
+
 ```ts
 /** Batch key. All jobs in the same batch contribute files to one note. */
 batchKey?: string;
@@ -513,6 +551,7 @@ batchKey?: string;
 - [ ] **Step 2: Add `appendFiles` to `UploadDeps`**
 
 In `run-upload.ts`, add to `UploadDeps`:
+
 ```ts
 appendFiles: (args: {
   reportId: string;
@@ -526,6 +565,7 @@ appendFiles: (args: {
 - [ ] **Step 3: Update `runUploadJob` — batch-aware createNote**
 
 When `input.batchKey` is set, instead of calling `deps.createNote` directly:
+
 - Accept an optional `batchNoteId?: string` parameter
 - If `batchNoteId` is provided → call `deps.appendFiles` instead
 - If not → call `deps.createNote` as before
@@ -544,6 +584,7 @@ enqueueBatch(
 ```
 
 Implementation:
+
 - Mint a `batchKey` (ulid or similar)
 - Stamp `batchKey` + `reportId` onto each input
 - Enqueue each via the existing `enqueue()` path
@@ -568,6 +609,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 8: Camera uploads — switch to `enqueueBatch`
 
 **Files:**
+
 - Modify: `apps/mobile/lib/camera/use-camera-uploads.ts`
 - Modify: `apps/mobile/lib/camera/pick-and-enqueue-gallery-images.ts`
 
@@ -595,7 +637,15 @@ const enqueueCameraUris = useCallback(
           contentType: 'image/jpeg',
           sizeBytes: processed.sizeBytes,
           reportId: opts.reportId,
-          ...(thumbnail ? { thumbnail: { sourceUri: thumbnail.uri, contentType: 'image/jpeg', sizeBytes: thumbnail.sizeBytes } } : {}),
+          ...(thumbnail
+            ? {
+                thumbnail: {
+                  sourceUri: thumbnail.uri,
+                  contentType: 'image/jpeg',
+                  sizeBytes: thumbnail.sizeBytes,
+                },
+              }
+            : {}),
         };
       }),
     );
@@ -632,6 +682,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 9: Data layer — `NoteEntry` + `usePhotoUploadEntries` batch grouping
 
 **Files:**
+
 - Modify: `apps/mobile/lib/note-entry.ts`
 - Modify: `apps/mobile/lib/uploads/usePhotoUploadEntries.ts`
 
@@ -709,6 +760,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 10: UI — `PhotoBatchGrid` component
 
 **Files:**
+
 - Create: `apps/mobile/components/notes/PhotoBatchGrid.tsx`
 - Create: `apps/mobile/components/notes/PhotoBatchGrid.test.tsx`
 
@@ -769,9 +821,7 @@ export function PhotoBatchGrid({ files, tileSize = 90, onPressTile }: PhotoBatch
           className="items-center justify-center rounded-md bg-muted"
           testID="photo-batch-overflow"
         >
-          <Text className="text-sm font-medium text-muted-foreground">
-            +{overflow + 1}
-          </Text>
+          <Text className="text-sm font-medium text-muted-foreground">+{overflow + 1}</Text>
         </View>
       ) : null}
     </View>
@@ -797,6 +847,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 11: UI — Update `PhotoNoteCard` + `NoteTimeline` for batches
 
 **Files:**
+
 - Modify: `apps/mobile/components/notes/PhotoNoteCard.tsx`
 - Create: `apps/mobile/components/notes/PendingPhotoBatchCard.tsx`
 - Modify: `apps/mobile/components/notes/NoteTimeline.tsx`
@@ -809,7 +860,9 @@ When `entry.files` is populated (length > 0), render `PhotoBatchGrid`. Otherwise
 import { PhotoBatchGrid } from '@/components/notes/PhotoBatchGrid';
 
 // In render:
-const files = entry.files ?? (entry.fileId ? [{ fileId: entry.fileId, thumbnailFileId: entry.thumbnailFileId }] : []);
+const files =
+  entry.files ??
+  (entry.fileId ? [{ fileId: entry.fileId, thumbnailFileId: entry.thumbnailFileId }] : []);
 
 // Replace the single PhotoGridTile with:
 <PhotoBatchGrid
@@ -818,7 +871,7 @@ const files = entry.files ?? (entry.fileId ? [{ fileId: entry.fileId, thumbnailF
     const f = files[i];
     if (f && onOpen) onOpen(f.fileId, sourceIndex);
   }}
-/>
+/>;
 ```
 
 - [ ] **Step 2: Create `PendingPhotoBatchCard`**
@@ -833,6 +886,7 @@ Similar to `PendingPhotoCard` but renders a grid of local thumbnails with per-ti
 - [ ] **Step 3: Update `NoteTimeline` — dispatch to batch cards**
 
 In the image branch of the `.map()`:
+
 - If `entry.pendingFiles` → render `PendingPhotoBatchCard`
 - If `entry.files` or `entry.fileId` → render `PhotoNoteCard` (already handles both)
 - Remove the old `entry.pendingUpload` → `PendingPhotoCard` path (replaced by batch)
@@ -851,6 +905,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 12: UI — Saved report `PhotoNoteRow` + `ReportNotesPane` + `ReportPhotos`
 
 **Files:**
+
 - Modify: `apps/mobile/components/reports/detail/PhotoNoteRow.tsx`
 - Modify: `apps/mobile/components/reports/detail/ReportNotesPane.tsx`
 - Modify: `apps/mobile/components/reports/detail/ReportPhotos.tsx`
@@ -871,11 +926,13 @@ Render logic: `files?.length ? <PhotoBatchGrid ... /> : <PhotoGridTile ... />`
 - [ ] **Step 2: Update `ReportNotesPane` — pass `files` through**
 
 Add `files` to `ReportNoteRow` interface:
+
 ```ts
 files?: ReadonlyArray<{ fileId: string; thumbnailFileId?: string | null }>;
 ```
 
 In the photo rendering branch, pass it:
+
 ```tsx
 <PhotoNoteRow ... files={note.files} />
 ```
@@ -885,26 +942,30 @@ In the photo rendering branch, pass it:
 Replace the flat photo list with a per-note grouping:
 
 ```tsx
-const photoBatches = useMemo(() =>
-  (noteRows ?? [])
-    .filter((n) => n.kind === 'photo' && n.files?.length)
-    .map((n) => ({
-      noteId: n.id,
-      coverFileId: n.files![0]!.fileId,
-      coverThumbId: n.files![0]!.thumbnailFileId ?? null,
-      count: n.files!.length,
-    })),
+const photoBatches = useMemo(
+  () =>
+    (noteRows ?? [])
+      .filter((n) => n.kind === 'photo' && n.files?.length)
+      .map((n) => ({
+        noteId: n.id,
+        coverFileId: n.files![0]!.fileId,
+        coverThumbId: n.files![0]!.thumbnailFileId ?? null,
+        count: n.files!.length,
+      })),
   [noteRows],
 );
 ```
 
 Each tile renders with a `count > 1` badge overlay:
+
 ```tsx
-{batch.count > 1 && (
-  <View className="absolute top-1 right-1 rounded bg-black/60 px-1">
-    <Text className="text-[10px] text-white font-medium">{batch.count}</Text>
-  </View>
-)}
+{
+  batch.count > 1 && (
+    <View className="absolute top-1 right-1 rounded bg-black/60 px-1">
+      <Text className="text-[10px] text-white font-medium">{batch.count}</Text>
+    </View>
+  );
+}
 ```
 
 - [ ] **Step 4: Commit**
@@ -921,6 +982,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 13: Wire batch into `GenerateReportProvider` photo gallery
 
 **Files:**
+
 - Modify: `apps/mobile/components/reports/generate/GenerateReportProvider.tsx`
 
 - [ ] **Step 1: Update `photoGallery` memo**
@@ -933,7 +995,8 @@ const photoGallery = useMemo(
     timelineItems
       .filter((e) => e.source === 'image')
       .flatMap((e) => {
-        const files = e.files ?? (e.fileId ? [{ fileId: e.fileId, thumbnailFileId: e.thumbnailFileId }] : []);
+        const files =
+          e.files ?? (e.fileId ? [{ fileId: e.fileId, thumbnailFileId: e.thumbnailFileId }] : []);
         return files.map((f) => ({
           fileId: f.fileId,
           title: e.text?.trim() || 'Photo',
@@ -960,6 +1023,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 14: Regenerate OpenAPI types + run full test suite
 
 **Files:**
+
 - Modify: `packages/api-contract/openapi.json` (auto-generated)
 - Modify: `packages/api-contract/src/generated/types.ts` (auto-generated)
 
@@ -1001,11 +1065,13 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 15: Update docs
 
 **Files:**
+
 - Modify: `docs/v4/arch-storage.md` or `docs/v4/arch-data-layer.md` (whichever covers notes schema)
 
 - [ ] **Step 1: Document `note_files` table and batch semantics**
 
 Add a section explaining:
+
 - Image notes now use `note_files` join table
 - One note = one batch of photos
 - Voice/document still use `notes.file_id` directly

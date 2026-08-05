@@ -31,12 +31,15 @@ i.e. the API **didn't actually work end-to-end** until P7 retro work.
 - ≥ 90% line coverage on `packages/api/src/`.
 - Testcontainers integration tests for every route, hitting real
   Postgres. Per-request scope tests for every authenticated route.
-- Contract tests verifying `api-contract` matches the live OpenAPI
-  spec generated from Hono.
-- No real LLM calls in CI. All AI calls go through `ai-fixtures`.
+- Contract tests that compare `api-contract` with Hono's generated
+  OpenAPI document and registered route table.
+- Normal unit and integration lanes use AI replay. The explicit
+  `ai-live` workflow and production-promotion journeys are the only
+  cost-bearing CI lanes.
 
-P1 is not "done" until `pnpm test:api && pnpm test:api:integration`
-both pass at the coverage gate. The CI workflow blocks merge.
+The API coverage gate runs with
+`pnpm --filter @harpa/api test:coverage`. It combines unit tests and
+two Testcontainers shards before it applies the 90% line threshold.
 
 ---
 
@@ -46,18 +49,33 @@ both pass at the coverage gate. The CI workflow blocks merge.
 several times (`00f139d` fixed type inference). The `:mock` build
 mode was bolted on later via `EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE`.
 
-**v4 rule.** `packages/ai-fixtures` is the **first thing** we build
-in P0 (P0.5), before any real LLM call exists. Every provider client
-is constructed via `createProvider({ fixtureMode })`. Modes:
+**Current v4 rule.** All provider calls go through
+`packages/ai-fixtures`. The API owns the mode decision:
 
-- `record` — hits the real provider, writes a fixture JSON to
-  `packages/ai-fixtures/fixtures/<name>.json`, redacted via a
-  schema. Used by `pnpm fixtures:record <name>`.
-- `replay` — reads the fixture; if missing, throws. Used in tests
-  and `:mock` builds.
-- `live` — only enabled by `AI_LIVE=1` in production deploys.
+- `AI_LIVE=1` selects live providers.
+- Any other `AI_LIVE` value selects checked-in replay fixtures.
+- A request-body `fixtureName` can select a scenario after replay is
+  active. It cannot change a live server to replay.
+- The API does not select record mode from `AI_FIXTURE_MODE`.
 
-CI sets `AI_FIXTURE_MODE=replay` and asserts no `live` calls.
+The provider package also supports record mode for controlled tools.
+The checked-in recorder currently covers only the five OpenAI report
+scenarios. Run it with:
+
+```bash
+AI_LIVE=1 OPENAI_API_KEY=... \
+  pnpm --filter @harpa/ai-fixtures record -- --scenario voice-3
+```
+
+Inspect every generated file before commit. The recorder redacts known
+secret and personal-data shapes, but human review remains required.
+
+`EXPO_PUBLIC_USE_FIXTURES=true` controls fixture input inside the
+mobile app. It does not select server replay. Point fixture-input
+builds only at an API with `AI_LIVE=0` when live calls are unwanted.
+
+Normal CI lanes use replay. The path-filtered `ai-live` workflow and
+production-promotion journeys make intentional live provider calls.
 
 ---
 
@@ -92,6 +110,7 @@ dumps and realignment docs are not part of this repository and are
 explicitly **not** acceptance sources in v4.
 
 Tactical sub-rules:
+
 - Tailwind tokens are defined once in
   `apps/mobile/tailwind.config.js`. No hex values in screen code
   (ESLint rule `no-restricted-syntax` scoped to `components/**` in
@@ -147,19 +166,18 @@ implementation and tests.
   — every screen was using `process.env.X!` and crashing at runtime
   when the var was missing.
 - `9c65a36 docs(testing): document EXPO_PUBLIC env var requirement
-  for Android release builds` — discovered in production.
+for Android release builds` — discovered in production.
 
 **v4 rule.**
 
 1. Auth ships in P0.6 with a working email-OTP flow via better-auth +
    Resend **before** any other API route. P1's first task is "auth
    middleware + integration tests".
-2. `apps/mobile/lib/env.ts` is a Zod-parsed object loaded at app
+2. `apps/mobile/lib/config/env.ts` is a Zod-parsed object loaded at app
    boot. ESLint forbids `process.env.EXPO_PUBLIC_*` outside that
-   file. CI runs the parse against a populated `.env.example` to
-   catch missing vars before merge.
+   file. Unit tests cover defaults, valid values, and invalid values.
 3. OTP verify uses a single async function (`await
-   authClient.signIn.emailOtp`, then `router.replace`). No
+authClient.signIn.emailOtp`, then `router.replace`). No
    `setTimeout` in auth flows. Lint rule: `no-restricted-syntax` for
    `setTimeout` inside `app/(auth)/`.
 
@@ -207,7 +225,7 @@ returned "Invalid date" in some locales.
 - API serialises all timestamps as ISO-8601 strings via a single
   Zod transform in `api-contract`. No raw PG textual timestamps over
   the wire.
-- `apps/mobile/lib/date.ts` is a single module with full unit test
+- `apps/mobile/lib/util/date.ts` is a single module with full unit test
   coverage of every format used in the UI (relative time, short
   date, long date, time-of-day) — and a regression test for the
   PG textual format ("just in case").
@@ -244,8 +262,9 @@ com.harpa.pro.v3 in all flows` — `.maestro/` flows had hardcoded
 
 **v4 rule.** `appId` is a single environment variable
 (`MAESTRO_APP_ID`) read by every flow via `${MAESTRO_APP_ID}`.
-A pre-test grep in `pnpm test:e2e` fails if any flow file contains
-a literal `com.harpa.*` instead of the variable.
+`scripts/check-maestro-appid.sh` fails if any flow file contains a
+literal `com.harpa.pro` instead of the variable. Root lint runs the
+check.
 
 ---
 
@@ -274,7 +293,7 @@ broken cross-references, dead code.
 returned `<time>-<rand>` got into Postgres `uuid` columns and
 silently broke PostgREST.
 
-**v4 rule.** `apps/mobile/lib/uuid.ts` is the only UUID source.
+**v4 rule.** `apps/mobile/lib/util/uuid.ts` is the only UUID source.
 It uses `expo-crypto`'s `randomUUID()` and asserts RFC-4122 shape.
 Lint rule forbids `crypto.randomUUID()` and template-string fallbacks.
 
@@ -331,7 +350,7 @@ selectors) must read the parsed `env` const, not `process.env`
 directly.** During the camera-upload audit we found
 `pickStorage()` was branching on `process.env.R2_FIXTURE_MODE` while
 every other line in the same module read `env.R2_*`. The default
-factory therefore made the live R2 selection on the *raw* env value,
+factory therefore made the live R2 selection on the _raw_ env value,
 which silently disagreed with the Zod-parsed view used by
 `R2Storage`'s constructor — a textbook layer-1 trapdoor that no
 unit test would catch. Two defences shipped together:
@@ -395,7 +414,7 @@ CLI compiler is the only place this surfaces — until you ship it.
 **Diagnosis crib:** if `openapi-fetch` complains the path literal
 isn't in `PathsWithMethod`, grep the generated types
 (`packages/api-contract/src/generated/types.ts`) for the resource
-prefix — the spec is the source of truth.
+prefix. Route code generates the spec; the committed spec must match.
 
 ## Pitfall 15 — Route handlers that ignore user settings
 
@@ -410,7 +429,7 @@ fixture, every email still ships in English.
 **Rule:** When a route's output depends on a per-user preference,
 load that preference in the same handler that does the work and
 pass it explicitly into the service. Don't rely on a default
-parameter — the default *is* the bug.
+parameter — the default _is_ the bug.
 
 `packages/api/src/routes/reports.ts::runGenerate` is the canonical
 shape (loads `getAiSettings(d, userId)`, forwards `vendor` to
@@ -429,11 +448,11 @@ keeps replaying canned fixtures.
 `fixtureName` argument and short-circuited to `'replay'` whenever any
 fixture name was set. The three callers (`transcribe`, `chat`,
 `generateReport`) each derived a sensible default (`summarize.basic`,
-`transcribe.basic.groq`, …) and passed it in *unconditionally* — so
+`transcribe.basic.groq`, …) and passed it in _unconditionally_ — so
 the function always saw a fixture name, and `AI_LIVE=1` was dead
 code. A unit-style test that called `chat({ userPrompt: 'x' })`
 without a fixtureName would have caught it; we only had tests that
-asserted *replay* behaviour and passed fixture names through.
+asserted _replay_ behaviour and passed fixture names through.
 
 The first repair distinguished caller-supplied names from derived
 defaults, but that still left an authenticated JSON field in control
@@ -475,7 +494,8 @@ container, CTA, surrounding padding) must be **identical** in
 inner content region. If a control must be disabled during load,
 render it disabled — do not unmount it.
 
-**Test rule:** Use `useLayoutShiftProbe` (`apps/mobile/lib/layout-shift-probe.ts`)
+**Test rule:** Use `useLayoutShiftProbe`
+(`apps/mobile/lib/util/layout-shift-probe.ts`)
 on landmark nodes in both the skeleton and the loaded tree with the
 same id. In dev, set `EXPO_PUBLIC_LAYOUT_PROBE=true` and call
 `dumpShiftReport()` — every landmark must have `maxDeltaY ≤ 2 px`.

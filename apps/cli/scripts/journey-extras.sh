@@ -25,16 +25,17 @@
 #   pnpm --filter @harpa/cli build
 #
 # Run:
-#   ./apps/cli/scripts/journey-extras.sh
+#   HARPA_TOKEN=<owner-token> HARPA_TOKEN_B=<outsider-token> \
+#     ./apps/cli/scripts/journey-extras.sh
+#
+# Or sign in with email OTP (codes are prompted after each send):
+#   EMAIL=owner@example.com EMAIL_B=outsider@example.com \
+#     ./apps/cli/scripts/journey-extras.sh
+#   # OTP_CODE / OTP_CODE_B may be set to avoid interactive prompts.
 set -euo pipefail
 
 export HARPA_API_URL="${HARPA_API_URL:-http://localhost:8787}"
 CLI="node $(cd "$(dirname "$0")/.." && pwd)/dist/index.js"
-
-# Use a unique phone per run so baseline usage is always 0.
-SUFFIX=$(printf "%04d" $(( $(date +%s) % 10000 )))
-PHONE="+1555123${SUFFIX}"
-OTP_CODE="000000"
 
 # Sample fixtures live in the repo (apps/cli/scripts/samples). They are
 # tiny, license-free, hand-crafted bytes — see samples/README.md.
@@ -51,6 +52,16 @@ KEYS_FILE="$WORK/keys"
 
 step() { echo; echo "▶ $*"; }
 fail() { echo "✗ $*" >&2; exit 1; }
+sign_in_with_email_otp() {
+  local email="$1" code="${2:-}"
+  $CLI auth otp start "$email" >&2
+  if [[ -z "$code" ]]; then
+    [[ -t 0 ]] || fail "an OTP code is required when stdin is not interactive"
+    read -r -s -p "OTP for $email: " code
+    echo >&2
+  fi
+  $CLI auth otp verify "$email" "$code" --raw
+}
 cleanup() {
   # Best-effort: remove uploaded objects from MinIO via the mc image.
   # Runs even on failure so the bucket doesn't accumulate orphans.
@@ -73,33 +84,37 @@ echo "using samples from $SAMPLES:"
 ls -l "$IMG" "$WAV" "$PDF" "$TXT"
 
 # ─── auth ──────────────────────────────────────────────────────────
-step "auth otp start"
-$CLI auth otp start "$PHONE"
-
-step "auth otp verify → captures token"
-TOKEN=$($CLI auth otp verify "$PHONE" "$OTP_CODE" --json | jq -r .token)
-test -n "$TOKEN" && echo "token: ${TOKEN:0:24}…"
+TOKEN="${HARPA_TOKEN:-}"
+TOKEN_FROM_OTP=0
+if [[ -n "$TOKEN" ]]; then
+  step "auth — reuse HARPA_TOKEN"
+else
+  : "${EMAIL:?EMAIL is required when HARPA_TOKEN is not set}"
+  step "auth email OTP — start + verify"
+  TOKEN=$(sign_in_with_email_otp "$EMAIL" "${OTP_CODE:-}")
+  TOKEN_FROM_OTP=1
+fi
+test -n "$TOKEN" || fail "authentication returned an empty token"
+echo "owner token: ${TOKEN:0:24}…"
 export HARPA_TOKEN="$TOKEN"
 
 # ─── baseline usage (before any LLM calls) ────────────────────────
 step "me usage (baseline)"
 USAGE_BEFORE=$($CLI me usage --json)
 CALLS_BEFORE=$(echo "$USAGE_BEFORE" | jq '.totals.calls')
-TOK_BEFORE=$(echo "$USAGE_BEFORE"   | jq '.totals.tokens.total')
+TOK_BEFORE=$(echo "$USAGE_BEFORE" | jq '.totals.inputTokens + .totals.outputTokens + .totals.cachedTokens')
 echo "baseline: calls=$CALLS_BEFORE tokens=$TOK_BEFORE"
-test "$CALLS_BEFORE"  = "0" || fail "expected 0 baseline calls, got $CALLS_BEFORE"
-test "$TOK_BEFORE"    = "0" || fail "expected 0 baseline tokens, got $TOK_BEFORE"
 
 # ─── setup: one project + one report ──────────────────────────────
 step "projects create"
-PROJ=$($CLI projects create --name "Token-accounting site" --json | jq -r .id)
-echo "project: $PROJ"
+PROJECT_SLUG=$($CLI projects create --name "Token-accounting site" --json | jq -er .id)
+echo "project slug: $PROJECT_SLUG"
 
 step "reports create"
-RPT_JSON=$($CLI reports create "$PROJ" --visit-date 2026-05-17 --json)
-RPT_NUM=$(echo "$RPT_JSON" | jq -r .number)
-RPT_ID=$(echo  "$RPT_JSON" | jq -r .id)
-echo "report number=$RPT_NUM id=$RPT_ID"
+REPORT_JSON=$($CLI reports create "$PROJECT_SLUG" --visit-date 2026-05-17 --json)
+REPORT_NUMBER=$(echo "$REPORT_JSON" | jq -er .number)
+REPORT_ID=$(echo "$REPORT_JSON" | jq -er .id)
+echo "report number=$REPORT_NUMBER id=$REPORT_ID"
 
 # ─── REAL uploads: round-trip each file kind through MinIO ────────
 # Each step: `files upload` (presign → PUT → register), then
@@ -135,108 +150,125 @@ upload_and_verify "document" document "$TXT" "text/plain"
 
 # ─── be-2: each AI call should record a usage row ─────────────────
 step "voice transcribe (records 1 transcribe row)"
-$CLI voice transcribe --file-id "$FILE_VOICE" --fixture transcribe.basic
+$CLI voice transcribe --file-id "$FILE_VOICE" --fixture transcribe.voice-1
 
 step "voice summarize (records 1 chat row, non-zero tokens)"
-$CLI voice summarize --transcript "Crew of four poured concrete at 8am." --fixture summarize.basic
+$CLI voice summarize --transcript "Crew of four poured concrete at 8am." --fixture summarize.voice-1
 
 step "reports generate (records 1 generate_report row)"
-$CLI reports generate "$PROJ" "$RPT_NUM" --fixture generate-report.full
+$CLI reports generate "$PROJECT_SLUG" "$REPORT_NUMBER" --fixture generate-report.voice-1
 
 # ─── be-3: /me/usage reflects all 3 LLM calls ─────────────────────
 step "me usage (after 3 LLM calls)"
 USAGE_AFTER=$($CLI me usage --json)
-echo "$USAGE_AFTER" | jq '{ totals, byModel }'
+echo "$USAGE_AFTER" | jq '{ totals, usageByModel }'
 CALLS_AFTER=$(echo "$USAGE_AFTER" | jq '.totals.calls')
-TOK_AFTER=$(echo "$USAGE_AFTER"   | jq '.totals.tokens.total')
-TOK_INPUT=$(echo "$USAGE_AFTER"   | jq '.totals.tokens.input')
-TOK_OUTPUT=$(echo "$USAGE_AFTER"  | jq '.totals.tokens.output')
-echo "after: calls=$CALLS_AFTER tokens=$TOK_AFTER (input=$TOK_INPUT output=$TOK_OUTPUT)"
+TOK_AFTER=$(echo "$USAGE_AFTER" | jq '.totals.inputTokens + .totals.outputTokens + .totals.cachedTokens')
+TOK_INPUT=$(echo "$USAGE_AFTER" | jq '.totals.inputTokens')
+TOK_OUTPUT=$(echo "$USAGE_AFTER" | jq '.totals.outputTokens')
+TOK_CACHED=$(echo "$USAGE_AFTER" | jq '.totals.cachedTokens')
+echo "after: calls=$CALLS_AFTER tokens=$TOK_AFTER (input=$TOK_INPUT output=$TOK_OUTPUT cached=$TOK_CACHED)"
 
 # 3 chokepoint calls: transcribe + chat (summarize) + generate.
-test "$CALLS_AFTER" -ge 3 || fail "expected >=3 calls, got $CALLS_AFTER"
+test "$CALLS_AFTER" -ge "$((CALLS_BEFORE + 3))" \
+  || fail "expected at least 3 new calls, got $((CALLS_AFTER - CALLS_BEFORE))"
 # chat + generate carry usage; transcribe (whisper) carries 0 tokens.
-test "$TOK_AFTER"   -gt 0 || fail "expected non-zero total tokens, got $TOK_AFTER"
-test "$TOK_INPUT"   -gt 0 || fail "expected non-zero input tokens"
-test "$TOK_OUTPUT"  -gt 0 || fail "expected non-zero output tokens"
-test "$TOK_AFTER"   -eq "$((TOK_INPUT + TOK_OUTPUT))" \
-  || fail "total ($TOK_AFTER) != input ($TOK_INPUT) + output ($TOK_OUTPUT)"
+test "$TOK_AFTER" -gt "$TOK_BEFORE" \
+  || fail "expected token usage to increase from $TOK_BEFORE, got $TOK_AFTER"
 
-step "me usage byModel breakdown lists chat + transcribe + generate_report"
-OPS=$(echo "$USAGE_AFTER" | jq -r '[.byModel[].operation] | unique | sort | join(",")')
+step "me usage usageByModel breakdown lists chat + transcribe + generate_report"
+OPS=$(echo "$USAGE_AFTER" | jq -r '[.usageByModel[].operation] | unique | sort | join(",")')
 echo "operations: $OPS"
-test "$OPS" = "chat,generate_report,transcribe" \
-  || fail "expected operations 'chat,generate_report,transcribe', got '$OPS'"
+echo "$USAGE_AFTER" | jq -e \
+  '[.usageByModel[].operation] | contains(["chat", "generate_report", "transcribe"])' \
+  >/dev/null || fail "usageByModel is missing an expected operation"
 
 # ─── coverage: deep-link resolvers (/p/{id}, /r/{id}) — no CLI command ─
 step "GET /p/{project} resolves to projectId"
-RESOLVED_P=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$HARPA_API_URL/p/$PROJ")
+RESOLVED_P=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$HARPA_API_URL/p/$PROJECT_SLUG")
 echo "$RESOLVED_P" | jq .
-test "$(echo "$RESOLVED_P" | jq -r .projectId)" = "$PROJ" \
+test "$(echo "$RESOLVED_P" | jq -r .projectId)" = "$PROJECT_SLUG" \
   || fail "resolver /p/{project} returned wrong projectId"
 
 step "GET /r/{report} resolves to projectId + reportNumber"
-RESOLVED_R=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$HARPA_API_URL/r/$RPT_ID")
+RESOLVED_R=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$HARPA_API_URL/r/$REPORT_ID")
 echo "$RESOLVED_R" | jq .
-test "$(echo "$RESOLVED_R" | jq -r .projectId)"    = "$PROJ"    || fail "/r resolver wrong projectId"
-test "$(echo "$RESOLVED_R" | jq -r .reportNumber)" = "$RPT_NUM" || fail "/r resolver wrong reportNumber"
+test "$(echo "$RESOLVED_R" | jq -r .projectId)" = "$PROJECT_SLUG" || fail "/r resolver wrong projectId"
+test "$(echo "$RESOLVED_R" | jq -r .reportNumber)" = "$REPORT_NUMBER" || fail "/r resolver wrong reportNumber"
 
 # ─── be-1: finalize → unfinalize round-trip ───────────────────────
 step "reports finalize"
-FIN=$($CLI reports finalize "$PROJ" "$RPT_NUM" --json)
+FIN=$($CLI reports finalize "$PROJECT_SLUG" "$REPORT_NUMBER" --json)
 test "$(echo "$FIN" | jq -r .report.status)" = "finalized" \
   || fail "expected finalized status"
 
 # ─── coverage: finalize lock-down (update blocked while finalized) ─
 step "reports update on finalized → must fail with 409"
-if $CLI reports update "$PROJ" "$RPT_NUM" --visit-date 2026-06-01 >/dev/null 2>&1; then
+if $CLI reports update "$PROJECT_SLUG" "$REPORT_NUMBER" --visit-date 2026-06-01 >/dev/null 2>&1; then
   fail "expected update on finalized report to fail"
 fi
 echo "✓ update blocked on finalized report"
 
 step "reports unfinalize (flips back to draft)"
-UNFIN=$($CLI reports unfinalize "$PROJ" "$RPT_NUM" --json)
+UNFIN=$($CLI reports unfinalize "$PROJECT_SLUG" "$REPORT_NUMBER" --json)
 test "$(echo "$UNFIN" | jq -r .report.status)" = "draft" \
   || fail "expected draft status after unfinalize"
 test "$(echo "$UNFIN" | jq -r .report.finalizedAt)" = "null" \
   || fail "expected finalizedAt cleared after unfinalize"
 
 step "reports unfinalize again → 409 (non-idempotent)"
-if $CLI reports unfinalize "$PROJ" "$RPT_NUM" >/dev/null 2>&1; then
+if $CLI reports unfinalize "$PROJECT_SLUG" "$REPORT_NUMBER" >/dev/null 2>&1; then
   fail "expected unfinalize on draft report to fail with 409"
 fi
 echo "✓ second unfinalize correctly failed"
 
-# ─── coverage: bootstrap a 2nd user for cross-tenant test ─────────
-step "bootstrap bob (second user)"
-SUFFIX_B=$(printf "%04d" $(( ($(date +%s) + 1) % 10000 )))
-PHONE_B="+1555124${SUFFIX_B}"
-$CLI auth otp start "$PHONE_B" >/dev/null
-TOKEN_B=$($CLI auth otp verify "$PHONE_B" "$OTP_CODE" --json | jq -r .token)
-echo "bob token: ${TOKEN_B:0:24}…"
+# ─── coverage: second user for cross-tenant test ──────────────────
+TOKEN_B="${HARPA_TOKEN_B:-}"
+TOKEN_B_FROM_OTP=0
+if [[ -n "$TOKEN_B" ]]; then
+  step "outsider auth — reuse HARPA_TOKEN_B"
+else
+  : "${EMAIL_B:?EMAIL_B is required when HARPA_TOKEN_B is not set}"
+  step "outsider auth email OTP — start + verify"
+  TOKEN_B=$(sign_in_with_email_otp "$EMAIL_B" "${OTP_CODE_B:-}")
+  TOKEN_B_FROM_OTP=1
+fi
+test -n "$TOKEN_B" || fail "outsider authentication returned an empty token"
+test "$TOKEN_B" != "$TOKEN" || fail "owner and outsider tokens must differ"
+echo "outsider token: ${TOKEN_B:0:24}…"
 
 # ─── coverage: cross-tenant 403 — non-member can't see alice's project ─
-step "bob GET /projects/{alice-project} → not 200"
-CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-  -H "Authorization: Bearer $TOKEN_B" "$HARPA_API_URL/projects/$PROJ")
-echo "got HTTP $CODE"
-test "$CODE" != "200" || fail "expected bob to be denied, got 200"
-echo "✓ cross-tenant access denied (status=$CODE)"
+step "outsider projects get <owner-project> → auth/not-found exit"
+if HARPA_TOKEN="$TOKEN_B" $CLI projects get "$PROJECT_SLUG" >/dev/null 2>&1; then
+  fail "expected outsider to be denied"
+else
+  CODE=$?
+fi
+test "$CODE" = "3" || test "$CODE" = "4" \
+  || fail "expected auth/not-found exit 3 or 4, got $CODE"
+echo "✓ cross-tenant access denied (exit=$CODE)"
 
-# Note: PATCH /projects/{p}/members/{u} role-change route exists but depends on
-# Postgres function `app.update_member_role` which is not present in migrations
-# — out of scope for this journey; tracked separately.
+# The member-role update API route has no CLI command and is intentionally
+# outside this CLI journey.
 
 # ─── cleanup ──────────────────────────────────────────────────────
 step "reports delete"
-$CLI reports delete "$PROJ" "$RPT_NUM"
+$CLI reports delete "$PROJECT_SLUG" "$REPORT_NUMBER"
 
 step "projects delete"
-$CLI projects delete "$PROJ"
+$CLI projects delete "$PROJECT_SLUG"
 
-step "auth logout (alice + bob)"
-$CLI auth logout
-HARPA_TOKEN="$TOKEN_B" $CLI auth logout
+step "auth logout"
+if [[ "$TOKEN_FROM_OTP" = "1" ]]; then
+  $CLI auth logout
+else
+  echo "owner logout skipped (caller supplied HARPA_TOKEN)"
+fi
+if [[ "$TOKEN_B_FROM_OTP" = "1" ]]; then
+  HARPA_TOKEN="$TOKEN_B" $CLI auth logout
+else
+  echo "outsider logout skipped (caller supplied HARPA_TOKEN_B)"
+fi
 
 echo
 echo "✅ Extras journey complete — real uploads + unfinalize + token accounting verified."

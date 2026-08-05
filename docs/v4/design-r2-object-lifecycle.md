@@ -165,7 +165,13 @@ because the account transaction has already committed.
 
 Fly runs one service-less worker in production and dev. The HTTP `app` group
 can still suspend at zero; the worker is independently scaled to one
-`shared-cpu-1x` Machine with 256 MB. This is a deliberate always-on cost.
+`shared-cpu-1x` Machine with 512 MB. It launches Node through the `tsx` loader
+directly and logs a structured process/guest memory sample at startup and
+hourly. This is a deliberate always-on cost; the headroom prevents the runtime
+and Fly guest overhead from crowding a 256 MB Machine into recurring OOM
+restarts. Fly's built-in Machine memory metric remains authoritative for
+whole-VM saturation.
+
 Preview apps have no worker and cannot call `DELETE /me`.
 
 The route fast-path normally removes the immediate job without waiting for the

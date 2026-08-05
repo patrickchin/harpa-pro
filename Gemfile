@@ -2,9 +2,7 @@
 
 source "https://rubygems.org"
 
-# The macOS system Ruby in this workspace is 2.6.x. Fastlane 2.228.0 is the
-# newest checked version that supports Ruby 2.6, keeping local setup
-# reproducible without requiring a Ruby version manager.
-ruby ">= 2.6.0"
+# Keep local and CI tooling on .ruby-version while supporting EAS Ruby 3.2.
+ruby ">= 3.1", "< 5"
 
-gem "fastlane", "2.228.0"
+gem "fastlane", "2.237.0"

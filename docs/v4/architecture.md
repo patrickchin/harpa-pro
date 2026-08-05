@@ -1,8 +1,9 @@
 # v4 Architecture
 
-> **Status**: live — the source of truth for the v4 rewrite. P0 and P1
-> are complete; P2 shipped at `v0.2.0-shell`; P3 (Feature Build) is the
-> active phase. Per-section docs are kept in sync as features land.
+> **Status: live.** The application, API, public site, and admin console
+> are deployed, and the iOS app is public. Phase plans are historical
+> delivery records. Current code, tests, and live architecture sections
+> define present behavior.
 >
 > Read [`pitfalls.md`](pitfalls.md) before this doc. The architecture
 > below is shaped by the lessons recorded there.
@@ -28,8 +29,8 @@ flowchart TB
     subgraph Mobile["Mobile (apps/mobile)"]
         UI["RN + NativeWind UI"]
         RQ["TanStack React Query"]
-        QUEUE["Upload queue (legend-state)"]
-        ENV["lib/env.ts (Zod-validated)"]
+        QUEUE["Upload queue (MMKV persistence)"]
+        ENV["lib/config/env.ts (Zod-validated)"]
         APIC["api-contract client (typed)"]
     end
 
@@ -61,16 +62,13 @@ flowchart TB
     end
 
     subgraph R2["Cloudflare R2"]
-        FILES[("voice / image / pdf buckets")]
+        FILES[("application file bucket")]
     end
 
     subgraph AI["AI providers"]
         K[Kimi]
         OAI[OpenAI]
-        ANT[Anthropic]
-        G[Google]
-        ZAI[Z.AI]
-        DS[DeepSeek]
+        GR[Groq]
     end
 
     subgraph FIX["packages/ai-fixtures"]
@@ -85,7 +83,7 @@ flowchart TB
     HONO --> BA
     HONO --> ADMINAUTH --> ADMINPG
     HONO --> SCOPE --> DRIZZLE --> PG
-    HONO --> AISVC --> FIX --> K & OAI & ANT & G & ZAI & DS
+    HONO --> AISVC --> FIX --> K & OAI & GR
     HONO --> R2SIGN
     BA -- "Email OTP" --> OTP
 ```
@@ -101,48 +99,48 @@ flowchart TB
 | API            | Hono + Drizzle                | **same**                                                                  | Working pattern, keep.                                                                                             |
 | Contract       | Zod + OpenAPI generated types | **same**                                                                  | Working pattern, keep.                                                                                             |
 | LLM mocking    | Bolt-on mock-ai (P5.3)        | **`ai-fixtures` package, P0**                                             | Fixtures-first per Pitfall 2.                                                                                      |
-| Mobile state   | React Query + legend-state    | **same**                                                                  | Worked.                                                                                                            |
+| Mobile state   | React Query + legend-state    | **TanStack Query + MMKV-backed caches and upload jobs**                   | User-scoped persistence protects account boundaries and resumes uploads.                                           |
 | E2E            | Maestro                       | **Maestro behaviour flows**                                               | Per-page interaction tests. No automated visual diff. Manual review uses the relevant v4 spec or current baseline. |
 | CI gates       | Coverage at end               | **Per-phase gates**                                                       | Gates listed in each `plan-p*.md`.                                                                                 |
 
 ## Section index
 
-| #   | Section                                             | File                                                                                     | Description                                                                                                                                                                                                                                                 |
-| --- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | API design                                          | [arch-api-design.md](arch-api-design.md)                                                 | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy                                                                                                                                                                            |
-| 1a  | **Rate limiting**                                   | [arch-rate-limiting.md](arch-rate-limiting.md)                                           | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /api/auth/email-otp/\*; multi-machine correctness**                                                                                                                |
-| 2   | Auth + per-request scope                            | [arch-auth-and-rls.md](arch-auth-and-rls.md)                                             | Better Auth email OTP, isolated admin password auth, scoped Postgres roles, and scope tests                                                                                                                                                                 |
-| 3   | Data layer (mobile)                                 | [arch-data-layer.md](arch-data-layer.md)                                                 | Generated client, React Query hooks, optimistic updates, error handling                                                                                                                                                                                     |
-| 4   | Mobile architecture                                 | [arch-mobile.md](arch-mobile.md)                                                         | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio                                                                                                                                                                  |
-| 4a  | **Mobile navigation policy**                        | [arch-mobile-navigation.md](arch-mobile-navigation.md)                                   | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper**                                                                                                                                                   |
-| 5   | Storage (R2)                                        | [arch-storage.md](arch-storage.md)                                                       | R2 buckets, signed URL flow, lifecycle, security, fixture mode                                                                                                                                                                                              |
-| 6   | AI fixtures                                         | [arch-ai-fixtures.md](arch-ai-fixtures.md)                                               | record/replay/live modes, redaction, packaging                                                                                                                                                                                                              |
-| 7   | Databases (Neon)                                    | [arch-database.md](arch-database.md)                                                     | Independent application and admin projects, branching, migrations, roles, and restore boundaries                                                                                                                                                            |
-| 7a  | IDs + URL shapes                                    | [arch-ids-and-urls.md](arch-ids-and-urls.md)                                             | Prefixed slugs, UUIDv7 keys, per-project report numbers, long + short URLs, deep-link readiness                                                                                                                                                             |
-| 7b  | **P3.0 IDs/slugs design**                           | [design-p30-ids-slugs.md](design-p30-ids-slugs.md)                                       | **Migration plan, slug generator, API routes, scope tests, mobile routing (implementation-ready)**                                                                                                                                                          |
-| 8   | Shared packages                                     | [arch-shared-packages.md](arch-shared-packages.md)                                       | api-contract, ai-fixtures, ui (optional)                                                                                                                                                                                                                    |
-| 9   | Testing strategy                                    | [arch-testing.md](arch-testing.md)                                                       | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay                                                                                                                                                                                  |
-| 10  | Observability + ops                                 | [arch-ops.md](arch-ops.md)                                                               | Fly metrics, Sentry, log shipping, deploy flow                                                                                                                                                                                                              |
-| 10a | **CI/CD + migrations**                              | [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md)                               | **Release-command migration apply, `/readyz` schema-head check, expand-contract rules, rollback playbook**                                                                                                                                                  |
-| 11  | **CLI**                                             | [arch-cli.md](arch-cli.md)                                                               | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes**                                                                                                                                                     |
-| 12  | **Project members**                                 | [arch-project-members.md](arch-project-members.md)                                       | **Roles, invite (POST), role-change (PATCH), removal (DELETE), owner-demotion guard, error codes, scope tests**                                                                                                                                             |
-| 13  | **Maestro full regression**                         | [design-maestro-full-regression.md](design-maestro-full-regression.md)                   | **P4.8 two-actor nightly E2E journey: members permissions, voice/photo/text notes, generate/finalize, Report Debug surface**                                                                                                                                |
-| 14  | **Usage limits**                                    | [arch-usage-limits.md](arch-usage-limits.md)                                             | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast**                                                                     |
-| 15  | **Batch photo notes**                               | [arch-batch-photo-notes.md](arch-batch-photo-notes.md)                                   | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI**                                                                                                                                                          |
-| 15a | **Photo placement**                                 | [design-photo-placement.md](design-photo-placement.md)                                   | **Lets the user attach a photo group to a specific issue or summary section: `report.body.*.attachments.images[]`, `PATCH /projects/{project}/reports/{number}/attachments`, `MapPin` chip + `AppDialogSheet` picker, server-side attachment sanitization** |
-| 16  | **Report auto-regen**                               | [arch-report-auto-regen.md](arch-report-auto-regen.md)                                   | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook**                                                                                                                                  |
-| 16a | **Published report review**                         | [design-report-review-comments.md](design-report-review-comments.md)                     | **Finalized Report / Review tabs, append-only member comments, RLS-scoped GET/POST routes, and full-width wrapping report titles**                                                                                                                          |
-| 17  | **Voice pipeline**                                  | [arch-voice-pipeline.md](arch-voice-pipeline.md)                                         | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))**                                                      |
-| 18  | **Mobile skeletons**                                | [arch-mobile-skeletons.md](arch-mobile-skeletons.md)                                     | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate**                                                                                                                                                                                  |
-| 19  | **App shell (P2.6)**                                | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md)                                         | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6**                                                                                                                                        |
-| 20  | **Admin business activity (implemented)**           | [design-admin-business-activity.md](design-admin-business-activity.md)                   | **Append-oriented business events, an admin-only API, and the activity console**                                                                                                                                                                            |
-| 20a | **Separate admin authentication (rollout pending)** | [design-separate-admin-auth.md](design-separate-admin-auth.md)                           | **Dedicated `@harpapro.com` identities, long-password login, opaque browser sessions, and an independent Neon project**                                                                                                                                     |
-| 20b | **Separate admin site**                             | [design-separate-admin-site.md](design-separate-admin-site.md)                           | **Independent `apps/admin` static artifact, Pages project, exact browser origins, and deployment workflows for `admin.harpapro.com`**                                                                                                                       |
-| 20c | **Cloudflare Pages Git deployments**                | [design-cloudflare-pages-git-deployments.md](design-cloudflare-pages-git-deployments.md) | **Tokenless Git publishing, exact `pr-N` preview refs, build-time environment selection, and exact-SHA deployment verification**                                                                                                                            |
-| 21  | **Office dashboard**                                  | [design-office-dashboard.md](design-office-dashboard.md)                                 | **Project/member/report management companion with keyboard-first report editing and mobile-first field capture**                                                                                                                                        |
-| 21a | **Dashboard visual system**                           | [design-dashboard-visual-system.md](design-dashboard-visual-system.md)                   | **Mobile-authored color, type, spacing, control, and shape contract for the office dashboard only**                                                                                                                                                        |
+| #   | Section                                      | File                                                                                     | Description                                                                                                                                                                                                                                                 |
+| --- | -------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | API design                                   | [arch-api-design.md](arch-api-design.md)                                                 | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy                                                                                                                                                                            |
+| 1a  | **Rate limiting**                            | [arch-rate-limiting.md](arch-rate-limiting.md)                                           | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /api/auth/email-otp/\*; multi-machine correctness**                                                                                                                |
+| 2   | Auth + per-request scope                     | [arch-auth-and-rls.md](arch-auth-and-rls.md)                                             | Better Auth email OTP, isolated admin password auth, scoped Postgres roles, and scope tests                                                                                                                                                                 |
+| 3   | Data layer (mobile)                          | [arch-data-layer.md](arch-data-layer.md)                                                 | Generated client, React Query hooks, optimistic updates, error handling                                                                                                                                                                                     |
+| 4   | Mobile architecture                          | [arch-mobile.md](arch-mobile.md)                                                         | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio                                                                                                                                                                  |
+| 4a  | **Mobile navigation policy**                 | [arch-mobile-navigation.md](arch-mobile-navigation.md)                                   | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper**                                                                                                                                                   |
+| 5   | Storage (R2)                                 | [arch-storage.md](arch-storage.md)                                                       | R2 buckets, signed URL flow, lifecycle, security, fixture mode                                                                                                                                                                                              |
+| 6   | AI fixtures                                  | [arch-ai-fixtures.md](arch-ai-fixtures.md)                                               | record/replay/live modes, redaction, packaging                                                                                                                                                                                                              |
+| 7   | Databases (Neon)                             | [arch-database.md](arch-database.md)                                                     | Independent application and admin projects, branching, migrations, roles, and restore boundaries                                                                                                                                                            |
+| 7a  | IDs + URL shapes                             | [arch-ids-and-urls.md](arch-ids-and-urls.md)                                             | Prefixed slugs, UUIDv7 keys, per-project report numbers, long + short URLs, deep-link readiness                                                                                                                                                             |
+| 7b  | **P3.0 IDs/slugs design**                    | [design-p30-ids-slugs.md](design-p30-ids-slugs.md)                                       | **Migration plan, slug generator, API routes, scope tests, mobile routing (implementation-ready)**                                                                                                                                                          |
+| 8   | Shared packages                              | [arch-shared-packages.md](arch-shared-packages.md)                                       | api-contract, ai-fixtures, ui (optional)                                                                                                                                                                                                                    |
+| 9   | Testing strategy                             | [arch-testing.md](arch-testing.md)                                                       | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay                                                                                                                                                                                  |
+| 10  | Observability + ops                          | [arch-ops.md](arch-ops.md)                                                               | Fly metrics, Sentry, log shipping, deploy flow                                                                                                                                                                                                              |
+| 10a | **CI/CD + migrations**                       | [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md)                               | **Release-command migration apply, `/readyz` schema-head check, expand-contract rules, rollback playbook**                                                                                                                                                  |
+| 11  | **CLI**                                      | [arch-cli.md](arch-cli.md)                                                               | **Debug and API-journey tool (`apps/cli`); stateless and environment-driven**                                                                                                                                                                               |
+| 12  | **Project members**                          | [arch-project-members.md](arch-project-members.md)                                       | **Roles, invite (POST), role-change (PATCH), removal (DELETE), owner-demotion guard, error codes, scope tests**                                                                                                                                             |
+| 13  | **Maestro full regression**                  | [design-maestro-full-regression.md](design-maestro-full-regression.md)                   | **P4.8 two-actor nightly E2E journey: members permissions, voice/photo/text notes, generate/finalize, Report Debug surface**                                                                                                                                |
+| 14  | **Usage limits**                             | [arch-usage-limits.md](arch-usage-limits.md)                                             | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast**                                                                     |
+| 15  | **Batch photo notes**                        | [arch-batch-photo-notes.md](arch-batch-photo-notes.md)                                   | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI**                                                                                                                                                          |
+| 15a | **Photo placement**                          | [design-photo-placement.md](design-photo-placement.md)                                   | **Lets the user attach a photo group to a specific issue or summary section: `report.body.*.attachments.images[]`, `PATCH /projects/{project}/reports/{number}/attachments`, `MapPin` chip + `AppDialogSheet` picker, server-side attachment sanitization** |
+| 16  | **Report auto-regen**                        | [arch-report-auto-regen.md](arch-report-auto-regen.md)                                   | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook**                                                                                                                                  |
+| 16a | **Published report review**                  | [design-report-review-comments.md](design-report-review-comments.md)                     | **Finalized Report / Review tabs, append-only member comments, RLS-scoped GET/POST routes, and full-width wrapping report titles**                                                                                                                          |
+| 17  | **Voice pipeline**                           | [arch-voice-pipeline.md](arch-voice-pipeline.md)                                         | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))**                                                      |
+| 18  | **Mobile skeletons**                         | [arch-mobile-skeletons.md](arch-mobile-skeletons.md)                                     | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate**                                                                                                                                                                                  |
+| 19  | **App shell (P2.6)**                         | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md)                                         | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6**                                                                                                                                        |
+| 20  | **Admin business activity (implemented)**    | [design-admin-business-activity.md](design-admin-business-activity.md)                   | **Append-oriented business events, an admin-only API, and the activity console**                                                                                                                                                                            |
+| 20a | **Separate admin authentication (deployed)** | [design-separate-admin-auth.md](design-separate-admin-auth.md)                           | **Dedicated `@harpapro.com` identities, long-password login, opaque browser sessions, and an independent Neon project**                                                                                                                                     |
+| 20b | **Separate admin site (deployed)**           | [design-separate-admin-site.md](design-separate-admin-site.md)                           | **Independent `apps/admin` static artifact, Pages project, exact browser origins, and deployment workflows for `admin.harpapro.com`**                                                                                                                       |
+| 20c | **Cloudflare Pages Git deployments**         | [design-cloudflare-pages-git-deployments.md](design-cloudflare-pages-git-deployments.md) | **Tokenless Git publishing, exact `pr-N` preview refs, build-time environment selection, and exact-SHA deployment verification**                                                                                                                            |
+| 21  | **Office dashboard (preview and dev)**       | [design-office-dashboard.md](design-office-dashboard.md)                                 | **Project/member/report management companion with keyboard-first report editing and mobile-first field capture**                                                                                                                                            |
+| 21a | **Dashboard visual system**                  | [design-dashboard-visual-system.md](design-dashboard-visual-system.md)                   | **Mobile-authored color, type, spacing, control, and shape contract for the office dashboard only**                                                                                                                                                         |
 
-## Repo layout (target end of P0)
+## Repository layout
 
 ```
 apps/
@@ -152,7 +150,10 @@ apps/
     features/             # domain logic (voice, upload, reports, …)
     lib/                  # env, date, uuid, dialogs, …
     tailwind.config.js
-  docs/                   # Next.js docs site (in-app guides + visual ref)
+  dashboard/              # React + Vite office project/report workspace
+  site/                   # Astro marketing, guides, and legal pages
+  admin/                  # standalone admin console
+  cli/                    # API and journey CLI
 
 packages/
   api/                    # Hono REST API
@@ -171,7 +172,7 @@ packages/
   api-contract/           # Zod schemas + generated OpenAPI types
   ai-fixtures/            # record/replay/live providers + fixtures
   design-tokens/          # mobile-authored CSS tokens for the dashboard
-  ui/                     # shared primitives (P2.1; optional split later)
+  report-core/            # shared report transformation and rendering logic
 
 infra/
   neon/                   # branching scripts (create/delete on PR)
@@ -186,10 +187,13 @@ docs/
   v4/                     # current
   bugs/                   # recurring bugs log
 
-skills/                   # auto-loaded
 ```
 
-## Phases
+## Historical phases
+
+The phase table records the original delivery model. It is not a
+current release-status dashboard. Use active pull requests, CI, and
+the release documentation for present work.
 
 | Phase | Name            | Exit gate (binding)                                                                                                                                                                                                                                                   |
 | ----- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

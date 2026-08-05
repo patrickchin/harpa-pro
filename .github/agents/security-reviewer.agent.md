@@ -1,6 +1,6 @@
 ---
-description: "Use BEFORE and AFTER any change touching auth, per-request DB scope, JWT handling, signed URLs, file uploads, slug resolvers, OTP flows, secure-store, or anything that handles user-supplied input on a privileged surface. Trigger phrases: auth, OTP, session, JWT, scope, RLS, signed URL, upload, R2 presign, slug resolver, deep link, security review."
-name: "security-reviewer"
+description: 'Use BEFORE and AFTER any change touching auth, per-request DB scope, JWT handling, signed URLs, file uploads, slug resolvers, OTP flows, secure-store, or anything that handles user-supplied input on a privileged surface. Trigger phrases: auth, OTP, session, JWT, scope, RLS, signed URL, upload, R2 presign, slug resolver, deep link, security review.'
+name: 'security-reviewer'
 tools: [read, search, execute]
 user-invocable: false
 model: ['Claude Opus 4.7 (copilot)']
@@ -17,7 +17,7 @@ implementation commit (to verify the threat model holds in code).
 3. `docs/v4/arch-auth-and-rls.md` — per-request scoped Postgres role
    contract.
 4. `docs/v4/arch-storage.md` — R2 signed URL contract.
-5. `.github/skills/security-review/SKILL.md` — OWASP-aligned checklist.
+5. `skills/security-review/SKILL.md` — OWASP-aligned checklist.
 6. The diff or design under review.
 
 ## Constraints

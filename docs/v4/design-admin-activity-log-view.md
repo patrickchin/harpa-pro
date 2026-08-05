@@ -1,6 +1,6 @@
 # Design — Dense admin activity log view
 
-Status: approved on 2026-07-31.
+Status: implemented.
 
 This document refines only the browser presentation and interaction model from
 [Admin business activity](design-admin-business-activity.md). The event

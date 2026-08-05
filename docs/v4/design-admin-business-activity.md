@@ -1,7 +1,7 @@
 # Design — Admin business activity
 
-Status: approved on 2026-07-29. The first detail-level expansion was approved
-on 2026-07-30. The separate admin-auth cutover is in progress; see
+Status: implemented and deployed. The first detail-level expansion was
+approved on 2026-07-30. The separate admin-auth boundary is live; see
 [Separate admin console authentication](design-separate-admin-auth.md).
 
 Implementation status:
@@ -10,7 +10,7 @@ Implementation status:
 - [x] Phase 2 — initial signup, project, and report event writers.
 - [x] Phase 3 — admin read API and credentialed browser CORS.
 - [x] Phase 4 — admin page.
-- [ ] Phase 5 — deployment.
+- [x] Phase 5 — deployment.
 - [x] Phase 6 — detail levels and advanced filtering.
 
 ## Problem
@@ -62,9 +62,9 @@ This design deliberately separates:
 Add an append-oriented `app.activity_events` table, a typed
 `GET /admin/activity` API, and an Astro page containing one React island.
 
-The page uses TanStack Table for table state and rendering. Filtering and
-pagination remain server-side. The API is the only data source; the browser
-never connects to Neon directly.
+The page renders a dense native list. Filtering and pagination remain
+server-side. The API is the only data source; the browser never connects to
+Neon directly. TanStack Table is not installed.
 
 Business events remain in the application Neon project. Administrator
 identities and sessions live in the independent `harpa-pro-admin` Neon
@@ -474,7 +474,7 @@ before being treated as complete.
 ### Phase 4 — Admin page
 
 - Add the dedicated admin-auth fetch client and password states.
-- Add TanStack Table and the activity island.
+- Add the dense activity-list island.
 - Add the Astro route, noindex/robots exclusions, tests, and responsive
   styling.
 
@@ -486,7 +486,7 @@ before being treated as complete.
 - Configure the production API origin allowlist and migrate the independent
   admin `main` database before provisioning production.
 - Attach `admin.harpapro.com` to the independent Pages project and verify the
-  root console plus legacy-path redirect.
+  root console and verify that unknown browser paths return 404.
 - Decide whether to enable Cloudflare Access.
 - Run a production smoke: sign up, create a project and report, add selected
   note kinds, and verify both milestone and detail rows with request IDs where

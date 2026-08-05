@@ -1,8 +1,7 @@
 # Public site and documentation design
 
-Status: approved on 2026-07-03; guide hierarchy and initial screenshot
-revision approved on 2026-07-03; contextual screenshot layout approved on
-2026-08-05.
+Status: implemented. Guide content and all nine release screenshots were
+reverified on 2026-08-04.
 
 ## Context
 
@@ -151,18 +150,18 @@ missing. Old H3/v3 screenshots and generated mockups are excluded.
 
 The initial screenshot map is:
 
-| Guide step or surface | Screenshot |
-| --- | --- |
-| Docs index strip | Voice/notes capture, generated report, PDF preview |
-| Generate an AI report | Projects, voice/notes, generated report |
-| Export and share a PDF | PDF preview |
-| Create and manage projects | Projects list |
-| Capture notes, photos, and voice notes | Voice/notes capture |
-| Add members to a project | Members list |
-| Edit a report manually | Closest current generated-report view |
-| Browse and reopen saved reports | Reports list |
-| Getting started | Projects list |
-| Your account | Usage history |
+| Guide step or surface                  | Screenshot                                            |
+| -------------------------------------- | ----------------------------------------------------- |
+| Docs index strip                       | Voice/notes capture, generated report, PDF preview    |
+| Generate an AI report                  | Reports, voice/notes, generated report, member review |
+| Export and share a PDF                 | PDF preview                                           |
+| Create and manage projects             | Projects list                                         |
+| Capture notes, photos, and voice notes | Voice/notes capture                                   |
+| Add members to a project               | Members list                                          |
+| Edit a report manually                 | Closest current generated-report view                 |
+| Browse and reopen saved reports        | Reports list                                          |
+| Getting started                        | Projects list                                         |
+| Your account                           | Usage history                                         |
 
 Every image has descriptive alt text, explicit dimensions, and lazy loading
 below the fold. Every guide crop has a contextual full-capture link. A missing

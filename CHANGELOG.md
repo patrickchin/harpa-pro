@@ -10,34 +10,33 @@ in the repository's Git history and tags.
 
 ## [Unreleased]
 
-### Changed
-
-- Separated the private administration console from the public website so it
-  can be deployed and verified independently before the
-  `admin.harpapro.com` cutover.
-
-## [0.1.65] - 2026-07-31
-
 ### Added
 
-- Added a protected administration activity feed for reviewing important
-  account, project, report, and note events.
+- Added the office dashboard for project/member management and keyboard-first
+  report editing against the same mobile report model.
+- Added protected administration activity and service-status views.
 
 ### Changed
 
+- Separated the private administration console from the public website.
 - Limited iOS photo access to in-app capture and camera-roll saves, and removed
   profile-photo controls that required photo-library browsing.
-- Made report generation retries and uploads safer across repeated requests,
-  server instances, and account changes.
-- Strengthened project-member permissions so viewers remain read-only and
-  editors cannot perform owner-only actions.
+- Made report generation retries safer across repeated requests and server
+  instances.
 
 ### Fixed
 
-- Account deletion now removes associated stored files instead of leaving
-  orphaned uploads.
-- Hardened production deployment checks, database snapshots, storage-worker
-  recovery, dependency review, and secret handling.
+- Account deletion now retries stored-file cleanup instead of leaving failed
+  deletions behind.
+- Persisted mobile query data is now isolated by signed-in account.
+
+## [0.1.65] - 2026-07-28
+
+### Changed
+
+- Isolated pending uploads by signed-in session.
+- Strengthened project-member permissions so viewers remain read-only and
+  editors cannot perform owner-only actions.
 
 ## [0.1.56] - 2026-07-28
 

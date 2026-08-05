@@ -16,7 +16,7 @@ react-native-svg`. RNSVG was never linked into the iOS Pods, so
 at runtime the bridge fell back to a default Image — which, with
 no source, rendered the brand asset.
 
-**Fix.** [TBD commit] — `apps/mobile/package.json` adds
+**Fix.** Commit `a777d47c` — `apps/mobile/package.json` adds
 `react-native-svg@15.8.0`. Pod reinstall via `expo run:ios` picks
 up `RNSVG` and the icons render.
 

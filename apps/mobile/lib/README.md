@@ -4,16 +4,19 @@
 Nothing flat at the `lib/` root — a CI guard enforces this.
 
 Subfolders:
+
 - `api/`, `auth/`, `audio/`, `camera/`, `config/`, `dialogs/`,
-  `files/`, `nav/`, `native/`, `notes/`, `phone/`, `projects/`,
+  `files/`, `nav/`, `native/`, `notes/`, `projects/`,
   `reports/`, `telemetry/`, `uploads/`, `util/`, plus
   `ai/`, `design-tokens/`, `dev-fixtures/`.
 
 Goes here:
+
 - Pure helpers, hooks without their own UI, type definitions,
   client wrappers (api, dialogs).
 
 Does NOT go here:
+
 - Presentational UI → `components/<domain>/`.
 - Anything with significant stateful coordination → `features/<domain>/`.
 

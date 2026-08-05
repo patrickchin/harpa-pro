@@ -1,6 +1,7 @@
 # Separate admin console authentication
 
-**Status:** Implemented; production rollout and first administrator provisioning pending
+**Status:** Implemented and deployed. Current administrator provisioning is
+provider-managed and `UNKNOWN` from the repository.
 
 ## Context
 
@@ -43,7 +44,7 @@ app-user audit foreign keys. They are not called by this page.
 
 1. An operator provisions an exact `@harpapro.com` address with the admin CLI
    and stores its long password in a password manager.
-2. The administrator opens `/admin/activity`.
+2. The administrator opens the admin site root, `/`.
 3. The page checks `GET /admin/auth/session`.
 4. If signed out, the page asks for email and password.
 5. `POST /admin/auth/login` verifies the dedicated identity, creates a
@@ -346,4 +347,5 @@ that step.
 - password recovery email;
 - an admin identity management UI;
 - migration of the remaining programmatic `/admin/*` routes; and
-- extraction into a separate `apps/admin` deployment.
+- migration of any remaining programmatic admin route that still uses app-user
+  authorization.

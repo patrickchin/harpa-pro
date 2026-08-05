@@ -1,6 +1,6 @@
 ---
-description: "Use for any change to packages/api Drizzle schema, SQL migrations under packages/api/migrations/, per-request scoped Postgres role work, slug resolvers, or anything in arch-database.md / arch-auth-and-rls.md. Trigger phrases: migration, drizzle, schema, postgres, neon, scope, RLS, scoped role, UUIDv7, slug, per-project number, expand-contract."
-name: "database-reviewer"
+description: 'Use for any change to packages/api Drizzle schema, SQL migrations under packages/api/migrations/, per-request scoped Postgres role work, slug resolvers, or anything in arch-database.md / arch-auth-and-rls.md. Trigger phrases: migration, drizzle, schema, postgres, neon, scope, RLS, scoped role, UUIDv7, slug, per-project number, expand-contract.'
+name: 'database-reviewer'
 tools: [read, search, execute]
 user-invocable: false
 model: ['Claude Opus 4.7 (copilot)']
@@ -17,8 +17,8 @@ touches the Postgres schema or the per-request scoped-role contract.
    number scheme.
 4. `docs/v4/pitfalls.md` — Pitfall 6 (RLS retrofit), Pitfall 1
    (test coverage gate).
-5. `.github/skills/database-migrations/SKILL.md`.
-6. `.github/skills/postgres-patterns/SKILL.md`.
+5. `skills/database-migrations/SKILL.md`.
+6. `skills/postgres-patterns/SKILL.md`.
 7. Existing Drizzle schema under `packages/api/src/db/` and
    migrations under `packages/api/migrations/`.
 
@@ -39,7 +39,8 @@ touches the Postgres schema or the per-request scoped-role contract.
 ## Approach
 
 1. Read the schema diff and the generated SQL migration.
-2. Verify migration filename matches `YYYYMMDDHHmm_description.sql`.
+2. Verify the migration filename uses a unique numeric prefix and a
+   lowercase underscore-separated description.
 3. Verify expand/contract is honoured for every breaking change.
 4. Verify scope tests cover every new column or table (Pitfall 6).
 5. Verify the corresponding `api-contract` Zod schemas are updated

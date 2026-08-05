@@ -1133,11 +1133,11 @@ function ActivityFeed({
                   />
                 </label>
 
-                <label className="block cursor-pointer">
+                <label className="relative block cursor-pointer">
                   <input
                     aria-label="Any user"
                     checked={!filters.actorUserId}
-                    className="peer sr-only"
+                    className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                     name="activity-included-user"
                     type="radio"
                     value=""
@@ -1167,11 +1167,11 @@ function ActivityFeed({
                           </p>
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
-                          <label className="block cursor-pointer">
+                          <label className="relative block cursor-pointer">
                             <input
                               aria-label={`Only ${actorOptionLabel(actor)}`}
                               checked={included}
-                              className="peer sr-only"
+                              className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                               name="activity-included-user"
                               type="radio"
                               value={actor.id}
@@ -1179,11 +1179,11 @@ function ActivityFeed({
                             />
                             <span className={filterListChoiceClass(included)}>Only</span>
                           </label>
-                          <label className="block cursor-pointer">
+                          <label className="relative block cursor-pointer">
                             <input
                               aria-label={`Exclude ${actorOptionLabel(actor)}`}
                               checked={excluded}
-                              className="peer sr-only"
+                              className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                               disabled={
                                 !excluded && filters.excludedActors.length >= MAX_EXCLUDED_ACTORS
                               }
@@ -1221,11 +1221,11 @@ function ActivityFeed({
                   />
                 </label>
 
-                <label className="block cursor-pointer">
+                <label className="relative block cursor-pointer">
                   <input
                     aria-label="Any project"
                     checked={!filters.projectId}
-                    className="peer sr-only"
+                    className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                     name="activity-project"
                     type="radio"
                     value=""
@@ -1255,11 +1255,11 @@ function ActivityFeed({
                           </p>
                           <p className="truncate font-mono text-xs text-ink-soft">{project.id}</p>
                         </div>
-                        <label className="block cursor-pointer">
+                        <label className="relative block cursor-pointer">
                           <input
                             aria-label={`Only ${projectOptionLabel(project)}`}
                             checked={optionSelected}
-                            className="peer sr-only"
+                            className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                             name="activity-project"
                             type="radio"
                             value={project.id}

@@ -75,6 +75,13 @@
     deployments. Automatic production deployments remain disabled. No custom
     domain is attached. See
     [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
+- **Pages pull request feedback**: The native Cloudflare Git integration owns
+  the preview deployment comment for the public site, admin console, and office
+  dashboard. GitHub Actions verifies each stable alias and reports its result as
+  a check, but does not post a second Pages link or request pull-request write
+  permission. The Fly API preview keeps its separate comment because it covers
+  readiness, isolated databases, and mobile override details that Cloudflare
+  does not provide.
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary

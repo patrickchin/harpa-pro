@@ -102,7 +102,6 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-      pull-requests: write
     env:
       DASHBOARD_BRANCH: pr-${{ github.event.pull_request.number }}
       DASHBOARD_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
@@ -186,21 +185,3 @@ jobs:
           path: apps/dashboard/test-results-live/**/*.png
           if-no-files-found: ignore
           retention-days: 7
-
-      - name: Comment dashboard preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          header: dashboard-preview
-          message: |
-            ### Office dashboard preview
-
-            - **Dashboard:** ${{ env.DASHBOARD_PREVIEW_ORIGIN }}
-            - **API:** ${{ env.API_PREVIEW_ORIGIN }}
-            - **Cloudflare Git branch:** `${{ env.DASHBOARD_BRANCH }}`
-            - **Pages head:** `${{ github.event.pull_request.head.sha }}`
-            - **Tested API merge:** `${{ github.sha }}`
-
-            The stable dashboard alias passed the exact-SHA marker and
-            client-side SPA route checks. The deployed Chromium journey also
-            exercised real auth, Fly, Neon, and one live AI generation against
-            the isolated pull-request API.

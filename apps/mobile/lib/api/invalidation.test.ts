@@ -38,6 +38,12 @@ function extractQueryHookNames(source: string): string[] {
   return [...names].sort();
 }
 
+function extractMutationBlock(source: string, hookName: string): string {
+  const start = source.indexOf(`export type ${hookName.replace(/^use/, '')}MutationVars`);
+  const end = source.indexOf('\nexport type ', start + 1);
+  return source.slice(start, end === -1 ? undefined : end);
+}
+
 describe('lib/api/invalidation', () => {
   const mutations = extractMutationHookNames(hooksSource);
   const queries = extractQueryHookNames(hooksSource);
@@ -77,5 +83,14 @@ describe('lib/api/invalidation', () => {
         expect(head.length, `${name}: key head cannot be ""`).toBeGreaterThan(0);
       }
     }
+  });
+
+  it.each([
+    'useFinalizeReport',
+    'useUnfinalizeReport',
+  ])('%s mutation forwards its OpenAPI request body', (hookName) => {
+    const block = extractMutationBlock(hooksSource, hookName);
+    expect(block).toContain('body: RequestBody<');
+    expect(block).toContain('body: vars.body');
   });
 });

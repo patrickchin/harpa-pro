@@ -39,6 +39,7 @@ import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane'
 import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
+import { reportMutationInput } from '@/lib/reports/report-mutation-input';
 import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
@@ -98,6 +99,7 @@ export default function SavedReportRoute() {
         body?: reportSchemas.ReportBody | null;
         visitDate?: string | null;
         generatedAt?: string | null;
+        updatedAt?: string;
       }
     | undefined;
   const reportStatus = reportRow?.status ?? null;
@@ -227,10 +229,12 @@ export default function SavedReportRoute() {
 
   const handleConfirmUnfinalize = useCallback(async () => {
     if (!slug || reportNumber === null) return;
-    await unfinalizeMutation.mutateAsync({
-      params: { project: slug, number: reportNumber },
-    });
-  }, [slug, reportNumber, unfinalizeMutation]);
+    const expectedUpdatedAt = reportRow?.updatedAt;
+    if (!expectedUpdatedAt) return;
+    await unfinalizeMutation.mutateAsync(
+      reportMutationInput(slug, reportNumber, expectedUpdatedAt),
+    );
+  }, [slug, reportNumber, reportRow?.updatedAt, unfinalizeMutation]);
 
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';

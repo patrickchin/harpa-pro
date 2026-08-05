@@ -14,6 +14,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 
 const mutateSpy = vi.hoisted(() => vi.fn());
 const mutationState = vi.hoisted(() => ({ isPending: false }));
+const EXPECTED_UPDATED_AT = '2026-07-29T00:00:00.000Z';
 
 vi.mock('@/lib/api/hooks', () => ({
   useUpdateReportMutation: () => ({
@@ -93,6 +94,7 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('Site A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: false,
     });
 
@@ -108,6 +110,7 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: true,
     });
 
@@ -119,6 +122,7 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('B'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: true,
     });
     act(() => {
@@ -134,6 +138,7 @@ describe('useReportBodyAutosave', () => {
     const call = mutateSpy.mock.calls[0]![0]!;
     expect(call.params).toEqual({ project: 'proj', number: 1 });
     expect(call.body.body.meta.visitDate).toBe('2025-01-01');
+    expect(call.body.expectedUpdatedAt).toBe(EXPECTED_UPDATED_AT);
   });
 
   it('skips PATCH while paused, even when dirty', () => {
@@ -141,8 +146,25 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: true,
       paused: true,
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(mutateSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not PATCH before the report version is available', () => {
+    mount({
+      slug: 'proj',
+      number: 1,
+      report: makeReport('A'),
+      expectedUpdatedAt: null,
+      dirty: true,
     });
 
     act(() => {
@@ -158,6 +180,7 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: true,
       onSaved,
     });
@@ -167,12 +190,14 @@ describe('useReportBodyAutosave', () => {
     });
     expect(mutateSpy).toHaveBeenCalledTimes(1);
 
-    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as () => void;
+    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as (
+      saved: { updatedAt: string },
+    ) => void;
     act(() => {
-      onSuccess();
+      onSuccess({ updatedAt: '2026-07-29T00:00:01.000Z' });
     });
 
-    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledWith('2026-07-29T00:00:01.000Z');
   });
 
   it('does not re-PATCH after caller clears dirty (no edit in the interim)', () => {
@@ -180,6 +205,7 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: true,
     });
 
@@ -189,14 +215,17 @@ describe('useReportBodyAutosave', () => {
     expect(mutateSpy).toHaveBeenCalledTimes(1);
 
     // Simulate success → caller clears dirty.
-    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as () => void;
+    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as (
+      saved: { updatedAt: string },
+    ) => void;
     act(() => {
-      onSuccess();
+      onSuccess({ updatedAt: '2026-07-29T00:00:01.000Z' });
     });
     harness.setProps({
       slug: 'proj',
       number: 1,
       report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: false,
     });
 
@@ -211,6 +240,7 @@ describe('useReportBodyAutosave', () => {
       slug: 'proj',
       number: 1,
       report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
       dirty: true,
     });
 

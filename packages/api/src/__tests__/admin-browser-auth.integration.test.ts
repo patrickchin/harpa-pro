@@ -8,6 +8,14 @@ import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
 const ADMIN_ORIGIN = 'http://localhost:3102';
+const UNTRUSTED_ADMIN_ORIGINS = [
+  'https://app.harpapro.com',
+  'https://admin.harpapro.com.evil.example',
+  'https://evil.example.com',
+  'https://harpapro.com',
+  'https://www.harpapro.com',
+  'https://dev.harpa-pro.pages.dev',
+] as const;
 const ADMIN_EMAIL = 'browser-admin@harpapro.com';
 const ADMIN_PASSWORD = 'correct horse battery staple admin password';
 
@@ -85,12 +93,7 @@ describe('dedicated admin browser authentication', () => {
     expect(appAuthPreflight.headers.get('access-control-allow-origin')).toBeNull();
     expect(appAuthPreflight.headers.get('access-control-allow-credentials')).toBeNull();
 
-    for (const origin of [
-      'https://evil.example.com',
-      'https://harpapro.com',
-      'https://www.harpapro.com',
-      'https://dev.harpa-pro.pages.dev',
-    ]) {
+    for (const origin of UNTRUSTED_ADMIN_ORIGINS) {
       const rejected = await app.request('/admin/auth/login', {
         method: 'OPTIONS',
         headers: {
@@ -266,16 +269,13 @@ describe('dedicated admin browser authentication', () => {
       body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
     });
     const untrusted = await Promise.all(
-      [
-        'https://admin.harpapro.com.evil.example',
-        'https://harpapro.com',
-        'https://www.harpapro.com',
-        'https://dev.harpa-pro.pages.dev',
-      ].map((origin) => login(ADMIN_EMAIL, ADMIN_PASSWORD, origin)),
+      UNTRUSTED_ADMIN_ORIGINS.map((origin) => login(ADMIN_EMAIL, ADMIN_PASSWORD, origin)),
     );
 
     expect(missing.status).toBe(403);
-    expect(untrusted.map((response) => response.status)).toEqual([403, 403, 403, 403]);
+    expect(untrusted.map((response) => response.status)).toEqual(
+      UNTRUSTED_ADMIN_ORIGINS.map(() => 403),
+    );
   });
 
   it('revokes the server session on logout and clears the cookie', async () => {

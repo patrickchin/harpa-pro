@@ -5,6 +5,7 @@ import {
   reportComment,
   reportBody,
 } from './reports.js';
+import * as reportSchemas from './reports.js';
 
 describe('reportBody with meta envelope', () => {
   it('accepts a populated meta object', () => {
@@ -118,6 +119,46 @@ describe('placeReportAttachmentRequest', () => {
     });
     expect(result.success).toBe(false);
   });
+});
+
+describe('report mutation concurrency contract', () => {
+  const schemas = [
+    ['updateReportRequest', reportSchemas.updateReportRequest],
+    ['generateReportRequest', reportSchemas.generateReportRequest],
+    ['regenerateReportRequest', reportSchemas.regenerateReportRequest],
+    [
+      'finalizeReportRequest',
+      (reportSchemas as unknown as Record<string, unknown>).finalizeReportRequest,
+    ],
+    [
+      'unfinalizeReportRequest',
+      (reportSchemas as unknown as Record<string, unknown>).unfinalizeReportRequest,
+    ],
+  ] as const;
+
+  it.each(schemas)(
+    '%s accepts an optional ISO expectedUpdatedAt and rejects invalid values',
+    (name, schemaValue) => {
+      expect(schemaValue, `${name} must be exported`).toBeDefined();
+      const schema = schemaValue as {
+        safeParse: (input: unknown) => { success: true; data: unknown } | { success: false };
+      };
+
+      expect(schema.safeParse({}).success).toBe(true);
+
+      const parsed = schema.safeParse({
+        expectedUpdatedAt: '2026-07-29T12:34:56Z',
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect((parsed.data as Record<string, unknown>).expectedUpdatedAt).toBe(
+          '2026-07-29T12:34:56.000Z',
+        );
+      }
+
+      expect(schema.safeParse({ expectedUpdatedAt: 'not-a-date' }).success).toBe(false);
+    },
+  );
 });
 
 describe('report review comment contract', () => {

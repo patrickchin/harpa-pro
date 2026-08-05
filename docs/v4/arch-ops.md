@@ -874,9 +874,10 @@ topology drift during any pre-clone re-list or polling fails before cloning.
 
 The verifier remains diagnostic-only. The workflow calls it again after
 repair and before arming. This proves that a running executor exists. It does
-not prove that lifecycle arming finished: the production shell command has no
-timeout or separate success marker. If a deployment stalls at that step, treat
-the rollout state as unknown and inspect it before retrying:
+not by itself prove that lifecycle arming finished; rely on the arming
+command's confirmation marker and the rollout table below. If a deployment
+stalls before that marker is reported, treat the rollout state as unknown and
+inspect it before retrying:
 
 ```sql
 SELECT armed_at, enforce_after, account_delete_enabled, updated_at

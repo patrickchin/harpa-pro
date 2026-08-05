@@ -633,8 +633,8 @@ normal release. Treat any existing ledger drift as a database incident.
 
 - CI has no immutable migration manifest or checksum gate.
 - The environment parser rejects a `.notx.sql` file as the required head.
-- Production lifecycle arming has no command timeout or separate success
-  marker.
+- Lifecycle arming still needs a rollout-table check before any retry if a
+  deployment stops before the confirmation marker is reported.
 - `infra/fly/deploy.sh` does not verify a clean, pushed checkout.
 - The pipeline has no destructive-SQL approval gate.
 - The repository has no automated production restore drill.

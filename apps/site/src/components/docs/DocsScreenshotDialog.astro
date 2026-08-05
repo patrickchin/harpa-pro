@@ -1,0 +1,97 @@
+<dialog
+  class="docs-screenshot-dialog"
+  aria-labelledby="docs-screenshot-dialog-title"
+  data-docs-screenshot-dialog
+>
+  <div class="docs-screenshot-dialog-panel">
+    <header>
+      <h2 id="docs-screenshot-dialog-title" data-docs-screenshot-dialog-title>
+        Full screenshot
+      </h2>
+      <button
+        class="docs-screenshot-dialog-close"
+        type="button"
+        aria-label="Close full screenshot"
+        data-docs-screenshot-dialog-close
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+    <figure>
+      <div class="docs-screenshot-dialog-image">
+        <img data-docs-screenshot-dialog-image alt="" decoding="async" />
+      </div>
+      <figcaption data-docs-screenshot-dialog-caption></figcaption>
+    </figure>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>(
+    "[data-docs-screenshot-dialog]",
+  );
+
+  if (dialog) {
+    const image = dialog.querySelector<HTMLImageElement>(
+      "[data-docs-screenshot-dialog-image]",
+    );
+    const title = dialog.querySelector<HTMLElement>(
+      "[data-docs-screenshot-dialog-title]",
+    );
+    const caption = dialog.querySelector<HTMLElement>(
+      "[data-docs-screenshot-dialog-caption]",
+    );
+    const closeButton = dialog.querySelector<HTMLButtonElement>(
+      "[data-docs-screenshot-dialog-close]",
+    );
+    let activeTrigger: HTMLAnchorElement | null = null;
+
+    document
+      .querySelectorAll<HTMLAnchorElement>("[data-docs-screenshot-trigger]")
+      .forEach((trigger) => {
+        trigger.addEventListener("click", (event) => {
+          if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          ) {
+            return;
+          }
+
+          if (!image || !title || !caption || !dialog.showModal) return;
+
+          const source = trigger.dataset.docsScreenshotSrc;
+          if (!source) return;
+
+          event.preventDefault();
+          activeTrigger = trigger;
+
+          const stepTitle = trigger.dataset.docsScreenshotTitle ?? "guide step";
+          image.setAttribute("src", source);
+          image.alt = trigger.dataset.docsScreenshotAlt ?? "";
+          if (trigger.dataset.docsScreenshotWidth) {
+            image.setAttribute("width", trigger.dataset.docsScreenshotWidth);
+          }
+          if (trigger.dataset.docsScreenshotHeight) {
+            image.setAttribute("height", trigger.dataset.docsScreenshotHeight);
+          }
+          title.textContent = `Full screenshot for ${stepTitle}`;
+          caption.textContent = stepTitle;
+          dialog.showModal();
+        });
+      });
+
+    closeButton?.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", () => {
+      image?.removeAttribute("src");
+      activeTrigger?.focus();
+      activeTrigger = null;
+    });
+  }
+</script>

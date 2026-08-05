@@ -214,6 +214,7 @@ documented in [`arch-ops.md`](arch-ops.md).
 | `cli.yml`                     | CLI-relevant pull requests and branch pushes                  | CLI typecheck, lint, tests, help drift, and integration journeys                                       |
 | `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push                                     | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
 | `dependency-review.yml`       | Pull requests                                                 | Reject newly introduced high or critical dependency vulnerabilities                                    |
+| `ruby-security.yml`           | Ruby dependency change                                        | Frozen Bundler install and Fastlane load on Ruby 3.2.11 and 3.4.10                                     |
 | `ai-live.yml`                 | Matching same-repository changes or manual dispatch           | Cost-bearing live report-model schema tests                                                            |
 | `main-gate.yml`               | Pull requests to `main`                                       | Exact development SHA and deployed journey checks, including live AI                                   |
 | `pr-preview.yml`              | PR open / push                                                | Credential-free path/migration guards; human-owned PR preview lifecycle                                |
@@ -232,14 +233,19 @@ documented in [`arch-ops.md`](arch-ops.md).
 ### Dependency security automation
 
 GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
-the repository's default branch, `main`. It checks the root pnpm workspace
-and GitHub Actions weekly. Routine version-update pull requests target
-`dev`. Compatibility-coupled Better Auth, React, Astro/Vite, Drizzle, AWS SDK,
-and TypeScript-ESLint packages update as coordinated stacks. The broad
-production/development groups accept patches only, so unrelated minor updates
-remain focused. Expo and React Native packages are ignored here: Expo Doctor
-and `expo install` own that native compatibility graph as a staged SDK
-migration.
+the repository's default branch, `main`. It checks the root pnpm workspace,
+the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
+version-update pull requests target `dev`. Compatibility-coupled Better Auth,
+React, Astro/Vite, Drizzle, AWS SDK, and TypeScript-ESLint packages update as
+coordinated stacks. The broad npm production/development groups accept patches
+only, so unrelated minor updates remain focused. Expo and React Native packages
+are ignored here: Expo Doctor and `expo install` own that native compatibility
+graph as a staged SDK migration.
+
+The path-scoped `ruby-security` workflow validates each Ruby dependency change
+with Bundler 2.6.9 on Ruby 3.2.11 (the supported EAS Ruby line) and Ruby 3.4.10
+(the checked-in local version). Both jobs load the Fastlane configuration after
+checking the patched dependency floors.
 
 Dependabot security updates are enabled separately under **Settings → Code
 security and analysis**. They are advisory-driven rather than scheduled and

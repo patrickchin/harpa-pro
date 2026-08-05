@@ -337,6 +337,11 @@ affected workspace rather than relying on the hoister's choice.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-05** — The admin Playwright seed used fixed July 29 activity
+  timestamps, so its `Past week` filter began returning zero rows on August 5
+  and blocked every unrelated API/admin PR. Fix: seed activity relative to the
+  database clock while preserving deterministic event order.
+  [detail](2026-08-05-admin-e2e-fixed-time-expiry.md)
 - **2026-08-05** — API integration intermittently failed after all 219
   integration tests passed because two rate-limiter test pools could re-emit
   PostgreSQL shutdown `57P01` while Testcontainers stopped. Fix: observe

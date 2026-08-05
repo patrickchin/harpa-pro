@@ -1,6 +1,6 @@
 ---
-applyTo: "docs/**,*.md,**/*.md"
-description: "Docs + markdown style. Loads when editing any markdown file."
+applyTo: 'docs/**,*.md,**/*.md'
+description: 'Docs + markdown style. Loads when editing any markdown file.'
 ---
 
 # Docs
@@ -27,6 +27,8 @@ workflow change → matching doc update in the same PR.
 - New `arch-*.md` doc → also link from `docs/v4/architecture.md`.
 - Plan checkboxes get ticked **in the same commit** that completes
   the task.
+- Run `pnpm test:docs:links` after you add, remove, or rename a local
+  Markdown link or heading. The root lint job runs the same check.
 
 ## Style
 

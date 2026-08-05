@@ -1,210 +1,220 @@
 # @harpa/cli
 
-Command-line interface for the Harpa Pro API. Thin HTTP client — every command maps directly to an API call.
+The Harpa Pro CLI is a thin client for supported API routes. It is useful for
+debugging, smoke tests, scripts, and agent-driven workflows.
 
-## Installation
+The package is private and is not published to npm.
 
-**Dev (symlinked, no copy):**
+## Run the CLI
+
+From the repository root:
+
 ```bash
-cd apps/cli
-pnpm build
-npm link
+pnpm harpa --help
+pnpm harpa <command>
 ```
 
-**Global install:**
+To create a local executable link:
+
 ```bash
+pnpm --filter @harpa/cli build
 cd apps/cli
-pnpm build
-npm pack
-npm install -g harpa-cli-0.1.0.tgz
+npm link
 ```
 
 ## Configuration
 
-Two environment variables, both must be exported in your shell (the CLI does not load `.env` files):
+The CLI does not load `.env` files. Export values in the current shell.
 
-| Variable | Required | Description |
-|---|---|---|
-| `HARPA_API_URL` | ✅ | Base URL of the API, e.g. `http://localhost:8787` |
-| `HARPA_TOKEN` | for authed routes | Bearer JWT from `auth otp verify --raw` |
-| `HARPA_DEBUG` | | Set to `1` to print request/response details to stderr |
-| `HARPA_IDEMPOTENCY_KEY` | | Override idempotency key for mutating requests |
+| Variable                | Required                  | Description                                  |
+| ----------------------- | ------------------------- | -------------------------------------------- |
+| `HARPA_API_URL`         | Yes for command execution | API origin, such as `http://localhost:8787`. |
+| `HARPA_TOKEN`           | Authenticated commands    | Bearer token from a successful sign-in.      |
+| `HARPA_DEBUG`           | No                        | Set to `1` for response details on errors.   |
+| `HARPA_IDEMPOTENCY_KEY` | No                        | Non-empty idempotency header value.          |
+
+Help and version output do not require these variables.
+
+## Output flags
+
+Most leaf commands accept these flags:
+
+| Flag        | Description                                                |
+| ----------- | ---------------------------------------------------------- |
+| `--json`    | Write the API JSON result to stdout.                       |
+| `--verbose` | Write available request and rate-limit metadata to stderr. |
+
+## Authentication
+
+Normal users sign in with email OTP:
 
 ```bash
-export HARPA_API_URL=http://localhost:8787
-export HARPA_TOKEN=$(harpa auth otp verify +15550000001 000000 --raw)
+export HARPA_API_URL=https://api.example.com
+harpa auth otp start user@example.com
+OTP_CODE=123456 # Replace with the code from the email.
+export HARPA_TOKEN="$(harpa auth otp verify user@example.com "$OTP_CODE" --raw)"
+harpa me get
 ```
 
-## Global flags
-
-| Flag | Description |
-|---|---|
-| `--json` | Emit raw JSON to stdout (for scripting / LLM tool use) |
-| `--verbose` | Print response metadata (request ID, rate-limit) to stderr |
+`auth otp verify --raw` writes only the bearer token. `auth logout` revokes
+the current token.
 
 ## Commands
 
-### Health
+The command implementation and `harpa --help` are authoritative. The CLI does
+not expose every API route.
+
+### Health and profile
+
 ```bash
 harpa health
-```
-
-### Auth
-```bash
-harpa auth otp start <phone>           # request OTP (E.164 format)
-harpa auth otp verify <phone> <code>   # verify OTP, prints session info
-harpa auth otp verify <phone> <code> --raw   # print bare JWT only (for shell capture)
-harpa auth logout                      # invalidate current session
-```
-
-### Me
-```bash
 harpa me get
-harpa me update --display-name "Alice Demo"
+harpa me update --display-name "Alice Demo" --company-name "Demo Co"
+harpa me usage
 ```
 
-### Projects
+### Projects and members
+
 ```bash
-harpa projects create --name "Demo Tower" --type residential
-harpa projects list [--limit N] [--offset N]
-harpa projects get <id>
-harpa projects update <id> --name "New Name"
-harpa projects delete <id>
+harpa projects list [--cursor <cursor>] [--limit <count>]
+harpa projects create --name "Demo Tower" \
+  --client-name "Acme" --address "1 Main Street"
+harpa projects get <projectSlug>
+harpa projects update <projectSlug> --name "New name"
+harpa projects delete <projectSlug>
+
+harpa projects members list <projectSlug>
+harpa projects members add <projectSlug> \
+  --email teammate@example.com --role editor
+harpa projects members remove <projectSlug> teammate@example.com
 ```
 
-### Project Members
-```bash
-harpa projects members add <projectId> --phone <E164> --role <owner|editor|viewer>
-harpa projects members list <projectId>
-harpa projects members remove <projectId> <userId>
-```
+The member must already have a Harpa Pro account. Remove accepts an email and
+resolves the matching user ID before the delete request.
 
 ### Reports
+
 ```bash
-harpa reports create <projectSlug> --title "Site Inspection 001"
-harpa reports list <projectSlug>
-harpa reports get <projectSlug> <number>
-harpa reports update <projectSlug> <number> --visit-date 2026-05-12
-harpa reports generate <projectSlug> <number>    # AI-generate report body from notes
-harpa reports regenerate <projectSlug> <number>  # replace body with fresh generation
-harpa reports finalize <projectSlug> <number>    # lock report (status → finalized)
-harpa reports pdf <projectSlug> <number>         # get signed PDF download URL
-harpa reports delete <projectSlug> <number>
+harpa reports list <projectSlug> [--cursor <cursor>] [--limit <count>]
+harpa reports create <projectSlug> [--visit-date 2026-08-04]
+harpa reports get <projectSlug> <reportNumber>
+harpa reports update <projectSlug> <reportNumber> --visit-date 2026-08-06
+harpa reports generate <projectSlug> <reportNumber>
+harpa reports regenerate <projectSlug> <reportNumber>
+harpa reports finalize <projectSlug> <reportNumber>
+harpa reports unfinalize <projectSlug> <reportNumber>
+harpa reports pdf <projectSlug> <reportNumber>
+harpa reports delete <projectSlug> <reportNumber>
 ```
 
+`generate` and `regenerate` accept `--fixture <name>` in server replay mode.
+They also accept `--idempotency-key <key>`.
+
 ### Notes
+
 ```bash
-harpa notes create <reportId> --kind <text|voice|image|document> --body "..."
-harpa notes list <reportId>
-harpa notes get <noteId>
+harpa notes list <projectSlug> <reportNumber>
+harpa notes create <projectSlug> <reportNumber> \
+  --kind text --body "Foundation: no cracks found."
+harpa notes create <projectSlug> <reportNumber> \
+  --kind image --file-id <fileId>
+harpa notes update <noteId> --body "Updated note"
 harpa notes delete <noteId>
 ```
 
-`--kind` is required.
+Supported note kinds are `text`, `voice`, `image`, and `document`.
 
 ### Files
+
 ```bash
-harpa files upload <reportId> <localPath> --kind document
-harpa files list <reportId>
-harpa files delete <fileId>
+harpa files presign --kind image --content-type image/jpeg --size 1024
+harpa files register --kind image --file-key <key> \
+  --content-type image/jpeg --size 1024
+harpa files url <fileId>
+harpa files upload --file ./photo.jpg --kind image
 ```
 
-### Voice
-```bash
-harpa voice transcribe <localAudioPath>
-```
+`files upload` streams the local file through presign, PUT, and registration.
 
-### Settings
+### Voice and AI settings
+
 ```bash
+harpa voice transcribe --file-id <fileId>
+harpa voice summarize --transcript "Crew poured concrete at 08:00."
+
 harpa settings ai get
-harpa settings ai set --vendor <openai|anthropic|google|kimi|deepseek> --model <model>
+harpa settings ai set --vendor openai --model gpt-4.1-mini
+harpa settings ai set --clear
 ```
 
-## Full journey (local docker stack)
+Voice commands accept `--fixture <name>` in server replay mode and
+`--idempotency-key <key>`. Current user settings support OpenAI only.
+
+## Local Docker journey
+
+The Docker Compose stack uses seeded password accounts and MinIO. Choose a
+local-only password of at least 16 characters. Do not reuse a real password.
 
 ```bash
-# Start backend (fixture mode — fake Twilio/AI/R2)
+export TEST_ACCOUNT_PASSWORD='local-test-password-change-me'
 docker compose up -d
 
 export HARPA_API_URL=http://localhost:8787
+export HARPA_TOKEN="$(
+  curl -fsS -X POST "$HARPA_API_URL/api/auth/sign-in/email" \
+    -H 'content-type: application/json' \
+    -d "{\"email\":\"test@harpapro.com\",\"password\":\"$TEST_ACCOUNT_PASSWORD\"}" \
+  | jq -r .token
+)"
 
-# Auth — OTP code is always 000000 in fixture mode
-harpa auth otp start +15550000001
-export HARPA_TOKEN=$(harpa auth otp verify +15550000001 000000 --raw)
+PROJECT_ID="$(
+  pnpm harpa projects create --name "Demo Tower" --json | jq -r .id
+)"
+REPORT_NUMBER="$(
+  pnpm harpa reports create "$PROJECT_ID" \
+    --visit-date 2026-08-04 --json | jq -r .number
+)"
 
-# Profile
-harpa me update --display-name "Alice Demo"
-harpa me get
+pnpm harpa projects members add "$PROJECT_ID" \
+  --email test2@harpapro.com --role editor
+pnpm harpa notes create "$PROJECT_ID" "$REPORT_NUMBER" \
+  --kind text --body "Foundation: no cracks found."
+pnpm harpa reports generate "$PROJECT_ID" "$REPORT_NUMBER"
+pnpm harpa reports pdf "$PROJECT_ID" "$REPORT_NUMBER"
+pnpm harpa reports finalize "$PROJECT_ID" "$REPORT_NUMBER"
+```
 
-# Project
-PROJECT_ID=$(harpa projects create --name "Demo Tower" --type residential --json | jq -r .id)
+The local API selects replay when `AI_LIVE` is not `1`. The mobile
+`EXPO_PUBLIC_USE_FIXTURES` flag does not control this server setting.
 
-# Add a member (they must exist — start OTP to register them)
-harpa auth otp start +15550000099
-harpa auth otp verify +15550000099 000000
-harpa projects members add $PROJECT_ID --phone +15550000099 --role editor
+Stop the stack when the journey is complete:
 
-# Report
-REPORT_ID=$(harpa reports create $PROJECT_ID --title "Site Inspection 001" --json | jq -r .id)
-
-# Notes
-harpa notes create $REPORT_ID --kind text --body "Foundation: no cracks found."
-harpa notes create $REPORT_ID --kind text --body "Roof: minor wear on north face."
-
-# Generate → finalize → PDF
-harpa reports generate $REPORT_ID
-harpa reports finalize $REPORT_ID
-harpa reports pdf $REPORT_ID
-
-# Settings
-harpa settings ai set --vendor openai --model gpt-4o
-
-# Logout
-harpa auth logout
-
-# Teardown
+```bash
 docker compose down
 ```
 
-## LLM / scripting usage
+## Exit codes
 
-Use `--json` on every command and pipe through `jq`:
-
-```bash
-# Clean JSON output, no ANSI colour codes
-export NO_COLOR=1
-
-PROJECT_ID=$(harpa projects create --name "Tower" --type residential --json | jq -r .id)
-REPORT_ID=$(harpa reports create $PROJECT_ID --title "Inspection" --json | jq -r .id)
-harpa notes create $REPORT_ID --kind text --body "Crack on east wall." --json
-harpa reports generate $REPORT_ID --json
-harpa reports finalize $REPORT_ID --json
-harpa reports pdf $REPORT_ID --json | jq -r .url
-```
-
-Exit codes:
-
-| Code | Meaning |
-|---|---|
-| 0 | Success |
-| 1 | API 4xx client error |
-| 2 | API 401 unauthorised |
-| 3 | API 403 forbidden |
-| 4 | API 404 not found |
-| 5 | API 409 conflict |
-| 6 | API 5xx server error |
-| 7 | Network / transport error |
+| Code | Meaning                                               |
+| ---- | ----------------------------------------------------- |
+| 0    | Success.                                              |
+| 1    | Generic or unmapped client error, including HTTP 409. |
+| 2    | HTTP 400 or 422 validation error.                     |
+| 3    | HTTP 401, HTTP 403, or missing token.                 |
+| 4    | HTTP 404.                                             |
+| 5    | HTTP 429.                                             |
+| 6    | HTTP 5xx.                                             |
+| 7    | Network or response-parse error.                      |
 
 ## Development
 
 ```bash
-pnpm test              # unit tests
-pnpm test:integration  # integration tests (requires Docker)
-pnpm typecheck
-pnpm lint
+pnpm --filter @harpa/cli typecheck
+pnpm --filter @harpa/cli lint
+pnpm --filter @harpa/cli test
+pnpm --filter @harpa/cli test:integration
+pnpm --filter @harpa/cli build
 ```
 
-Run without building (via tsx):
-```bash
-pnpm harpa <command>   # from repo root
-```
+Integration tests require Docker. The CLI workflow also runs
+`bash scripts/check-cli-help-drift.sh` from the repository root.

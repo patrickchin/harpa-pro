@@ -1,5 +1,9 @@
 # Photo Grid and Fullscreen Viewer Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
@@ -79,6 +83,7 @@ exercise the real hook path rather than priming cache state.
 ### Task 1: Add `react-native-pager-view`
 
 **Files:**
+
 - Modify: `apps/mobile/package.json`
 - Modify: `pnpm-lock.yaml`
 - Check: `app.json`
@@ -148,6 +153,7 @@ git commit -m "chore(mobile): add pager view dependency" \
 ### Task 2: Make `PhotoBatchGrid` always use three columns
 
 **Files:**
+
 - Modify: `apps/mobile/components/notes/PhotoBatchGrid.test.tsx`
 - Modify: `apps/mobile/components/notes/PhotoBatchGrid.tsx`
 
@@ -157,12 +163,9 @@ In `PhotoBatchGrid.test.tsx`, add this helper near the existing tests:
 
 ```ts
 function tileWidth(tree: ReturnType<typeof render>, testID: string): number {
-  const node = tree.root.findAllByProps({ testID })
-    .find((n) => typeof n.type !== 'function');
+  const node = tree.root.findAllByProps({ testID }).find((n) => typeof n.type !== 'function');
   expect(node).toBeDefined();
-  const style = node!.props.style as
-    | { width: number }
-    | Array<{ width?: number }>;
+  const style = node!.props.style as { width: number } | Array<{ width?: number }>;
   return Array.isArray(style)
     ? style.find((s) => s && typeof s.width === 'number')!.width!
     : style.width;
@@ -248,10 +251,7 @@ const tileSize = Math.max(0, Math.floor((containerWidth - GAP * (cols - 1)) / co
 with:
 
 ```ts
-const tileSize = Math.max(
-  0,
-  Math.floor((containerWidth - GAP * (COLUMNS - 1)) / COLUMNS),
-);
+const tileSize = Math.max(0, Math.floor((containerWidth - GAP * (COLUMNS - 1)) / COLUMNS));
 ```
 
 - [x] **Step 4: Run the focused test**
@@ -278,6 +278,7 @@ git commit -m "fix(mobile): keep photo batches in a three-column grid" \
 ### Task 3: Delete dead `ImageNoteCard` and update references
 
 **Files:**
+
 - Delete: `apps/mobile/components/notes/ImageNoteCard.tsx`
 - Delete: `apps/mobile/components/notes/ImageNoteCard.test.tsx`
 - Modify: `apps/mobile/components/notes/NoteTimeline.tsx`
@@ -445,6 +446,7 @@ git commit -m "refactor(mobile): remove dead image note card" \
 ### Task 4: Add placeholder cache keys to `CachedImage`
 
 **Files:**
+
 - Create: `apps/mobile/components/ui/CachedImage.test.tsx`
 - Modify: `apps/mobile/components/ui/CachedImage.tsx`
 
@@ -602,6 +604,7 @@ git commit -m "feat(mobile): cache fullscreen thumbnail placeholders" \
 ### Task 5: Thread `thumbnailFileId` through gallery builders
 
 **Files:**
+
 - Modify: `apps/mobile/components/files/ImagePreviewModal.tsx`
 - Modify: `apps/mobile/features/generate/GenerateReportProvider.tsx`
 - Modify: `apps/mobile/screens/report-notes.tsx`
@@ -633,12 +636,12 @@ return [{ uri, fileId, thumbnailFileId: null, title, cacheKey }];
 In `GenerateReportProvider.tsx`, change `PreviewSurface.photoGallery` to:
 
 ```ts
-  photoGallery: ReadonlyArray<{
-    fileId: string;
-    thumbnailFileId: string | null;
-    title: string;
-    cacheKey: string;
-  }>;
+photoGallery: ReadonlyArray<{
+  fileId: string;
+  thumbnailFileId: string | null;
+  title: string;
+  cacheKey: string;
+}>;
 ```
 
 In the `photoGallery` builder, change the pushed item to:
@@ -738,6 +741,7 @@ git commit -m "feat(mobile): thread thumbnails into photo galleries" \
 ### Task 6: Add the `ZoomableImage` primitive
 
 **Files:**
+
 - Create: `apps/mobile/components/files/ZoomableImage.tsx`
 - Create: `apps/mobile/components/files/ZoomableImage.test.tsx`
 
@@ -922,11 +926,7 @@ export function isZoomedScale(value: number): boolean {
   return value > ZOOMED_THRESHOLD;
 }
 
-export function clampTranslation(
-  value: number,
-  scale: number,
-  viewportSize: number,
-): number {
+export function clampTranslation(value: number, scale: number, viewportSize: number): number {
   'worklet';
   if (scale <= MIN_SCALE) return 0;
   const max = ((scale - MIN_SCALE) * viewportSize) / 2;
@@ -1088,16 +1088,7 @@ export function ZoomableImage({
             height,
           );
         }),
-    [
-      height,
-      panEnabled,
-      scale,
-      startTranslateX,
-      startTranslateY,
-      translateX,
-      translateY,
-      width,
-    ],
+    [height, panEnabled, scale, startTranslateX, startTranslateY, translateX, translateY, width],
   );
 
   const singleTap = useMemo(
@@ -1112,11 +1103,7 @@ export function ZoomableImage({
   );
 
   const composedGesture = useMemo(
-    () =>
-      Gesture.Race(
-        Gesture.Exclusive(doubleTap, singleTap),
-        Gesture.Simultaneous(pinch, pan),
-      ),
+    () => Gesture.Race(Gesture.Exclusive(doubleTap, singleTap), Gesture.Simultaneous(pinch, pan)),
     [doubleTap, pan, pinch, singleTap],
   );
 
@@ -1187,6 +1174,7 @@ git commit -m "feat(mobile): add zoomable image viewer primitive" \
 ### Task 7: Redesign `ImagePreviewModal`
 
 **Files:**
+
 - Modify: `apps/mobile/components/files/ImagePreviewModal.tsx`
 - Modify: `apps/mobile/components/files/ImagePreviewModal.test.tsx`
 
@@ -1214,17 +1202,11 @@ vi.mock('react-native-pager-view', () => ({
     scrollEnabled?: boolean;
     onPageSelected?: (event: { nativeEvent: { position: number } }) => void;
     testID?: string;
-  }) =>
-    React.createElement(
-      'rn-pager-view',
-      { scrollEnabled, onPageSelected, testID },
-      children,
-    ),
+  }) => React.createElement('rn-pager-view', { scrollEnabled, onPageSelected, testID }, children),
 }));
 
 vi.mock('expo-status-bar', () => ({
-  StatusBar: (props: Record<string, unknown>) =>
-    React.createElement('rn-status-bar', props, null),
+  StatusBar: (props: Record<string, unknown>) => React.createElement('rn-status-bar', props, null),
 }));
 
 vi.mock('react-native-reanimated', () => ({
@@ -1353,25 +1335,11 @@ Replace the current imports with this set:
 
 ```tsx
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { ActivityIndicator, Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { X } from 'lucide-react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import {
-  SafeAreaProvider,
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 import { ZoomableImage } from '@/components/files/ZoomableImage';
@@ -1448,9 +1416,7 @@ function PreviewContent({
 
   const activePhoto = photos[currentIndex] ?? photos[0]!;
   const headerTitle = activePhoto.title ?? fallbackTitle;
-  const headerSubtitle = isGallery
-    ? `${currentIndex + 1} / ${photos.length}`
-    : null;
+  const headerSubtitle = isGallery ? `${currentIndex + 1} / ${photos.length}` : null;
 
   const toggleChrome = useCallback(() => {
     setChromeVisible((prev) => !prev);
@@ -1523,9 +1489,7 @@ function PreviewContent({
                 {headerTitle}
               </Text>
               {headerSubtitle ? (
-                <Text className="mt-0.5 text-xs text-white/50">
-                  {headerSubtitle}
-                </Text>
+                <Text className="mt-0.5 text-xs text-white/50">{headerSubtitle}</Text>
               ) : null}
             </View>
 
@@ -1576,16 +1540,12 @@ function ImagePreviewBody({
   const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
     enabled: !uri && Boolean(thumbnailFileId),
   });
-  const resolvedUri =
-    uri ?? (data as { url?: string } | undefined)?.url ?? null;
-  const thumbnailUri =
-    (thumbnailData as { url?: string } | undefined)?.url ?? null;
+  const resolvedUri = uri ?? (data as { url?: string } | undefined)?.url ?? null;
+  const thumbnailUri = (thumbnailData as { url?: string } | undefined)?.url ?? null;
   const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
   const effectivePlaceholderCacheKey = thumbnailFileId ?? undefined;
   const sourceUri = resolvedUri ?? thumbnailUri;
-  const sourceCacheKey = resolvedUri
-    ? effectiveCacheKey
-    : effectivePlaceholderCacheKey;
+  const sourceCacheKey = resolvedUri ? effectiveCacheKey : effectivePlaceholderCacheKey;
 
   if (sourceUri) {
     return (
@@ -1649,6 +1609,7 @@ git commit -m "feat(mobile): redesign fullscreen photo viewer" \
 ### Task 8: Add default-wiring thumbnail placeholder integration test
 
 **Files:**
+
 - Create:
   `apps/mobile/components/files/gallery-thumbnail-placeholder.integration.test.tsx`
 
@@ -1668,8 +1629,7 @@ import { PhotoBatchGrid } from '@/components/notes/PhotoBatchGrid';
 import type { Attachment } from '@/lib/notes/attachments';
 
 vi.mock('expo-image', () => ({
-  Image: (props: Record<string, unknown>) =>
-    React.createElement('rn-expo-image', props, null),
+  Image: (props: Record<string, unknown>) => React.createElement('rn-expo-image', props, null),
 }));
 
 vi.mock('react-native-pager-view', () => ({
@@ -1678,8 +1638,7 @@ vi.mock('react-native-pager-view', () => ({
 }));
 
 vi.mock('expo-status-bar', () => ({
-  StatusBar: (props: Record<string, unknown>) =>
-    React.createElement('rn-status-bar', props, null),
+  StatusBar: (props: Record<string, unknown>) => React.createElement('rn-status-bar', props, null),
 }));
 
 vi.mock('react-native-gesture-handler', () => {
@@ -1728,15 +1687,9 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-async function waitForImage(
-  tree: ReactTestRenderer,
-  testID: string,
-): Promise<void> {
+async function waitForImage(tree: ReactTestRenderer, testID: string): Promise<void> {
   const start = Date.now();
-  while (
-    tree.root.findAllByProps({ testID }).length === 0 &&
-    Date.now() - start < 1000
-  ) {
+  while (tree.root.findAllByProps({ testID }).length === 0 && Date.now() - start < 1000) {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 5));
     });
@@ -1775,19 +1728,13 @@ describe('gallery thumbnail placeholder default wiring', () => {
     await act(async () => {
       tree = create(
         <QueryClientProvider client={queryClient}>
-          <PhotoBatchGrid
-            attachments={[attachment]}
-            containerWidth={320}
-            onOpenFile={() => {}}
-          />
+          <PhotoBatchGrid attachments={[attachment]} containerWidth={320} onOpenFile={() => {}} />
         </QueryClientProvider>,
       );
     });
 
     await waitForImage(tree, 'batch-grid-tile-0-img');
-    const thumbnailCallsAfterGrid = calls.filter((c) =>
-      c.includes('/files/fil_thumb/url'),
-    );
+    const thumbnailCallsAfterGrid = calls.filter((c) => c.includes('/files/fil_thumb/url'));
     expect(thumbnailCallsAfterGrid).toHaveLength(1);
 
     await act(async () => {
@@ -1810,9 +1757,7 @@ describe('gallery thumbnail placeholder default wiring', () => {
     });
 
     await waitForImage(tree, 'image-preview-0-image');
-    const thumbnailCallsAfterModal = calls.filter((c) =>
-      c.includes('/files/fil_thumb/url'),
-    );
+    const thumbnailCallsAfterModal = calls.filter((c) => c.includes('/files/fil_thumb/url'));
     expect(thumbnailCallsAfterModal).toHaveLength(1);
 
     const image = tree.root.findByProps({ testID: 'image-preview-0-image' });
@@ -1852,6 +1797,7 @@ git commit -m "test(mobile): cover thumbnail placeholder default wiring" \
 ### Task 9: Final validation and manual QA notes
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/2026-05-29-photo-grid-and-fullscreen-redesign.md`
 
 - [x] **Step 1: Run the mobile test suite**

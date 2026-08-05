@@ -1,5 +1,11 @@
 # Maestro full regression journey
 
+> **Document scope:** historical design and run evidence. Use
+> [`.maestro/README.md`](../../.maestro/README.md) and
+> [`tools/maestro-orchestrator/README.md`](../../tools/maestro-orchestrator/README.md)
+> for current commands and prerequisites. The proposed hosted Maestro
+> workflow in this design was not added.
+>
 > **Historical status:** green. The listed modules passed end-to-end on
 > real Android device `R3CT7092S2H` (`com.harpa.pro.dev`) in
 > fixture-replay mode against the local docker-compose stack.
@@ -39,7 +45,7 @@
 > [Pitfall 3](pitfalls.md#pitfall-3--mobile-shell-drifted-from-the-visual-design),
 > [Pitfall 4](pitfalls.md#pitfall-4--big-features-stubbed-then-forgotten),
 > [Pitfall 6](pitfalls.md#pitfall-6--per-request-db-scope-rls-replacement-added-late),
-> [Pitfall 9](pitfalls.md#pitfall-9--maestro-appid-hardcoded),
+> [Pitfall 9](pitfalls.md#pitfall-9--maestro-flows-broken-by-bundle-id-change),
 > [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken).
 
 ---
@@ -75,10 +81,10 @@ underlying surface lands. **Do not silently green-stub these**
 lands; the [Future modules](#7-future-modules-pickup-pointers)
 section is the queue.
 
-| Carved out | Why | Pickup pointer |
-|---|---|---|
-| Voice note debug fields (transcript, summary, playback) in Report Debug | Module 09 covers the draft-side voice lifecycle and module 12 covers the current debug surface. Voice-specific debug fields need API + UI support before Maestro can assert them. | Track after the debug payload expands. |
-| Push notifications / universal links cold-tap | Tracked in [P4.6](plan-p4-hardening.md#p46-universal-links). Different harness. | [P4.6] — separate flow `share-link-cold-start.yaml`. |
+| Carved out                                                              | Why                                                                                                                                                                               | Pickup pointer                                       |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Voice note debug fields (transcript, summary, playback) in Report Debug | Module 09 covers the draft-side voice lifecycle and module 12 covers the current debug surface. Voice-specific debug fields need API + UI support before Maestro can assert them. | Track after the debug payload expands.               |
+| Push notifications / universal links cold-tap                           | Tracked in [P4.6](plan-p4-hardening.md#p46-universal-links). Different harness.                                                                                                   | [P4.6] — separate flow `share-link-cold-start.yaml`. |
 
 ---
 
@@ -145,10 +151,10 @@ the slot for when the corresponding features land on `dev`. See
 Maestro can only drive one device. We sequence actor switches by
 signing out and signing back in.
 
-| Actor | Phone | OTP | Role |
-|---|---|---|---|
-| `alice` | `+15550000001` | `000000` | project owner |
-| `bob` | `+15550000002` | `000000` | invitee (editor → viewer → removed) |
+| Actor   | Phone          | OTP      | Role                                |
+| ------- | -------------- | -------- | ----------------------------------- |
+| `alice` | `+15550000001` | `000000` | project owner                       |
+| `bob`   | `+15550000002` | `000000` | invitee (editor → viewer → removed) |
 
 **Fixture-mode OTP.** `EXPO_PUBLIC_USE_FIXTURES=true` (`:mock` build)
 must wire the Twilio Verify client to accept `000000` for
@@ -164,10 +170,10 @@ do not inline the phone/OTP in modules.
 Maestro variables, set by `output:` on the first module and read by
 later ones:
 
-| Variable | Set by | Read by |
-|---|---|---|
-| `REPORT_NUMBER` | `07-reports-crud` | 08–12 |
-| `BOB_USER_ID` | `03-members-invite` (from members row testID) | 05, 06 |
+| Variable        | Set by                                        | Read by |
+| --------------- | --------------------------------------------- | ------- |
+| `REPORT_NUMBER` | `07-reports-crud`                             | 08–12   |
+| `BOB_USER_ID`   | `03-members-invite` (from members row testID) | 05, 06  |
 
 The single project created by `02-projects-crud` is referenced from
 modules 04–13 by its **post-edit name** (`text: "Regression Test
@@ -229,62 +235,65 @@ copy tweaks). The journey requires the following testIDs to exist —
 add them in the **screen** files in the same commit as the
 corresponding module flow:
 
-| testID | Screen / component | Used by |
-|---|---|---|
-| `btn-new-project` | `projects-list.tsx` | 02 |
-| `input-project-name` | `project-new.tsx` | 02 |
-| `btn-save-project` | `project-new.tsx`, `project-edit.tsx` | 02 |
-| `btn-project-edit` | `project-home.tsx` | 02 |
-| `btn-project-delete` | `project-edit.tsx` | 13 |
-| `confirm-delete-project` | `AppDialogSheet` destructive confirm | 13 |
-| `link-project-members` | `project-home.tsx` | 03 |
-| `input-member-phone` | `project-members.tsx` AddMemberForm | 03 |
-| `picker-member-role` | `project-members.tsx` | 03, 05 |
-| `btn-add-member` | `project-members.tsx` | 03 |
-| `member-row-${userId}` | `project-members.tsx` | 03, 05, 06 |
-| `btn-remove-member-${userId}` | `project-members.tsx` | 06 |
-| `confirm-remove-member` | `AppDialogSheet` destructive confirm | 06 |
-| `member-role-badge-${userId}` | `project-members.tsx` | 04, 05 |
-| `btn-new-report` | `reports-list.tsx` | 07 |
-| `btn-report-delete` | `saved-report.tsx` actions menu | 07 |
-| `report-row-${number}` | `reports-list.tsx` | 07–12 |
-| `tab-notes` / `tab-report` / `tab-edit` | `GenerateReportTabBar` | 08–12 |
-| `input-text-note` | `GenerateReportInputBar` | 08 |
-| `btn-send-text-note` | `GenerateReportInputBar` | 08 |
-| `note-row-${noteId}` | `NoteTimeline` | 08 |
-| `btn-delete-note-${noteId}` | `NoteTimeline` long-press menu | 08 |
-| `btn-generate-report` | `GenerateReportActionRow` | 11 |
-| `btn-finalize-report` | `GenerateReportActionRow` | 11 |
-| `confirm-finalize` | `AppDialogSheet` | 11 |
-| `btn-unfinalize-report` | `saved-report.tsx` actions menu | 11 |
-| `report-view-${number}` | `ReportView` | 11, 12 |
-| `report-title-${number}` | `ReportView` heading | 11 |
-| `report-summary-${number}` | `SummarySectionCard` body | 11 — **currently dead, do not assert.** The testID is gated on `report.report.meta.summary` at `apps/mobile/components/reports/ReportView.tsx:40`, but the wire schema in `packages/api-contract/src/schemas/reports.ts` does not include a `meta.summary` field — the AI fixture returns `summarySections` instead. Until either the schema converges with `meta.summary` or `ReportView.tsx` is changed to always render the testID (e.g. against the joined `summarySections` text), this selector resolves to a non-existent element. |
-| `btn-open-report-debug` | `saved-report.tsx` actions menu (dev section only) | 12 |
-| `debug-prompt` | `report-debug.tsx` | 12 |
-| `debug-report-notes` | `report-debug.tsx` | 12 |
-| `debug-llm-response` | `report-debug.tsx` | 12 |
-| `debug-empty-state` | `report-debug.tsx` | 12 (carve-out fallback) |
+| testID                                  | Screen / component                                 | Used by                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `btn-new-project`                       | `projects-list.tsx`                                | 02                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `input-project-name`                    | `project-new.tsx`                                  | 02                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-save-project`                      | `project-new.tsx`, `project-edit.tsx`              | 02                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-project-edit`                      | `project-home.tsx`                                 | 02                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-project-delete`                    | `project-edit.tsx`                                 | 13                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `confirm-delete-project`                | `AppDialogSheet` destructive confirm               | 13                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `link-project-members`                  | `project-home.tsx`                                 | 03                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `input-member-phone`                    | `project-members.tsx` AddMemberForm                | 03                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `picker-member-role`                    | `project-members.tsx`                              | 03, 05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `btn-add-member`                        | `project-members.tsx`                              | 03                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `member-row-${userId}`                  | `project-members.tsx`                              | 03, 05, 06                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `btn-remove-member-${userId}`           | `project-members.tsx`                              | 06                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `confirm-remove-member`                 | `AppDialogSheet` destructive confirm               | 06                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `member-role-badge-${userId}`           | `project-members.tsx`                              | 04, 05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `btn-new-report`                        | `reports-list.tsx`                                 | 07                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-report-delete`                     | `saved-report.tsx` actions menu                    | 07                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `report-row-${number}`                  | `reports-list.tsx`                                 | 07–12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `tab-notes` / `tab-report` / `tab-edit` | `GenerateReportTabBar`                             | 08–12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `input-text-note`                       | `GenerateReportInputBar`                           | 08                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-send-text-note`                    | `GenerateReportInputBar`                           | 08                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `note-row-${noteId}`                    | `NoteTimeline`                                     | 08                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-delete-note-${noteId}`             | `NoteTimeline` long-press menu                     | 08                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-generate-report`                   | `GenerateReportActionRow`                          | 11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-finalize-report`                   | `GenerateReportActionRow`                          | 11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `confirm-finalize`                      | `AppDialogSheet`                                   | 11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `btn-unfinalize-report`                 | `saved-report.tsx` actions menu                    | 11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `report-view-${number}`                 | `ReportView`                                       | 11, 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `report-title-${number}`                | `ReportView` heading                               | 11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `report-summary-${number}`              | `SummarySectionCard` body                          | 11 — **currently dead, do not assert.** The testID is gated on `report.report.meta.summary` at `apps/mobile/components/reports/ReportView.tsx:40`, but the wire schema in `packages/api-contract/src/schemas/reports.ts` does not include a `meta.summary` field — the AI fixture returns `summarySections` instead. Until either the schema converges with `meta.summary` or `ReportView.tsx` is changed to always render the testID (e.g. against the joined `summarySections` text), this selector resolves to a non-existent element. |
+| `btn-open-report-debug`                 | `saved-report.tsx` actions menu (dev section only) | 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `debug-prompt`                          | `report-debug.tsx`                                 | 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `debug-report-notes`                    | `report-debug.tsx`                                 | 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `debug-llm-response`                    | `report-debug.tsx`                                 | 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `debug-empty-state`                     | `report-debug.tsx`                                 | 12 (carve-out fallback)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 The CI gate `scripts/check-maestro-testids.sh` (new — see
 implementation checklist) greps the modules for `id:` selectors and
 fails if any are unreferenced in `apps/mobile/screens/**` or
 `apps/mobile/components/**`.
 
-### 3.4 New product surface — Report Debug screen
+### 3.4 Report Debug screen
 
 The user-stated requirement "In the debug page, there are correct
 values for the prompt, for the report notes, and for the response
 from the LLM" requires a surface that does not currently exist.
 
-**Decision:** ship `screens/report-debug.tsx` + route at
-`app/(app)/projects/[project]/reports/[number]/debug.tsx`, gated by
-the same `showDeveloperSection` flag (`DEV_TOOLS_VISIBLE` /
-`EXPO_PUBLIC_USE_FIXTURES`) that already controls the Profile
-developer section. Reached via a new "Report Debug" entry in
-`ReportActionsMenu` that only renders when the flag is on.
+The Report Debug screen and route shipped. Generate-screen Debug and
+Edit tabs remain opt-in developer flags.
+
+The Profile route currently passes `showDeveloperSection`
+unconditionally and always links to `/developer`. This differs from
+the original dev-or-fixture gate below. Treat the production exposure
+as an implementation gap. The regression journey must not be used as
+evidence that the route is gated.
 
 API contract (new): `GET /reports/{number}/debug` →
+
 ```ts
 {
   prompt: { system: string; user: string };
@@ -333,11 +342,11 @@ that is the Pitfall 13 contract.
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
 - assertVisible:
-    id: "btn-project-edit"                # editor can edit
+    id: 'btn-project-edit' # editor can edit
 - assertNotVisible:
-    id: "btn-add-member"                  # editor cannot manage members
+    id: 'btn-add-member' # editor cannot manage members
 - assertNotVisible:
-    id: "btn-project-delete"
+    id: 'btn-project-delete'
 ```
 
 ```yaml
@@ -345,35 +354,39 @@ that is the Pitfall 13 contract.
 - runFlow: helpers/sign-in-alice.yaml
 - ... # tap role picker on member-row, choose viewer
 - assertVisible:
-    id: "member-role-badge-${BOB_USER_ID}"
-    text: "viewer"
+    id: 'member-role-badge-${BOB_USER_ID}'
+    text: 'viewer'
 - runFlow: helpers/sign-out.yaml
 - runFlow: helpers/sign-in-bob.yaml
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
 - assertNotVisible:
-    id: "btn-project-edit"
+    id: 'btn-project-edit'
 - assertNotVisible:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 - assertNotVisible:
-    id: "tab-edit"                        # viewer cannot reach edit tab on draft
+    id: 'tab-edit' # viewer cannot reach edit tab on draft
 ```
 
 ```yaml
 # 12-report-debug.yaml
 - assertVisible:
-    id: "debug-prompt"
+    id: 'debug-prompt'
 - assertVisible:
-    id: "debug-report-notes"
+    id: 'debug-report-notes'
 - assertVisible:
-    id: "debug-llm-response"
+    id: 'debug-llm-response'
 # spot-check that the debug page shows the SAME report number we generated
 - assertVisible:
-    id: "debug-prompt"
-    text: ".*${REPORT_NUMBER}.*"          # regex form
+    id: 'debug-prompt'
+    text: '.*${REPORT_NUMBER}.*' # regex form
 ```
 
-### 3.7 CI integration
+### 3.7 Proposed CI integration
+
+The workflow described below was not implemented. No
+`.github/workflows/e2e-maestro-regression.yml` file exists. Maestro is
+currently a local, device-driven suite.
 
 - New workflow `.github/workflows/e2e-maestro-regression.yml`
   triggered on push to `main` + `dev` + nightly cron. Runs on
@@ -421,16 +434,16 @@ Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 
 ## 5. Open questions / carve-outs
 
-| ID | Question / carve-out | Resolution / owner |
-|---|---|---|
-| Q1 | Where does this land in the plan tree? | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md). |
-| Q2 | Does the regression journey replace `core-end-to-end.yaml`? | No. `core-end-to-end.yaml` stays as the PR-time smoke flow (≈2 min). The regression journey is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with). |
-| Q3 | How do test accounts get into the `dev` deployment? | Use the existing `POST /api/auth/sign-in/email` test-account password bypass, gated by `TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint. |
-| Q4 | Universal-links cold-tap coverage | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links). |
-| Q5 | Token-event timeline (`GET /me/usage/events`) | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up. |
-| Q6 | Android emu LLM-fixture network surface (local mode) | Verify Android emu can reach the loopback fixture server (`10.0.2.2:<port>`). Surface in step 13. |
-| Q7 | Voice + photo carve-outs — where do they re-enter? | [§7](#7-future-modules-pickup-pointers). Tracked here, not silently deferred. |
-| Q8 | Dev mode runs against real LLMs — cost? | `dev` API uses real vendor keys with cost caps in Doppler `dev`. The regression journey runs nightly only on `dev` mode (1×/day × short fixture-friendly prompts) — estimated <$0.05/run. If cost becomes a concern, switch dev-mode to point at fixture-replay too (set `AI_FIXTURE_MODE=replay` on the dev Fly machine for the run window). |
+| ID  | Question / carve-out                                        | Resolution / owner                                                                                                                                                                                                                                                                                                                            |
+| --- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | Where does this land in the plan tree?                      | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md).                                                                                                                                                                                                                                             |
+| Q2  | Does the regression journey replace `core-end-to-end.yaml`? | No. `core-end-to-end.yaml` stays as the PR-time smoke flow (≈2 min). The regression journey is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with).                                                                                                                                                                             |
+| Q3  | How do test accounts get into the `dev` deployment?         | Use the existing `POST /api/auth/sign-in/email` test-account password bypass, gated by `TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint.            |
+| Q4  | Universal-links cold-tap coverage                           | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links).                                                                                                                                                                                                                                                                                    |
+| Q5  | Token-event timeline (`GET /me/usage/events`)               | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up.                                                                                                                                                                                                                                            |
+| Q6  | Android emu LLM-fixture network surface (local mode)        | Verify Android emu can reach the loopback fixture server (`10.0.2.2:<port>`). Surface in step 13.                                                                                                                                                                                                                                             |
+| Q7  | Voice + photo carve-outs — where do they re-enter?          | [§7](#7-future-modules-pickup-pointers). Tracked here, not silently deferred.                                                                                                                                                                                                                                                                 |
+| Q8  | Dev mode runs against real LLMs — cost?                     | `dev` API uses real vendor keys with cost caps in Doppler `dev`. The regression journey runs nightly only on `dev` mode (1×/day × short fixture-friendly prompts) — estimated <$0.05/run. If cost becomes a concern, switch dev-mode to point at fixture-replay too (set `AI_FIXTURE_MODE=replay` on the dev Fly machine for the run window). |
 
 ---
 
@@ -491,18 +504,18 @@ Open implementation work:
 
 ---
 
-## 7. Future modules — pickup pointers
+## 7. Future modules pickup pointers
 
 These slots are reserved in the module numbering and **must be
 filled** when the underlying feature lands on `dev`. Each row owns a
 clear merge-trigger so we don't drift back into Pitfall 4.
 
-| Slot | Module | Trigger to add | Tracking |
-|---|---|---|---|
-| 09 | `09-voice-notes.yaml` — fixture recording + upload + transcribe + summarize + title + transcript sheet + playback entry point + delete | Voice-note E2E hardening landed on `dev` | Re-enabled in `regression-journey.yaml`; passed local Android regression before module 10a work. |
-| 10a | `10a-photo-notes-draft.yaml` — `btn-attachment` → camera → Done → two-tile photo row appears on Notes timeline → generate → Report tab photo strip → preview → delete | Photo upload UI redesign landed on `dev` (`5173049`) | Re-enabled in `regression-journey.yaml`; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
-| 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | Add a photo-bearing finalized-report path after the draft-side upload lifecycle | Added to local/dev journeys after module 10a; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
-| 12a | `12-report-debug.yaml` voice fields | Add `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F4 in §4 after the debug payload expands. |
+| Slot | Module                                                                                                                                                                | Trigger to add                                                                                       | Tracking                                                                                                                                                   |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 09   | `09-voice-notes.yaml` — fixture recording + upload + transcribe + summarize + title + transcript sheet + playback entry point + delete                                | Voice-note E2E hardening landed on `dev`                                                             | Re-enabled in `regression-journey.yaml`; passed local Android regression before module 10a work.                                                           |
+| 10a  | `10a-photo-notes-draft.yaml` — `btn-attachment` → camera → Done → two-tile photo row appears on Notes timeline → generate → Report tab photo strip → preview → delete | Photo upload UI redesign landed on `dev` (`5173049`)                                                 | Re-enabled in `regression-journey.yaml`; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28.      |
+| 10b  | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL                                        | Add a photo-bearing finalized-report path after the draft-side upload lifecycle                      | Added to local/dev journeys after module 10a; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
+| 12a  | `12-report-debug.yaml` voice fields                                                                                                                                   | Add `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F4 in §4 after the debug payload expands.                                                                                                     |
 
 If a feature lands on `dev` but its module is **not** added in the
 same PR, the PR is blocked. The merge-checklist for any branch in

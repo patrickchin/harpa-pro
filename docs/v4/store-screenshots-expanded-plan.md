@@ -1,5 +1,10 @@
 # Expanded Store Screenshot Plan
 
+> **Status: shipped.** The seed script, nine-source iOS capture flow,
+> eight-image Play Store set, and checked-in Fastlane screenshots now
+> implement this plan. Use `.maestro/README.md` for the current capture
+> procedure. The steps below remain as the delivery record.
+
 ## Goal
 
 Update the app-store screenshot flow so the generated images show a fuller, more credible HARPA workspace:
@@ -67,17 +72,15 @@ Replace the first-pass flow with a seeded capture flow that produces nine source
 8. `08_usage` - usage screen with populated metrics, OpenAI/Groq model mix, and recent events.
 9. `09_report_review` - finalized report review tab with member feedback and the full wrapping title.
 
-## Implementation Steps
+## Implemented steps
 
-1. Add the plan document.
-2. Add four more CC0 fixture photos and update fixture source documentation.
-3. Keep all six photos as seed-only MinIO fixtures so they are not bundled into release builds.
-4. Add `scripts/maestro/seed-store-screenshots.sh` to seed Postgres and MinIO.
-5. Update `.maestro/store-screenshots.yaml` to use the seeded state and capture the nine screens.
-6. Update `.maestro/README.md` with the seed step.
-7. Run the local API stack, seed fixtures, run Maestro, and regenerate Android/iOS Fastlane screenshots.
-8. Verify dimensions and run focused mobile checks.
-9. Commit, push, and update the existing PR.
+1. [x] Add the plan document.
+2. [x] Add the CC0 fixture photos and source documentation.
+3. [x] Keep the source photos in the seed-only fixture directory.
+4. [x] Add `scripts/maestro/seed-store-screenshots.sh`.
+5. [x] Capture the nine iOS source screenshots with Maestro.
+6. [x] Document the seed and capture commands in `.maestro/README.md`.
+7. [x] Check in the nine iOS and eight Android listing images.
 
 ## Verification
 

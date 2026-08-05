@@ -1,4 +1,4 @@
-# Observability + Ops
+# Observability and operations
 
 ## Hosting
 
@@ -380,10 +380,11 @@ directly on Fly. CI control-plane credentials such as `NEON_API_KEY` and
 | `prd`          | prod Fly app + prod CI deploys          | `.env.prod`        |
 | `dev_personal` | per-developer overrides on top of `dev` | `.env.local`       |
 
-`.env.example` (committed) enumerates every var. The three live
-variants (`.env.local` / `.env.dev` / `.env.prod`) are gitignored and
-mirror Doppler except for deployment-resolved values such as
-`ADMIN_DATABASE_URL`.
+`.env.example` lists application variables and common deployment variables.
+Workspace-specific examples list additional test and tool values. The three
+live variants (`.env.local`, `.env.dev`, and `.env.prod`) are gitignored.
+Deployment-resolved values, such as `ADMIN_DATABASE_URL`, do not mirror
+Doppler.
 
 An administrator's login password is not a deployment secret. The
 `admin:set-password --password-stdin` command hashes it into the independent
@@ -470,10 +471,12 @@ publishes Git-connected browser applications through its GitHub App. GitHub
 Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
 credential.
 
-`--stage` defers activation; the subsequent `flyctl deploy` flips the
-secrets on — so code + secrets ship in a single transaction. To rotate
-a secret: edit it in Doppler, push to `dev` or `main`, deploy fires
-and picks up the new value.
+The root lint job runs `pnpm test:docs:links`. It checks repository Markdown
+links and local image references before merge.
+
+`--stage` defers activation. The subsequent `flyctl deploy` activates the
+secrets. To rotate a secret, edit Doppler and dispatch the matching API
+workflow. A normal code change follows the protected `dev` and `main` flow.
 
 The `DOPPLER_TOKEN_{DEV,PRD}` service tokens are created with
 `doppler configs tokens create ci-github --project harpa-pro --config <env>`
@@ -505,10 +508,8 @@ flags. Before importing, the workflow removes any legacy
 `ADMIN_CORS_ORIGINS` Fly secret so the checked-in Fly TOML value cannot remain
 shadowed.
 
-- `.env.example` at the repo root enumerates every
-  `EXPO_PUBLIC_*` var. The `lib/env.ts` Zod parse runs in CI
-  against a populated `.env.example` to catch missing entries
-  before merge.
+- `.env.example` lists every mobile `EXPO_PUBLIC_*` variable parsed by
+  `apps/mobile/lib/config/env.ts`.
 
 ## Observability
 
@@ -531,18 +532,23 @@ shadowed.
     bundles receive the same values.
     The Expo plugin disables auto-upload when `SENTRY_AUTH_TOKEN` is not
     present so local prebuilds do not fail.
-- **Fly metrics** — built-in for API latency / 5xx rate.
-- **Logs** — Fly log shipping to Better Stack (free tier) for
-  search.
-- **Request id** — every API request gets `X-Request-Id` echoed
-  in responses; logged with the structured log entry; mobile
-  attaches it to Sentry breadcrumbs on error.
+- **Fly metrics** provide provider-side Machine and HTTP telemetry.
+- **Fly logs** capture application stdout and stderr. The repository has no
+  Better Stack drain or shipping configuration. Verify any external drain in
+  Fly before relying on it.
+- **Request ID** middleware returns `X-Request-Id` on every API response.
+  Error paths add it to console output and Sentry context. The API has no
+  global structured request-log middleware. `REQUEST_LOG` is parsed but has no
+  runtime consumer.
 
 ## Deploy flow
 
 > Detailed pipeline, migration apply, and rollback playbook in
 > [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md). The flow
 > below is the high-level summary.
+
+Feature pull requests target `dev`. Production promotions use a `dev` to
+`main` pull request. Do not merge a feature branch directly to `main`.
 
 The Fly release command applies migrations in this fixed order:
 
@@ -610,7 +616,7 @@ PR to main (production gate)
   ↳ run stress/core/extended journeys against that exact dev deploy
 
 Push to main (production)
-  ↳ blocking snapshots of application and admin Neon `main` branches
+  ↳ blocking recovery branches of application and admin Neon `main` branches
   ↳ Fly deploy → harpa-pro-api
     ↳ release_command applies app migrations, then admin migrations
     ↳ /readyz and /admin/readyz verified independently
@@ -624,6 +630,13 @@ Push to main (production)
     ↳ appVersion change: skip until the matching native build exists
   ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
+
+Use the protected GitHub workflows for normal deployment. The local
+`infra/fly/deploy.sh` helper always targets production through
+`infra/fly/fly.toml`; it does not read `FLY_APP`. It labels the image from
+local `HEAD` but does not prove that the checkout is clean or pushed. Before
+an approved emergency use, compare `git status --short`, the local SHA, and
+the remote branch SHA, then record the deployed image digest.
 
 ### Mobile OTA and native runtime ordering
 
@@ -720,7 +733,6 @@ flyctl secrets set --app harpa-pro-api-dev \
   TURNSTILE_LIVE=1 TURNSTILE_SECRET_KEY=... \
   RATE_LIMIT_BACKEND=postgres \
   WAITLIST_CORS_ORIGINS="https://dev.harpa-pro.pages.dev" \
-  TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
   R2_FIXTURE_MODE=live \
   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
   R2_BUCKET=harpa-pro-dev \
@@ -861,7 +873,17 @@ singleton started/no-standby retry clones it. Id, identity, service, standby, or
 topology drift during any pre-clone re-list or polling fails before cloning.
 
 The verifier remains diagnostic-only. The workflow calls it again after
-repair and before arming, so a green deploy proves a running executor exists.
+repair and before arming. This proves that a running executor exists. It does
+not by itself prove that lifecycle arming finished; rely on the arming
+command's confirmation marker and the rollout table below. If a deployment
+stalls before that marker is reported, treat the rollout state as unknown and
+inspect it before retrying:
+
+```sql
+SELECT armed_at, enforce_after, account_delete_enabled, updated_at
+FROM app.storage_lifecycle_rollout
+WHERE singleton = TRUE;
+```
 
 Fly can create a stopped standby for the service-less process group. An
 explicit `storage-worker=1` command therefore collapses the pair without
@@ -888,33 +910,39 @@ ORDER BY run_after;
 
 ### Burst scaling
 
-[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's
-proxy when to wake / start additional machines:
+[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's proxy when
+an existing Machine is too busy to receive more work:
 
-- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly
-  starts routing new connections to a second (or third…) machine.
+- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly routes
+  new connections to another available Machine.
 - `hard_limit = 50` — Fly stops sending to a machine entirely until
   it drains below the soft limit.
 
-Sized for the current node-postgres pool (`max: 10` per machine)
-plus headroom for non-DB-bound work (auth, validation, idle).
-
-**Set the max machine count out-of-band** (not in fly.toml):
+Concurrency settings do not create a maximum Machine count or add Machines.
+Capacity changes are explicit operations. Before changing the app process
+count, record the current process groups and worker topology:
 
 ```bash
-# Allow up to 6 machines in the primary region during a spike.
-fly scale count 6 --max-per-region 6 -a harpa-pro-api
+flyctl scale show --app harpa-pro-api
+flyctl machine list --app harpa-pro-api
 ```
 
-Steady-state Fly will keep `min_machines_running` hot (currently 0 for
-prod) and let the rest stop/suspend when traffic recedes.
+With owner approval, set only the HTTP process group to an exact count:
+
+```bash
+flyctl scale count <count> --process-group app --app harpa-pro-api
+```
+
+Do not omit `--process-group`. A broad scale command can also change the
+service-less `storage-worker` group. After a count change, rerun the Machine
+inventory and confirm the worker pair is unchanged. `--max-per-region` controls
+distribution of the requested count; it is not an autoscaling ceiling.
 
 ### Multi-region (future)
 
-`primary_region = "fra"` today. Adding read-replica regions is a
-single-step `fly regions add` once the user base demands it — Neon
-read replicas exist in multiple regions and the API has no
-sticky-session state. Not configured today; flag for P5+.
+`primary_region = "fra"` today. Multi-region placement is not configured.
+It requires an explicit Machine topology, database-latency design, failure
+policy, and verification plan. Do not treat it as a one-command change.
 
 ### Neon connection pooling
 
@@ -930,9 +958,9 @@ Neon's per-compute connection limit. Two safety nets:
    fly secrets list -a harpa-pro-api | grep DATABASE_URL  # shows digest only
    doppler secrets get DATABASE_URL --plain | grep -o '[^@]*$'  # full host
    ```
-2. **`pg.Pool.max = 10`** per machine. With 6 machines max that's 60
-   concurrent backend connections — well inside Neon's free-tier
-   limit (~100) and trivially inside paid plans.
+2. **`pg.Pool.max = 10`** per application Machine. Total possible client
+   connections grow with the active Machine count. Verify the current Neon
+   plan and endpoint limits before increasing Fly capacity.
 
 If the pooler hostname is missing, the API still works but Neon's
 compute will saturate well before Fly does and you'll see
@@ -951,22 +979,26 @@ variable.
 ### Verifying scale in prod
 
 ```bash
-fly status -a harpa-pro-api               # current machine count + state
-fly logs -a harpa-pro-api | grep started  # see auto-starts under load
-fly autoscale show -a harpa-pro-api       # current limits
+flyctl status --app harpa-pro-api
+flyctl scale show --app harpa-pro-api
+flyctl machine list --app harpa-pro-api
+flyctl logs --app harpa-pro-api
 ```
 
 ## Alerts
 
-- Fly app down → PagerDuty.
-- 5xx rate > 1% over 5 min → Slack.
-- Sentry new issue (crash) → Slack.
-- AI provider failure rate > 5% over 10 min → Slack.
+The repository configures Sentry capture, Fly health checks, and deployment
+smokes. It does not configure PagerDuty, Slack alert routes, or percentage
+thresholds. Treat those integrations as unknown until they are verified in
+the provider consoles. Record the destination, threshold, owner, and a test
+event when an external alert is enabled.
 
 ## Budget guards
 
 - AI: per-user monthly token budget enforced server-side; usage
   visible on the in-app `usage` screen.
-- R2: lifecycle rules cap orphan files (see [arch-storage.md](arch-storage.md)).
+- R2: application jobs remove expired uploads and account-owned objects. No
+  bucket-native R2 lifecycle policy is configured in this repository; see
+  [arch-storage.md](arch-storage.md).
 - Neon: application and admin PR branches auto-delete on PR close. CI also
-  prunes stale branches and per-deploy snapshots in both projects.
+  prunes stale branches and pre-deploy recovery branches in both projects.

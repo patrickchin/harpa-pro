@@ -348,6 +348,12 @@ on the real relative filter.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-07** — The loopback Maestro API/R2 bridge accepted absolute or
+  arbitrary outbound targets, hostname substring checks accepted lookalikes,
+  and AI-fixture cleanup used four polynomial regex paths. Fix: pin the API
+  origin, require signed HTTPS R2 allowlists, use linear scans, and exercise the
+  real proxy factories with adversarial regressions.
+  [detail](2026-08-07-dev-e2e-proxy-ssrf.md)
 - **2026-08-06** _(R5)_ — Fixture-mode saved reports always substituted a
   static sample, hiding persisted edits and photo placements after finalize.
   Fix: persisted report bodies now win and the sample is an absence-only

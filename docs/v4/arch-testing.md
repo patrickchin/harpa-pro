@@ -134,6 +134,15 @@ Each AI-touching route has a test that:
   once after `openLink`: a 90-second union wait observes Quickstep,
   the Metro server row, or app UI before conditional recovery, server
   selection, and app assertions.
+- Shared-development device runs expose the host-side API, R2, and auth helpers
+  through `adb reverse`; loopback binding is not an authorization boundary.
+  `dev-e2e-api-proxy.cjs` accepts only relative paths and constructs outbound
+  requests from the configured HTTPS API hostname plus that path. JSON response
+  rewriting and `dev-e2e-r2-proxy.cjs` share one signed-R2 validator: strict
+  Cloudflare R2 hostname suffixes, SigV4 fields, no credentials/custom ports,
+  and `GET|HEAD|PUT` only. The R2 proxy uses HTTPS directly and does not follow
+  redirects. A PR-gated Node test starts the real server factories and proves
+  rejected inputs cannot reach a loopback sentinel.
 - Both semantic Quickstep `Wait` fallbacks remain even with global dialog
   suppression. They recover a dialog already present at either transition;
   the flow still fails closed unless the final `input-email` testID renders.

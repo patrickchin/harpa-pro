@@ -104,7 +104,7 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
 });
 
 test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/docs/guides/generate-ai-report");
 
   const trigger = page.getByRole("link", {

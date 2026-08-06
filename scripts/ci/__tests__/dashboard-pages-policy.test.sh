@@ -49,6 +49,24 @@ require_before() {
   fi
 }
 
+job_body() {
+  local file="$1" job="$2"
+  awk -v header="  ${job}:" '
+    $0 == header { in_job = 1 }
+    in_job && $0 ~ /^  [^[:space:]][^:]*:$/ && $0 != header { exit }
+    in_job { print }
+  ' "$file"
+}
+
+require_job_fixed() {
+  local file="$1" job="$2" needle="$3" description="$4"
+  if job_body "$file" "$job" | grep -Fq -- "$needle"; then
+    pass "$description"
+  else
+    fail "$description"
+  fi
+}
+
 echo "dashboard Pages Git deployment policy"
 
 require_file "$PREVIEW" "dashboard preview workflow exists"
@@ -145,6 +163,12 @@ require_fixed "$PROD" "https://harpa-pro-dashboard.pages.dev" \
   "production verifies the Pages project origin"
 require_fixed "$PROD" "https://app.harpapro.com" \
   "production verifies the custom dashboard origin"
+require_job_fixed "$PROD" "api" \
+  "vars.DASHBOARD_PRODUCTION_ENABLED == 'true'" \
+  "production API verification stays dormant before activation"
+require_job_fixed "$PROD" "deployment" \
+  "vars.DASHBOARD_PRODUCTION_ENABLED == 'true'" \
+  "production Pages verification stays dormant before activation"
 require_fixed "$PROD" "https://api.harpapro.com/healthz" \
   "production verifies the production Fly API"
 require_fixed "$PROD" '--commit "${{ github.sha }}"' \

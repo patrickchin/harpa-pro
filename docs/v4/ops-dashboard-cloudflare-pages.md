@@ -165,8 +165,9 @@ The tokenless workflows verify stable aliases. They do not publish artifacts.
 - `dashboard-dev.yml` checks API compatibility, verifies the exact `dev` SHA,
   and checks SPA routing on `dev.harpa-pro-dashboard.pages.dev`.
 - `dashboard-prod.yml` stays dormant unless the repository variable
-  `DASHBOARD_PRODUCTION_ENABLED` is exactly `true`. After activation, it checks
-  API compatibility and verifies the exact `main` SHA on each configured
+  `DASHBOARD_PRODUCTION_ENABLED` is exactly `true`. Both jobs also require the
+  `main` ref, including for manual dispatch. After activation, the workflow
+  checks API compatibility and verifies the exact `main` SHA on each configured
   production hostname.
 
 Do not enable dashboard production builds during the current dev activation.

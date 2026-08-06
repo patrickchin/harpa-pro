@@ -19,12 +19,12 @@ preview contract became custom branches `dev` and `pr-*`. The build watch
 include remains `*` so each allowed branch head produces its exact-SHA
 deployment marker. Automatic production deployments remain disabled.
 
-A 2026-08-07 follow-up found the same provider-state mismatch in
+A 2026-08-07 Asia/Shanghai follow-up found the same provider-state mismatch in
 `dashboard-prod.yml`: a qualifying `main` push would verify the intentionally
 absent Pages production deployment and custom domain. Both production jobs now
 require the repository variable `DASHBOARD_PRODUCTION_ENABLED` to be exactly
-`true`. The variable stays unset until production activation is approved and
-the configured hostnames are ready.
+`true` and reject non-`main` refs. The variable stays unset until production
+activation is approved and the configured hostnames are ready.
 
 **Test.** On 2026-08-05, the Cloudflare Pages project API returned automatic
 production deployments disabled, preview mode `custom`, preview includes `dev`

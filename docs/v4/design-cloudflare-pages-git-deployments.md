@@ -74,6 +74,20 @@ stable Pages origin until that marker matches the expected Git SHA, then run
 the surface-specific HTTP checks. A `200` from an old deployment is not
 success.
 
+### Wrangler tooling contract
+
+Cloudflare Git remains the only Pages publisher. Root
+`wrangler@4.119.0` supports the checked-in site and admin
+`wrangler.jsonc` schemas and local diagnostics; it does not restore direct
+uploads from GitHub Actions. Wrangler 4 requires Node 22 or newer, while this
+repository deliberately runs it on the selected Node 24.19.0 runtime.
+
+Wrangler 4 commands that can run locally or remotely default to local
+execution. An operator who intentionally inspects a remote resource must pass
+`--remote`. The CI runtime smoke validates both Pages configs against
+Wrangler's installed schema, exercises the Miniflare 5 HTTP path, and requires
+the patched Undici 7.29 runtime.
+
 The dashboard Pages project sets `SKIP_DEPENDENCY_INSTALL=1` and runs
 `pnpm install --frozen-lockfile` explicitly before the build wrapper. This
 keeps the repository-root `Gemfile.lock`, which belongs to native release

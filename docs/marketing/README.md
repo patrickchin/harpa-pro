@@ -40,6 +40,11 @@ calls replay fixtures from `packages/ai-fixtures` in CI.
 Repository configuration does not prove that public-site analytics or Sentry
 is active. Treat provider-console state as `UNKNOWN` until it is checked.
 
+The proposed consent and marketing-telemetry contract is documented in
+[`../v4/design-public-site-consent-and-marketing-telemetry.md`](../v4/design-public-site-consent-and-marketing-telemetry.md).
+That document is design-only: it does not approve a provider or authorize
+adding a CMP, tracker, cookie, or visitor-data flow.
+
 ## Stack decision
 
 | Concern            | Choice                                           | Rationale                                                                         |

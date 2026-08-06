@@ -19,8 +19,23 @@ set -euo pipefail
 
 printf 'flyctl %s\n' "$*" >> "$POLICY_LOG"
 if [[ "$*" == "machines list --app harpa-pro-api --json" ]]; then
-  printf '%s\n' \
-    '[{"id":"app-current","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"app","fly_release_id":"rel-current","fly_release_version":"42"}}},{"id":"worker-started","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":[]}},{"id":"worker-standby","state":"stopped","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":["worker-started"]}}]'
+  machines_json='[{"id":"app-current","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"app","fly_release_id":"rel-current","fly_release_version":"42"}}},{"id":"worker-started","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":[]}},{"id":"worker-standby","state":"stopped","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":["worker-started"]}}]'
+  if [[ -n "${POLICY_MACHINES_JSON:-}" ]]; then
+    machines_json="$POLICY_MACHINES_JSON"
+  fi
+  if [[ -n "${POLICY_LIST_COUNTER:-}" ]]; then
+    list_count=0
+    if [[ -f "$POLICY_LIST_COUNTER" ]]; then
+      list_count=$(<"$POLICY_LIST_COUNTER")
+    fi
+    list_count=$((list_count + 1))
+    printf '%s\n' "$list_count" > "$POLICY_LIST_COUNTER"
+    if [[ "$list_count" -gt 1 &&
+          -n "${POLICY_MACHINES_JSON_AFTER_FIRST_LIST:-}" ]]; then
+      machines_json="$POLICY_MACHINES_JSON_AFTER_FIRST_LIST"
+    fi
+  fi
+  printf '%s\n' "$machines_json"
 fi
 
 if [[ "${1:-} ${2:-}" == "machine exec" ]]; then

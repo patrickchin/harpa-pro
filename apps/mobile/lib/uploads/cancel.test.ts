@@ -57,7 +57,13 @@ describe('upload queue — AbortController cancellation', () => {
     const registerFile = vi.fn();
     const createNote = vi.fn();
 
-    const queue = createUploadQueue({ presign, putToR2, registerFile, createNote, appendFiles: vi.fn() });
+    const queue = createUploadQueue({
+      presign,
+      putToR2,
+      registerFile,
+      createNote,
+      appendFiles: vi.fn(),
+    });
     const promise = queue.enqueue(input());
 
     // Wait for the job to actually reach `uploading` before cancelling.
@@ -97,9 +103,133 @@ describe('upload queue — AbortController cancellation', () => {
     const registerFile = vi.fn(async () => fakeFile);
     const createNote = vi.fn(async () => fakeNote);
 
-    const queue = createUploadQueue({ presign, putToR2, registerFile, createNote, appendFiles: vi.fn() });
+    const queue = createUploadQueue({
+      presign,
+      putToR2,
+      registerFile,
+      createNote,
+      appendFiles: vi.fn(),
+    });
     const promise = queue.enqueue(input());
     await promise;
     expect(queue.getJobs()[0]?.attempt).toBe(1);
+  });
+
+  it('rejects a queued batch promise when remove() runs before that job starts', async () => {
+    const presign = vi.fn(async () => ({
+      uploadUrl: 'https://r2/sign',
+      fileKey: 'k',
+      fileId: 'fil-test1234',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    }));
+    const putToR2 = vi.fn(
+      (args: { signal?: AbortSignal }) =>
+        new Promise<void>((_resolve, reject) => {
+          args.signal?.addEventListener(
+            'abort',
+            () => {
+              const err = new Error('R2 PUT aborted');
+              err.name = 'AbortError';
+              reject(err);
+            },
+            { once: true },
+          );
+        }),
+    );
+    const queue = createUploadQueue({
+      presign,
+      putToR2,
+      registerFile: vi.fn(),
+      createNote: vi.fn(),
+      appendFiles: vi.fn(),
+    });
+    const { promises } = queue.enqueueBatch([
+      input({ sourceUri: 'file:///tmp/first.jpg' }),
+      input({ sourceUri: 'file:///tmp/queued.jpg' }),
+    ]);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const [active, queued] = queue.getJobs();
+    expect(active?.status).toBe('uploading');
+    expect(queued?.status).toBe('pending');
+    if (!active || !queued) throw new Error('expected active and queued jobs');
+
+    const queuedSettlement = promises[1]!.then(
+      () => ({ kind: 'resolved' as const }),
+      (error: unknown) => ({ kind: 'rejected' as const, error }),
+    );
+    queue.remove(queued.id);
+    const result = await Promise.race([
+      queuedSettlement,
+      new Promise<{ kind: 'timeout' }>((resolve) =>
+        setTimeout(() => resolve({ kind: 'timeout' }), 50),
+      ),
+    ]);
+
+    queue.remove(active.id);
+    await expect(promises[0]).rejects.toMatchObject({ name: 'AbortError' });
+    expect(result).toMatchObject({
+      kind: 'rejected',
+      error: { name: 'AbortError' },
+    });
+  });
+
+  it('lets an active collaborator settle its abort before rejecting the upload promise', async () => {
+    let finishAbort: (() => void) | null = null;
+    const queue = createUploadQueue({
+      presign: vi.fn(async () => ({
+        uploadUrl: 'https://r2/sign',
+        fileKey: 'k',
+        fileId: 'fil-test1234',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      })),
+      putToR2: vi.fn(
+        (args: { signal?: AbortSignal }) =>
+          new Promise<void>((_resolve, reject) => {
+            args.signal?.addEventListener(
+              'abort',
+              () => {
+                finishAbort = () => {
+                  const err = new Error('R2 PUT aborted');
+                  err.name = 'AbortError';
+                  reject(err);
+                };
+              },
+              { once: true },
+            );
+          }),
+      ),
+      registerFile: vi.fn(),
+      createNote: vi.fn(),
+      appendFiles: vi.fn(),
+    });
+    const promise = queue.enqueue(input());
+    let settled = false;
+    const settlement = promise.catch((error: unknown) => {
+      settled = true;
+      return error;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const [active] = queue.getJobs();
+    expect(active?.status).toBe('uploading');
+    if (!active) throw new Error('expected active job');
+
+    let removalSettled = false;
+    const removal = queue.remove(active.id).then(() => {
+      removalSettled = true;
+    });
+    await Promise.resolve();
+    expect(finishAbort).toBeTypeOf('function');
+    expect(settled).toBe(false);
+    expect(removalSettled).toBe(false);
+
+    finishAbort!();
+    await expect(settlement).resolves.toMatchObject({ name: 'AbortError' });
+    await removal;
+    expect(settled).toBe(true);
+    expect(removalSettled).toBe(true);
   });
 });

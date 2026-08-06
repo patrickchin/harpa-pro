@@ -114,17 +114,14 @@ function buildContext(overrides: Record<string, unknown> = {}) {
       openFinalize: vi.fn(),
       closeFinalize: vi.fn(),
       isAutoSaving: false,
+      isReportWriteBlocked: false,
       lastSavedAt: null,
     },
     voice: {} as Record<string, unknown>,
     photo: {} as Record<string, unknown>,
     preview: {
       openFile: vi.fn(),
-      photoGallery: [
-        PHOTO_PLACED_IN_SECTION,
-        PHOTO_UNPLACED,
-        PHOTO_PLACED_IN_ISSUE,
-      ],
+      photoGallery: [PHOTO_PLACED_IN_SECTION, PHOTO_UNPLACED, PHOTO_PLACED_IN_ISSUE],
       photoIndex: null,
       openPhoto: vi.fn(),
       closePhoto: vi.fn(),
@@ -183,9 +180,9 @@ describe('ReportTabPane placement pipeline', () => {
 
   it('renders the placed photo inside its target section card', () => {
     const tree = render();
-    expect(
-      tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length).toBeGreaterThan(
+      0,
+    );
     expect(
       tree.root.findAllByProps({ testID: 'btn-placed-photo-fil_placed' }).length,
     ).toBeGreaterThan(0);
@@ -193,9 +190,7 @@ describe('ReportTabPane placement pipeline', () => {
 
   it('renders the placed photo inside its target issue card', () => {
     const tree = render();
-    expect(
-      tree.root.findAllByProps({ testID: 'placed-photos-issue-0' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'placed-photos-issue-0' }).length).toBeGreaterThan(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-placed-photo-fil_issue' }).length,
     ).toBeGreaterThan(0);
@@ -222,12 +217,10 @@ describe('ReportTabPane placement pipeline', () => {
       },
     });
     const tree = render();
-    expect(
-      tree.root.findAllByProps({ testID: 'generate-report-photos' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'generate-report-photos' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it('submits a selected target from the unplaced photo chip', () => {
@@ -263,9 +256,9 @@ describe('ReportTabPane placement pipeline', () => {
       addButton.props.onPress();
     });
 
-    expect(
-      tree.root.findAllByProps({ testID: 'attachment-picker-group-n_placed' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'attachment-picker-group-n_placed' })).toHaveLength(
+      0,
+    );
 
     const photoGroup = tree.root.findByProps({
       testID: 'attachment-picker-group-n_unplaced',
@@ -311,9 +304,9 @@ describe('ReportTabPane placement pipeline', () => {
 
     const tree = render();
 
-    expect(
-      tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length).toBeGreaterThan(
+      0,
+    );
     expect(
       tree.root.findAllByProps({ testID: 'btn-placed-photo-fil_placed' }).length,
     ).toBeGreaterThan(0);
@@ -342,11 +335,9 @@ describe('ReportTabPane placement pipeline', () => {
     });
 
     expect(mockCtx.placement.onPlacePhotoGroup).not.toHaveBeenCalled();
-    expect(
-      tree.root.findAllByProps({ testID: 'placement-sheet-issue-0' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'attachment-picker-group-n_unplaced' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'placement-sheet-issue-0' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'attachment-picker-group-n_unplaced' })).toHaveLength(
+      0,
+    );
   });
 });

@@ -153,6 +153,20 @@ require_before() {
   fi
 }
 
+require_ordered_pair() {
+  local path="$1" first="$2" second="$3" description="$4"
+  if [[ -f "$REPO_ROOT/$path" ]] && awk -v first="$first" -v second="$second" '
+    index($0, first) { saw_first = 1 }
+    saw_first && index($0, second) { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$REPO_ROOT/$path"; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 require_occurrence_before() {
   local path="$1" first="$2" first_occurrence="$3" second="$4" second_occurrence="$5" description="$6"
   local first_line second_line
@@ -273,7 +287,7 @@ forbid_fixed ".github/dependabot.yml" \
 require_file ".github/workflows/dependency-review.yml" \
   "pull requests have a dependency-review workflow"
 require_regex ".github/workflows/dependency-review.yml" \
-  'actions/dependency-review-action@v[1-9][0-9]*$' \
+  'actions/dependency-review-action@v[1-9][0-9]*[[:space:]]*$' \
   "dependency review pins an explicit numeric action major"
 require_fixed ".github/workflows/dependency-review.yml" \
   "fail-on-severity: high" \
@@ -323,7 +337,7 @@ require_regex ".maestro/ci-launch-smoke.yaml" \
   "id:[[:space:]]*['\"]?input-email['\"]?" \
   "Maestro launch flow asserts a rendered app control"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
-  "visible: 'Continue|Email'" \
+  "visible: 'Continue|Close|Email'" \
   "Maestro waits for either Expo onboarding or rendered app UI"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
@@ -332,7 +346,7 @@ require_fixed ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding|Development Build"' \
   "Maestro accepts the recoverable Quickstep dialog at launcher readiness"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
-  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
   "Maestro observes late Quickstep interception during post-link loading"
 require_fixed_count ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding"' 2 \
@@ -348,7 +362,7 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "timeout: 30000" \
   "launcher or Quickstep readiness remains bounded to 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
-  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
   "timeout: 90000" \
   "post-link launcher or app readiness retains the 90-second cold-bundle budget"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
@@ -356,7 +370,7 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "timeout: 30000" \
   "Expo Dev Launcher readiness wait allows 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
-  "visible: 'Continue|Email'" \
+  "visible: 'Continue|Close|Email'" \
   "timeout: 90000" \
   "fail-closed Expo app-readiness wait allows 90 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
@@ -384,10 +398,10 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "Maestro waits for the Expo Dev Launcher before opening Metro"
 require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
   "- openLink:" 1 \
-  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' 1 \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' 1 \
   "Maestro starts bounded post-link observation after opening Metro"
 require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
-  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' 1 \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' 1 \
   'visible: "Quickstep isn'\''t responding"' 2 \
   "Maestro observes late Quickstep before its second recovery action"
 require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
@@ -404,7 +418,7 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "Maestro selects the available Metro server before asserting app UI"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
-  "visible: 'Continue|Email'" \
+  "visible: 'Continue|Close|Email'" \
   "Maestro waits for app readiness only after selecting Metro"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "timeout: 90000" \
@@ -418,6 +432,281 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "- assertVisible:" \
   "id: 'input-email'" \
   "launch smoke finishes by asserting the rendered email control"
+
+require_file ".maestro/helpers/launch-local-dev-client.yaml" \
+  "local Maestro journeys share one dev-client launch helper"
+require_fixed_count ".maestro/helpers/launch-local-dev-client.yaml" \
+  "Continue|Close|Email" 4 \
+  "local launch waits accept Expo's Continue and Close onboarding actions"
+require_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding|Development Build|Continue|Close|Email"' \
+  "local launch helper accepts recoverable Quickstep at native readiness"
+require_adjacent_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding|Development Build|Continue|Close|Email"' \
+  "timeout: 30000" \
+  "local native-launcher readiness remains bounded to 30 seconds"
+require_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
+  "local launch helper accepts recoverable Quickstep during post-link loading"
+require_adjacent_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
+  "timeout: 180000" \
+  "local post-link readiness allows a three-minute cache-empty bundle"
+require_fixed_count ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding"' 2 \
+  "local launch helper checks Quickstep around both launcher transitions"
+require_fixed_count ".maestro/helpers/launch-local-dev-client.yaml" \
+  "- tapOn: 'Wait'" 2 \
+  "local launch helper recovers both Quickstep checks semantically"
+forbid_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  "optional: true" \
+  "local launch readiness remains fail-closed"
+require_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  "visible: 'http://10.0.2.2:8081'" \
+  "local launch helper detects the Android emulator Metro row"
+require_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  "- tapOn: 'http://10.0.2.2:8081'" \
+  "local launch helper selects the visible Android Metro row"
+require_adjacent_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  "visible: 'Continue|Close|Email'" \
+  "timeout: 180000" \
+  "local post-selection readiness allows a three-minute cache-empty bundle"
+require_adjacent_fixed ".maestro/helpers/launch-local-dev-client.yaml" \
+  "id: 'input-email'" \
+  "timeout: 90000" \
+  "local final app-control wait retains its 90-second budget"
+require_before ".maestro/helpers/launch-local-dev-client.yaml" \
+  "clearState: true" \
+  'visible: "Quickstep isn'\''t responding|Development Build|Continue|Close|Email"' \
+  "local launch helper clears state before observing native readiness"
+require_occurrence_before ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding"' 1 \
+  "visible: 'Development Build|Continue|Close|Email'" 1 \
+  "local launch helper handles initial Quickstep before strict readiness"
+require_before ".maestro/helpers/launch-local-dev-client.yaml" \
+  "visible: 'Development Build|Continue|Close|Email'" \
+  "- openLink:" \
+  "local launch helper waits for native readiness before opening Metro"
+require_before ".maestro/helpers/launch-local-dev-client.yaml" \
+  "- openLink:" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
+  "local launch helper observes fallback state after opening Metro"
+require_occurrence_before ".maestro/helpers/launch-local-dev-client.yaml" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' 1 \
+  'visible: "Quickstep isn'\''t responding"' 2 \
+  "local launch helper observes late Quickstep before recovering it"
+require_before ".maestro/helpers/launch-local-dev-client.yaml" \
+  "- tapOn: 'http://10.0.2.2:8081'" \
+  "id: 'input-email'" \
+  "local launch helper selects Metro before requiring app UI"
+require_fixed ".maestro/modules/01-auth.yaml" \
+  "- runFlow: ../helpers/launch-local-dev-client.yaml" \
+  "modular local journeys use the shared dev-client launch helper"
+require_fixed ".maestro/core-end-to-end.yaml" \
+  "- runFlow: helpers/launch-local-dev-client.yaml" \
+  "legacy core journey uses the shared dev-client launch helper"
+require_fixed ".maestro/account-deletion.yaml" \
+  "- runFlow: helpers/launch-local-dev-client.yaml" \
+  "account-deletion journey uses the shared dev-client launch helper"
+require_fixed ".maestro/store-screenshots.yaml" \
+  "- runFlow: helpers/launch-local-dev-client.yaml" \
+  "store screenshot flow uses the shared dev-client launch helper"
+require_fixed ".maestro/place-photo-on-issue.flow.yml" \
+  "- runFlow: modules/01-auth.yaml" \
+  "standalone photo-placement flow uses current local launch and email auth"
+forbid_fixed ".maestro/place-photo-on-issue.flow.yml" \
+  "id: 'input-phone'" \
+  "standalone photo-placement flow does not use removed phone authentication"
+require_fixed ".maestro/place-photo-on-issue.flow.yml" \
+  "id: 'report-row-1'" \
+  "standalone photo-placement flow opens the reset-db seeded report"
+require_fixed ".maestro/place-photo-on-issue.flow.yml" \
+  "id: 'project-row-prj_aaaaaaaaaaaa'" \
+  "standalone photo-placement flow selects the reset-db project by stable id"
+require_before ".maestro/place-photo-on-issue.flow.yml" \
+  "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
+  "id: 'btn-generate-report-photos-place-.*'" \
+  "photo placement waits for persisted generation before opening placement UI"
+forbid_fixed ".maestro/place-photo-on-issue.flow.yml" \
+  "visible: '^(Generate report|Update report)$'" \
+  "photo placement does not race route-level auto-regeneration with a text-based tap"
+require_file ".maestro/helpers/wait-for-auto-regeneration.yaml" \
+  "photo journeys share one route-level auto-regeneration wait"
+require_before ".maestro/helpers/wait-for-auto-regeneration.yaml" \
+  "id: 'report-generation-current'" \
+  "id: 'btn-finalize-report'" \
+  "auto-regeneration observes current generation before finalized readiness"
+require_before ".maestro/helpers/wait-for-auto-regeneration.yaml" \
+  "id: 'btn-finalize-report'" \
+  "enabled: true" \
+  "auto-regeneration waits for an enabled finalized-ready action"
+require_adjacent_fixed ".maestro/helpers/wait-for-auto-regeneration.yaml" \
+  "enabled: true" \
+  "timeout: 60000" \
+  "auto-regeneration wait has a bounded finalized-ready assertion"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "const [uploadSync, dispatchUploadSync] = useReducer(" \
+  "generation synchronization tracks the local upload/refetch epoch"
+require_file "apps/mobile/lib/reports/upload-sync-state.test.ts" \
+  "overlapping and recoverable upload synchronization has unit coverage"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "uploadSyncReducer," \
+  "generate route tracks concurrent upload synchronization operations"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "const handleRetryPhotoUpload = useCallback(" \
+  "generate route owns failed-photo retry synchronization"
+require_ordered_pair "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "await retry();" \
+  "await invalidateAfterFileUpload(qc, { reportId });" \
+  "failed-photo retry refetches canonical notes and report state"
+require_fixed "apps/mobile/features/generate/GenerateReportProvider.tsx" \
+  "onRetryPhotoUpload" \
+  "photo-tile retry delegates to the route synchronization boundary"
+require_fixed "apps/mobile/lib/uploads/usePhotoUploadEntries.ts" \
+  "retry: (jobId: string) => Promise<void>;" \
+  "photo upload retry exposes queue settlement to its caller"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "getReportPhotoUploadQueueState(" \
+  "generate readiness derives unresolved failures from the live upload queue"
+require_fixed "apps/mobile/lib/reports/upload-sync-state.test.ts" \
+  "keeps every failed job visible while another retry is pending or succeeds" \
+  "multi-failure and concurrent-retry queue state has unit coverage"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "const handleCancelPhotoUpload = useCallback(" \
+  "generate route owns failed-photo dismissal synchronization"
+require_fixed "apps/mobile/features/generate/GenerateReportProvider.tsx" \
+  "onCancelPhotoUpload(cancel);" \
+  "photo-tile cancellation delegates to the route synchronization boundary"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "countNonCancelledUploadFailures(results)" \
+  "intentional in-flight cancellation is not latched as an upload failure"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "if (!isUploadCancellation(err))" \
+  "cancelled inline retry does not relatch an upload error"
+require_ordered_pair "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "await retry();" \
+  "await invalidateAfterFileUpload(qc, { reportId });" \
+  "inline retry cancellation still precedes canonical refetch"
+require_fixed "apps/mobile/lib/uploads/cancel.test.ts" \
+  "rejects a queued batch promise when remove() runs before that job starts" \
+  "queued batch cancellation settlement has behavioral coverage"
+require_fixed "apps/mobile/lib/uploads/queue.ts" \
+  "if (wasPending) {" \
+  "removed pending upload jobs settle without racing active collaborators"
+require_fixed "apps/mobile/lib/uploads/queue.ts" \
+  "remove: (jobId: string) => Promise<void>;" \
+  "upload cancellation exposes active collaborator settlement"
+require_ordered_pair "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "await cancel();" \
+  "await invalidateAfterFileUpload(qc, { reportId });" \
+  "direct photo cancellation settles before canonical refetch"
+require_fixed "apps/mobile/lib/uploads/persistence.test.ts" \
+  "noteId: 'not_xyz'" \
+  "persisted completed uploads retain canonical note linkage"
+require_fixed "apps/mobile/lib/reports/upload-sync-state.test.ts" \
+  "releases a committed completed job after canonical refetch when its note is outside the visible page" \
+  "paginated rehydrated completion readiness has unit coverage"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "setRefetchedCompletedUploadIds" \
+  "generate route acknowledges completed uploads only after refetch"
+require_fixed "apps/mobile/lib/reports/upload-sync-state.ts" \
+  "!job.noteId || !refetchedCompletedJobIds.has(job.id)" \
+  "completed upload acknowledgment requires committed note linkage and refetch"
+forbid_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "const refreshedNotes = qc.getQueryData" \
+  "completed upload acknowledgment does not assume the note is in page one"
+forbid_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "setUploadSyncPending(" \
+  "generate route does not collapse concurrent uploads into one boolean latch"
+require_fixed_count "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "await invalidateAfterFileUpload(qc, { reportId });" 5 \
+  "gallery, camera, retry, cancel, and resumed uploads await note/report refetches"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "reportGenerationStateTestId(" \
+  "generate route derives a current-generation marker"
+require_adjacent_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "uploadSyncPending," \
+  "isGenerating: isGenerating || placePhotoGroupMutation.isPending," \
+  "current-generation marker remains pending while its mutation settles"
+require_adjacent_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "isGenerating: isGenerating || placePhotoGroupMutation.isPending," \
+  "noteSyncPending," \
+  "current-generation marker remains pending while notes settle"
+require_adjacent_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "noteSyncPending," \
+  "hasSyncError," \
+  "current-generation marker fails closed on synchronization errors"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "visibleNotes.some((note) => note.isPending)" \
+  "generation synchronization observes optimistic note rows"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "report.isFetching ||" \
+  "generation synchronization observes report refetches"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "notesQuery.isFetching;" \
+  "generation synchronization observes notes refetches"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "report.error != null ||" \
+  "generation synchronization fails closed on query errors"
+require_file "apps/mobile/lib/reports/generation-sync.test.ts" \
+  "current-generation marker has unit coverage"
+require_before ".maestro/helpers/assert-report-generation-write-lock.yaml" \
+  "id: 'report-generation-current'" \
+  "enabled: true" \
+  "manual regeneration waits for the shared current-generation marker"
+require_fixed ".maestro/core-end-to-end.yaml" \
+  "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
+  "legacy core journey waits for route-level auto-regeneration"
+require_before ".maestro/core-end-to-end.yaml" \
+  "id: 'voice-title-.*'" \
+  "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
+  "legacy core journey waits for provider-owned voice processing"
+require_fixed ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
+  "draft photo journey waits for route-level auto-regeneration"
+require_fixed ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
+  "finalized photo journey waits for route-level auto-regeneration"
+require_fixed ".maestro/modules/10c-photo-attachment-picker-scroll.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
+  "attachment-picker journey waits for route-level auto-regeneration"
+require_fixed ".maestro/modules/11-generate-finalize.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
+  "generate/finalize regression waits for route-level auto-regeneration"
+forbid_fixed ".maestro/modules/11-generate-finalize.yaml" \
+  "id: 'btn-generate-.*report'" \
+  "generate/finalize regression does not tap a transient generation action"
+require_fixed ".maestro/modules/17-heavy-usage-stress.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
+  "heavy-usage stress waits for route-level auto-regeneration"
+forbid_fixed ".maestro/modules/17-heavy-usage-stress.yaml" \
+  "id: \"btn-generate-.*report\"" \
+  "heavy-usage stress does not tap a transient generation action"
+require_fixed ".maestro/place-photo-on-issue.flow.yml" \
+  "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
+  "photo-placement journey waits for route-level auto-regeneration"
+require_fixed_count ".maestro/place-photo-on-issue.flow.yml" \
+  "- runFlow: helpers/wait-for-auto-regeneration.yaml" 2 \
+  "photo placement waits again after the optimistic placement write"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "expectedUpdatedAtRef.current = response.report.updatedAt;" \
+  "placement response advances the finalize body version synchronously"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "const placementWriteBlocked = placePhotoGroupMutation.isPending || placementWriteError !== null;" \
+  "placement settlement and failure block report actions"
+require_fixed "apps/mobile/components/reports/generate/GenerateReportActionRow.tsx" \
+  "isReportWriteBlocked: draft.isReportWriteBlocked" \
+  "report action row observes unresolved placement writes"
+require_file "apps/mobile/components/reports/generate/GenerateReportActionRow.test.ts" \
+  "report action-row write blocking has unit coverage"
+latest_local_migration="$(basename "$(find "$REPO_ROOT/packages/api/migrations" -maxdepth 1 -type f -name '*.sql' | sort | tail -n 1)")"
+require_fixed_count "docker-compose.yml" \
+  "MIGRATIONS_REQUIRED_HEAD: $latest_local_migration" 2 \
+  "local Compose API and account seed pin the current migration head"
+latest_local_admin_migration="$(basename "$(find "$REPO_ROOT/packages/api/admin-migrations" -maxdepth 1 -type f -name '*.sql' | sort | tail -n 1)")"
+require_fixed_count "docker-compose.yml" \
+  "ADMIN_MIGRATIONS_REQUIRED_HEAD: $latest_local_admin_migration" 2 \
+  "local Compose API and account seed override the image's admin head"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"
@@ -455,45 +744,56 @@ require_filter_fixed ".github/actions/changed-paths/action.yml" \
   "mobile" \
   "'scripts/ci/run-maestro-launch-smoke.sh'" \
   "mobile path filtering includes the Maestro smoke runner"
+require_filter_fixed ".github/actions/changed-paths/action.yml" \
+  "mobile" \
+  "'scripts/maestro/prepare-android-emulator.sh'" \
+  "mobile path filtering includes the shared Android preflight"
+require_filter_fixed ".github/actions/changed-paths/action.yml" \
+  "mobile" \
+  "'scripts/ci/__tests__/prepare-android-emulator.test.sh'" \
+  "mobile path filtering includes Android preflight behavioral coverage"
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "set -euo pipefail" \
   "Maestro smoke enables strict Bash handling"
-require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
-  "adb shell settings put global hide_error_dialogs 1" \
-  "Maestro smoke suppresses system crash and ANR dialogs on the test emulator"
-# This is a literal runner-script string, not a policy-test expansion.
+require_file "scripts/maestro/prepare-android-emulator.sh" \
+  "local and CI Maestro runs share an Android emulator preflight"
+require_fixed "scripts/maestro/prepare-android-emulator.sh" \
+  "shell getprop ro.kernel.qemu" \
+  "Android preflight refuses to mutate physical devices"
+require_fixed "scripts/maestro/prepare-android-emulator.sh" \
+  "shell settings put global hide_error_dialogs 1" \
+  "Android preflight suppresses system crash and ANR dialogs"
+require_fixed "scripts/maestro/prepare-android-emulator.sh" \
+  "shell settings get global hide_error_dialogs" \
+  "Android preflight reads back error-dialog suppression"
+# This is a literal preflight-script string, not a policy-test expansion.
 # shellcheck disable=SC2016
-require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
-  'hide_error_dialogs="$(adb shell settings get global hide_error_dialogs | tr -d '\''\r'\'')"' \
-  "Maestro smoke reads back the Android error-dialog setting"
-# shellcheck disable=SC2016
-require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+require_fixed "scripts/maestro/prepare-android-emulator.sh" \
   'if [[ "$hide_error_dialogs" != "1" ]]; then' \
-  "Maestro smoke fails closed when Android rejects error-dialog suppression"
-# shellcheck disable=SC2016
-require_adjacent_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
-  '"$hide_error_dialogs" >&2' \
-  "exit 1" \
-  "Maestro smoke exits after reporting rejected error-dialog suppression"
+  "Android preflight fails closed when the setting is rejected"
+require_before "scripts/maestro/prepare-android-emulator.sh" \
+  "shell getprop ro.kernel.qemu" \
+  "shell settings put global hide_error_dialogs 1" \
+  "Android preflight verifies an emulator before changing global settings"
+require_before "scripts/maestro/prepare-android-emulator.sh" \
+  "shell settings put global hide_error_dialogs 1" \
+  "shell settings get global hide_error_dialogs" \
+  "Android preflight sets error-dialog suppression before verifying it"
+require_file "scripts/ci/__tests__/prepare-android-emulator.test.sh" \
+  "Android emulator preflight has fake-adb behavioral coverage"
+require_fixed ".github/workflows/lint-typecheck.yml" \
+  "bash scripts/ci/__tests__/prepare-android-emulator.test.sh" \
+  "PR policy runs Android emulator preflight behavioral tests"
+require_fixed ".github/workflows/lint-typecheck.yml" \
+  "shellcheck scripts/maestro/prepare-android-emulator.sh" \
+  "PR policy shellchecks the shared Android preflight"
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  "bash scripts/maestro/prepare-android-emulator.sh" \
+  "Maestro smoke delegates Android setup to the shared preflight"
 require_before "scripts/ci/run-maestro-launch-smoke.sh" \
-  "adb shell settings put global hide_error_dialogs 1" \
-  "adb shell settings get global hide_error_dialogs" \
-  "Maestro smoke sets Android error-dialog suppression before verifying it"
-# This is a literal runner-script string, not a policy-test expansion.
-# shellcheck disable=SC2016
-require_before "scripts/ci/run-maestro-launch-smoke.sh" \
-  "adb shell settings get global hide_error_dialogs" \
-  '"$hide_error_dialogs" >&2' \
-  "Maestro smoke reads back Android error-dialog suppression before reporting rejection"
-# shellcheck disable=SC2016
-require_before "scripts/ci/run-maestro-launch-smoke.sh" \
-  '"$hide_error_dialogs" >&2' \
+  "bash scripts/maestro/prepare-android-emulator.sh" \
   "adb install -r" \
-  "Maestro smoke reports rejected error-dialog suppression before installing the APK"
-require_before "scripts/ci/run-maestro-launch-smoke.sh" \
-  "adb shell settings get global hide_error_dialogs" \
-  'maestro" test' \
-  "Maestro smoke verifies Android error-dialog suppression before the flow"
+  "Maestro smoke verifies Android settings before installing the APK"
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"

@@ -11,7 +11,9 @@
  * at provider mount.
  *
  * What we persist:
- *   - `id`, `input`, `status`, `attempt`, `progress`, `error`, `fileId`.
+ *   - `id`, `input`, `status`, `attempt`, `progress`, `error`, `fileId`,
+ *     and `noteId` (the completion observer needs the canonical linkage after
+ *     restart before it can release report-generation readiness).
  *
  * What we drop on rehydrate:
  *   - Promise resolve/reject callbacks (no caller is awaiting after
@@ -37,7 +39,15 @@ import type { UploadJob } from './types';
 /** Subset of `UploadJob` that we serialise. Promise handles are dropped. */
 export type PersistedJob = Pick<
   UploadJob,
-  'id' | 'input' | 'status' | 'attempt' | 'progress' | 'error' | 'fileId' | 'thumbnailFileId'
+  | 'id'
+  | 'input'
+  | 'status'
+  | 'attempt'
+  | 'progress'
+  | 'error'
+  | 'fileId'
+  | 'thumbnailFileId'
+  | 'noteId'
 >;
 
 export interface QueuePersistence {

@@ -69,6 +69,7 @@ describe('upload queue persistence', () => {
       input: { sourceUri: 'file:///tmp/photo.jpg' },
       status: 'completed',
       fileId: 'fil_abc',
+      noteId: 'not_xyz',
     });
   });
 

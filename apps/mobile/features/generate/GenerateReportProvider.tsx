@@ -17,14 +17,7 @@
  * them up later is a one-field-at-a-time change rather than a
  * provider rewrite.
  */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import type { TabKey } from '@/components/reports/generate/tabs';
 import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
@@ -120,6 +113,8 @@ export interface GenerateReportProviderProps {
   onSetReport?: (next: GeneratedSiteReport) => void;
   /** True while autosave is in flight. Surfaces in the Edit tab header. */
   isAutoSaving?: boolean;
+  /** True while another report-body write is pending or needs recovery. */
+  isReportWriteBlocked?: boolean;
   /** Epoch ms of the last successful autosave, or `null` if none. */
   lastSavedAt?: number | null;
   /** True while finalize is in flight. */
@@ -149,6 +144,16 @@ export interface GenerateReportProviderProps {
    * + upload pipeline. When omitted this is a no-op.
    */
   onPickAttachment?: (category: 'image' | 'document') => void;
+  /**
+   * Wraps an inline failed-photo retry so the route can synchronize queue
+   * completion with canonical report/notes refetches.
+   */
+  onRetryPhotoUpload?: (retry: () => Promise<void>) => void;
+  /**
+   * Wraps inline photo cancellation/dismissal so the route can reconcile its
+   * synchronization guard after the queue removes the abandoned job.
+   */
+  onCancelPhotoUpload?: (cancel: () => Promise<void>) => void;
   /**
    * Called when the user picks (or clears) a placement target for a
    * photo group on the Report tab. Route wrapper wires this to
@@ -217,9 +222,7 @@ interface VoiceSurface {
 
 interface PhotoSurface {
   handleCameraCapture: () => Promise<void> | void;
-  handleMenuPick: (
-    category: 'image' | 'document',
-  ) => Promise<void> | void;
+  handleMenuPick: (category: 'image' | 'document') => Promise<void> | void;
   /** Retry a failed image upload job. */
   retryUpload: (jobId: string) => void;
   /** Cancel / dismiss an in-flight or failed image upload job. */
@@ -335,6 +338,8 @@ interface DraftSurface {
   finalize: () => void;
   /** True while autosave is in flight (Edit-tab header). */
   isAutoSaving: boolean;
+  /** Disables generation/finalize while another report-body write is unresolved. */
+  isReportWriteBlocked: boolean;
   /** Epoch ms of last successful autosave, or `null`. */
   lastSavedAt: number | null;
 }
@@ -399,15 +404,12 @@ export interface GenerateReportContextValue {
   handleRegenerate: () => void;
 }
 
-const GenerateReportContext =
-  createContext<GenerateReportContextValue | null>(null);
+const GenerateReportContext = createContext<GenerateReportContextValue | null>(null);
 
 export function useGenerateReport(): GenerateReportContextValue {
   const v = useContext(GenerateReportContext);
   if (!v) {
-    throw new Error(
-      'useGenerateReport must be used inside <GenerateReportProvider>',
-    );
+    throw new Error('useGenerateReport must be used inside <GenerateReportProvider>');
   }
   return v;
 }
@@ -424,9 +426,7 @@ export function remapAttachmentKeys(
   fileIdToAttachmentKey: ReadonlyMap<string, string>,
 ): readonly Attachment[] {
   return attachments.map((att) => {
-    const synthetic = att.fileId
-      ? fileIdToAttachmentKey.get(att.fileId)
-      : undefined;
+    const synthetic = att.fileId ? fileIdToAttachmentKey.get(att.fileId) : undefined;
     return synthetic ? { ...att, key: synthetic } : att;
   });
 }
@@ -477,6 +477,7 @@ export function GenerateReportProvider({
   onEditManually,
   onSetReport,
   isAutoSaving = false,
+  isReportWriteBlocked = false,
   lastSavedAt = null,
   isFinalizing = false,
   finalizeError = null,
@@ -484,6 +485,8 @@ export function GenerateReportProvider({
   onOpenFile,
   onCameraCapture,
   onPickAttachment,
+  onRetryPhotoUpload,
+  onCancelPhotoUpload,
   onPlacePhotoGroup,
   initialTab = 'notes',
   children,
@@ -493,11 +496,8 @@ export function GenerateReportProvider({
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
-  const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
-    useState(false);
-  const [photoPreviewIndex, setPhotoPreviewIndex] = useState<number | null>(
-    null,
-  );
+  const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
+  const [photoPreviewIndex, setPhotoPreviewIndex] = useState<number | null>(null);
 
   // Phase H: inline recorder state lives here so the input bar can
   // morph between text/photo/mic and the recording strip without
@@ -591,6 +591,28 @@ export function GenerateReportProvider({
   const meQuery = useMeQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const meId = meQuery.data?.user?.id;
   const photoUploads = usePhotoUploadEntries(reportId, meId);
+  const handleRetryPhotoUpload = useCallback(
+    (jobId: string) => {
+      const retry = () => photoUploads.retry(jobId);
+      if (onRetryPhotoUpload) {
+        onRetryPhotoUpload(retry);
+        return;
+      }
+      void retry();
+    },
+    [onRetryPhotoUpload, photoUploads.retry],
+  );
+  const handleCancelPhotoUpload = useCallback(
+    (jobId: string) => {
+      const cancel = () => photoUploads.cancel(jobId);
+      if (onCancelPhotoUpload) {
+        onCancelPhotoUpload(cancel);
+        return;
+      }
+      void cancel();
+    },
+    [onCancelPhotoUpload, photoUploads.cancel],
+  );
   const timelineItems = useMemo<readonly NoteEntry[]>(() => {
     const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
     const photoEntries = photoUploads.entries;
@@ -626,9 +648,7 @@ export function GenerateReportProvider({
     );
 
     const baseWithPhotos =
-      filteredPhotoEntries.length > 0
-        ? [...remappedNotes, ...filteredPhotoEntries]
-        : remappedNotes;
+      filteredPhotoEntries.length > 0 ? [...remappedNotes, ...filteredPhotoEntries] : remappedNotes;
     if (step === 'idle' || !reportId) return baseWithPhotos;
     if (savedNote && notes.some((n) => n.id === savedNote.id)) {
       return baseWithPhotos;
@@ -745,20 +765,12 @@ export function GenerateReportProvider({
       const note = timelineItems[sourceIndex];
       if (!note || !onDeleteNote) return;
       onDeleteNote(note, sourceIndex);
-      if (
-        note.source === 'voice' &&
-        note.id &&
-        voicePipeline.state.note?.id === note.id
-      ) {
+      if (note.source === 'voice' && note.id && voicePipeline.state.note?.id === note.id) {
         voicePipeline.reset();
       }
-      cancelImageAttachmentJobs(
-        note,
-        photoUploads.cancel,
-        photoUploads.fileIdToAttachmentKey,
-      );
+      cancelImageAttachmentJobs(note, handleCancelPhotoUpload, photoUploads.fileIdToAttachmentKey);
     },
-    [timelineItems, onDeleteNote, voicePipeline, photoUploads],
+    [timelineItems, onDeleteNote, voicePipeline, handleCancelPhotoUpload, photoUploads],
   );
 
   const updateNote = useCallback(
@@ -825,8 +837,7 @@ export function GenerateReportProvider({
       project,
       reportNumber,
       reportTitle:
-        reportTitle?.trim() ||
-        (reportNumber !== null ? `Report #${reportNumber}` : 'New report'),
+        reportTitle?.trim() || (reportNumber !== null ? `Report #${reportNumber}` : 'New report'),
       notes: {
         list: timelineItems,
         totalCount: timelineItems.length,
@@ -874,6 +885,7 @@ export function GenerateReportProvider({
         finalizeError,
         finalize: handleFinalize,
         isAutoSaving,
+        isReportWriteBlocked,
         lastSavedAt,
       },
       // Phase H: inline WhatsApp-style recorder lives in the input
@@ -902,8 +914,8 @@ export function GenerateReportProvider({
       photo: {
         handleCameraCapture: () => onCameraCapture?.(),
         handleMenuPick: (category) => onPickAttachment?.(category),
-        retryUpload: photoUploads.retry,
-        cancelUpload: photoUploads.cancel,
+        retryUpload: handleRetryPhotoUpload,
+        cancelUpload: handleCancelPhotoUpload,
       },
       preview: {
         openFile: handleOpenFile,
@@ -958,6 +970,7 @@ export function GenerateReportProvider({
       finalizeError,
       handleFinalize,
       isAutoSaving,
+      isReportWriteBlocked,
       lastSavedAt,
       attachmentSheetVisible,
       fileUploadError,
@@ -986,8 +999,8 @@ export function GenerateReportProvider({
       onCameraCapture,
       onPickAttachment,
       onPlacePhotoGroup,
-      photoUploads.retry,
-      photoUploads.cancel,
+      handleRetryPhotoUpload,
+      handleCancelPhotoUpload,
     ],
   );
 
@@ -1019,7 +1032,7 @@ export function GenerateReportProvider({
         title="Recording failed"
         message={
           inlineRecorder.error !== null
-            ? inlineRecorder.userErrorMessage ?? RECORDER_START_FAILED_MESSAGE
+            ? (inlineRecorder.userErrorMessage ?? RECORDER_START_FAILED_MESSAGE)
             : undefined
         }
         noticeTone="danger"

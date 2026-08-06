@@ -298,7 +298,7 @@ documented in [`arch-ops.md`](arch-ops.md).
 | `site-prod.yml`               | push to `main`                                                | Verify the exact SHA on every native public-site production hostname                                   |
 | `dashboard-preview.yml`       | PR to `dev` or `main`                                         | Verify exact head-SHA Git preview, SPA routing, and live browser checks on the stable alias            |
 | `dashboard-dev.yml`           | push to `dev`                                                 | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment                           |
-| `dashboard-prod.yml`          | push to `main`                                                | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
+| `dashboard-prod.yml`          | push to `main` with `DASHBOARD_PRODUCTION_ENABLED=true`       | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
 
 ### Dependency security automation
 

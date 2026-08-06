@@ -1,7 +1,7 @@
 name: dashboard-prod
 
-# Cloudflare Git publishes main. GitHub first verifies the production Fly API,
-# then proves the exact dashboard commit and SPA fallback on both origins.
+# Cloudflare Git publishes main only after separately approved dashboard
+# production activation. Until then, both verification jobs remain dormant.
 
 on:
   push:
@@ -29,7 +29,9 @@ concurrency:
 
 jobs:
   api:
-    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    if: >-
+      vars.DASHBOARD_PRODUCTION_ENABLED == 'true' &&
+      (github.event_name == 'push' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -51,6 +53,7 @@ jobs:
 
   deployment:
     needs: api
+    if: vars.DASHBOARD_PRODUCTION_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

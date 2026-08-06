@@ -238,7 +238,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
     'Document uploaded',
     '[deleted note]',
   ]);
-  await expect(feed.locator('[data-icon="message-square-text"]')).toBeVisible();
+  await expect(feed.locator('[data-icon="message-square-text"]').first()).toBeVisible();
   await expect(feed.locator('[data-icon="mic"]')).toBeVisible();
   await expect(feed.locator('[data-icon="image"]')).toBeVisible();
   await expect(feed.locator('[data-icon="file-text"]')).toBeVisible();

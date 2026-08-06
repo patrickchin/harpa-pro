@@ -27,8 +27,8 @@ The dialog must:
 - scale the complete screenshot into the available image area without internal
   scrolling on a 1366 × 768 laptop-class desktop viewport, while preserving
   its aspect ratio and keeping the dialog viewport-bound at smaller sizes; and
-- keep the panel close to the fitted portrait image width instead of retaining
-  a wide desktop canvas around it.
+- derive the panel width from the height-fitted portrait image, allowing a long
+  title to wrap instead of widening the dialog around it.
 
 The image URL is assigned only when the dialog opens. This avoids loading each
 full-resolution screenshot during the initial guide render.
@@ -44,3 +44,4 @@ raw image in a new tab without opening the dialog. The desktop regression also
 checks that the image area does not overflow, that all four image bounds stay
 inside it, that the rendered image keeps its intrinsic aspect ratio, and that
 the surrounding dialog chrome adds no more than 80 pixels to the image width.
+The exercised guide step uses the longest current screenshot title.

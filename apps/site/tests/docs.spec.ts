@@ -125,7 +125,11 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   });
   await expect(fullScreenshot).toHaveAttribute("src", screenshotUrl ?? "");
   await expect
-    .poll(() => fullScreenshot.evaluate((image) => image.complete))
+    .poll(() =>
+      fullScreenshot.evaluate(
+        (image) => (image as HTMLImageElement).complete,
+      ),
+    )
     .toBe(true);
   await expect(dialog.getByText("Start a report", { exact: true })).toBeVisible();
 
@@ -143,6 +147,7 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   );
 
   const fit = await fullScreenshot.evaluate((image) => {
+    const fullImage = image as HTMLImageElement;
     const imageRegion = image.closest<HTMLElement>(
       ".docs-screenshot-dialog-image",
     );
@@ -155,8 +160,8 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
       imageHeight: imageBounds.height,
       imageTop: imageBounds.top,
       imageWidth: imageBounds.width,
-      naturalHeight: image.naturalHeight,
-      naturalWidth: image.naturalWidth,
+      naturalHeight: fullImage.naturalHeight,
+      naturalWidth: fullImage.naturalWidth,
       regionBottom: regionBounds.bottom,
       regionClientHeight: imageRegion.clientHeight,
       regionScrollHeight: imageRegion.scrollHeight,

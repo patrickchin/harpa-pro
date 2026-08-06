@@ -779,7 +779,7 @@
     grid-template-rows: auto minmax(0, 1fr);
     max-height: calc(100dvh - 1.5rem);
     overflow: hidden;
-    width: min(60rem, calc(100vw - 1.5rem));
+    width: min(22rem, calc(100vw - 1.5rem));
   }
 
   .docs-screenshot-dialog-panel > header {

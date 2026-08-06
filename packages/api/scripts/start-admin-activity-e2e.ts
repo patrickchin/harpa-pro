@@ -77,6 +77,15 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
   const projectId = newId('prj');
   const reportId = newId('rpt');
   const reportEventId = newId('aud');
+  const deletedProjectId = newId('prj');
+  const deletedReportId = newId('rpt');
+  const deletedNoteId = newId('not');
+  const deletedEventIds = {
+    project: newId('aud'),
+    report: newId('aud'),
+    user: newId('aud'),
+    note: newId('aud'),
+  };
   const noteIds = {
     text: newId('not'),
     voice: newId('not'),
@@ -156,6 +165,35 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
         `note.voice_created:${noteIds.voice}`,
         `note.image_created:${noteIds.image}`,
         `note.document_created:${noteIds.document}`,
+      ],
+    );
+    await client.query(
+      `INSERT INTO app.activity_events
+         (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+          project_id, request_id, dedupe_key, metadata)
+       VALUES
+         ($1, CURRENT_TIMESTAMP - INTERVAL '6 minutes', 'project.created', $2, 'project', $3,
+          $3, 'request-deleted-project-e2e', $4, '{}'),
+         ($5, CURRENT_TIMESTAMP - INTERVAL '7 minutes', 'report.created', $2, 'report', $6,
+          $7, 'request-deleted-report-e2e', $8, '{"reportNumber":8}'),
+         ($9, CURRENT_TIMESTAMP - INTERVAL '8 minutes', 'user.signed_up', NULL, 'user', NULL,
+          NULL, 'request-deleted-user-e2e', $10, '{"method":"email_otp"}'),
+         ($11, CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'note.text_created', $2, 'note', $12,
+          $7, 'request-deleted-note-e2e', $13, '{}')`,
+      [
+        deletedEventIds.project,
+        user.id,
+        deletedProjectId,
+        `project.created:${deletedProjectId}`,
+        deletedEventIds.report,
+        deletedReportId,
+        projectId,
+        `report.created:${deletedReportId}`,
+        deletedEventIds.user,
+        `redacted:${deletedEventIds.user}`,
+        deletedEventIds.note,
+        deletedNoteId,
+        `note.text_created:${deletedNoteId}`,
       ],
     );
     await client.query('COMMIT');

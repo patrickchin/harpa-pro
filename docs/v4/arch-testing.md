@@ -119,6 +119,11 @@ Each AI-touching route has a test that:
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
   ceiling, emulator boot has a 300-second ceiling, and the Maestro
   command has a 420-second ceiling.
+- Before installing the APK, the runner writes Android's global
+  `hide_error_dialogs=1` setting on the disposable CI emulator, reads it
+  back, and exits unless the value is exactly `1`. This emulator-only
+  boundary suppresses recurring system crash and ANR dialogs before they
+  can own Maestro's accessibility surface.
 - After clearing app state, the flow waits up to 30 seconds for either
   the Expo Dev Launcher home screen or Android's known Quickstep ANR
   dialog. It chooses the dialog's semantic `Wait` action conditionally,
@@ -127,6 +132,9 @@ Each AI-touching route has a test that:
   once after `openLink`: a 90-second union wait observes Quickstep,
   the Metro server row, or app UI before conditional recovery, server
   selection, and app assertions.
+- Both semantic Quickstep `Wait` fallbacks remain even with global dialog
+  suppression. They recover a dialog already present at either transition;
+  the flow still fails closed unless the final `input-email` testID renders.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild

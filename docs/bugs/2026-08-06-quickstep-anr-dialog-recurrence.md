@@ -13,17 +13,19 @@ transitions, but Quickstep could raise the ANR dialog again after either
 check. Adding another fixed-count dismissal would only move the race; the
 emulator environment still controlled whether and when the dialog returned.
 
-**Fix.** The CI runner now writes Android's global
-`hide_error_dialogs=1` setting on the disposable test emulator, reads it back,
-and exits before installing the APK unless the value is exactly `1`. The flow
-retains both semantic Quickstep `Wait` fallbacks for recovery if a dialog is
-already present, and it still finishes with a strict `input-email` assertion.
+**Fix.** CI and local Android emulator runs now share
+`scripts/maestro/prepare-android-emulator.sh`. It refuses physical devices,
+writes the emulator's global `hide_error_dialogs=1` setting, reads it back, and
+exits unless the value is exactly `1`. The flow retains both semantic
+Quickstep `Wait` fallbacks for recovery if a dialog is already present, and it
+still finishes with a strict `input-email` assertion.
 
-**Test.** `release-confidence-gates.test.sh` pins the global-setting write,
-read-back verification, fail-closed mismatch branch, and ordering before the
-Maestro flow. Its existing assertions keep exactly two semantic Quickstep
-fallbacks, the 420-second Maestro ceiling, and the final `input-email` wait and
-assertion.
+**Test.** `prepare-android-emulator.test.sh` uses a fake ADB to cover emulator
+success, physical-device refusal, write failure, and a fail-closed read-back
+mismatch. `release-confidence-gates.test.sh` pins the shared CI delegation and
+ordering before APK installation. Its existing assertions keep exactly two
+semantic Quickstep fallbacks, the 420-second Maestro ceiling, and the final
+`input-email` wait and assertion.
 
 **Pattern.** Recurrence of the Expo Dev Launcher synchronization failure in
 the [2026-08-04 bug entry]. Environment-owned system UI cannot be made reliable

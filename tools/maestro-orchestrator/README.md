@@ -38,17 +38,24 @@ uv run pytest -v
 
 ## Status
 
-**Phase 4.0 — scaffold only.** All subcommands are stubs that
-exit non-zero with `"not implemented"`. Real behaviour lands in
-later phases per the design doc.
+All current subcommands are implemented. In particular, `mo up` always runs
+`docker compose up -d --build` before its API health check, even when the
+existing stack is healthy. Migrations are baked into the API images, so this
+reconciliation prevents a fast-forwarded checkout from reusing an old schema.
+The Compose build has a 15-minute ceiling separate from the 60-second API
+health budget; unchanged services normally resolve from Docker cache.
 
 Subcommands:
 
-| Command | Purpose (see design doc) |
-|---|---|
-| `mo doctor` | Preflight checklist; gates a journey. |
-| `mo reset` | Single source of truth for between-runs DB + device reset. |
-| `mo run` | Spawn `maestro test` detached with PID + log tracking. |
-| `mo journey` | Composite: `doctor --fix && reset && run regression-journey`. |
-| `mo kill` | Terminate live runner + orphaned Maestro/driver processes. |
-| `mo logs` | Tail the latest run log without remembering the timestamp. |
+| Command      | Purpose (see design doc)                                                |
+| ------------ | ----------------------------------------------------------------------- |
+| `mo doctor`  | Preflight checklist; gates a journey.                                   |
+| `mo reset`   | Single source of truth for between-runs DB + device reset.              |
+| `mo run`     | Spawn `maestro test` detached with PID + log tracking.                  |
+| `mo journey` | Composite: `doctor --fix && reset && run regression-journey`.           |
+| `mo kill`    | Terminate live runner + orphaned Maestro/driver processes.              |
+| `mo logs`    | Tail the latest run log without remembering the timestamp.              |
+| `mo up`      | Rebuild/reconcile Compose, reverse ports, and start the broker + Metro. |
+| `mo down`    | Stop local Maestro services without deleting database volumes.          |
+| `mo build`   | Build the mobile development client.                                    |
+| `mo install` | Install the built client on the selected simulator or emulator.         |

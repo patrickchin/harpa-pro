@@ -108,16 +108,20 @@ export function runInvalidations(qc: QueryClient, hookName: string): void {
  * `INVALIDATIONS` loop never fires. Call this when a queued upload
  * finishes so the timeline picks up the new image-note rows.
  *
+ * The returned promise resolves after active notes/report refetches settle so
+ * E2E synchronization cannot clear its upload latch in the stale-cache gap.
  * Kept next to `INVALIDATIONS` on purpose — same source of truth.
  */
-export function invalidateAfterFileUpload(
+export async function invalidateAfterFileUpload(
   qc: QueryClient,
   _opts: { reportId: string },
-): void {
+): Promise<void> {
   // Matches the `useCreateNoteMutation` rule head — the queue worker
   // ultimately calls `POST /reports/{report}/notes`, so we mirror its
   // declared invalidations.
-  for (const head of ['reportNotes', 'report'] as const) {
-    qc.invalidateQueries({ queryKey: [head] });
-  }
+  await Promise.all(
+    (['reportNotes', 'report'] as const).map((head) =>
+      qc.invalidateQueries({ queryKey: [head] }, { throwOnError: true }),
+    ),
+  );
 }

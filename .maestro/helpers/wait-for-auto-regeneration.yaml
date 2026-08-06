@@ -1,0 +1,19 @@
+appId: ${MAESTRO_APP_ID}
+---
+# The generate route automatically regenerates a draft when its persisted
+# `needsRegeneration` flag is true. Do not conditionally tap Generate / Update:
+# the mutation can settle between Maestro's visibility check and its tap.
+# `report-generation-current` proves the local upload/refetch epoch is settled
+# and the API generation timestamp covers its canonical note-change clock;
+# `btn-finalize-report` being enabled then proves the generation mutation and
+# autosave gates have settled and the draft is ready to finalize.
+
+- extendedWaitUntil:
+    visible:
+      id: 'report-generation-current'
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: 'btn-finalize-report'
+      enabled: true
+    timeout: 60000

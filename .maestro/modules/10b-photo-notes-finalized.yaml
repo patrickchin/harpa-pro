@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "10b - Photo notes (finalized): saved-report photos and preview"
+name: '10b - Photo notes (finalized): saved-report photos and preview'
 tags:
   - regression
   - photo
@@ -22,172 +22,164 @@ tags:
 
 # --- Open reports list and create a new draft ------------------------------
 - tapOn:
-    id: "btn-open-reports"
+    id: 'btn-open-reports'
 - extendedWaitUntil:
     visible:
-      id: "btn-new-report"
+      id: 'btn-new-report'
     timeout: 10000
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 - extendedWaitUntil:
     visible:
-      id: "report-row-.*"
+      id: 'report-row-.*'
     timeout: 15000
 - tapOn:
-    id: "report-row-.*"
+    id: 'report-row-.*'
 - extendedWaitUntil:
     visible:
-      id: "input-note"
+      id: 'input-note'
     timeout: 15000
 
 # --- Camera capture ---------------------------------------------------------
 - tapOn:
-    id: "btn-attachment"
+    id: 'btn-attachment'
 - extendedWaitUntil:
     visible:
-      id: "btn-attachment-camera"
+      id: 'btn-attachment-camera'
     timeout: 8000
 - tapOn:
-    id: "btn-attachment-camera"
+    id: 'btn-attachment-camera'
 - extendedWaitUntil:
     visible:
-      id: "btn-camera-shutter"
+      id: 'btn-camera-shutter'
     timeout: 15000
 - tapOn:
-    id: "btn-camera-shutter"
+    id: 'btn-camera-shutter'
 - extendedWaitUntil:
     visible:
-      id: "btn-camera-thumb-0"
+      id: 'btn-camera-thumb-0'
     timeout: 8000
 - tapOn:
-    id: "btn-camera-shutter"
+    id: 'btn-camera-shutter'
 - extendedWaitUntil:
     visible:
-      id: "btn-camera-thumb-1"
+      id: 'btn-camera-thumb-1'
     timeout: 8000
 - tapOn:
-    id: "btn-camera-done"
+    id: 'btn-camera-done'
 
 # --- Back on Generate; wait for persisted photo attachments -----------------
 - extendedWaitUntil:
     visible:
-      id: "note-timeline"
+      id: 'note-timeline'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "batch-grid-tile-0"
+      id: 'batch-grid-tile-0'
     timeout: 30000
 - extendedWaitUntil:
     visible:
-      id: "batch-grid-tile-1"
+      id: 'batch-grid-tile-1'
     timeout: 30000
 - extendedWaitUntil:
     notVisible:
-      id: "batch-grid-tile-0-ring"
+      id: 'batch-grid-tile-0-ring'
     timeout: 30000
 - extendedWaitUntil:
     notVisible:
-      id: "batch-grid-tile-1-ring"
+      id: 'batch-grid-tile-1-ring'
     timeout: 30000
 - extendedWaitUntil:
     visible:
-      id: "batch-grid-tile-0-img"
+      id: 'batch-grid-tile-0-img'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "batch-grid-tile-1-img"
+      id: 'batch-grid-tile-1-img'
     timeout: 15000
 
-# --- Generate and finalize with the photos still attached -------------------
-- extendedWaitUntil:
-    visible:
-      id: "btn-generate-.*report"
-    timeout: 15000
-- runFlow:
-    when:
-      visible: "^(Generate report|Update report)$"
-    commands:
-      - tapOn: "^(Generate report|Update report)$"
+# --- Wait for auto-generation, then finalize with photos attached ----------
+- runFlow: ../helpers/wait-for-auto-regeneration.yaml
 - runFlow:
     when:
       visible:
-        id: "confirm-finalize"
+        id: 'confirm-finalize'
     commands:
-      - tapOn: "Cancel"
+      - tapOn: 'Cancel'
       - extendedWaitUntil:
           notVisible:
-            id: "confirm-finalize"
+            id: 'confirm-finalize'
           timeout: 8000
 - extendedWaitUntil:
     visible:
-      id: "btn-finalize-report"
+      id: 'btn-finalize-report'
     timeout: 60000
 - runFlow:
     when:
       visible:
-        id: "confirm-finalize"
+        id: 'confirm-finalize'
     commands:
-      - tapOn: "Cancel"
+      - tapOn: 'Cancel'
       - extendedWaitUntil:
           notVisible:
-            id: "confirm-finalize"
+            id: 'confirm-finalize'
           timeout: 8000
 - extendedWaitUntil:
     visible:
-      id: "btn-tab-report"
+      id: 'btn-tab-report'
     timeout: 10000
 - tapOn:
-    id: "btn-tab-report"
+    id: 'btn-tab-report'
 - extendedWaitUntil:
     visible:
-      id: "report-tab-pane"
+      id: 'report-tab-pane'
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-view-.*"
+      id: 'report-view-.*'
     timeout: 60000
 - tapOn:
-    id: "btn-finalize-report"
+    id: 'btn-finalize-report'
 - extendedWaitUntil:
     visible:
-      id: "confirm-finalize"
+      id: 'confirm-finalize'
     timeout: 8000
 - tapOn:
-    id: "confirm-finalize"
+    id: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     timeout: 20000
 - assertVisible:
-    id: "report-title-.*"
+    id: 'report-title-.*'
 
 # --- Saved-report photo strip + preview ------------------------------------
 - scrollUntilVisible:
     element:
-      id: "report-photos"
+      id: 'report-photos'
     direction: DOWN
     timeout: 60000
 - assertVisible:
-    id: "report-photos-grid"
+    id: 'report-photos-grid'
 - scrollUntilVisible:
     element:
-      id: "btn-report-photo-.*"
+      id: 'btn-report-photo-.*'
     direction: DOWN
     timeout: 15000
 - assertVisible:
-    id: "btn-report-photo-.*"
+    id: 'btn-report-photo-.*'
 - tapOn:
-    id: "btn-report-photo-.*"
+    id: 'btn-report-photo-.*'
 - extendedWaitUntil:
     visible:
-      id: "image-preview-gallery"
+      id: 'image-preview-gallery'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "image-preview-0-image"
+      id: 'image-preview-0-image'
     timeout: 30000
 - tapOn:
-    id: "btn-close-image-preview"
+    id: 'btn-close-image-preview'
 
 # --- Clean up: delete finalized report and return to project home -----------
 # The saved report can be several screens tall; after closing the image preview
@@ -195,7 +187,7 @@ tags:
 # Treat the scroll as positioning and require the button below.
 - scrollUntilVisible:
     element:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     direction: UP
     timeout: 60000
     optional: true
@@ -203,52 +195,52 @@ tags:
     centerElement: true
 - extendedWaitUntil:
     visible:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     timeout: 10000
 - tapOn:
-    id: "btn-report-actions"
+    id: 'btn-report-actions'
 - extendedWaitUntil:
     visible:
-      id: "report-actions-menu"
+      id: 'report-actions-menu'
     timeout: 8000
 - extendedWaitUntil:
     visible:
-      id: "btn-report-delete"
-    timeout: 8000
-- tapOn:
-    id: "btn-report-delete"
-- extendedWaitUntil:
-    visible:
-      id: "dialog-sheet"
+      id: 'btn-report-delete'
     timeout: 8000
 - tapOn:
-    id: "btn-confirm-delete-report"
+    id: 'btn-report-delete'
 - extendedWaitUntil:
     visible:
-      id: "btn-new-report"
+      id: 'dialog-sheet'
+    timeout: 8000
+- tapOn:
+    id: 'btn-confirm-delete-report'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-new-report'
     timeout: 15000
 - tapOn:
-    id: "btn-back"
+    id: 'btn-back'
 - extendedWaitUntil:
     visible:
-      id: "btn-project-edit|btn-new-project"
+      id: 'btn-project-edit|btn-new-project'
     timeout: 10000
 - runFlow:
     when:
       visible:
-        id: "btn-new-project"
+        id: 'btn-new-project'
     commands:
       - runFlow:
           when:
-            visible: ".*Regression Test Project.*"
+            visible: '.*Regression Test Project.*'
           commands:
             - tapOn: "Regression Test Project \\(Edited\\)"
       - runFlow:
           when:
-            visible: "${PROJECT_NAME_EDITED}"
+            visible: '${PROJECT_NAME_EDITED}'
           commands:
-            - tapOn: "${PROJECT_NAME_EDITED}"
+            - tapOn: '${PROJECT_NAME_EDITED}'
 - extendedWaitUntil:
     visible:
-      id: "btn-project-edit"
+      id: 'btn-project-edit'
     timeout: 10000

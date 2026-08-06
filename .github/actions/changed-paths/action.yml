@@ -81,6 +81,8 @@ runs:
           mobile:
             - '.maestro/**'
             - 'scripts/ci/run-maestro-launch-smoke.sh'
+            - 'scripts/maestro/prepare-android-emulator.sh'
+            - 'scripts/ci/__tests__/prepare-android-emulator.test.sh'
             - 'apps/mobile/**'
             - 'packages/api-contract/**'
             - 'packages/report-core/**'

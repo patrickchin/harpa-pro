@@ -62,10 +62,10 @@ export interface PhotoUploadEntriesApi {
    * transition without a remount.
    */
   fileIdToAttachmentKey: ReadonlyMap<string, string>;
-  /** Retry a failed upload job. No-op when no queue mounted. */
-  retry: (jobId: string) => void;
-  /** Remove / cancel an upload job from the snapshot. No-op when no queue. */
-  cancel: (jobId: string) => void;
+  /** Retry a failed upload job and resolve when its queue work settles. */
+  retry: (jobId: string) => Promise<void>;
+  /** Remove a job and resolve after any active queue collaborator settles. */
+  cancel: (jobId: string) => Promise<void>;
 }
 
 const EMPTY_JOBS: ReadonlyArray<UploadJob> = [];
@@ -160,10 +160,7 @@ export function usePhotoUploadEntries(
     },
     [queue],
   );
-  const getSnapshot = useCallback(
-    () => (queue ? queue.getJobs() : EMPTY_JOBS),
-    [queue],
-  );
+  const getSnapshot = useCallback(() => (queue ? queue.getJobs() : EMPTY_JOBS), [queue]);
   const jobs = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   // Session-lived maps. Both are kept in refs so entries survive queue
@@ -180,9 +177,7 @@ export function usePhotoUploadEntries(
     if (reportId) {
       for (const job of jobs) {
         if (job.input.kind !== 'image' || job.input.reportId !== reportId) continue;
-        const syntheticId = job.batchKey
-          ? batchSyntheticId(job.batchKey)
-          : soloSyntheticId(job.id);
+        const syntheticId = job.batchKey ? batchSyntheticId(job.batchKey) : soloSyntheticId(job.id);
         if (job.noteId && noteMap.get(job.noteId) !== syntheticId) {
           noteMap.set(job.noteId, syntheticId);
         }
@@ -237,16 +232,16 @@ export function usePhotoUploadEntries(
   }, [jobs, reportId, authorId]);
 
   const retry = useCallback(
-    (jobId: string) => {
+    async (jobId: string): Promise<void> => {
       if (!queue) return;
-      void queue.retry(jobId);
+      await queue.retry(jobId);
     },
     [queue],
   );
   const cancel = useCallback(
-    (jobId: string) => {
+    async (jobId: string): Promise<void> => {
       if (!queue) return;
-      queue.remove(jobId);
+      await queue.remove(jobId);
     },
     [queue],
   );

@@ -29,13 +29,7 @@ cleanup() {
 }
 trap 'cleanup "$?"' EXIT
 
-adb shell settings put global hide_error_dialogs 1
-hide_error_dialogs="$(adb shell settings get global hide_error_dialogs | tr -d '\r')"
-if [[ "$hide_error_dialogs" != "1" ]]; then
-  printf 'Expected Android hide_error_dialogs=1, got %s\n' \
-    "$hide_error_dialogs" >&2
-  exit 1
-fi
+bash scripts/maestro/prepare-android-emulator.sh
 
 adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 adb reverse tcp:8081 tcp:8081

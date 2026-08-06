@@ -529,7 +529,7 @@ describe('AdminActivity', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain('cursor=next-page-cursor');
-    expect((await screen.findAllByText('Deleted user')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('[deleted user]')).length).toBeGreaterThan(0);
     const deletedEntry = screen.getByTestId(`activity-row-${deletedEvent.id}`);
     expect(
       within(deletedEntry).getByTestId('event-icon-user.signed_up').getAttribute('data-icon'),

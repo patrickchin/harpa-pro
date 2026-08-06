@@ -48,7 +48,9 @@ updated flow still requires a fresh PR-time Android smoke to validate recovery
 on a real emulator.
 
 **Pattern.** Recurrence of the Expo Dev Launcher synchronization failure
-documented in the [2026-07-29 bug entry].
+documented in the [2026-07-29 bug entry]. A [2026-08-06 follow-up] records why
+fixed-count semantic dismissals still raced a recurring Quickstep dialog and
+moved suppression into the verified emulator setup.
 
 [Actions run 30924240940]: https://github.com/patrickchin/harpa-pro/actions/runs/30924240940
 [PR #255 diagnostic artifact]: https://github.com/patrickchin/harpa-pro/actions/runs/30924240940/artifacts/8899016750
@@ -57,3 +59,4 @@ documented in the [2026-07-29 bug entry].
 [earlier failed attempt]: https://github.com/patrickchin/harpa-pro/actions/runs/30917762954/attempts/1
 [unselected Metro server bug]: 2026-07-29-expo-dev-launcher-server-not-selected.md
 [2026-07-29 bug entry]: 2026-07-29-expo-dev-launcher-server-not-selected.md
+[2026-08-06 follow-up]: 2026-08-06-quickstep-anr-dialog-recurrence.md

@@ -104,6 +104,7 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
 });
 
 test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/docs/guides/generate-ai-report");
 
   const trigger = page.getByRole("link", {
@@ -119,11 +120,17 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
     name: "Full screenshot for Start a report",
   });
   await expect(dialog).toBeVisible();
-  await expect(
-    dialog.getByRole("img", {
-      name: "Harpa Pro Reports list with the New report button",
-    }),
-  ).toHaveAttribute("src", screenshotUrl ?? "");
+  const fullScreenshot = dialog.getByRole("img", {
+    name: "Harpa Pro Reports list with the New report button",
+  });
+  await expect(fullScreenshot).toHaveAttribute("src", screenshotUrl ?? "");
+  await expect
+    .poll(() =>
+      fullScreenshot.evaluate(
+        (image) => (image as HTMLImageElement).complete,
+      ),
+    )
+    .toBe(true);
   await expect(dialog.getByText("Start a report", { exact: true })).toBeVisible();
 
   const bounds = await dialog.boundingBox();
@@ -137,6 +144,46 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   ).toBeLessThanOrEqual(1);
   expect(bounds?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
     viewport?.height ?? 0,
+  );
+
+  const fit = await fullScreenshot.evaluate((image) => {
+    const fullImage = image as HTMLImageElement;
+    const imageRegion = image.closest<HTMLElement>(
+      ".docs-screenshot-dialog-image",
+    );
+    if (!imageRegion) throw new Error("Screenshot image region is missing");
+
+    const imageBounds = image.getBoundingClientRect();
+    const regionBounds = imageRegion.getBoundingClientRect();
+    return {
+      imageBottom: imageBounds.bottom,
+      imageHeight: imageBounds.height,
+      imageLeft: imageBounds.left,
+      imageRight: imageBounds.right,
+      imageTop: imageBounds.top,
+      imageWidth: imageBounds.width,
+      naturalHeight: fullImage.naturalHeight,
+      naturalWidth: fullImage.naturalWidth,
+      regionBottom: regionBounds.bottom,
+      regionClientHeight: imageRegion.clientHeight,
+      regionLeft: regionBounds.left,
+      regionRight: regionBounds.right,
+      regionScrollHeight: imageRegion.scrollHeight,
+      regionTop: regionBounds.top,
+    };
+  });
+  expect(fit.naturalWidth).toBeGreaterThan(0);
+  expect(fit.naturalHeight).toBeGreaterThan(0);
+  expect(fit.regionScrollHeight).toBeLessThanOrEqual(
+    fit.regionClientHeight + 1,
+  );
+  expect(fit.imageTop).toBeGreaterThanOrEqual(fit.regionTop - 1);
+  expect(fit.imageBottom).toBeLessThanOrEqual(fit.regionBottom + 1);
+  expect(fit.imageLeft).toBeGreaterThanOrEqual(fit.regionLeft - 1);
+  expect(fit.imageRight).toBeLessThanOrEqual(fit.regionRight + 1);
+  expect(fit.imageWidth / fit.imageHeight).toBeCloseTo(
+    fit.naturalWidth / fit.naturalHeight,
+    2,
   );
 
   await dialog.getByRole("button", { name: "Close full screenshot" }).click();

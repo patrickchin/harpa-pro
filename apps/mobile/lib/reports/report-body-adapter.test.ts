@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { reportBodyToGeneratedReport, generatedReportToReportBody } from './report-body-adapter';
+import {
+  reportBodyToGeneratedReport,
+  generatedReportToReportBody,
+  resolveGeneratedReport,
+} from './report-body-adapter';
 
 const emptyMeta = {
   title: null,
@@ -190,6 +194,40 @@ describe('reportBodyToGeneratedReport — materials & issues', () => {
     expect(out.report.sections[0]!.attachments).toEqual({
       images: ['not_img_section'],
     });
+  });
+});
+
+describe('resolveGeneratedReport — persisted-body precedence', () => {
+  const fixtureFallback = reportBodyToGeneratedReport({
+    ...baseBody,
+    meta: { ...emptyMeta, title: 'Static fixture fallback' },
+  });
+
+  it('uses a persisted report body, including photo placements, before the fixture fallback', () => {
+    const out = resolveGeneratedReport(
+      {
+        ...baseBody,
+        meta: { ...emptyMeta, title: 'Persisted placement' },
+        issues: [
+          {
+            title: 'Water intrusion',
+            severity: 'high',
+            description: null,
+            action: null,
+            attachments: { images: ['not_photo'] },
+          },
+        ],
+      },
+      fixtureFallback,
+    );
+
+    expect(out?.report.meta.title).toBe('Persisted placement');
+    expect(out?.report.issues[0]?.attachments?.images).toEqual(['not_photo']);
+  });
+
+  it('uses the fixture fallback only while the persisted body is absent', () => {
+    expect(resolveGeneratedReport(null, fixtureFallback)).toBe(fixtureFallback);
+    expect(resolveGeneratedReport(undefined, null)).toBeNull();
   });
 });
 

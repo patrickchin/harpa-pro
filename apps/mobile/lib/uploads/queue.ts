@@ -53,8 +53,8 @@ export interface UploadQueue {
   retry: (jobId: string) => Promise<UploadResult>;
   getJobs: () => UploadJob[];
   subscribe: (listener: () => void) => () => void;
-  /** Cancel and remove one job. In-flight network work is aborted. */
-  remove: (jobId: string) => void;
+  /** Cancel/remove one job and resolve after active collaborator work settles. */
+  remove: (jobId: string) => Promise<void>;
   /** Abort and forget every job, including the persisted snapshot. */
   clear: () => void;
 }
@@ -68,10 +68,7 @@ interface InternalJob extends UploadJob {
   batchKey?: string;
 }
 
-export function createUploadQueue(
-  deps: UploadDeps,
-  internals: QueueInternals = {},
-): UploadQueue {
+export function createUploadQueue(deps: UploadDeps, internals: QueueInternals = {}): UploadQueue {
   const jobs: InternalJob[] = [];
   const listeners = new Set<() => void>();
   let batchCoord = createBatchCoordinator();
@@ -95,6 +92,7 @@ export function createUploadQueue(
           attempt: j.attempt,
           fileId: j.fileId,
           thumbnailFileId: j.thumbnailFileId,
+          noteId: j.noteId,
           error: j.error,
         })),
       );
@@ -126,9 +124,7 @@ export function createUploadQueue(
     try {
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const next = jobs.find(
-          (j) => j.status === 'pending' && j.attempt <= MAX_ATTEMPTS,
-        );
+        const next = jobs.find((j) => j.status === 'pending' && j.attempt <= MAX_ATTEMPTS);
         if (!next) break;
         await processJob(next);
       }
@@ -249,11 +245,7 @@ export function createUploadQueue(
       // non-failed job — completed jobs already created their file row
       // server-side; failed jobs are retried explicitly via retry().
       if (input.clientId) {
-        const dup = jobs.find(
-          (j) =>
-            j.input.clientId === input.clientId &&
-            j.status !== 'failed',
-        );
+        const dup = jobs.find((j) => j.input.clientId === input.clientId && j.status !== 'failed');
         if (dup) {
           if (dup.status === 'completed') {
             resolve({
@@ -293,7 +285,10 @@ export function createUploadQueue(
     });
   }
 
-  function enqueueBatch(inputs: EnqueueInput[]): { batchKey: string; promises: Promise<UploadResult>[] } {
+  function enqueueBatch(inputs: EnqueueInput[]): {
+    batchKey: string;
+    promises: Promise<UploadResult>[];
+  } {
     if (inputs.length === 0) return { batchKey: '', promises: [] };
     const batchKey = nextBatchKey();
     const jobIds: string[] = [];
@@ -348,23 +343,49 @@ export function createUploadQueue(
     });
   }
 
-  function remove(jobId: string): void {
+  function remove(jobId: string): Promise<void> {
     const idx = jobs.findIndex((j) => j.id === jobId);
-    if (idx < 0) return;
+    if (idx < 0) return Promise.resolve();
     const [job] = jobs.splice(idx, 1);
-    if (
-      job &&
-      job.status !== 'completed' &&
-      job.status !== 'failed' &&
-      job.status !== 'cancelled'
-    ) {
+    if (!job) return Promise.resolve();
+    if (job.status !== 'completed' && job.status !== 'failed' && job.status !== 'cancelled') {
+      let settleRemoval!: () => void;
+      const settled = new Promise<void>((resolve) => {
+        settleRemoval = resolve;
+      });
+      const resolveJob = job.resolve;
+      const rejectJob = job.reject;
+      job.resolve = (result) => {
+        resolveJob(result);
+        settleRemoval();
+      };
+      job.reject = (error) => {
+        rejectJob(error);
+        settleRemoval();
+      };
+
       // In-flight job: abort the network call so we don't fire any
       // downstream pipeline step (notably POST /files). `processJob`
       // will catch the `AbortError`, but by then the job is no longer
       // in `jobs` so the catch path's state writes are inert.
+      const wasPending = job.status === 'pending';
       job.controller.abort();
+      // A pending job may be queued behind another upload (or sleeping
+      // between retries), so `processJob` is not guaranteed to observe the
+      // abort and settle its caller. Reject immediately to ensure batch
+      // `Promise.allSettled` callers can always finish after dismissal. Active
+      // jobs settle through `processJob` only after their current collaborator
+      // observes the abort, preserving the route's refetch ordering.
+      if (wasPending) {
+        const error = new Error('upload job removed');
+        error.name = 'AbortError';
+        job.reject(error);
+      }
+      notify();
+      return settled;
     }
     notify();
+    return Promise.resolve();
   }
 
   function clear(): void {
@@ -372,11 +393,7 @@ export function createUploadQueue(
     batchCoord = createBatchCoordinator();
 
     for (const job of removed) {
-      if (
-        job.status === 'completed' ||
-        job.status === 'failed' ||
-        job.status === 'cancelled'
-      ) {
+      if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
         continue;
       }
       job.controller.abort();
@@ -406,6 +423,7 @@ export function createUploadQueue(
         attempt: persisted.attempt,
         fileId: persisted.fileId,
         thumbnailFileId: persisted.thumbnailFileId,
+        noteId: persisted.noteId,
         error: persisted.error,
         resolve: noop,
         reject: noop,
@@ -426,6 +444,7 @@ export function createUploadQueue(
           attempt: j.attempt,
           fileId: j.fileId,
           thumbnailFileId: j.thumbnailFileId,
+          noteId: j.noteId,
           error: j.error,
         })),
       );

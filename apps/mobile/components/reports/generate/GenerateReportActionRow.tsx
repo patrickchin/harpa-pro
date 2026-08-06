@@ -16,6 +16,15 @@ import { Button } from '@/components/primitives/Button';
 import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
+export function isGenerateReportActionRowBusy(input: {
+  isUpdating: boolean;
+  isFinalizing: boolean;
+  isAutoSaving: boolean;
+  isReportWriteBlocked: boolean;
+}): boolean {
+  return input.isUpdating || input.isFinalizing || input.isAutoSaving || input.isReportWriteBlocked;
+}
+
 export function GenerateReportActionRow() {
   const { generation, draft, timeline, handleRegenerate } = useGenerateReport();
 
@@ -27,7 +36,12 @@ export function GenerateReportActionRow() {
   // lock whatever stale body is on the server. Disable both Finalize
   // and Regenerate (regenerate races autosave on the body column).
   const saving = draft.isAutoSaving;
-  const busy = generation.isUpdating || draft.isFinalizing || saving;
+  const busy = isGenerateReportActionRowBusy({
+    isUpdating: generation.isUpdating,
+    isFinalizing: draft.isFinalizing,
+    isAutoSaving: saving,
+    isReportWriteBlocked: draft.isReportWriteBlocked,
+  });
 
   if (!upToDate) {
     const label = generation.isUpdating
@@ -48,10 +62,7 @@ export function GenerateReportActionRow() {
         >
           <View className="flex-row items-center gap-1.5">
             <Sparkles size={16} color={colors.foreground} />
-            <Text
-              className="text-base font-semibold text-foreground"
-              numberOfLines={1}
-            >
+            <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
               {label}
             </Text>
           </View>
@@ -81,15 +92,8 @@ export function GenerateReportActionRow() {
           onPress={() => draft.setIsFinalizeConfirmVisible(true)}
           disabled={busy}
         >
-          <Text
-            className="text-base font-semibold text-primary-foreground"
-            numberOfLines={1}
-          >
-            {draft.isFinalizing
-              ? 'Finalizing…'
-              : saving
-                ? 'Saving…'
-                : 'Finalize report'}
+          <Text className="text-base font-semibold text-primary-foreground" numberOfLines={1}>
+            {draft.isFinalizing ? 'Finalizing…' : saving ? 'Saving…' : 'Finalize report'}
           </Text>
         </Button>
       </View>

@@ -51,6 +51,7 @@ jobs:
           bash scripts/ci/__tests__/mobile-ota-release-policy.test.sh
           bash scripts/ci/__tests__/dashboard-visual-contract.test.sh
           bash scripts/ci/__tests__/check-no-maestro-point-taps.test.sh
+          bash scripts/ci/__tests__/prepare-android-emulator.test.sh
           bash scripts/ci/__tests__/storage-lifecycle-deploy-policy.test.sh
           bash scripts/ci/__tests__/repair-storage-worker-topology.test.sh
           bash scripts/ci/__tests__/verify-storage-worker-started.test.sh
@@ -75,3 +76,4 @@ jobs:
         run: |
           shellcheck --version
           find scripts/ci scripts/journeys -name '*.sh' -print0 | xargs -0 shellcheck
+          shellcheck scripts/maestro/prepare-android-emulator.sh

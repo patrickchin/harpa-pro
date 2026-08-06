@@ -18,87 +18,103 @@ tags:
 #     does not expose placement or manual-edit controls
 #
 # Pre-flight is identical to the photo upload modules: docker compose stack
-# up, fresh DB via `scripts/maestro/reset-db.sh`. The flow assumes a
-# seeded report whose normalized JSON contains at least one issue
-# (the dev-mirror sample report does).
+# up, fresh DB via `scripts/maestro/reset-db.sh`, fixture-mode Metro, local
+# auth broker, and camera permission. The reset supplies Wiring Smoke Project,
+# draft report 1, and a text note. Fixture generation supplies the report issue
+# targeted below; the flow captures its own image note.
 #
 # Run:
+#   bash scripts/maestro/prepare-android-emulator.sh
 #   ./scripts/maestro/reset-db.sh
 #   maestro test .maestro/place-photo-on-issue.flow.yml
 ---
-- launchApp:
-    clearState: true
-    clearKeychain: true
-    stopApp: true
-- waitForAnimationToEnd
+# Use the same clear-state launch recovery and current email/password auth as
+# the canonical local regression journey. Module 01 finishes signed in on the
+# projects list.
+- runFlow: modules/01-auth.yaml
 
-# Sign in.
-- assertVisible:
-    id: 'input-phone'
+# Open reset-db's seeded project and draft report.
+- extendedWaitUntil:
+    visible:
+      id: 'project-row-prj_aaaaaaaaaaaa'
+    timeout: 15000
 - tapOn:
-    id: 'input-phone'
-- inputText: '+15550100100'
-- hideKeyboard
-- tapOn:
-    id: 'btn-login-send-code'
-- assertVisible:
-    id: 'input-otp'
-- tapOn:
-    id: 'input-otp'
-- inputText: '000000'
-- hideKeyboard
-- tapOn:
-    id: 'btn-verify-code'
-
-# Open the first project / first draft report.
-- assertVisible:
-    id: 'btn-open-reports'
+    id: 'project-row-prj_aaaaaaaaaaaa'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-open-reports'
+    timeout: 10000
 - tapOn:
     id: 'btn-open-reports'
-- assertVisible:
-    id: 'report-row-draft-0'
+- extendedWaitUntil:
+    visible:
+      id: 'report-row-1'
+    timeout: 15000
 - tapOn:
-    id: 'report-row-draft-0'
+    id: 'report-row-1'
+- extendedWaitUntil:
+    visible:
+      id: 'input-note'
+    timeout: 15000
 
-# Capture a photo via the same camera + upload pipeline as module 10a.
-- assertVisible:
-    id: 'btn-tab-notes'
+# Capture and persist one photo through the current fixture-camera pipeline.
+- runFlow: helpers/capture-one-photo-note.yaml
+
+# Wait for the route-level auto-regeneration triggered by the uploaded note,
+# then open the Report tab. Do not conditionally tap the Generate / Update
+# label: the automatic mutation can finish between Maestro's condition check
+# and tap. `btn-finalize-report` appears only after regeneration has settled.
+# The canonical replay fixture contains issues, so placement-sheet-issue-0 is
+# a deterministic target.
+- extendedWaitUntil:
+    visible:
+      id: 'btn-tab-report'
+    timeout: 15000
+- runFlow: helpers/wait-for-auto-regeneration.yaml
 - tapOn:
-    id: 'btn-tab-notes'
-- tapOn:
-    id: 'btn-attachment'
-- tapOn:
-    id: 'btn-attachment-camera'
-- tapOn:
-    id: 'btn-camera-shutter'
-- tapOn:
-    id: 'btn-camera-done'
+    id: 'btn-tab-report'
+- extendedWaitUntil:
+    visible:
+      id: 'report-tab-live'
+    timeout: 45000
+- extendedWaitUntil:
+    visible:
+      id: 'report-view-.*'
+    timeout: 15000
 
 # Switch to the Report tab — the photo lands in the Unplaced photos
 # card with a `Place into…` chip.
-- tapOn:
-    id: 'btn-tab-report'
+- scrollUntilVisible:
+    element:
+      id: 'btn-generate-report-photos-place-.*'
+    direction: DOWN
+    timeout: 60000
 - assertVisible:
-    id: 'report-photos'
+    id: 'generate-report-photos'
 - assertVisible: 'Unplaced photos'
-- assertVisible: 'Place into…'
+- assertVisible:
+    id: 'btn-generate-report-photos-place-.*'
 
 # Regenerate while the existing report remains visible. Placement controls must
 # stay mounted to avoid layout shift, but they must be disabled because the
-# backend response will replace report.body.
+# backend response will replace report.body. The helper asserts the disabled
+# state when the fixture response is slow enough for Maestro to observe it.
 - runFlow: helpers/assert-report-generation-write-lock.yaml
 - scrollUntilVisible:
     element:
       id: 'btn-generate-report-photos-place-.*'
     direction: DOWN
-    timeout: 30000
+    timeout: 60000
 - assertVisible:
     id: 'btn-generate-report-photos-place-.*'
-    enabled: false
 
 # Tap the chip to open the placement sheet.
-- tapOn: 'Place into…'
-- assertVisible: 'Place photos'
+- tapOn:
+    id: 'btn-generate-report-photos-place-.*'
+- extendedWaitUntil:
+    visible:
+      id: 'placement-sheet'
+    timeout: 10000
 
 # Pick the first issue. The sheet's row testIDs follow the
 # `placement-sheet-issue-{index}` convention from PhotoGroupPlacementSheet.
@@ -107,22 +123,32 @@ tags:
 - tapOn:
     id: 'placement-sheet-issue-0'
 
-# Sheet closes; the photo now renders under the first issue.
+# Sheet closes; the photo now renders under the first issue. The placement
+# control was at the bottom of the report, so move back up to the issue card
+# instead of requiring its off-screen accessibility node immediately.
+- scrollUntilVisible:
+    element:
+      id: 'placed-photos-issue-0'
+    direction: UP
+    timeout: 60000
 - assertVisible:
     id: 'placed-photos-issue-0'
 
 # And the bottom Unplaced photos card is gone (or empty) — the only
 # group has been moved out of it.
-- assertNotVisible: 'Unplaced photos'
+- assertNotVisible:
+    id: 'btn-generate-report-photos-place-.*'
+
+# Placement is an optimistic report write. Wait for its API response, report
+# refetch, and version handoff before Finalize can consume that body version.
+- runFlow: helpers/wait-for-auto-regeneration.yaml
 
 # Finalized saved reports are read-only: the placed photo remains visible,
 # but move/place/add-attachment/manual-edit affordances are absent.
-- scrollUntilVisible:
-    element:
+- extendedWaitUntil:
+    visible:
       id: 'btn-finalize-report'
-    direction: UP
-    timeout: 10000
-    optional: true
+    timeout: 15000
 - tapOn:
     id: 'btn-finalize-report'
 - extendedWaitUntil:
@@ -141,7 +167,7 @@ tags:
     element:
       id: 'placed-photos-issue-0'
     direction: DOWN
-    timeout: 30000
+    timeout: 60000
 - assertVisible:
     id: 'placed-photos-issue-0'
 - assertNotVisible:

@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "Account deletion - confirm and sign out"
+name: 'Account deletion - confirm and sign out'
 tags:
   - account
   - deletion
@@ -11,103 +11,78 @@ tags:
 # shared dev deployment. The normal regression journey covers discoverability
 # and cancel without destroying the primary test account.
 
-- launchApp:
-    clearState: true
-    clearKeychain: true
-    stopApp: true
-- waitForAnimationToEnd
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
-- waitForAnimationToEnd:
-    timeout: 20000
-- runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn: "Continue"
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: "Close"
-    commands:
-      - tapOn: "Close"
-      - waitForAnimationToEnd
-- runFlow:
-    file: helpers/dismiss-open-dialog.yaml
-- extendedWaitUntil:
-    visible:
-      id: "input-email"
-    timeout: 90000
+- runFlow: helpers/launch-local-dev-client.yaml
 
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "test3@harpapro.com"
+      EMAIL: 'test3@harpapro.com'
 
 - runFlow:
     when:
       visible:
-        id: "screen-onboarding"
+        id: 'screen-onboarding'
     commands:
       - tapOn:
-          id: "input-onboarding-name"
-      - inputText: "Delete Flow E2E"
+          id: 'input-onboarding-name'
+      - inputText: 'Delete Flow E2E'
       - tapOn:
-          id: "input-onboarding-company"
-      - inputText: "E2E Corp"
+          id: 'input-onboarding-company'
+      - inputText: 'E2E Corp'
       - hideKeyboard
       # iOS can submit this form while dismissing the keyboard, which
       # navigates to Projects before Maestro reaches the explicit tap.
       - runFlow:
           when:
             visible:
-              id: "btn-onboarding-submit"
+              id: 'btn-onboarding-submit'
           commands:
             - tapOn:
-                id: "btn-onboarding-submit"
+                id: 'btn-onboarding-submit'
 
 - extendedWaitUntil:
     visible:
-      id: "btn-new-project"
+      id: 'btn-new-project'
     timeout: 15000
 - tapOn:
-    id: "btn-open-profile"
+    id: 'btn-open-profile'
 - extendedWaitUntil:
     visible:
-      id: "screen-profile"
+      id: 'screen-profile'
     timeout: 10000
 - tapOn:
-    id: "btn-open-account"
+    id: 'btn-open-account'
 - extendedWaitUntil:
     visible:
-      id: "screen-account"
+      id: 'screen-account'
     timeout: 10000
 - scrollUntilVisible:
     element:
-      id: "btn-open-delete-account"
+      id: 'btn-open-delete-account'
     direction: DOWN
     timeout: 20000
 - tapOn:
-    id: "btn-open-delete-account"
+    id: 'btn-open-delete-account'
 - extendedWaitUntil:
     visible:
-      id: "dialog-sheet"
+      id: 'dialog-sheet'
     timeout: 10000
-- assertVisible: "Delete account?"
+- assertVisible: 'Delete account?'
 - extendedWaitUntil:
-    visible: ".*Projects deleted.*"
+    visible: '.*Projects deleted.*'
     timeout: 10000
 - tapOn:
-    id: "input-delete-account-email"
-- inputText: "test3@harpapro.com"
+    id: 'input-delete-account-email'
+- inputText: 'test3@harpapro.com'
 - hideKeyboard
 - runFlow:
     when:
       visible:
-        id: "btn-confirm-delete-account"
+        id: 'btn-confirm-delete-account'
     commands:
       - tapOn:
-          id: "btn-confirm-delete-account"
+          id: 'btn-confirm-delete-account'
 - extendedWaitUntil:
     visible:
-      id: "input-email"
+      id: 'input-email'
     timeout: 20000

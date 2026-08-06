@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "17 - Heavy usage stress: long notes and report lists"
+name: '17 - Heavy usage stress: long notes and report lists'
 tags:
   - regression
   - release
@@ -26,396 +26,391 @@ tags:
 
 # --- Create the stress project --------------------------------------------
 - tapOn:
-    id: "btn-new-project"
+    id: 'btn-new-project'
 - extendedWaitUntil:
     visible:
-      id: "input-project-name"
+      id: 'input-project-name'
     timeout: 10000
 - tapOn:
-    id: "input-project-name"
-- inputText: "Extended Stress Project"
+    id: 'input-project-name'
+- inputText: 'Extended Stress Project'
 - tapOn:
-    id: "input-client-name"
-- inputText: "Release QA"
+    id: 'input-client-name'
+- inputText: 'Release QA'
 - tapOn:
-    id: "input-project-address"
-- inputText: "99 Stress Test Way"
+    id: 'input-project-address'
+- inputText: '99 Stress Test Way'
 - hideKeyboard
 # iOS can submit the form while dismissing the keyboard, so only tap if
 # the button is still on the form after the keyboard closes.
 - runFlow:
     when:
       visible:
-        id: "btn-save-project"
+        id: 'btn-save-project'
     commands:
       - tapOn:
-          id: "btn-save-project"
+          id: 'btn-save-project'
 - extendedWaitUntil:
     visible:
-      id: "btn-project-edit"
+      id: 'btn-project-edit'
     timeout: 15000
 
 # --- Create the primary report --------------------------------------------
 - tapOn:
-    id: "btn-open-reports"
+    id: 'btn-open-reports'
 - extendedWaitUntil:
     visible:
-      id: "btn-new-report"
+      id: 'btn-new-report'
     timeout: 10000
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 # Follow the established create-vs-navigate workaround: wait for the
 # row and open it from the list instead of relying on create-time push.
 - extendedWaitUntil:
     visible:
-      id: "report-row-.*"
+      id: 'report-row-.*'
     timeout: 15000
 - tapOn:
-    id: "report-row-.*"
+    id: 'report-row-.*'
 - extendedWaitUntil:
     visible:
-      id: "input-note"
+      id: 'input-note'
     timeout: 15000
 
 # --- Add enough notes to make the timeline meaningfully long ---------------
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "0"
-      NOTE_TEXT: "Stress note 01 foundation line checked and documented"
+      NOTE_INDEX: '0'
+      NOTE_TEXT: 'Stress note 01 foundation line checked and documented'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "1"
-      NOTE_TEXT: "Stress note 02 crew completed morning safety briefing"
+      NOTE_INDEX: '1'
+      NOTE_TEXT: 'Stress note 02 crew completed morning safety briefing'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "2"
-      NOTE_TEXT: "Stress note 03 rebar spacing reviewed at west stair"
+      NOTE_INDEX: '2'
+      NOTE_TEXT: 'Stress note 03 rebar spacing reviewed at west stair'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "3"
-      NOTE_TEXT: "Stress note 04 temporary lighting checked in basement"
+      NOTE_INDEX: '3'
+      NOTE_TEXT: 'Stress note 04 temporary lighting checked in basement'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "4"
-      NOTE_TEXT: "Stress note 05 delivery gate clear for afternoon pour"
+      NOTE_INDEX: '4'
+      NOTE_TEXT: 'Stress note 05 delivery gate clear for afternoon pour'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "5"
-      NOTE_TEXT: "Stress note 06 lift inspection paperwork collected"
+      NOTE_INDEX: '5'
+      NOTE_TEXT: 'Stress note 06 lift inspection paperwork collected'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "6"
-      NOTE_TEXT: "Stress note 07 housekeeping complete on level three"
+      NOTE_INDEX: '6'
+      NOTE_TEXT: 'Stress note 07 housekeeping complete on level three'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "7"
-      NOTE_TEXT: "Stress note 08 concrete cylinders labeled and stored"
+      NOTE_INDEX: '7'
+      NOTE_TEXT: 'Stress note 08 concrete cylinders labeled and stored'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "8"
-      NOTE_TEXT: "Stress note 09 sprinkler sleeves verified in corridor"
+      NOTE_INDEX: '8'
+      NOTE_TEXT: 'Stress note 09 sprinkler sleeves verified in corridor'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "9"
-      NOTE_TEXT: "Stress note 10 access stair checked with no obstruction"
+      NOTE_INDEX: '9'
+      NOTE_TEXT: 'Stress note 10 access stair checked with no obstruction'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "10"
-      NOTE_TEXT: "Stress note 11 drywall mockup reviewed with foreman"
+      NOTE_INDEX: '10'
+      NOTE_TEXT: 'Stress note 11 drywall mockup reviewed with foreman'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "11"
-      NOTE_TEXT: "Stress note 12 roof drain protection still in place"
+      NOTE_INDEX: '11'
+      NOTE_TEXT: 'Stress note 12 roof drain protection still in place'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "12"
-      NOTE_TEXT: "Stress note 13 firestop material staged by riser room"
+      NOTE_INDEX: '12'
+      NOTE_TEXT: 'Stress note 13 firestop material staged by riser room'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "13"
-      NOTE_TEXT: "Stress note 14 punch item logged for door hardware"
+      NOTE_INDEX: '13'
+      NOTE_TEXT: 'Stress note 14 punch item logged for door hardware'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "14"
-      NOTE_TEXT: "Stress note 15 inspector requested added cleanout photo"
+      NOTE_INDEX: '14'
+      NOTE_TEXT: 'Stress note 15 inspector requested added cleanout photo'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "15"
-      NOTE_TEXT: "Stress note 16 water test scheduled for south stack"
+      NOTE_INDEX: '15'
+      NOTE_TEXT: 'Stress note 16 water test scheduled for south stack'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "16"
-      NOTE_TEXT: "Stress note 17 MEP sleeves coordinated above lobby"
+      NOTE_INDEX: '16'
+      NOTE_TEXT: 'Stress note 17 MEP sleeves coordinated above lobby'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "17"
-      NOTE_TEXT: "Stress note 18 temporary guardrail repaired at loading bay"
+      NOTE_INDEX: '17'
+      NOTE_TEXT: 'Stress note 18 temporary guardrail repaired at loading bay'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "18"
-      NOTE_TEXT: "Stress note 19 material laydown shifted away from crane path"
+      NOTE_INDEX: '18'
+      NOTE_TEXT: 'Stress note 19 material laydown shifted away from crane path'
 - runFlow:
     file: ../helpers/add-text-note.yaml
     env:
-      NOTE_INDEX: "19"
-      NOTE_TEXT: "Stress note 20 end of day walkthrough completed"
+      NOTE_INDEX: '19'
+      NOTE_TEXT: 'Stress note 20 end of day walkthrough completed'
 
 # --- Scroll the long note timeline both directions -------------------------
 - scrollUntilVisible:
     element:
-      id: "note-row-19"
+      id: 'note-row-19'
     direction: DOWN
     timeout: 45000
 - assertVisible:
-    id: "note-row-19"
+    id: 'note-row-19'
 - scrollUntilVisible:
     element:
-      id: "note-row-0"
+      id: 'note-row-0'
     direction: UP
     timeout: 45000
 - assertVisible:
-    id: "note-row-0"
+    id: 'note-row-0'
 - scrollUntilVisible:
     element:
-      id: "note-row-19"
+      id: 'note-row-19'
     direction: DOWN
     timeout: 45000
 - assertVisible:
-    id: "note-row-19"
+    id: 'note-row-19'
 
 # --- Generate and finalize from the heavy note set -------------------------
+- runFlow: ../helpers/wait-for-auto-regeneration.yaml
+- tapOn:
+    id: 'btn-tab-report'
 - extendedWaitUntil:
     visible:
-      id: "btn-generate-.*report"
-    timeout: 15000
-- tapOn:
-    id: "btn-generate-.*report"
-- tapOn:
-    id: "btn-tab-report"
-- extendedWaitUntil:
-    visible:
-      id: "report-tab-pane"
+      id: 'report-tab-pane'
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-view-.*"
+      id: 'report-view-.*'
     timeout: 60000
 - tapOn:
-    id: "btn-finalize-report"
+    id: 'btn-finalize-report'
 - extendedWaitUntil:
     visible:
-      id: "confirm-finalize"
+      id: 'confirm-finalize'
     timeout: 8000
 - tapOn:
-    id: "confirm-finalize"
+    id: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     timeout: 20000
 - assertVisible:
-    id: "report-title-.*"
+    id: 'report-title-.*'
 
 # --- Build a mixed reports list with several extra drafts ------------------
 - tapOn:
-    id: "btn-back"
+    id: 'btn-back'
 - extendedWaitUntil:
     visible:
-      id: "btn-new-report"
+      id: 'btn-new-report'
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-row-1"
+      id: 'report-row-1'
     timeout: 10000
 
 # Create report #2 and return to the reports list.
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 - extendedWaitUntil:
     visible:
-      id: "input-note|report-row-2"
+      id: 'input-note|report-row-2'
     timeout: 20000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - waitForAnimationToEnd:
     timeout: 1000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-row-2"
+      id: 'report-row-2'
     timeout: 15000
 
 # Create report #3 and return to the reports list.
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 - extendedWaitUntil:
     visible:
-      id: "input-note|report-row-3"
+      id: 'input-note|report-row-3'
     timeout: 20000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - waitForAnimationToEnd:
     timeout: 1000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-row-3"
+      id: 'report-row-3'
     timeout: 15000
 
 # Create report #4 and return to the reports list.
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 - extendedWaitUntil:
     visible:
-      id: "input-note|report-row-4"
+      id: 'input-note|report-row-4'
     timeout: 20000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - waitForAnimationToEnd:
     timeout: 1000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-row-4"
+      id: 'report-row-4'
     timeout: 15000
 
 # Create report #5 and return to the reports list.
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 - extendedWaitUntil:
     visible:
-      id: "input-note|report-row-5"
+      id: 'input-note|report-row-5'
     timeout: 20000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - waitForAnimationToEnd:
     timeout: 1000
 - runFlow:
     when:
       visible:
-        id: "input-note"
+        id: 'input-note'
     commands:
       - tapOn:
-          id: "btn-back"
+          id: 'btn-back'
       - extendedWaitUntil:
           visible:
-            id: "btn-new-report"
+            id: 'btn-new-report'
           timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "report-row-5"
+      id: 'report-row-5'
     timeout: 15000
 
 # Drafts sort first/newest-first; the finalized heavy report sits lower.
 - assertVisible:
-    id: "report-row-5"
+    id: 'report-row-5'
 - scrollUntilVisible:
     element:
-      id: "report-row-1"
+      id: 'report-row-1'
     direction: DOWN
     timeout: 45000
 - assertVisible:
-    id: "report-row-1"
+    id: 'report-row-1'
 - scrollUntilVisible:
     element:
-      id: "report-row-5"
+      id: 'report-row-5'
     direction: UP
     timeout: 45000
 - assertVisible:
-    id: "report-row-5"
+    id: 'report-row-5'
 
 # --- Cleanup: delete the project and all accumulated data ------------------
 - tapOn:
-    id: "btn-back"
+    id: 'btn-back'
 - extendedWaitUntil:
     visible:
-      id: "btn-project-edit"
+      id: 'btn-project-edit'
     timeout: 10000
 - runFlow:
     file: ../helpers/delete-current-project.yaml
     env:
-      PROJECT_NAME_EDITED: "Extended Stress Project"
+      PROJECT_NAME_EDITED: 'Extended Stress Project'

@@ -158,12 +158,16 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
     return {
       imageBottom: imageBounds.bottom,
       imageHeight: imageBounds.height,
+      imageLeft: imageBounds.left,
+      imageRight: imageBounds.right,
       imageTop: imageBounds.top,
       imageWidth: imageBounds.width,
       naturalHeight: fullImage.naturalHeight,
       naturalWidth: fullImage.naturalWidth,
       regionBottom: regionBounds.bottom,
       regionClientHeight: imageRegion.clientHeight,
+      regionLeft: regionBounds.left,
+      regionRight: regionBounds.right,
       regionScrollHeight: imageRegion.scrollHeight,
       regionTop: regionBounds.top,
     };
@@ -175,6 +179,8 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   );
   expect(fit.imageTop).toBeGreaterThanOrEqual(fit.regionTop - 1);
   expect(fit.imageBottom).toBeLessThanOrEqual(fit.regionBottom + 1);
+  expect(fit.imageLeft).toBeGreaterThanOrEqual(fit.regionLeft - 1);
+  expect(fit.imageRight).toBeLessThanOrEqual(fit.regionRight + 1);
   expect(fit.imageWidth / fit.imageHeight).toBeCloseTo(
     fit.naturalWidth / fit.naturalHeight,
     2,

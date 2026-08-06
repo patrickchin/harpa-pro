@@ -46,9 +46,14 @@ appId: ${MAESTRO_APP_ID}
     timeout: 15000
 - extendedWaitUntil:
     visible:
+      id: 'report-generation-current'
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
       id: 'btn-generate-update-report'
     timeout: 15000
 - extendedWaitUntil:
     visible:
       id: 'btn-finalize-report'
+      enabled: true
     timeout: 15000

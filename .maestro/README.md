@@ -46,11 +46,12 @@ The emulator action invokes `scripts/ci/run-maestro-launch-smoke.sh`
 with Bash explicitly because the action otherwise evaluates `script:`
 with `/usr/bin/sh`, which does not support `pipefail` on Ubuntu. The
 runner creates its Metro log and Maestro debug directory before
-installing the APK. On this disposable CI emulator only, it writes
-Android's global `hide_error_dialogs=1` setting, reads it back, and exits
-before installation unless the value is exactly `1`. This suppresses system
-crash and ANR dialogs at the emulator boundary instead of relying on a fixed
-number of dismissals.
+installing the APK. It delegates to the same
+`scripts/maestro/prepare-android-emulator.sh` preflight used locally. The
+preflight first refuses non-emulators, then writes Android's global
+`hide_error_dialogs=1` setting, reads it back, and exits unless the value is
+exactly `1`. This suppresses system crash and ANR dialogs at the emulator
+boundary instead of relying on a fixed number of dismissals.
 
 The flow still keeps both semantic Quickstep recovery paths: one around Expo
 Dev Launcher readiness and one after opening the Metro link. If Expo registers
@@ -67,6 +68,39 @@ hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.
 This does not replace the regression journey. It proves the native
 build, Metro bundle, installation, launch, and first rendered route;
 the larger flows remain explicit local and release checks.
+
+## Local dev-client launch helper
+
+Local fixture entrypoints use `helpers/launch-local-dev-client.yaml`. A wiped
+Android development build forgets its last Metro server, and a deep link sent
+before Expo's native controller initializes can be lost. The helper therefore
+observes `Development Build` or rendered app UI before opening the link. At
+both native transitions it also detects Android's recurring Quickstep ANR and
+chooses the semantic `Wait` action. Afterward it waits for app UI or the
+emulator's green `http://10.0.2.2:8081` row and selects that row conditionally.
+Both post-link paths allow three minutes for a cache-empty local Metro bundle;
+each readiness alternative accepts Expo's `Continue` and `Close` onboarding
+actions before the shared semantic dismissal pass. The path still fails closed
+unless the `input-email` testID renders.
+
+Before every local Android **emulator** flow, run the verified system-UI
+preflight once after boot:
+
+```bash
+bash scripts/maestro/prepare-android-emulator.sh
+```
+
+It refuses physical devices rather than persistently suppressing their crash
+dialogs. Physical-device runs retain the semantic Quickstep recovery in the
+flow but do not use this global emulator setting.
+
+The modular regression, legacy core, account-deletion, and store-screenshot
+entrypoints use this helper directly; the standalone photo-placement flow uses
+it through regression auth module 01. The shared-development-deployment flow
+retains its target-specific `127.0.0.1:8082` prelude. Release-confidence policy
+tests keep the native readiness boundary, Quickstep recovery, semantic
+server-row fallback, strict final assertion, and delegation wiring from
+drifting apart.
 
 ## `core-end-to-end.yaml` (legacy P3 smoke)
 
@@ -88,7 +122,7 @@ seeded test-account path on the real `(auth)` + `(app)` routes:
 **Setup (one-time per box):**
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 pnpm --filter @harpa/mobile start --dev-client     # real API mode
 xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
 xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
@@ -101,9 +135,11 @@ xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
 maestro test .maestro/core-end-to-end.yaml
 ```
 
-Wrap with `gtimeout 240` for longer batches; on a hung XCTest driver,
-`kill` the leftover `maestro-driver-ios` PID and retry. Prefer the
-modular regression journey for current coverage.
+If a process watchdog is required, allow at least `gtimeout 7200` for the full
+flow; the fail-closed local launcher budget alone is almost ten minutes on a
+cache-empty build. On a hung XCTest driver, `kill` the leftover
+`maestro-driver-ios` PID and retry. Prefer the modular regression journey for
+current coverage.
 
 The flow uses the password-login test accounts
 (`test@harpapro.com`, `test2@harpapro.com`, `test3@harpapro.com`).
@@ -153,6 +189,7 @@ the local MinIO endpoint, so `9000` is required in addition to Metro
 and the API:
 
 ```bash
+bash scripts/maestro/prepare-android-emulator.sh # emulator only; refuses phones
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
 adb reverse tcp:8790 tcp:8790
@@ -162,7 +199,7 @@ adb reverse tcp:9000 tcp:9000
 **Run:**
 
 ```bash
-docker compose down -v && docker compose up -d   # fresh DB + seeded test accounts
+docker compose down -v && docker compose up -d --build   # fresh DB + current schema/test accounts
 node scripts/dev-e2e-auth-broker.cjs             # or use `mo up`
 maestro test .maestro/regression-journey.yaml
 ```
@@ -203,10 +240,11 @@ Dev-deployment target:
   visible. Module 11 verifies regeneration settles with the report still
   mounted; deterministic unit tests pin the disabled write-lock states
   because fixture regeneration can finish before Maestro observes the
-  transient lock. The standalone `place-photo-on-issue.flow.yml` also
-  finalizes a placed-photo report and asserts the saved-report page keeps
-  the placed photo visible without exposing placement or manual-edit
-  controls.
+  transient lock. The standalone `place-photo-on-issue.flow.yml` uses the
+  current email-auth module and reset-db seed, captures its own fixture photo,
+  places it into an issue, then finalizes the report and asserts the
+  saved-report page keeps the placed photo visible without exposing placement
+  or manual-edit controls.
 - Mobile code (`apps/mobile/**`), Maestro flows (`.maestro/**`), and the
   launch runner (`scripts/ci/run-maestro-launch-smoke.sh`) trigger the
   mobile confidence workflow: the Maestro testID gate, Metro bundle
@@ -250,7 +288,7 @@ Run against the local API stack and a non-fixture dev-client bundle:
 
 ```bash
 export MAESTRO_APP_ID=com.harpa.pro.dev
-docker compose down -v && docker compose up -d
+docker compose down -v && docker compose up -d --build
 node scripts/dev-e2e-auth-broker.cjs
 EXPO_PUBLIC_USE_FIXTURES=false pnpm --filter @harpa/mobile start --dev-client
 xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
@@ -261,6 +299,7 @@ maestro test .maestro/native-input-smoke.yaml
 On Android, also reverse Metro/API ports before running:
 
 ```bash
+bash scripts/maestro/prepare-android-emulator.sh # emulator only; refuses phones
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
 adb reverse tcp:8790 tcp:8790
@@ -271,14 +310,14 @@ adb reverse tcp:8790 tcp:8790
 Fixture mode is still the right default for the long regression
 journey, but any path it replaces needs one focused non-fixture guard.
 
-| Surface | What fixtures avoid | Non-fixture guard |
-| --- | --- | --- |
-| Voice recorder | `fixtureRecorder` replaces `expo-audio` in fixture/screenshot builds. | `.maestro/native-input-smoke.yaml` starts/cancels the real recorder; `expoAudioRecorder.test.ts` pins native options. |
-| Camera capture | Fixture camera flows make capture deterministic before upload assertions. | `.maestro/native-input-smoke.yaml` opens the real camera route, taps shutter, waits for a thumbnail, then discards. |
+| Surface                             | What fixtures avoid                                                                                                             | Non-fixture guard                                                                                                                                                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Voice recorder                      | `fixtureRecorder` replaces `expo-audio` in fixture/screenshot builds.                                                           | `.maestro/native-input-smoke.yaml` starts/cancels the real recorder; `expoAudioRecorder.test.ts` pins native options.                                                                                                        |
+| Camera capture                      | Fixture camera flows make capture deterministic before upload assertions.                                                       | `.maestro/native-input-smoke.yaml` opens the real camera route, taps shutter, waits for a thumbnail, then discards.                                                                                                          |
 | Photo library picker (Android only) | Screenshot mode resolves seeded image URIs instead of opening the system picker. iOS intentionally exposes camera capture only. | `pick-and-enqueue-gallery-images.test.ts` verifies Android calls `expo-image-picker` and iOS returns before either native picker API; keep Android OS-picker Maestro coverage manual unless we add stable picker automation. |
-| R2 storage | API replay mode uses `FixtureStorage` instead of signed object storage. | `files.r2-live.integration.test.ts` runs `/files/presign` plus a real signed PUT against MinIO when `CI_R2_LIVE` is enabled. |
-| AI providers | Normal tests replay `packages/ai-fixtures` instead of calling providers. | `.github/workflows/ai-live.yml` runs `pnpm --filter @harpa/api test:live` with `AI_LIVE=1` on prompt/provider-sensitive changes. |
-| Auth broker | E2E auth uses the local password broker instead of email delivery. | `mo doctor` checks the broker, and API auth integration tests cover allowlisted password sign-in. |
+| R2 storage                          | API replay mode uses `FixtureStorage` instead of signed object storage.                                                         | `files.r2-live.integration.test.ts` runs `/files/presign` plus a real signed PUT against MinIO when `CI_R2_LIVE` is enabled.                                                                                                 |
+| AI providers                        | Normal tests replay `packages/ai-fixtures` instead of calling providers.                                                        | `.github/workflows/ai-live.yml` runs `pnpm --filter @harpa/api test:live` with `AI_LIVE=1` on prompt/provider-sensitive changes.                                                                                             |
+| Auth broker                         | E2E auth uses the local password broker instead of email delivery.                                                              | `mo doctor` checks the broker, and API auth integration tests cover allowlisted password sign-in.                                                                                                                            |
 
 ## `store-screenshots.yaml` (App Store / Play Store assets)
 
@@ -304,9 +343,10 @@ Run against the local fixture stack and a screenshot-mode Metro bundle:
 
 ```bash
 export MAESTRO_APP_ID=com.harpa.pro.dev
-docker compose down -v && docker compose up -d
+docker compose down -v && docker compose up -d --build
 scripts/maestro/seed-store-screenshots.sh
 node scripts/dev-e2e-auth-broker.cjs
+bash scripts/maestro/prepare-android-emulator.sh
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
 adb reverse tcp:8790 tcp:8790
@@ -341,7 +381,7 @@ seeded `test3@harpapro.com` account:
 
 ```bash
 export MAESTRO_APP_ID=com.harpa.pro.dev
-docker compose down -v && docker compose up -d
+docker compose down -v && docker compose up -d --build
 node scripts/dev-e2e-auth-broker.cjs
 maestro test .maestro/account-deletion.yaml
 ```
@@ -396,15 +436,15 @@ and default buckets as part of `regression-journey.yaml`.
 ## Known infra quirks
 
 - XCUITest driver occasionally returns `kAXErrorInvalidUIElement`
-  and Maestro hangs retrying. Mitigation: wrap `maestro test` in
-  `gtimeout 240s` and `kill` the leftover `maestro-driver-ios`
+  and Maestro hangs retrying. Mitigation: wrap a full `maestro test` in
+  `gtimeout 7200s` and `kill` the leftover `maestro-driver-ios`
   xcodebuild process between attempts. Roughly 1-in-5 frequency on
   iPhone 17 Pro / iOS 26.5 sim.
 
 ```bash
 # coreutils provides gtimeout (brew install coreutils)
 for i in $(seq 1 N); do
-  gtimeout 600 maestro test .maestro/regression-journey.yaml || {
+  gtimeout 7200 maestro test .maestro/regression-journey.yaml || {
     for PID in $(ps aux | grep maestro-driver-ios | grep -v grep | awk '{print $2}'); do
       kill "$PID" 2>/dev/null
     done

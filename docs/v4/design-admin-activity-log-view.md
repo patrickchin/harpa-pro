@@ -58,6 +58,15 @@ Icons are decorative and `aria-hidden`; each row exposes an explicit accessible
 name with event, actor, subject, project, and occurrence-time labels, while the
 complete visible text remains the source of truth.
 
+Deleted-entity labels returned by the API are fallback values, not historical
+names. The admin presentation renders them as lowercase, square-bracketed
+placeholders (`[deleted user]`, `[deleted project]`, `[deleted report]`, or
+`[deleted note]`) in muted italic text. The same wording appears in rows,
+header-filter choices, details, and the plain-text view. Accessible row names
+describe the entity as unavailable. Stable IDs remain in the filter identity
+line, detail drawer, and text view. An event with no project context continues
+to use an em dash and remains distinct from a deleted project.
+
 Selecting a row still opens the detail drawer for IDs, request ID, and strict
 metadata. Filtering actions are removed from the drawer because the attached
 column-header controls are the primary filter surface.
@@ -148,6 +157,8 @@ Every activity event occupies exactly one tab-separated line containing:
 This format supports browser Find, copying, and Save As while retaining the
 safe fields already returned by the admin API. It does not introduce note
 content, transcripts, filenames, storage keys, or other excluded data.
+Deleted-entity fallback labels use the same bracketed placeholders as the
+interactive feed; stable event and entity IDs remain unchanged.
 
 ## Failure and accessibility behavior
 
@@ -182,9 +193,11 @@ Component tests cover:
 - out-of-order request protection;
 - refresh baselines and local `New` markers;
 - cursor pagination; and
-- the generated plain-text Blob.
+- bracketed deleted-entity presentation, unavailable accessible names, stable
+  filter/detail IDs, and the generated plain-text Blob.
 
 The admin Playwright smoke covers the above-feed controls, header popups,
 choice search, immediate filter requests, stable row geometry, duplicate-name
-labels, icon rendering, empty-result recovery, refresh markers, the text view,
-detail inspection, and sign-out against the real local API wiring.
+labels, deleted-entity placeholders, icon rendering, empty-result recovery,
+refresh markers, the text view, detail inspection, and sign-out against the
+real local API wiring.

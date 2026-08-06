@@ -153,8 +153,10 @@ without duplicating the activity row.
 The event row does not copy email addresses, display names, project names,
 report or note bodies, transcripts, filenames, client names, addresses, AI
 prompts, or other free-form content. The admin read query left-joins current
-labels from their source tables. If an entity has been deleted, the UI
-displays its stable ID and a `Deleted user/project/report/note` label.
+labels from their source tables. If an entity has been deleted, the API returns
+a `Deleted user/project/report/note` fallback. The admin UI presents that value
+as a bracketed deleted-entity placeholder and keeps stable IDs available in
+filters, the detail drawer, and the plain-text view.
 
 This trades perfect historical labels for less duplicated personal and client
 data. Historical label snapshots can be added later only with an explicit

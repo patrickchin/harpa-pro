@@ -81,6 +81,40 @@ function eventLabel(eventType: activity.EventType): string {
   return EVENT_LABELS[eventType];
 }
 
+const DELETED_ENTITY_PLACEHOLDERS = new Map<string, string>([
+  ['Deleted user', '[deleted user]'],
+  ['Deleted project', '[deleted project]'],
+  ['Deleted report', '[deleted report]'],
+  ['Deleted note', '[deleted note]'],
+]);
+
+function deletedEntityPlaceholder(value: string): string | null {
+  return DELETED_ENTITY_PLACEHOLDERS.get(value) ?? null;
+}
+
+function displayEntityLabel(value: string): string {
+  return deletedEntityPlaceholder(value) ?? value;
+}
+
+function accessibleEntityLabel(value: string): string {
+  const placeholder = deletedEntityPlaceholder(value);
+  return placeholder ? `${placeholder.slice(1, -1)} (unavailable)` : value;
+}
+
+function EntityLabel({ value, className = '' }: { value: string; className?: string }) {
+  const placeholder = deletedEntityPlaceholder(value);
+  return (
+    <span
+      className={[className, placeholder ? 'font-normal italic text-ink-soft' : '']
+        .filter(Boolean)
+        .join(' ')}
+      data-entity-placeholder={placeholder ? 'deleted' : undefined}
+    >
+      {placeholder ?? value}
+    </span>
+  );
+}
+
 const DETAIL_LEVEL_OPTIONS = [
   { value: 'milestone', label: 'Milestones' },
   { value: 'detail', label: 'Detailed activity' },
@@ -330,9 +364,9 @@ function activityRowLabel(event: activity.Event, isNew: boolean): string {
   return [
     isNew ? 'New activity.' : null,
     `Event: ${eventLabel(event.eventType)}.`,
-    `Actor: ${event.actorLabel}.`,
-    `Subject: ${event.subjectLabel}.`,
-    `Project: ${event.projectLabel ?? 'No project'}.`,
+    `Actor: ${accessibleEntityLabel(event.actorLabel)}.`,
+    `Subject: ${accessibleEntityLabel(event.subjectLabel)}.`,
+    `Project: ${event.projectLabel ? accessibleEntityLabel(event.projectLabel) : 'No project'}.`,
     `Occurred at ${displayTime(event.occurredAt)}.`,
   ]
     .filter((part): part is string => part !== null)
@@ -347,10 +381,10 @@ function activityTextLine(event: activity.Event): string {
   return [
     event.occurredAt,
     event.eventType,
-    oneLineField(event.actorLabel),
+    oneLineField(displayEntityLabel(event.actorLabel)),
     oneLineField(event.actorEmail),
-    oneLineField(event.projectLabel),
-    oneLineField(event.subjectLabel),
+    oneLineField(event.projectLabel ? displayEntityLabel(event.projectLabel) : null),
+    oneLineField(displayEntityLabel(event.subjectLabel)),
     event.id,
     event.actorUserId ?? '',
     event.projectId ?? '',
@@ -360,12 +394,19 @@ function activityTextLine(event: activity.Event): string {
   ].join('\t');
 }
 
+function actorIdentityLabel(actor: ActorOption): string {
+  const emailOrId = actor.email ?? actor.id;
+  return deletedEntityPlaceholder(actor.label) && actor.email
+    ? `${actor.id} — ${actor.email}`
+    : emailOrId;
+}
+
 function actorOptionLabel(actor: ActorOption): string {
-  return `${actor.label} — ${actor.email ?? actor.id}`;
+  return `${displayEntityLabel(actor.label)} — ${actorIdentityLabel(actor)}`;
 }
 
 function projectOptionLabel(project: ProjectOption): string {
-  return `${project.label} — ${project.id}`;
+  return `${displayEntityLabel(project.label)} — ${project.id}`;
 }
 
 function compareLabels(leftLabel: string, rightLabel: string, leftId: string, rightId: string): number {
@@ -1066,16 +1107,23 @@ function ActivityFeed({
                               name="user"
                               testId="actor-icon"
                             />
-                            {event.actorLabel}
+                            <EntityLabel value={event.actorLabel} />
                           </span>
-                          <span className="font-medium text-accent-ink">{event.subjectLabel}</span>
+                          <EntityLabel
+                            className="font-medium text-accent-ink"
+                            value={event.subjectLabel}
+                          />
                           <span className="inline-flex items-center gap-1.5 text-ink-soft">
                             <ActivityIcon
                               className="size-3.5 shrink-0"
                               name="folder"
                               testId="project-icon"
                             />
-                            <span>{event.projectLabel ?? '—'}</span>
+                            {event.projectLabel ? (
+                              <EntityLabel value={event.projectLabel} />
+                            ) : (
+                              <span>—</span>
+                            )}
                           </span>
                         </button>
                       </li>
@@ -1175,9 +1223,11 @@ function ActivityFeed({
                         key={actor.id}
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-ink">{actor.label}</p>
+                          <p className="truncate text-sm font-semibold text-ink">
+                            <EntityLabel value={actor.label} />
+                          </p>
                           <p className="truncate text-xs text-ink-soft">
-                            {actor.email ?? actor.id}
+                            {actorIdentityLabel(actor)}
                           </p>
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
@@ -1265,7 +1315,7 @@ function ActivityFeed({
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-ink">
-                            {project.label}
+                            <EntityLabel value={project.label} />
                           </p>
                           <p className="truncate font-mono text-xs text-ink-soft">{project.id}</p>
                         </div>
@@ -1318,7 +1368,7 @@ function ActivityFeed({
                   {eventLabel(selected.eventType)}
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-ink" id="activity-detail-title">
-                  {selected.subjectLabel}
+                  <EntityLabel value={selected.subjectLabel} />
                 </h2>
               </div>
               <button
@@ -1337,9 +1387,8 @@ function ActivityFeed({
               <dd className="break-all text-ink-soft">{selected.occurredAt}</dd>
               <dt className="font-medium text-ink">Actor</dt>
               <dd className="break-all text-ink-soft">
-                {selected.actorEmail
-                  ? `${selected.actorLabel} — ${selected.actorEmail}`
-                  : selected.actorLabel}
+                <EntityLabel value={selected.actorLabel} />
+                {selected.actorEmail ? ` — ${selected.actorEmail}` : null}
               </dd>
               <dt className="font-medium text-ink">Actor ID</dt>
               <dd className="break-all text-ink-soft">{selected.actorUserId ?? 'Deleted'}</dd>

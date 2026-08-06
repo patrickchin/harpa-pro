@@ -166,9 +166,15 @@ require_fixed "$PROD" "https://app.harpapro.com" \
 require_job_fixed "$PROD" "api" \
   "vars.DASHBOARD_PRODUCTION_ENABLED == 'true'" \
   "production API verification stays dormant before activation"
+require_job_fixed "$PROD" "api" \
+  "github.ref == 'refs/heads/main'" \
+  "production API verification accepts only the main ref"
 require_job_fixed "$PROD" "deployment" \
   "vars.DASHBOARD_PRODUCTION_ENABLED == 'true'" \
   "production Pages verification stays dormant before activation"
+require_job_fixed "$PROD" "deployment" \
+  "github.ref == 'refs/heads/main'" \
+  "production Pages verification accepts only the main ref"
 require_fixed "$PROD" "https://api.harpapro.com/healthz" \
   "production verifies the production Fly API"
 require_fixed "$PROD" '--commit "${{ github.sha }}"' \

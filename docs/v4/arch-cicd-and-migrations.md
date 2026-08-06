@@ -175,7 +175,7 @@ environment and only surfaces when the deploy fires.
 | `admin-dev.yml`               |       ✗       | dev                   | Verify the exact SHA and static routing on the native admin `dev` deployment              |
 | `admin-prod.yml`              |       ✗       | main                  | Verify the exact SHA and static routing on both admin production hostnames                |
 | `dashboard-dev.yml`           |       ✗       | dev                   | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment              |
-| `dashboard-prod.yml`          |       ✗       | main, after activation | Verify the exact SHA and SPA routes on approved dashboard production hostnames            |
+| `dashboard-prod.yml`          |       ✗       | main (guarded)        | Verify the exact SHA and SPA routes on approved dashboard production hostnames            |
 | `mobile-ota-dev.yml`          |       ✗       | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy                    |
 | `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                |
 | `ai-live.yml`                 |       ✓       | dev + main + dispatch | Path-filtered live AI provider smoke for same-repository PRs and pushes                   |

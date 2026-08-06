@@ -42,12 +42,19 @@ def _patch_no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # --- step: docker -------------------------------------------------------
-def test_docker_skip_when_stack_running_and_healthy(
+def test_docker_rebuilds_even_when_stack_running_and_healthy(
     monkeypatch: pytest.MonkeyPatch, project_root: Path
 ) -> None:
     monkeypatch.setattr(
         up_cmd, "_docker_stack_running", lambda _cfg: True
     )
+    called: dict[str, object] = {}
+
+    def fake_compose(cfg: MoConfig) -> tuple[bool, str]:
+        called["compose"] = cfg.project_root
+        return True, "rebuilt"
+
+    monkeypatch.setattr(up_cmd, "_docker_compose_up", fake_compose)
     monkeypatch.setattr(
         up_cmd.healthcheck,
         "http_get",
@@ -56,10 +63,11 @@ def test_docker_skip_when_stack_running_and_healthy(
     report = up_cmd.UpReport()
     ok = up_cmd._step_docker(_cfg(project_root), up_cmd.UpOptions(), report)
     assert ok is True
+    assert called["compose"] == project_root
     assert report.steps[0] == {
         "name": "docker",
-        "status": "skip",
-        "detail": "stack already up + healthy",
+        "status": "ok",
+        "detail": "rebuilt; reconciled existing stack",
     }
 
 
@@ -154,6 +162,31 @@ def test_docker_compose_up_handles_missing_docker(
     ok, detail = up_cmd._docker_compose_up(_cfg(project_root))
     assert ok is False
     assert "PATH" in detail
+
+
+def test_docker_compose_up_builds_current_images(
+    monkeypatch: pytest.MonkeyPatch, project_root: Path
+) -> None:
+    seen: dict[str, object] = {}
+
+    class _CP:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(args: list[str], **kwargs: object) -> _CP:
+        seen["args"] = args
+        seen["cwd"] = kwargs["cwd"]
+        seen["timeout"] = kwargs["timeout"]
+        return _CP()
+
+    monkeypatch.setattr(up_cmd.subprocess, "run", fake_run)
+    ok, detail = up_cmd._docker_compose_up(_cfg(project_root))
+    assert ok is True
+    assert seen["args"] == ["docker", "compose", "up", "-d", "--build"]
+    assert seen["cwd"] == str(project_root)
+    assert seen["timeout"] == 900.0
+    assert "--build" in detail
 
 
 def test_docker_compose_up_nonzero_returncode(

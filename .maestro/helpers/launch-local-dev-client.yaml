@@ -1,0 +1,64 @@
+appId: ${MAESTRO_APP_ID}
+---
+# Launch a local Expo development build from clean app state.
+#
+# Android `clearState` removes the dev launcher's remembered server. The
+# custom-scheme deep link usually restores localhost:8081, but Expo can ignore
+# it during a cold launcher transition and remain on the server picker. Wait
+# for either rendered app UI or the emulator's discovered Metro row; if the
+# row wins, select it semantically before requiring the email control.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Quickstep isn't responding|Development Build|Continue|Close|Email"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Quickstep isn't responding"
+    commands:
+      - tapOn: 'Wait'
+      - waitForAnimationToEnd:
+          timeout: 10000
+- extendedWaitUntil:
+    visible: 'Development Build|Continue|Close|Email'
+    timeout: 30000
+- runFlow: dismiss-open-dialog.yaml
+- openLink: 'exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
+- waitForAnimationToEnd:
+    timeout: 20000
+
+# Handles Android resolver UI, the iOS custom-scheme confirmation, and Expo's
+# first-run Continue/Close sheet when any of them arrives promptly.
+- runFlow: dismiss-open-dialog.yaml
+
+- extendedWaitUntil:
+    visible: "Quickstep isn't responding|http://10.0.2.2:8081|Continue|Close|Email"
+    timeout: 180000
+- runFlow:
+    when:
+      visible: "Quickstep isn't responding"
+    commands:
+      - tapOn: 'Wait'
+      - waitForAnimationToEnd:
+          timeout: 10000
+- runFlow:
+    when:
+      visible: 'http://10.0.2.2:8081'
+    commands:
+      - tapOn: 'http://10.0.2.2:8081'
+      - waitForAnimationToEnd:
+          timeout: 20000
+
+# The Expo onboarding sheet can appear only after the selected Metro bundle
+# finishes loading, so make one more semantic dismissal pass.
+- extendedWaitUntil:
+    visible: 'Continue|Close|Email'
+    timeout: 180000
+- runFlow: dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: 'input-email'
+    timeout: 90000

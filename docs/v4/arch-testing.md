@@ -119,11 +119,13 @@ Each AI-touching route has a test that:
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
   ceiling, emulator boot has a 300-second ceiling, and the Maestro
   command has a 420-second ceiling.
-- Before installing the APK, the runner writes Android's global
-  `hide_error_dialogs=1` setting on the disposable CI emulator, reads it
-  back, and exits unless the value is exactly `1`. This emulator-only
-  boundary suppresses recurring system crash and ANR dialogs before they
-  can own Maestro's accessibility surface.
+- Before installing the APK, the runner calls the shared
+  `scripts/maestro/prepare-android-emulator.sh` preflight. It refuses physical
+  devices, writes Android's global `hide_error_dialogs=1` setting on the
+  disposable emulator, reads it back, and exits unless the value is exactly
+  `1`. Local Android emulator runs call the same preflight after boot. This
+  boundary suppresses recurring system crash and ANR dialogs before they can
+  own Maestro's accessibility surface.
 - After clearing app state, the flow waits up to 30 seconds for either
   the Expo Dev Launcher home screen or Android's known Quickstep ANR
   dialog. It chooses the dialog's semantic `Wait` action conditionally,
@@ -135,6 +137,16 @@ Each AI-touching route has a test that:
 - Both semantic Quickstep `Wait` fallbacks remain even with global dialog
   suppression. They recover a dialog already present at either transition;
   the flow still fails closed unless the final `input-email` testID renders.
+- Local fixture clear-state entrypoints share
+  `.maestro/helpers/launch-local-dev-client.yaml`. It observes Expo native
+  readiness before sending `openLink`, recovers the known Quickstep ANR at
+  both transitions, then selects the emulator's discovered
+  `http://10.0.2.2:8081` row if the link leaves the Development Build picker
+  visible. Its post-link paths allow three minutes for a cache-empty local
+  Metro bundle. Modular regression, legacy core, account-deletion, and
+  screenshot entrypoints cannot drift to separate launch preludes; the
+  standalone photo-placement flow reaches it through modular auth. The
+  shared-dev deployment keeps its port-8082 target-specific prelude.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild
@@ -148,6 +160,48 @@ Each AI-touching route has a test that:
 - Full regression and native-input flows remain explicit local /
   release checks; the PR smoke proves native build, Metro startup,
   installation, launch, and a rendered sign-in control.
+- After fast-forwarding, local Maestro setup uses `docker compose up -d
+--build` after resetting volumes. `mo up` performs that reconciliation on
+  every invocation, even when the existing stack is healthy, with a separate
+  15-minute build ceiling. API migrations are image-baked, so a new database
+  on a cached image can still expose an old schema. Unit and policy tests pin
+  the build command and derive the newest SQL migration, requiring both local
+  Compose head pins to match it.
+- Fixture-mode saved reports prefer the API row's persisted body. The static
+  sample is only a body-absent rendering fallback, so finalized edits and
+  attachment placements remain observable in local end-to-end tests.
+- Active core and photo journeys share
+  `.maestro/helpers/wait-for-auto-regeneration.yaml`. The generate route owns
+  dirty-draft regeneration. A local operation counter remains pending from
+  upload enqueue through awaited notes/report refetches, and tracks overlapping
+  uploads independently. Failed completions latch an error; gallery, camera,
+  and inline failed-tile retry paths clear it only after successful persistence
+  and canonical refetch, rather than when a picker merely opens or cancels.
+  Active and failed image jobs are also derived from the live report queue, so
+  success from one concurrent retry cannot erase another failure. Failed-tile
+  dismissal routes through the same owner, while an intentional in-flight abort
+  is excluded from retryable failures and still precedes canonical refetch.
+  Removing a serial queue job settles a pending promise immediately; active
+  collaborators settle their own aborted promise before the refetch boundary.
+  Completed jobs persist their canonical note linkage and remain pending until
+  a route observer refetches both report heads after that committed `noteId`.
+  The acknowledgement does not require the newest note to appear in the
+  timeline's oldest-first first page. Photo placement is another report-body write: its pending
+  and error states block generation/finalize actions and the current-generation
+  marker, and its response advances the expected body version synchronously.
+  Regression modules 11 and 17 delegate to the shared helper rather than
+  tapping auto-generation controls; placement repeats the helper after its
+  optimistic write.
+  Maestro then requires the clean API
+  generation timestamp to cover the canonical note-change clock, requires the
+  mutation to settle, and waits for the stable, enabled `btn-finalize-report`
+  postcondition. Manual-regeneration coverage uses the same current-generation
+  marker. Optimistic note mutations, temporary note rows, report/notes
+  refetches, and synchronization errors also hold the marker pending, so an
+  earlier clean generation cannot satisfy a newly added note. The legacy core
+  journey additionally waits for its provider-owned voice pipeline to expose a
+  saved title before entering the readiness gate. Active journeys do not
+  conditionally tap a transient Generate / Update action.
 
 ### Docs site (Playwright)
 

@@ -21,8 +21,8 @@ export interface UseFileUploadApi {
   enqueueBatch: (inputs: EnqueueInput[]) => { batchKey: string; promises: Promise<UploadResult>[] };
   /** Push a previously-failed job back through the pipeline. */
   retry: (jobId: string) => Promise<UploadResult>;
-  /** Remove a job from the snapshot. In-flight jobs continue but stop being visible. */
-  remove: (jobId: string) => void;
+  /** Remove a job and resolve after any active collaborator observes cancellation. */
+  remove: (jobId: string) => Promise<void>;
   /** Live list of every known job in this queue. */
   jobs: ReadonlyArray<UploadJob>;
   /** Convenience: jobs whose status is `failed` (retryable). */
@@ -34,27 +34,15 @@ export interface UseFileUploadApi {
 export function useFileUpload(): UseFileUploadApi {
   const queue = useUploadQueueContext();
 
-  const jobs = useSyncExternalStore(
-    queue.subscribe,
-    queue.getJobs,
-    queue.getJobs,
-  );
+  const jobs = useSyncExternalStore(queue.subscribe, queue.getJobs, queue.getJobs);
 
-  const enqueue = useCallback(
-    (input: EnqueueInput) => queue.enqueue(input),
-    [queue],
-  );
-  const enqueueBatch = useCallback(
-    (inputs: EnqueueInput[]) => queue.enqueueBatch(inputs),
-    [queue],
-  );
+  const enqueue = useCallback((input: EnqueueInput) => queue.enqueue(input), [queue]);
+  const enqueueBatch = useCallback((inputs: EnqueueInput[]) => queue.enqueueBatch(inputs), [queue]);
   const retry = useCallback((jobId: string) => queue.retry(jobId), [queue]);
   const remove = useCallback((jobId: string) => queue.remove(jobId), [queue]);
 
   const failedJobs = jobs.filter((j) => j.status === 'failed');
-  const activeJobs = jobs.filter(
-    (j) => j.status !== 'completed' && j.status !== 'failed',
-  );
+  const activeJobs = jobs.filter((j) => j.status !== 'completed' && j.status !== 'failed');
 
   return {
     enqueue,

@@ -28,6 +28,7 @@ import { createMMKV } from 'react-native-mmkv';
 import { QueueProvider, useFileUpload } from './index';
 import { usePhotoUploadEntries } from './usePhotoUploadEntries';
 import type { EnqueueInput, UploadResult } from './types';
+import type { UploadQueue } from './queue';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 
 // The mocked `react-native-mmkv` keeps stores in module scope, so the
@@ -170,11 +171,66 @@ describe('usePhotoUploadEntries — noteIdToSyntheticId identity contract', () =
     // must have the noteId mapped AND a different identity than the
     // empty-map snapshot. Without that, GenerateReportProvider's
     // memo never re-runs and the flicker is back.
-    const populated = observed.find(
-      (m) => m.has('not_X') && m !== before,
-    );
+    const populated = observed.find((m) => m.has('not_X') && m !== before);
     expect(populated, 'expected a re-rendered map with not_X and a new identity').toBeTruthy();
     expect(populated!.get('not_X')).toMatch(/^__/);
+  });
+});
+
+describe('usePhotoUploadEntries — retry settlement', () => {
+  let tree: ReactTestRenderer | null = null;
+  let retryRef: ((jobId: string) => Promise<void>) | null = null;
+
+  function RetryProbe() {
+    retryRef = usePhotoUploadEntries('rep_1', 'usr_1').retry;
+    return null;
+  }
+
+  afterEach(() => {
+    act(() => {
+      tree?.unmount();
+    });
+    tree = null;
+    retryRef = null;
+  });
+
+  it('resolves only after the queue retry settles', async () => {
+    let resolveRetry!: (result: UploadResult) => void;
+    const retry = vi.fn(
+      () =>
+        new Promise<UploadResult>((resolve) => {
+          resolveRetry = resolve;
+        }),
+    );
+    const jobs: ReturnType<UploadQueue['getJobs']> = [];
+    const queue = {
+      retry,
+      getJobs: () => jobs,
+      subscribe: () => () => {},
+    } as unknown as UploadQueue;
+
+    act(() => {
+      tree = create(
+        <QueueProvider queue={queue}>
+          <RetryProbe />
+        </QueueProvider>,
+      );
+    });
+
+    let settled = false;
+    const pending = retryRef!('upl_failed').then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    resolveRetry({ file: { id: 'fil_1' } as UploadResult['file'] });
+    await act(async () => {
+      await pending;
+    });
+
+    expect(retry).toHaveBeenCalledWith('upl_failed');
+    expect(settled).toBe(true);
   });
 });
 

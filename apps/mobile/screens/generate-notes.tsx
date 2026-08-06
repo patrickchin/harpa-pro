@@ -72,6 +72,8 @@ export type GenerateNotesProps = Omit<GenerateReportProviderProps, 'children'> &
   isDeletingDraft?: boolean;
   /** Profile button slot — rendered in the screen header. */
   actions?: ReactNode;
+  /** Stable route-owned generation marker for end-to-end synchronization. */
+  generationStateTestID?: string;
 };
 
 export function GenerateNotes({
@@ -80,15 +82,12 @@ export function GenerateNotes({
   onDeleteDraft,
   isDeletingDraft = false,
   actions,
+  generationStateTestID,
   ...providerProps
 }: GenerateNotesProps) {
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        className="flex-1"
-        keyboardVerticalOffset={0}
-      >
+    <SafeAreaView className="flex-1 bg-background" edges={['top']} testID={generationStateTestID}>
+      <KeyboardAvoidingView behavior="padding" className="flex-1" keyboardVerticalOffset={0}>
         <GenerateReportProvider {...providerProps}>
           <GenerateNotesLayout
             canWrite={canWrite}
@@ -166,10 +165,8 @@ function GenerateNotesLayout({
   };
 
   useEffect(() => {
-    const showEvent =
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent =
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, () => {
       setKeyboardVisible(true);
       Animated.timing(chromeAnim, {
@@ -211,13 +208,7 @@ function GenerateNotesLayout({
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
   const activeIndex =
-    tabs.active === 'notes'
-      ? 0
-      : tabs.active === 'report'
-        ? 1
-        : tabs.active === 'edit'
-          ? 2
-          : 3;
+    tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : tabs.active === 'edit' ? 2 : 3;
 
   return (
     <>

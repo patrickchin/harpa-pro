@@ -175,6 +175,19 @@ export function reportBodyToGeneratedReport(body: ReportBody): GeneratedSiteRepo
 }
 
 /**
+ * Resolve a saved report for display without letting fixture decoration hide
+ * server state. Persisted bodies always win so finalized edits and attachment
+ * placements round-trip; the fallback is only for routes whose API row has no
+ * generated body yet.
+ */
+export function resolveGeneratedReport(
+  body: ReportBody | null | undefined,
+  fallback: GeneratedSiteReport | null,
+): GeneratedSiteReport | null {
+  return body ? reportBodyToGeneratedReport(body) : fallback;
+}
+
+/**
  * Inverse adapter: UI `GeneratedSiteReport` → API `reportBody`.
  *
  * Used by the Edit-tab autosave to PATCH manual edits back to the

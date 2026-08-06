@@ -14,13 +14,8 @@
  * registerFile → createNote) and the notes query is invalidated so
  * image notes appear in the timeline immediately.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
-  type Href,
-} from 'expo-router';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { GenerateNotes } from '@/screens/generate-notes';
@@ -53,6 +48,16 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
+import { reportGenerationStateTestId } from '@/lib/reports/generation-sync';
+import {
+  countNonCancelledUploadFailures,
+  getReportPhotoUploadQueueState,
+  initialUploadSyncState,
+  isUnreflectedCompletedReportPhotoJob,
+  isUploadCancellation,
+  isUploadSyncPending,
+  uploadSyncReducer,
+} from '@/lib/reports/upload-sync-state';
 import { applyPhotoPlacement } from '@/lib/reports/photo-placements';
 import { useAutoRegenerate } from '@/features/generate/useAutoRegenerate';
 import {
@@ -70,6 +75,7 @@ import {
 } from '@/lib/camera/camera-session-registry';
 import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
 import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
+import { useFileUpload } from '@/lib/uploads';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 interface ApiNoteFile {
@@ -145,8 +151,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
       // directly; populate from the first joined file (preferred) or
       // the legacy column (back-compat for unmigrated rows).
       fileId: primaryImage?.fileId ?? n.fileId ?? null,
-      thumbnailFileId:
-        primaryImage?.thumbnailFileId ?? n.thumbnailFileId ?? null,
+      thumbnailFileId: primaryImage?.thumbnailFileId ?? n.thumbnailFileId ?? null,
       attachments: imageFiles.map((f, idx) => attachmentFromSavedFile(f, idx)),
     }),
   };
@@ -162,10 +167,7 @@ export default function GenerateReportRoute() {
   const parsedNumber = Number.parseInt(number ?? '', 10);
   const reportNumber = Number.isFinite(parsedNumber) ? parsedNumber : null;
 
-  const projectQuery = useProjectQuery(
-    { params: { project: slug } },
-    { enabled: slug.length > 0 },
-  );
+  const projectQuery = useProjectQuery({ params: { project: slug } }, { enabled: slug.length > 0 });
   const report = useReportQuery(
     {
       params: {
@@ -182,6 +184,7 @@ export default function GenerateReportRoute() {
         body?: reports.ReportBody | null;
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
+        notesChangedAt?: string | null;
         needsRegeneration?: boolean;
         generatedAt?: string | null;
         updatedAt?: string;
@@ -194,9 +197,11 @@ export default function GenerateReportRoute() {
     { enabled: slug.length > 0 },
   );
   const memberNames = useMemo<ReadonlyMap<string, string>>(() => {
-    const items = (membersQuery.data as
-      | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
-      | undefined)?.items;
+    const items = (
+      membersQuery.data as
+        | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
+        | undefined
+    )?.items;
     const map = new Map<string, string>();
     if (!items) return map;
     for (const m of items) {
@@ -217,15 +222,13 @@ export default function GenerateReportRoute() {
   const createNote = useOptimisticCreateNote();
   const deleteNote = useOptimisticDeleteNote();
   const updateNote = useOptimisticUpdateNote();
-  const [noteActionError, setNoteActionError] =
-    useState<NoteActionError | null>(null);
+  const [noteActionError, setNoteActionError] = useState<NoteActionError | null>(null);
 
   const visibleNotes = useMemo<NoteEntry[]>(() => {
     const items = (notesQuery.data as { items?: ApiNote[] } | undefined)?.items;
     if (!items) return [];
     return items.map(noteToEntry).sort((a, b) => a.addedAt - b.addedAt);
   }, [notesQuery.data]);
-
   const runDeleteNote = useCallback(
     (noteIdValue: string) => {
       if (!reportId) return;
@@ -324,9 +327,7 @@ export default function GenerateReportRoute() {
     [runCreateTextNote],
   );
 
-  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
-    null,
-  );
+  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
   // `userDirty` flips true only when the user edits a field in the
   // Edit tab — see `handleEditReport` below. Programmatic
   // setLocalReport calls (e.g. seeding from a regenerate response or
@@ -345,15 +346,16 @@ export default function GenerateReportRoute() {
   useEffect(() => {
     const serverUpdatedAt = reportRow?.updatedAt;
     if (!serverUpdatedAt || userDirty) return;
-    if (
-      expectedUpdatedAtRef.current === null ||
-      serverUpdatedAt > expectedUpdatedAtRef.current
-    ) {
+    if (expectedUpdatedAtRef.current === null || serverUpdatedAt > expectedUpdatedAtRef.current) {
       expectedUpdatedAtRef.current = serverUpdatedAt;
     }
   }, [reportRow?.updatedAt, userDirty]);
 
   const placePhotoGroupMutation = usePlaceAttachment();
+  const placementWriteError = placePhotoGroupMutation.isError
+    ? (placePhotoGroupMutation.error?.message ?? "Couldn't place photo in the report.")
+    : null;
+  const placementWriteBlocked = placePhotoGroupMutation.isPending || placementWriteError !== null;
   const handlePlacePhotoGroup = useCallback(
     async (input: {
       noteId: string;
@@ -362,16 +364,10 @@ export default function GenerateReportRoute() {
       if (!reportId || reportNumber === null || !slug) return;
       const previousLocalReport = localReport;
       if (previousLocalReport) {
-        setLocalReport(
-          applyPhotoPlacement(
-            previousLocalReport,
-            input.noteId,
-            input.placement,
-          ),
-        );
+        setLocalReport(applyPhotoPlacement(previousLocalReport, input.noteId, input.placement));
       }
       try {
-        await placePhotoGroupMutation.mutateAsync({
+        const response = await placePhotoGroupMutation.mutateAsync({
           params: { project: slug, number: reportNumber },
           body: {
             noteId: input.noteId,
@@ -379,6 +375,7 @@ export default function GenerateReportRoute() {
             expectedBodyVersion: reportRow?.generatedAt ?? null,
           },
         });
+        expectedUpdatedAtRef.current = response.report.updatedAt;
       } catch {
         if (previousLocalReport) {
           setLocalReport(previousLocalReport);
@@ -386,14 +383,7 @@ export default function GenerateReportRoute() {
         // optimistic helper already rolls back on error.
       }
     },
-    [
-      localReport,
-      placePhotoGroupMutation,
-      reportId,
-      reportNumber,
-      slug,
-      reportRow?.generatedAt,
-    ],
+    [localReport, placePhotoGroupMutation, reportId, reportNumber, slug, reportRow?.generatedAt],
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
@@ -418,7 +408,11 @@ export default function GenerateReportRoute() {
 
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSync, dispatchUploadSync] = useReducer(uploadSyncReducer, initialUploadSyncState);
+  const [refetchedCompletedUploadIds, setRefetchedCompletedUploadIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const completedUploadSyncAttemptsRef = useRef<Set<string>>(new Set());
   const [usageLimitHit, setUsageLimitHit] = useState<UsageLimitDetails | null>(null);
   const [lastGeneration, setLastGeneration] = useState<
     import('@/features/generate/GenerateReportProvider').GenerationDebug | null
@@ -439,24 +433,25 @@ export default function GenerateReportRoute() {
       },
     },
     {
-      enabled:
-        showGenerateDebugTab && slug.length > 0 && reportNumber !== null,
+      enabled: showGenerateDebugTab && slug.length > 0 && reportNumber !== null,
     },
   );
   const persistedLastGeneration = useMemo<
     import('@/features/generate/GenerateReportProvider').GenerationDebug | null
   >(() => {
-    const persisted = (debugQuery.data as
-      | {
-          lastGeneration?: {
-            systemPrompt?: string;
-            userPrompt?: string;
-            response?: string;
-            model?: string;
-            vendor?: string;
-          } | null;
-        }
-      | undefined)?.lastGeneration;
+    const persisted = (
+      debugQuery.data as
+        | {
+            lastGeneration?: {
+              systemPrompt?: string;
+              userPrompt?: string;
+              response?: string;
+              model?: string;
+              vendor?: string;
+            } | null;
+          }
+        | undefined
+    )?.lastGeneration;
     if (!persisted) return null;
     return {
       systemPrompt: persisted.systemPrompt ?? '',
@@ -471,9 +466,7 @@ export default function GenerateReportRoute() {
   const generateMutation = useGenerateReportMutation();
   const regenerateMutation = useRegenerateReportMutation();
   const finalizeMutation = useFinalizeReportMutation();
-  const [generationIdempotency] = useState(
-    () => createReportGenerationIdempotency(),
-  );
+  const [generationIdempotency] = useState(() => createReportGenerationIdempotency());
 
   // Stable JSON view of the server-side body was removed — the
   // autosave hook is now driven by `userDirty`, set by
@@ -487,33 +480,25 @@ export default function GenerateReportRoute() {
   // depending on timing. React Query already queues mutations sharing
   // a key, but generate/regenerate are different hooks so we gate
   // explicitly.
-  const isGenerating =
-    generateMutation.isPending || regenerateMutation.isPending;
+  const isGenerating = generateMutation.isPending || regenerateMutation.isPending;
 
   const autosave = useReportBodyAutosave({
     slug,
     number: reportNumber,
     report: localReport,
-    expectedUpdatedAt:
-      expectedUpdatedAtRef.current ?? reportRow?.updatedAt ?? null,
+    expectedUpdatedAt: expectedUpdatedAtRef.current ?? reportRow?.updatedAt ?? null,
     dirty: userDirty,
     onSaved: handleAutoSaved,
     paused: isGenerating || finalizeMutation.isPending,
   });
 
   const handleRegenerate = useCallback(() => {
-    if (!slug || reportNumber === null) return;
-    const expectedUpdatedAt =
-      expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
+    if (!slug || reportNumber === null || placementWriteBlocked) return;
+    const expectedUpdatedAt = expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
     if (!expectedUpdatedAt) return;
     setGenerationError(null);
-    const attempt = generationIdempotency.attempt(
-      currentReport ? 'regenerate' : 'generate',
-    );
-    const mutation =
-      attempt.operation === 'regenerate'
-        ? regenerateMutation
-        : generateMutation;
+    const attempt = generationIdempotency.attempt(currentReport ? 'regenerate' : 'generate');
+    const mutation = attempt.operation === 'regenerate' ? regenerateMutation : generateMutation;
     mutation.mutate(
       {
         ...reportMutationInput(slug, reportNumber, expectedUpdatedAt),
@@ -521,43 +506,39 @@ export default function GenerateReportRoute() {
       },
       {
         onSuccess: (data) => {
-          acceptReportGenerationSuccess(
-            generationIdempotency,
-            attempt.key,
-            () => {
-              const payload = data as
-                | {
-                    report?: {
-                      body?: reports.ReportBody | null;
-                      updatedAt?: string;
-                    };
-                    debug?: {
-                      systemPrompt?: string;
-                      userPrompt?: string;
-                      rawText?: string;
-                      model?: string;
-                      vendor?: string;
-                    };
-                  }
-                | undefined;
-              const nextBody = payload?.report?.body ?? null;
-              if (nextBody) {
-                setLocalReport(reportBodyToGeneratedReport(nextBody));
-              }
-              if (payload?.report?.updatedAt) {
-                expectedUpdatedAtRef.current = payload.report.updatedAt;
-              }
-              if (payload?.debug) {
-                setLastGeneration({
-                  systemPrompt: payload.debug.systemPrompt ?? '',
-                  userPrompt: payload.debug.userPrompt ?? '',
-                  rawText: payload.debug.rawText ?? '',
-                  model: payload.debug.model ?? '',
-                  vendor: payload.debug.vendor ?? '',
-                });
-              }
-            },
-          );
+          acceptReportGenerationSuccess(generationIdempotency, attempt.key, () => {
+            const payload = data as
+              | {
+                  report?: {
+                    body?: reports.ReportBody | null;
+                    updatedAt?: string;
+                  };
+                  debug?: {
+                    systemPrompt?: string;
+                    userPrompt?: string;
+                    rawText?: string;
+                    model?: string;
+                    vendor?: string;
+                  };
+                }
+              | undefined;
+            const nextBody = payload?.report?.body ?? null;
+            if (nextBody) {
+              setLocalReport(reportBodyToGeneratedReport(nextBody));
+            }
+            if (payload?.report?.updatedAt) {
+              expectedUpdatedAtRef.current = payload.report.updatedAt;
+            }
+            if (payload?.debug) {
+              setLastGeneration({
+                systemPrompt: payload.debug.systemPrompt ?? '',
+                userPrompt: payload.debug.userPrompt ?? '',
+                rawText: payload.debug.rawText ?? '',
+                model: payload.debug.model ?? '',
+                vendor: payload.debug.vendor ?? '',
+              });
+            }
+          });
         },
         onError: (err) => {
           generationIdempotency.failed(attempt.key, err.status);
@@ -578,6 +559,7 @@ export default function GenerateReportRoute() {
     generateMutation,
     regenerateMutation,
     generationIdempotency,
+    placementWriteBlocked,
   ]);
 
   const handleRetryNoteActionError = useCallback(() => {
@@ -600,37 +582,25 @@ export default function GenerateReportRoute() {
   useAutoRegenerate({
     needsRegeneration: reportRow?.needsRegeneration ?? false,
     status: (reportRow?.status as 'draft' | 'finalized') ?? 'draft',
-    isGenerating,
-    generationError,
+    isGenerating: isGenerating || placePhotoGroupMutation.isPending,
+    generationError: generationError ?? placementWriteError,
     onRegenerate: handleRegenerate,
   });
 
   const handleFinalize = useCallback(() => {
-    if (!slug || reportNumber === null) return;
-    const expectedUpdatedAt =
-      expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
+    if (!slug || reportNumber === null || placementWriteBlocked) return;
+    const expectedUpdatedAt = expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
     if (!expectedUpdatedAt) return;
     setFinalizeError(null);
-    finalizeMutation.mutate(
-      reportMutationInput(slug, reportNumber, expectedUpdatedAt),
-      {
-        onSuccess: () => {
-          router.replace(
-            `/(app)/projects/${slug}/reports/${reportNumber}` as Href,
-          );
-        },
-        onError: (err) => {
-          setFinalizeError(err.message ?? 'Finalize failed.');
-        },
+    finalizeMutation.mutate(reportMutationInput(slug, reportNumber, expectedUpdatedAt), {
+      onSuccess: () => {
+        router.replace(`/(app)/projects/${slug}/reports/${reportNumber}` as Href);
       },
-    );
-  }, [
-    slug,
-    reportNumber,
-    reportRow?.updatedAt,
-    finalizeMutation,
-    router,
-  ]);
+      onError: (err) => {
+        setFinalizeError(err.message ?? 'Finalize failed.');
+      },
+    });
+  }, [slug, reportNumber, reportRow?.updatedAt, finalizeMutation, router, placementWriteBlocked]);
 
   // Delete-draft handler. Routes back to the reports list on success so
   // the deleted draft isn't in nav history (would 404 on swipe-back).
@@ -661,7 +631,66 @@ export default function GenerateReportRoute() {
   // and invalidate the notes query so image notes appear in the
   // timeline immediately.
   const { enqueueCameraUris } = useCameraUploads();
+  const { jobs: uploadJobs } = useFileUpload();
   const qc = useQueryClient();
+  const unreflectedCompletedPhotoJobs = useMemo(
+    () =>
+      uploadJobs.filter((job) =>
+        isUnreflectedCompletedReportPhotoJob(job, reportId, refetchedCompletedUploadIds),
+      ),
+    [uploadJobs, reportId, refetchedCompletedUploadIds],
+  );
+
+  useEffect(() => {
+    if (!reportId || isUploadSyncPending(uploadSync)) return;
+    const unsynchronized = unreflectedCompletedPhotoJobs.filter(
+      (job) => !completedUploadSyncAttemptsRef.current.has(`${reportId}:${job.id}`),
+    );
+    if (unsynchronized.length === 0) return;
+    for (const job of unsynchronized) {
+      completedUploadSyncAttemptsRef.current.add(`${reportId}:${job.id}`);
+    }
+
+    dispatchUploadSync({ type: 'start' });
+    void (async () => {
+      let syncError: string | null = unsynchronized.some((job) => !job.noteId)
+        ? "A completed photo upload wasn't linked to its report note. Reopen the report to retry synchronization."
+        : null;
+      try {
+        // Rehydrated queue work has no live picker/camera promise to own this
+        // boundary, so observe completion and refetch before dropping readiness.
+        await invalidateAfterFileUpload(qc, { reportId });
+        const reflectedJobIds = unsynchronized
+          // `noteId` is assigned only after the upload pipeline's canonical
+          // create/append call succeeds. The awaited refetch above is the
+          // post-commit cache boundary; the note may legitimately be outside
+          // the timeline's oldest-first visible page.
+          .filter((job) => job.noteId)
+          .map((job) => job.id);
+        if (reflectedJobIds.length > 0) {
+          setRefetchedCompletedUploadIds((previous) => {
+            const next = new Set(previous);
+            for (const jobId of reflectedJobIds) next.add(jobId);
+            return next;
+          });
+        }
+        if (reflectedJobIds.length !== unsynchronized.length) {
+          syncError =
+            "A completed photo upload wasn't reflected in its report notes. Reopen the report to retry synchronization.";
+        }
+      } catch (err) {
+        syncError =
+          err instanceof Error
+            ? `Couldn't refresh the report after resumed uploads: ${err.message}`
+            : "Couldn't refresh the report after resumed uploads.";
+      }
+      dispatchUploadSync({
+        type: 'finish',
+        ...(syncError === null ? {} : { error: syncError }),
+      });
+    })();
+  }, [qc, reportId, unreflectedCompletedPhotoJobs, uploadSync]);
+
   const handleCameraCapture = useCallback(() => {
     if (!slug || reportNumber === null || !reportId) return;
     const sessionId = createCameraSession({
@@ -682,9 +711,15 @@ export default function GenerateReportRoute() {
       // to keep the prop signature aligned with the provider contract.
       if (category !== 'image') return;
       if (!reportId) {
-        setUploadError('Open a saved report before adding photos.');
+        dispatchUploadSync({
+          type: 'error',
+          error: 'Open a saved report before adding photos.',
+        });
         return;
       }
+      dispatchUploadSync({ type: 'start' });
+      let syncError: string | null = null;
+      let clearError = false;
       try {
         const outcome = await pickAndEnqueueGalleryImages({
           reportId,
@@ -695,35 +730,101 @@ export default function GenerateReportRoute() {
           case 'unavailable':
             return;
           case 'permission-denied':
-            setUploadError(
-              'Photo library access was denied. Enable it in Settings to attach images.',
-            );
+            syncError = 'Photo library access was denied. Enable it in Settings to attach images.';
             return;
           case 'cancelled':
           case 'empty':
             return;
           case 'enqueued': {
-            const failed = outcome.results.filter(
-              (r) => r.status === 'rejected',
-            ).length;
+            const failed = countNonCancelledUploadFailures(outcome.results);
             if (failed > 0) {
-              setUploadError(
-                `${failed} of ${formatCount(outcome.total, 'photo')} failed to upload. Open the report queue to retry.`,
-              );
+              syncError = `${failed} of ${formatCount(outcome.total, 'photo')} failed to upload. Open the report queue to retry.`;
             }
-            void invalidateAfterFileUpload(qc, { reportId });
+            await invalidateAfterFileUpload(qc, { reportId });
+            clearError = syncError === null;
             return;
           }
         }
       } catch (err) {
-        setUploadError(
-          err instanceof Error
-            ? `Couldn't pick photos: ${err.message}`
-            : "Couldn't pick photos.",
-        );
+        syncError =
+          err instanceof Error ? `Couldn't pick photos: ${err.message}` : "Couldn't pick photos.";
+      } finally {
+        dispatchUploadSync({
+          type: 'finish',
+          ...(syncError === null ? {} : { error: syncError }),
+          clearError,
+        });
       }
     },
     [reportId, slug, enqueueCameraUris, qc],
+  );
+
+  const handleRetryPhotoUpload = useCallback(
+    (retry: () => Promise<void>) => {
+      if (!reportId) return;
+      dispatchUploadSync({ type: 'start' });
+      void (async () => {
+        let syncError: string | null = null;
+        try {
+          await retry();
+        } catch (err) {
+          if (!isUploadCancellation(err)) {
+            syncError =
+              err instanceof Error
+                ? `Couldn't retry photo: ${err.message}`
+                : "Couldn't retry photo.";
+          }
+        }
+        try {
+          // Refetch after every settlement, including an intentional abort: a
+          // collaborator may have committed just before it observed cancel.
+          await invalidateAfterFileUpload(qc, { reportId });
+        } catch (err) {
+          if (syncError === null) {
+            syncError =
+              err instanceof Error
+                ? `Couldn't refresh the report after retry: ${err.message}`
+                : "Couldn't refresh the report after retry.";
+          }
+        }
+        dispatchUploadSync({
+          type: 'finish',
+          ...(syncError === null ? {} : { error: syncError }),
+          clearError: syncError === null,
+        });
+      })();
+    },
+    [qc, reportId],
+  );
+
+  const handleCancelPhotoUpload = useCallback(
+    (cancel: () => Promise<void>) => {
+      if (!reportId) {
+        void cancel();
+        return;
+      }
+      dispatchUploadSync({ type: 'start' });
+      void (async () => {
+        let syncError: string | null = null;
+        try {
+          await cancel();
+          // The queue promise settles only after an active collaborator has
+          // observed abort, so this refetch cannot race a late note commit.
+          await invalidateAfterFileUpload(qc, { reportId });
+        } catch (err) {
+          syncError =
+            err instanceof Error
+              ? `Couldn't synchronize the cancelled photo: ${err.message}`
+              : "Couldn't synchronize the cancelled photo.";
+        }
+        dispatchUploadSync({
+          type: 'finish',
+          ...(syncError === null ? {} : { error: syncError }),
+          clearError: syncError === null,
+        });
+      })();
+    },
+    [qc, reportId],
   );
 
   useFocusEffect(
@@ -737,32 +838,82 @@ export default function GenerateReportRoute() {
         if (uris && uris.length > 0) allUris.push(...uris);
       }
       if (allUris.length === 0) return;
-      void enqueueCameraUris(allUris, { reportId, projectId: slug }).then((results) => {
-        const failed = results.filter((r) => r.status === 'rejected').length;
-        if (failed > 0) {
-          setUploadError(
-            `${failed} of ${formatCount(allUris.length, 'photo')} failed to upload. Open the report queue to retry.`,
-          );
+      dispatchUploadSync({ type: 'start' });
+      void (async () => {
+        let syncError: string | null = null;
+        let clearError = false;
+        try {
+          const results = await enqueueCameraUris(allUris, {
+            reportId,
+            projectId: slug,
+          });
+          const failed = countNonCancelledUploadFailures(results);
+          if (failed > 0) {
+            syncError = `${failed} of ${formatCount(allUris.length, 'photo')} failed to upload. Open the report queue to retry.`;
+          }
+          // Await both active refetches before exposing generation readiness.
+          await invalidateAfterFileUpload(qc, { reportId });
+          clearError = syncError === null;
+        } catch (err) {
+          syncError =
+            err instanceof Error
+              ? `Couldn't upload photos: ${err.message}`
+              : "Couldn't upload photos.";
+        } finally {
+          dispatchUploadSync({
+            type: 'finish',
+            ...(syncError === null ? {} : { error: syncError }),
+            clearError,
+          });
         }
-        // Invalidate the notes/report queries so uploaded image notes
-        // appear in the timeline immediately after the pipeline completes.
-        invalidateAfterFileUpload(qc, { reportId });
-      });
+      })();
     }, [reportId, slug, enqueueCameraUris, qc]),
   );
 
-  const canWrite =
-    projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
+  const canWrite = projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
   const reportTitleField = reportRow?.body?.meta?.title;
+  const photoQueueSync = useMemo(
+    () => getReportPhotoUploadQueueState(uploadJobs, reportId, refetchedCompletedUploadIds),
+    [uploadJobs, reportId, refetchedCompletedUploadIds],
+  );
+  const uploadSyncPending = isUploadSyncPending(uploadSync) || photoQueueSync.activeCount > 0;
+  const effectiveUploadError =
+    uploadSync.error ??
+    (photoQueueSync.failedCount > 0
+      ? `${formatCount(photoQueueSync.failedCount, 'photo')} failed to upload. Retry or dismiss the failed photo.`
+      : null);
+  const noteSyncPending =
+    createNote.isPending ||
+    deleteNote.isPending ||
+    updateNote.isPending ||
+    visibleNotes.some((note) => note.isPending) ||
+    report.isFetching ||
+    notesQuery.isFetching;
+  const hasSyncError =
+    report.error != null ||
+    notesQuery.error != null ||
+    createNote.isError ||
+    deleteNote.isError ||
+    updateNote.isError ||
+    placePhotoGroupMutation.isError ||
+    generationError !== null ||
+    effectiveUploadError !== null;
 
   // Combine autosave + generation errors into the existing surface so
   // both bubble through `generationError`. Generation errors trump
   // autosave (the user just tried to regenerate; show them that).
   const combinedError =
-    generationError ?? autosave.error ?? noteActionError?.message ?? uploadError;
+    generationError ??
+    autosave.error ??
+    noteActionError?.message ??
+    placementWriteError ??
+    effectiveUploadError;
   const canRetryNoteAction =
-    generationError === null && !autosave.error && noteActionError !== null;
+    generationError === null &&
+    !autosave.error &&
+    placementWriteError === null &&
+    noteActionError !== null;
 
   // Surface upload-pipeline errors via the existing dialog. Wired
   // through the screen's `fileUploadError` UI surface — we mirror it
@@ -789,28 +940,34 @@ export default function GenerateReportRoute() {
         isGeneratingReport={isGenerating}
         generationError={combinedError}
         generationErrorActionLabel={canRetryNoteAction ? 'Try again' : undefined}
-        onGenerationErrorAction={
-          canRetryNoteAction ? handleRetryNoteActionError : undefined
-        }
+        onGenerationErrorAction={canRetryNoteAction ? handleRetryNoteActionError : undefined}
         lastGeneration={effectiveLastGeneration}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
         needsRegeneration={reportRow?.needsRegeneration ?? false}
         isAutoSaving={autosave.isAutoSaving || userDirty}
+        isReportWriteBlocked={placementWriteBlocked}
         lastSavedAt={autosave.lastSavedAt}
         isFinalizing={finalizeMutation.isPending}
         finalizeError={finalizeError}
         onFinalize={handleFinalize}
         onCameraCapture={handleCameraCapture}
         onPickAttachment={handlePickAttachment}
-        onPlacePhotoGroup={
-          canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
-        }
-        onDeleteDraft={
-          reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
-        }
+        onRetryPhotoUpload={handleRetryPhotoUpload}
+        onCancelPhotoUpload={handleCancelPhotoUpload}
+        onPlacePhotoGroup={canWrite && reportId !== null ? handlePlacePhotoGroup : undefined}
+        onDeleteDraft={reportRow?.status === 'finalized' ? undefined : handleDeleteDraft}
         isDeletingDraft={deleteReportMutation.isPending}
         actions={<AppHeaderActions />}
+        generationStateTestID={reportGenerationStateTestId({
+          generatedAt: reportRow?.generatedAt,
+          notesChangedAt: reportRow?.notesChangedAt,
+          needsRegeneration: reportRow?.needsRegeneration,
+          uploadSyncPending,
+          isGenerating: isGenerating || placePhotoGroupMutation.isPending,
+          noteSyncPending,
+          hasSyncError,
+        })}
       />
       <UsageLimitDialog
         visible={usageLimitHit !== null}

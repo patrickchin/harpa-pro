@@ -346,6 +346,12 @@ on the real relative filter.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-06** — CI artifacts repeatedly showed ready Harpa or Expo UI behind
+  a recurring Quickstep ANR dialog, while fixed-count dismissals could still
+  race its next appearance. Fix: write and verify emulator-only
+  `hide_error_dialogs=1` before install, retain both semantic fallbacks, and
+  keep the final `input-email` assertion strict.
+  [detail](2026-08-06-quickstep-anr-dialog-recurrence.md)
 - **2026-08-05** — Stacked Cloudflare Pages build waves kept an exact-SHA site
   deployment incomplete beyond 75 minutes and the admin deployment beyond 90.
   Fix: allow a 120-minute marker poll and 150-minute `dev`/preview jobs, with

@@ -24,8 +24,9 @@ The dialog must:
 - provide a visible close button;
 - close with the `Escape` key or a backdrop click;
 - return focus to the screenshot link that opened it; and
-- fit within the viewport on desktop and mobile while allowing a tall image
-  to scroll inside the dialog.
+- scale the complete screenshot into the available image area without internal
+  scrolling on a 1440 × 900 desktop viewport, while preserving its aspect
+  ratio and keeping the dialog viewport-bound at smaller sizes.
 
 The image URL is assigned only when the dialog opens. This avoids loading each
 full-resolution screenshot during the initial guide render.
@@ -37,4 +38,6 @@ change, checks the dialog image and accessible name, closes it through the
 button, and repeats the flow with `Escape`. Existing tests continue to assert
 that every trigger retains a valid full-image `href` for the no-JavaScript
 fallback. A modified-click test verifies that the browser can still open the
-raw image in a new tab without opening the dialog.
+raw image in a new tab without opening the dialog. The desktop regression also
+checks that the image area does not overflow, that all four image bounds stay
+inside it, and that the rendered image keeps its intrinsic aspect ratio.

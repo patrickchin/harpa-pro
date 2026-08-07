@@ -34,7 +34,7 @@ which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 CI generates and installs the Android debug app, starts fixture-mode
 Metro, opens the dev-client bundle, and asserts the sign-in email
 control renders. The job is capped at 30 minutes, emulator boot at
-300 seconds, and the Maestro process at 420 seconds so a stuck
+300 seconds, and the Maestro process at 600 seconds so a stuck
 emulator or driver cannot consume an unbounded runner. The APK build
 targets only the emulator's `x86_64` ABI and restores Gradle
 dependencies from a cache keyed by the lockfile and mobile prebuild
@@ -55,12 +55,14 @@ boundary instead of relying on a fixed number of dismissals.
 
 The flow still keeps both semantic Quickstep recovery paths: one around Expo
 Dev Launcher readiness and one after opening the Metro link. If Expo registers
-Metro but leaves the emulator on Dev Launcher's Home screen, the flow
+Metro slowly, the first post-link observation allows up to 180 seconds for
+Quickstep, the server row, or app UI. If Expo leaves the emulator on Dev
+Launcher's Home screen, the flow
 conditionally selects the green `http://10.0.2.2:8081` server row. It then
-waits up to 90 seconds for either the first-run `Continue` action or the
+waits up to 180 seconds for either the first-run `Continue` action or the
 rendered `Email` label, failing closed if neither appears. After dismissing
 any developer menu, it allows 30 seconds for the strict `input-email` wait and
-assertion. The wrapper keeps its independent 420-second ceiling over the
+assertion. The wrapper keeps its independent 600-second ceiling over the
 entire Maestro process. On failure, it captures ADB state and recent logcat
 output; CI uploads those runner logs and Maestro's hidden UI
 hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.

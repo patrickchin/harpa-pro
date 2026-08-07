@@ -118,7 +118,7 @@ Each AI-touching route has a test that:
   real emulator, then run the bounded
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
   ceiling, emulator boot has a 300-second ceiling, and the Maestro
-  command has a 420-second ceiling.
+  command has a 600-second ceiling.
 - Before installing the APK, the runner calls the shared
   `scripts/maestro/prepare-android-emulator.sh` preflight. It refuses physical
   devices, writes Android's global `hide_error_dialogs=1` setting on the
@@ -131,9 +131,10 @@ Each AI-touching route has a test that:
   dialog. It chooses the dialog's semantic `Wait` action conditionally,
   then requires the `Development Build` heading within 30 seconds before
   opening the Metro deep link. It performs the same conditional recovery
-  once after `openLink`: a 90-second union wait observes Quickstep,
-  the Metro server row, or app UI before conditional recovery, server
-  selection, and app assertions.
+  once after `openLink`: a 180-second union wait observes Quickstep,
+  the Metro server row, or app UI before conditional recovery and server
+  selection. A second 180-second wait then covers a cache-empty bundle that
+  starts only after the server row is selected, before the app assertions.
 - Shared-development device runs expose the host-side API, R2, and auth helpers
   through `adb reverse`; loopback binding is not an authorization boundary.
   `dev-e2e-api-proxy.cjs` accepts only relative paths and constructs outbound

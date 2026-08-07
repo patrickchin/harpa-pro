@@ -25,7 +25,7 @@ tags:
     timeout: 20000
 - extendedWaitUntil:
     visible: "Quickstep isn't responding|http://10.0.2.2:8081|Continue|Close|Email"
-    timeout: 90000
+    timeout: 180000
 - runFlow:
     when:
       visible: "Quickstep isn't responding"
@@ -42,7 +42,7 @@ tags:
           timeout: 20000
 - extendedWaitUntil:
     visible: 'Continue|Close|Email'
-    timeout: 90000
+    timeout: 180000
 - runFlow:
     when:
       visible: 'Continue'

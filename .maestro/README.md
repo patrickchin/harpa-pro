@@ -34,7 +34,7 @@ which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 CI generates and installs the Android debug app, starts fixture-mode
 Metro, opens the dev-client bundle, and asserts the sign-in email
 control renders. The job is capped at 30 minutes, emulator boot at
-300 seconds, and the Maestro process at 420 seconds so a stuck
+300 seconds, and the Maestro process at 600 seconds so a stuck
 emulator or driver cannot consume an unbounded runner. The APK build
 targets only the emulator's `x86_64` ABI and restores Gradle
 dependencies from a cache keyed by the lockfile and mobile prebuild
@@ -55,12 +55,14 @@ boundary instead of relying on a fixed number of dismissals.
 
 The flow still keeps both semantic Quickstep recovery paths: one around Expo
 Dev Launcher readiness and one after opening the Metro link. If Expo registers
-Metro but leaves the emulator on Dev Launcher's Home screen, the flow
+Metro slowly, the first post-link observation allows up to 180 seconds for
+Quickstep, the server row, or app UI. If Expo leaves the emulator on Dev
+Launcher's Home screen, the flow
 conditionally selects the green `http://10.0.2.2:8081` server row. It then
-waits up to 90 seconds for either the first-run `Continue` action or the
+waits up to 180 seconds for either the first-run `Continue` action or the
 rendered `Email` label, failing closed if neither appears. After dismissing
 any developer menu, it allows 30 seconds for the strict `input-email` wait and
-assertion. The wrapper keeps its independent 420-second ceiling over the
+assertion. The wrapper keeps its independent 600-second ceiling over the
 entire Maestro process. On failure, it captures ADB state and recent logcat
 output; CI uploads those runner logs and Maestro's hidden UI
 hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.
@@ -196,6 +198,13 @@ adb reverse tcp:8790 tcp:8790
 adb reverse tcp:9000 tcp:9000
 ```
 
+All current camera flows delegate to
+`helpers/wait-for-camera-shutter-ready.yaml` before tapping the shutter.
+The helper waits for the existing shutter to be enabled, which proves native
+picture-size discovery is stable and the previous native capture has reached a
+terminal callback; burst flows repeat it between captures. Do not replace this
+boundary with a fixed sleep or a whole-flow retry.
+
 **Run:**
 
 ```bash
@@ -218,6 +227,13 @@ Dev-deployment target:
   `scripts/dev-e2e-api-proxy.cjs` on `8788`,
   `scripts/dev-e2e-r2-proxy.cjs` on `8791`, plus the auth broker on
   `8790`.
+- Treat all three reversed ports as untrusted device inputs. The API proxy
+  accepts only relative request paths and pins them to the operator-controlled
+  HTTPS `E2E_API_TARGET_URL`. It rewrites only SigV4-signed URLs on strict
+  `*.r2.cloudflarestorage.com` or `*.r2.dev` suffixes. The R2 proxy revalidates
+  the same boundary, permits only `GET`, `HEAD`, and `PUT`, fixes transport to
+  HTTPS port 443, and never follows redirects. Invalid targets fail before an
+  outbound socket opens.
 - Dev runs must create unique per-run data and clean it up in-flow;
   they must not truncate the shared dev database.
 - `mo journey --target dev` is the intended future entry point once
@@ -245,6 +261,17 @@ Dev-deployment target:
   places it into an issue, then finalizes the report and asserts the
   saved-report page keeps the placed photo visible without exposing placement
   or manual-edit controls.
+- 2026-08-07 follow-up: repeated single-photo capture waits for the shared
+  route-owned current-generation marker after every upload. This prevents the
+  next native Modal from mounting while the prior upload/refetch/regeneration
+  is still producing long Android frames. The helper first gives the shared
+  `dialog-sheet` a bounded 20-second render budget, then requires its semantic
+  camera action.
+- 2026-08-06 follow-up: module 08 waits for the route-owned automatic
+  regeneration boundary after adding a text note and before opening its row
+  actions. This prevents the note-options modal from mounting while the
+  empty-to-generated report panes are replaced. It repeats the boundary after
+  optimistic note deletion and before opening draft actions.
 - Mobile code (`apps/mobile/**`), Maestro flows (`.maestro/**`), and the
   launch runner (`scripts/ci/run-maestro-launch-smoke.sh`) trigger the
   mobile confidence workflow: the Maestro testID gate, Metro bundle
@@ -279,10 +306,17 @@ parts that fixture flows deliberately avoid:
 - real `expo-camera` through camera permission, route mount, shutter,
   thumbnail render, and discard teardown
 
+The shutter starts disabled under default native wiring. On Android it becomes
+enabled only after CameraX reopens following preferred picture-size rebinding;
+the smoke uses the shared camera-readiness helper before capture.
+
 It does not tap Send or commit captured photos. `modules/09-voice-notes.yaml`
 and `modules/10a-photo-notes-draft.yaml` keep deterministic upload,
 transcription, summary, playback, image upload, and delete coverage in
 fixture mode.
+After draft deletion, cleanup accepts either project home or the Projects
+index. The latter is a valid `dismissOrReplaceTo` stack outcome, so the flow
+reopens the edited project before invoking shared project deletion.
 
 Run against the local API stack and a non-fixture dev-client bundle:
 
@@ -360,6 +394,11 @@ maestro test .maestro/store-screenshots.yaml
 adb shell settings delete global policy_control || true
 ```
 
+The seed script scopes `MSYS_NO_PATHCONV=1` to its container-only
+`minio/mc` command. This keeps `/bin/sh` inside the container when the
+runbook is executed from Git Bash on Windows, while the earlier host fixture
+paths still receive Git Bash's normal Docker path conversion.
+
 `EXPO_PUBLIC_USE_FIXTURES=false` keeps report and usage data backed by
 the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` uses
 deterministic screenshot-only input paths such as the canned voice
@@ -386,6 +425,10 @@ node scripts/dev-e2e-auth-broker.cjs
 maestro test .maestro/account-deletion.yaml
 ```
 
+The local Compose migration one-shot arms storage lifecycle with zero grace
+before the API starts. This is required for `DELETE /me`; production and dev
+deployments retain their separate rolling-deploy arming policy.
+
 ## Archived and pending flows
 
 Top-level `.maestro/*.yaml` files are current entrypoints. Historical
@@ -408,6 +451,14 @@ runs do not pick them up by accident.
 The old P3.14a usage-limits-card flow was folded into
 `modules/15-usage.yaml`, which now asserts the free-plan limits card
 and default buckets as part of `regression-journey.yaml`.
+
+## Scroll positioning
+
+- On Android, a tall container at the viewport edge can expose accessibility
+  bounds for only its visible sliver. Maestro may then treat that sliver as
+  `visibilityPercentage: 100` even though nested controls remain offscreen.
+  Scroll to a bounded leaf control with `centerElement: true`, then assert the
+  container and its descendants.
 
 ## iOS sim quirks
 
@@ -432,6 +483,10 @@ and default buckets as part of `regression-journey.yaml`.
   bottom. When tapping report-card controls that scroll near the
   bottom edge, require full visibility and use `centerElement: true`
   before `tapOn`; otherwise Maestro can tap the sticky recorder area.
+  If the target has just entered from below, Maestro's centering gesture can
+  overshoot it above the viewport. In that case, stop at full visibility with
+  `centerElement: false`, apply one small coordinate-bounded upward swipe, wait
+  for settlement, and tap the leaf action.
 
 ## Known infra quirks
 

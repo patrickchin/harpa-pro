@@ -19,8 +19,23 @@ set -euo pipefail
 
 printf 'flyctl %s\n' "$*" >> "$POLICY_LOG"
 if [[ "$*" == "machines list --app harpa-pro-api --json" ]]; then
-  printf '%s\n' \
-    '[{"id":"app-current","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"app","fly_release_id":"rel-current","fly_release_version":"42"}}},{"id":"worker-started","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":[]}},{"id":"worker-standby","state":"stopped","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":["worker-started"]}}]'
+  machines_json='[{"id":"app-current","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"app","fly_release_id":"rel-current","fly_release_version":"42"}}},{"id":"worker-started","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":[]}},{"id":"worker-standby","state":"stopped","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":["worker-started"]}}]'
+  if [[ -n "${POLICY_MACHINES_JSON:-}" ]]; then
+    machines_json="$POLICY_MACHINES_JSON"
+  fi
+  if [[ -n "${POLICY_LIST_COUNTER:-}" ]]; then
+    list_count=0
+    if [[ -f "$POLICY_LIST_COUNTER" ]]; then
+      list_count=$(<"$POLICY_LIST_COUNTER")
+    fi
+    list_count=$((list_count + 1))
+    printf '%s\n' "$list_count" > "$POLICY_LIST_COUNTER"
+    if [[ "$list_count" -gt 1 &&
+          -n "${POLICY_MACHINES_JSON_AFTER_FIRST_LIST:-}" ]]; then
+      machines_json="$POLICY_MACHINES_JSON_AFTER_FIRST_LIST"
+    fi
+  fi
+  printf '%s\n' "$machines_json"
 fi
 
 if [[ "${1:-} ${2:-}" == "machine exec" ]]; then
@@ -189,6 +204,47 @@ if [[ "${#RETRY_ACTIONS[@]}" -ne 4 ||
   exit 1
 fi
 echo "  ok   - transient exec failure re-proves and retries the same worker"
+
+set +e
+ambiguous_output=$(
+  POLICY_LOG="$TMP/ambiguous-actions.log" \
+  POLICY_EXEC_COUNTER="$TMP/ambiguous-exec-count" \
+  POLICY_MACHINES_JSON='[{"id":"worker-one","state":"started","config":{"metadata":{"fly_process_group":"storage-worker"}}},{"id":"worker-two","state":"started","config":{"metadata":{"fly_process_group":"storage-worker"}}}]' \
+  PATH="$TMP/bin:$PATH" \
+    bash "$ARM_SCRIPT" harpa-pro-api 2>&1
+)
+ambiguous_status=$?
+set -e
+if [[ "$ambiguous_status" -eq 0 ||
+      "$ambiguous_output" != *"cannot choose one started storage-worker"* ||
+      -f "$TMP/ambiguous-exec-count" ]]; then
+  echo "  FAIL - ambiguous worker inventory did not fail before Machine exec"
+  echo "$ambiguous_output"
+  exit 1
+fi
+echo "  ok   - ambiguous worker inventory fails before Machine exec"
+
+set +e
+drift_output=$(
+  POLICY_LOG="$TMP/drift-actions.log" \
+  POLICY_EXEC_COUNTER="$TMP/drift-exec-count" \
+  POLICY_LIST_COUNTER="$TMP/drift-list-count" \
+  POLICY_MACHINES_JSON_AFTER_FIRST_LIST='[{"id":"worker-replacement","state":"started","config":{"metadata":{"fly_process_group":"storage-worker"}}}]' \
+  POLICY_EXEC_FAILURES=1 \
+  STORAGE_LIFECYCLE_ARM_RETRY_DELAY_SECONDS=0 \
+  PATH="$TMP/bin:$PATH" \
+    bash "$ARM_SCRIPT" harpa-pro-api 2>&1
+)
+drift_status=$?
+set -e
+if [[ "$drift_status" -eq 0 ||
+      "$drift_output" != *"storage-worker target changed during arming"* ||
+      "$(<"$TMP/drift-exec-count")" -ne 1 ]]; then
+  echo "  FAIL - worker identity drift did not fail before retry"
+  echo "$drift_output"
+  exit 1
+fi
+echo "  ok   - worker identity drift fails before retry"
 
 set +e
 bounded_output=$(

@@ -189,9 +189,11 @@ tags:
 
 - scrollUntilVisible:
     element:
-      id: 'report-photos'
+      id: 'btn-report-photo-.*'
     direction: DOWN
     timeout: 60000
+    visibilityPercentage: 100
+    centerElement: true
 - extendedWaitUntil:
     visible:
       id: 'report-photos-grid'

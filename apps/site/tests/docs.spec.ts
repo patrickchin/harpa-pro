@@ -177,7 +177,7 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   expect(fit.naturalWidth).toBeGreaterThan(0);
   expect(fit.naturalHeight).toBeGreaterThan(0);
   expect(bounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
-    fit.imageWidth + 80,
+    fit.imageWidth + 32,
   );
   expect(fit.regionScrollHeight).toBeLessThanOrEqual(
     fit.regionClientHeight + 1,

@@ -24,6 +24,7 @@ import {
   type ChatResponse,
   LiveAdapterMissingError,
 } from '../index.js';
+import { stripTrailingSlashes } from './base-url.js';
 import { AdapterError } from './error.js';
 
 export interface KimiAdapterConfig {
@@ -44,7 +45,7 @@ interface ChatCompletionResponse {
 }
 
 export function createKimiProvider(cfg: KimiAdapterConfig): AiProvider {
-  const baseUrl = (cfg.baseUrl ?? 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
+  const baseUrl = stripTrailingSlashes(cfg.baseUrl ?? 'https://api.moonshot.cn/v1');
   const fetchFn = cfg.fetchImpl ?? fetch;
 
   return {

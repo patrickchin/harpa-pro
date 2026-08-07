@@ -5,11 +5,29 @@
 **Symptom.** Android photo flows observed `Generate report` or `Update report`
 and then failed to tap it. The failure screenshot already showed the
 finalized-ready action row, proving the report had generated successfully.
+The first post-merge full regression then reproduced a missing boundary in
+module 08 around a text note's options button. A later fresh run reproduced a
+second failure before any overlay interaction: automatic generation itself
+surfaced Fabric's `RetryableMountingLayerException: Unable to find viewState`,
+and the readiness assertion saw only the error screen. Module 10c later
+repeated the same missing boundary between single-photo captures: its third
+attachment sheet rendered just beyond an eight-second action wait while the
+prior upload and regeneration produced multi-second Android frames.
 
 **Root cause.** The generate route automatically starts regeneration whenever
 the persisted draft becomes dirty. Maestro evaluated a conditional button
 selector, but the mutation could finish and replace that button before the
-following tap performed its own element lookup.
+following tap performed its own element lookup. Module 08 also lacked the
+dirty draft's route-owned regeneration boundary before opening another
+overlay.
+
+The no-overlay reproduction proved the Fabric crash had a separate product
+cause. The always-mounted off-screen Edit pane wrapped `ReportEditForm` in a
+View whose opacity changed from 0.6 to 1 when regeneration finished. Fabric
+made the translucent wrapper a native stacking context, then flattened it as a
+layout-only view at full opacity. The same mount batch attempted to update its
+removed native tag. See
+[`design-generate-pane-fabric-stability.md`](../v4/design-generate-pane-fabric-stability.md).
 
 **Fix.** Active core and photo journeys now delegate to
 `.maestro/helpers/wait-for-auto-regeneration.yaml`. The helper waits for the
@@ -47,6 +65,17 @@ pending; this prevents an earlier clean report generation from being accepted
 while a new note is still reaching the server. The legacy core journey waits
 for the saved voice title before this readiness gate because voice processing
 is owned asynchronously by the screen provider.
+The text-note lifecycle now enters the same helper after saving its note and
+before opening row actions, so the modal is mounted only after generation and
+canonical refetch settle. It waits again after optimistic note deletion and
+before opening draft actions, closing the same overlay/tree-replacement race
+during cleanup. The shared single-photo capture helper now enters the same
+boundary after every upload. It gives the common `dialog-sheet` a bounded
+20-second render budget before requiring the camera action, so repeated callers
+cannot stack the next native Modal on an unsettled route. Independently, the
+Edit pane's opacity wrapper is explicitly
+non-collapsable, keeping one native host across the generating-to-current
+transition so Fabric never targets a tag it flattened in the same batch.
 
 **Test.** Release-confidence policy pins the shared helper, its 60-second
 bound, all active delegates, the voice-pipeline boundary, counter-based upload
@@ -56,6 +85,13 @@ retries, queued and active cancellation, persistence linkage, resumed upload
 acknowledgment, and report-write action blocking. Regression modules 11 and 17
 now use the same stable helper, and the photo-placement flow repeats it after
 the optimistic placement write.
+Module 08's delegates are pinned before its note-options and draft-options
+selectors. Edit-pane component coverage rerenders the no-overlay Notes-tab
+case from generating to current and pins the wrapper's stable native-host
+identity and opacity transition. Static policy also pins the repeated-photo
+upload → current-generation ordering and the attachment-sheet render bound.
+Fresh full regression runs cover the exact
+add-note, regenerate, open, and delete sequence that failed.
 On fresh Android emulators, the corrected legacy core journey passed in 625.3
 seconds and the standalone placement flow passed in 416.3 seconds, including
 upload, regeneration, placement, finalization, and persisted-photo
@@ -64,4 +100,6 @@ verification.
 **Pattern.** When application behavior owns an automatic transition, an E2E
 test should wait for the transition's stable postcondition. A conditional
 visibility check followed by a separate tap is still a race because those are
-two independent UI snapshots.
+two independent UI snapshots. Separately, a View whose styling toggles Fabric
+flattening must retain a stable native-host contract when its descendants are
+updated in the same transition.

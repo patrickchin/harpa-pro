@@ -63,7 +63,10 @@ complete visible text remains the source of truth.
 The API identifies missing joins with `actorState` and `subjectState`
 (`available` or `deleted`) and `projectState` (`none`, `available`, or
 `deleted`). Labels are current values only when the entity is available; they
-are null when it is deleted. The admin presentation creates lowercase,
+are null when it is deleted, and `actorEmail` is also null whenever
+`actorState` is `deleted`. The response parser rejects contradictory actor
+identity fields before the row, detail drawer, filters, or text export can use
+them. The admin presentation creates lowercase,
 square-bracketed placeholders (`[deleted user]`, `[deleted project]`,
 `[deleted report]`, or `[deleted note]`) from this state and the subject type,
 not from label text. The same wording appears in rows, header-filter choices,
@@ -165,7 +168,7 @@ safe fields already returned by the admin API. It does not introduce note
 content, transcripts, filenames, storage keys, or other excluded data.
 Explicit deleted-entity state produces the same bracketed placeholders as the
 interactive feed; live labels are exported verbatim, and stable event and
-entity IDs remain unchanged.
+entity IDs remain unchanged. A deleted actor's email column is empty.
 
 ## Failure and accessibility behavior
 

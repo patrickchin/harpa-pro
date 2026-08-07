@@ -349,8 +349,10 @@ as `Deleted user` makes that string an undocumented reserved value. A live,
 user-named entity can collide with it and be styled, announced, filtered, and
 exported as unavailable even though the database join succeeded. Keep state in
 an explicit contract field, derive it from row presence, and treat display
-labels as opaque data. Regression fixtures must include live labels that are
-exactly equal to every human-readable fallback they could collide with.
+labels as opaque data. Every related identity field must agree with that state:
+a deleted actor cannot retain an email. Regression fixtures must include live
+labels that are exactly equal to every human-readable fallback they could
+collide with and contradictory payloads that must fail closed.
 
 ## Bugs
 

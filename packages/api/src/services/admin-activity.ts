@@ -108,7 +108,10 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
           actor.email
         )
       END AS actor_label,
-      actor.email AS actor_email,
+      CASE
+        WHEN actor.id IS NULL THEN NULL
+        ELSE actor.email
+      END AS actor_email,
       CASE
         WHEN actor.id IS NULL THEN 'deleted'
         ELSE 'available'

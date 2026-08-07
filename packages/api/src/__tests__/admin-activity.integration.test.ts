@@ -244,10 +244,13 @@ describe('GET /admin/activity', () => {
       actorUserId: actorId,
       actorLabel: 'Alice Activity',
       actorEmail: 'alice-activity@example.com',
+      actorState: 'available',
       subjectId: reportId,
       subjectLabel: 'Report #7',
+      subjectState: 'available',
       projectId,
       projectLabel: 'Tower Refurbishment',
+      projectState: 'available',
       requestId: 'request-report-1',
       metadata: { reportNumber: 7 },
     });
@@ -282,10 +285,9 @@ describe('GET /admin/activity', () => {
         [liveEventId, liveUserId, liveProjectId, `project.created:${liveProjectId}`],
       );
 
-      const response = await createApp().request(
-        `/admin/activity?actorUserId=${liveUserId}`,
-        { headers: await adminHeaders() },
-      );
+      const response = await createApp().request(`/admin/activity?actorUserId=${liveUserId}`, {
+        headers: await adminHeaders(),
+      });
       expect(response.status).toBe(200);
       const rawBody = (await response.json()) as {
         items: Array<Record<string, unknown>>;
@@ -309,7 +311,7 @@ describe('GET /admin/activity', () => {
     }
   });
 
-  it('uses a stable cursor and deleted-entity fallbacks', async () => {
+  it('uses a stable cursor and explicit deleted-entity state', async () => {
     const first = activitySchemas.listResponse.parse(
       await (
         await createApp().request('/admin/activity?limit=3', {
@@ -336,17 +338,83 @@ describe('GET /admin/activity', () => {
     expect(second.nextCursor).toBeNull();
     expect(second.items[0]).toMatchObject({
       subjectId: deletedProjectId,
-      subjectLabel: 'Deleted project',
+      subjectLabel: null,
+      subjectState: 'deleted',
       projectId: deletedProjectId,
-      projectLabel: 'Deleted project',
+      projectLabel: null,
+      projectState: 'deleted',
     });
     expect(second.items[1]).toMatchObject({
       actorUserId: null,
-      actorLabel: 'Deleted user',
+      actorLabel: null,
       actorEmail: null,
+      actorState: 'deleted',
       subjectId: null,
-      subjectLabel: 'Deleted user',
+      subjectLabel: null,
+      subjectState: 'deleted',
+      projectState: 'none',
     });
+  });
+
+  it('reports deleted report and note subjects independently from live project context', async () => {
+    const deletedReportId = makeReportId();
+    const deletedNoteId = makeNoteId();
+    const deletedReportEventId = newId('aud');
+    const deletedNoteEventId = newId('aud');
+
+    try {
+      await db.query(
+        `INSERT INTO app.activity_events
+           (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+            project_id, request_id, dedupe_key, metadata)
+         VALUES
+           ($1, '2026-07-29T03:40:00Z', 'report.created', $3, 'report', $4, $5,
+            'request-deleted-report-state', $6, '{"reportNumber":8}'),
+           ($2, '2026-07-29T03:35:00Z', 'note.text_created', $3, 'note', $7, $5,
+            'request-deleted-note-state', $8, '{}')`,
+        [
+          deletedReportEventId,
+          deletedNoteEventId,
+          actorId,
+          deletedReportId,
+          projectId,
+          `report.created:${deletedReportId}`,
+          deletedNoteId,
+          `note.text_created:${deletedNoteId}`,
+        ],
+      );
+
+      const [reportResponse, noteResponse] = await Promise.all([
+        createApp().request('/admin/activity?eventType=report.created&limit=10', {
+          headers: await adminHeaders(),
+        }),
+        createApp().request('/admin/activity?eventType=note.text_created&limit=10', {
+          headers: await adminHeaders(),
+        }),
+      ]);
+      expect([reportResponse.status, noteResponse.status]).toEqual([200, 200]);
+
+      const reportBody = activitySchemas.listResponse.parse(await reportResponse.json());
+      const noteBody = activitySchemas.listResponse.parse(await noteResponse.json());
+      const deletedReport = reportBody.items.find((item) => item.id === deletedReportEventId);
+      const deletedNote = noteBody.items.find((item) => item.id === deletedNoteEventId);
+
+      for (const item of [deletedReport, deletedNote]) {
+        expect(item).toMatchObject({
+          actorState: 'available',
+          subjectLabel: null,
+          subjectState: 'deleted',
+          projectId,
+          projectLabel: 'Tower Refurbishment',
+          projectState: 'available',
+        });
+      }
+    } finally {
+      await db.query(`DELETE FROM app.activity_events WHERE id IN ($1, $2)`, [
+        deletedReportEventId,
+        deletedNoteEventId,
+      ]);
+    }
   });
 
   it('applies event, actor, project, and time filters', async () => {
@@ -561,7 +629,8 @@ describe('GET /admin/activity', () => {
       expect(body.items[0]).toMatchObject({
         level: 'milestone',
         actorUserId: null,
-        actorLabel: 'Deleted user',
+        actorLabel: null,
+        actorState: 'deleted',
       });
     } finally {
       await db.query(`DELETE FROM app.activity_events WHERE id = $1`, [regularEventId]);

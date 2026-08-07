@@ -221,9 +221,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await reservedLabelRow.click();
   const reservedLabelDetail = page.getByRole('dialog', { name: 'Deleted project' });
   await expect(reservedLabelDetail).toBeVisible();
-  await expect(
-    reservedLabelDetail.getByText('Deleted user', { exact: true }),
-  ).toBeVisible();
+  await expect(reservedLabelDetail.getByText('Deleted user', { exact: true })).toBeVisible();
   await expect(reservedLabelDetail.locator('[data-entity-placeholder="deleted"]')).toHaveCount(0);
   await reservedLabelDetail.getByRole('button', { name: 'Close' }).click();
 

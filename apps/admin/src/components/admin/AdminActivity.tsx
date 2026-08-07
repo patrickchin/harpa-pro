@@ -21,7 +21,8 @@ type RefetchSession = () => Promise<AdminSession | null>;
 
 interface ActorExclusion {
   id: string;
-  label: string;
+  label: string | null;
+  state: activity.EntityState;
 }
 
 interface ActorOption extends ActorExclusion {
@@ -30,7 +31,8 @@ interface ActorOption extends ActorExclusion {
 
 interface ProjectOption {
   id: string;
-  label: string;
+  label: string | null;
+  state: activity.EntityState;
 }
 
 interface Filters {
@@ -81,36 +83,49 @@ function eventLabel(eventType: activity.EventType): string {
   return EVENT_LABELS[eventType];
 }
 
-const DELETED_ENTITY_PLACEHOLDERS = new Map<string, string>([
-  ['Deleted user', '[deleted user]'],
-  ['Deleted project', '[deleted project]'],
-  ['Deleted report', '[deleted report]'],
-  ['Deleted note', '[deleted note]'],
-]);
+type EntityKind = activity.Event['subjectType'];
 
-function deletedEntityPlaceholder(value: string): string | null {
-  return DELETED_ENTITY_PLACEHOLDERS.get(value) ?? null;
+function deletedEntityPlaceholder(kind: EntityKind): string {
+  return `[deleted ${kind}]`;
 }
 
-function displayEntityLabel(value: string): string {
-  return deletedEntityPlaceholder(value) ?? value;
+function displayEntityLabel(
+  kind: EntityKind,
+  value: string | null,
+  state: activity.EntityState,
+): string {
+  if (state === 'deleted') return deletedEntityPlaceholder(kind);
+  return value ?? `Unknown ${kind}`;
 }
 
-function accessibleEntityLabel(value: string): string {
-  const placeholder = deletedEntityPlaceholder(value);
-  return placeholder ? `${placeholder.slice(1, -1)} (unavailable)` : value;
+function accessibleEntityLabel(
+  kind: EntityKind,
+  value: string | null,
+  state: activity.EntityState,
+): string {
+  return state === 'deleted' ? `deleted ${kind} (unavailable)` : (value ?? `Unknown ${kind}`);
 }
 
-function EntityLabel({ value, className = '' }: { value: string; className?: string }) {
-  const placeholder = deletedEntityPlaceholder(value);
+function EntityLabel({
+  kind,
+  value,
+  state,
+  className = '',
+}: {
+  kind: EntityKind;
+  value: string | null;
+  state: activity.EntityState;
+  className?: string;
+}) {
+  const deleted = state === 'deleted';
   return (
     <span
-      className={[className, placeholder ? 'font-normal italic text-ink-soft' : '']
+      className={[className, deleted ? 'font-normal italic text-ink-soft' : '']
         .filter(Boolean)
         .join(' ')}
-      data-entity-placeholder={placeholder ? 'deleted' : undefined}
+      data-entity-placeholder={deleted ? 'deleted' : undefined}
     >
-      {placeholder ?? value}
+      {displayEntityLabel(kind, value, state)}
     </span>
   );
 }
@@ -364,9 +379,13 @@ function activityRowLabel(event: activity.Event, isNew: boolean): string {
   return [
     isNew ? 'New activity.' : null,
     `Event: ${eventLabel(event.eventType)}.`,
-    `Actor: ${accessibleEntityLabel(event.actorLabel)}.`,
-    `Subject: ${accessibleEntityLabel(event.subjectLabel)}.`,
-    `Project: ${event.projectLabel ? accessibleEntityLabel(event.projectLabel) : 'No project'}.`,
+    `Actor: ${accessibleEntityLabel('user', event.actorLabel, event.actorState)}.`,
+    `Subject: ${accessibleEntityLabel(event.subjectType, event.subjectLabel, event.subjectState)}.`,
+    `Project: ${
+      event.projectState === 'none'
+        ? 'No project'
+        : accessibleEntityLabel('project', event.projectLabel, event.projectState)
+    }.`,
     `Occurred at ${displayTime(event.occurredAt)}.`,
   ]
     .filter((part): part is string => part !== null)
@@ -381,10 +400,14 @@ function activityTextLine(event: activity.Event): string {
   return [
     event.occurredAt,
     event.eventType,
-    oneLineField(displayEntityLabel(event.actorLabel)),
+    oneLineField(displayEntityLabel('user', event.actorLabel, event.actorState)),
     oneLineField(event.actorEmail),
-    oneLineField(event.projectLabel ? displayEntityLabel(event.projectLabel) : null),
-    oneLineField(displayEntityLabel(event.subjectLabel)),
+    oneLineField(
+      event.projectState === 'none'
+        ? null
+        : displayEntityLabel('project', event.projectLabel, event.projectState),
+    ),
+    oneLineField(displayEntityLabel(event.subjectType, event.subjectLabel, event.subjectState)),
     event.id,
     event.actorUserId ?? '',
     event.projectId ?? '',
@@ -396,20 +419,23 @@ function activityTextLine(event: activity.Event): string {
 
 function actorIdentityLabel(actor: ActorOption): string {
   const emailOrId = actor.email ?? actor.id;
-  return deletedEntityPlaceholder(actor.label) && actor.email
-    ? `${actor.id} — ${actor.email}`
-    : emailOrId;
+  return actor.state === 'deleted' && actor.email ? `${actor.id} — ${actor.email}` : emailOrId;
 }
 
 function actorOptionLabel(actor: ActorOption): string {
-  return `${displayEntityLabel(actor.label)} — ${actorIdentityLabel(actor)}`;
+  return `${displayEntityLabel('user', actor.label, actor.state)} — ${actorIdentityLabel(actor)}`;
 }
 
 function projectOptionLabel(project: ProjectOption): string {
-  return `${displayEntityLabel(project.label)} — ${project.id}`;
+  return `${displayEntityLabel('project', project.label, project.state)} — ${project.id}`;
 }
 
-function compareLabels(leftLabel: string, rightLabel: string, leftId: string, rightId: string): number {
+function compareLabels(
+  leftLabel: string,
+  rightLabel: string,
+  leftId: string,
+  rightId: string,
+): number {
   const labelOrder = leftLabel.localeCompare(rightLabel);
   return labelOrder !== 0 ? labelOrder : leftId.localeCompare(rightId);
 }
@@ -549,23 +575,35 @@ function ActivityFeed({
           id: event.actorUserId,
           label: event.actorLabel,
           email: event.actorEmail,
+          state: event.actorState,
         });
       }
       return [...byId.values()].sort((left, right) =>
-        compareLabels(left.label, right.label, left.id, right.id),
+        compareLabels(
+          displayEntityLabel('user', left.label, left.state),
+          displayEntityLabel('user', right.label, right.state),
+          left.id,
+          right.id,
+        ),
       );
     });
     setKnownProjects((current) => {
       const byId = new Map(current.map((project) => [project.id, project]));
       for (const event of events) {
-        if (!event.projectId || !event.projectLabel) continue;
+        if (!event.projectId || event.projectState === 'none') continue;
         byId.set(event.projectId, {
           id: event.projectId,
           label: event.projectLabel,
+          state: event.projectState,
         });
       }
       return [...byId.values()].sort((left, right) =>
-        compareLabels(left.label, right.label, left.id, right.id),
+        compareLabels(
+          displayEntityLabel('project', left.label, left.state),
+          displayEntityLabel('project', right.label, right.state),
+          left.id,
+          right.id,
+        ),
       );
     });
   }, []);
@@ -691,9 +729,7 @@ function ActivityFeed({
 
   function toggleActorExclusion(actor: ActorExclusion, checked: boolean) {
     setFilters((current) => {
-      const alreadyExcluded = current.excludedActors.some(
-        (excluded) => excluded.id === actor.id,
-      );
+      const alreadyExcluded = current.excludedActors.some((excluded) => excluded.id === actor.id);
       if (checked) {
         if (alreadyExcluded || current.excludedActors.length >= MAX_EXCLUDED_ACTORS) {
           return current;
@@ -1107,10 +1143,16 @@ function ActivityFeed({
                               name="user"
                               testId="actor-icon"
                             />
-                            <EntityLabel value={event.actorLabel} />
+                            <EntityLabel
+                              kind="user"
+                              state={event.actorState}
+                              value={event.actorLabel}
+                            />
                           </span>
                           <EntityLabel
                             className="font-medium text-accent-ink"
+                            kind={event.subjectType}
+                            state={event.subjectState}
                             value={event.subjectLabel}
                           />
                           <span className="inline-flex items-center gap-1.5 text-ink-soft">
@@ -1119,8 +1161,12 @@ function ActivityFeed({
                               name="folder"
                               testId="project-icon"
                             />
-                            {event.projectLabel ? (
-                              <EntityLabel value={event.projectLabel} />
+                            {event.projectState !== 'none' ? (
+                              <EntityLabel
+                                kind="project"
+                                state={event.projectState}
+                                value={event.projectLabel}
+                              />
                             ) : (
                               <span>—</span>
                             )}
@@ -1169,9 +1215,7 @@ function ActivityFeed({
                 <p className="text-[10px] font-bold uppercase tracking-wide text-accent-ink">
                   {openFilter} column
                 </p>
-                <h2 className="text-sm font-semibold text-ink">
-                  Filter by {openFilter}
-                </h2>
+                <h2 className="text-sm font-semibold text-ink">Filter by {openFilter}</h2>
               </div>
               <button
                 aria-label={`Close ${openFilter} filter`}
@@ -1224,7 +1268,7 @@ function ActivityFeed({
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-ink">
-                            <EntityLabel value={actor.label} />
+                            <EntityLabel kind="user" state={actor.state} value={actor.label} />
                           </p>
                           <p className="truncate text-xs text-ink-soft">
                             {actorIdentityLabel(actor)}
@@ -1315,7 +1359,11 @@ function ActivityFeed({
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-ink">
-                            <EntityLabel value={project.label} />
+                            <EntityLabel
+                              kind="project"
+                              state={project.state}
+                              value={project.label}
+                            />
                           </p>
                           <p className="truncate font-mono text-xs text-ink-soft">{project.id}</p>
                         </div>
@@ -1368,7 +1416,11 @@ function ActivityFeed({
                   {eventLabel(selected.eventType)}
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-ink" id="activity-detail-title">
-                  <EntityLabel value={selected.subjectLabel} />
+                  <EntityLabel
+                    kind={selected.subjectType}
+                    state={selected.subjectState}
+                    value={selected.subjectLabel}
+                  />
                 </h2>
               </div>
               <button
@@ -1387,7 +1439,7 @@ function ActivityFeed({
               <dd className="break-all text-ink-soft">{selected.occurredAt}</dd>
               <dt className="font-medium text-ink">Actor</dt>
               <dd className="break-all text-ink-soft">
-                <EntityLabel value={selected.actorLabel} />
+                <EntityLabel kind="user" state={selected.actorState} value={selected.actorLabel} />
                 {selected.actorEmail ? ` — ${selected.actorEmail}` : null}
               </dd>
               <dt className="font-medium text-ink">Actor ID</dt>

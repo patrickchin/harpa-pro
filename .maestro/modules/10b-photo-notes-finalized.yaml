@@ -49,16 +49,14 @@ tags:
     timeout: 8000
 - tapOn:
     id: 'btn-attachment-camera'
-- extendedWaitUntil:
-    visible:
-      id: 'btn-camera-shutter'
-    timeout: 15000
+- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml
 - tapOn:
     id: 'btn-camera-shutter'
 - extendedWaitUntil:
     visible:
       id: 'btn-camera-thumb-0'
     timeout: 8000
+- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml
 - tapOn:
     id: 'btn-camera-shutter'
 - extendedWaitUntil:
@@ -154,18 +152,18 @@ tags:
     id: 'report-title-.*'
 
 # --- Saved-report photo strip + preview ------------------------------------
-- scrollUntilVisible:
-    element:
-      id: 'report-photos'
-    direction: DOWN
-    timeout: 60000
-- assertVisible:
-    id: 'report-photos-grid'
+# Scroll to a leaf tile, not the outer card. Android clips the card's
+# accessibility bounds at the viewport edge, which can make Maestro treat a
+# header-only sliver as fully visible while the nested grid remains offscreen.
 - scrollUntilVisible:
     element:
       id: 'btn-report-photo-.*'
     direction: DOWN
-    timeout: 15000
+    timeout: 60000
+    visibilityPercentage: 100
+    centerElement: true
+- assertVisible:
+    id: 'report-photos-grid'
 - assertVisible:
     id: 'btn-report-photo-.*'
 - tapOn:

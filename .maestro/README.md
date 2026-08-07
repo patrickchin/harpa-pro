@@ -196,6 +196,13 @@ adb reverse tcp:8790 tcp:8790
 adb reverse tcp:9000 tcp:9000
 ```
 
+All current camera flows delegate to
+`helpers/wait-for-camera-shutter-ready.yaml` before tapping the shutter.
+The helper waits for the existing shutter to be enabled, which proves native
+picture-size discovery is stable and the previous native capture has reached a
+terminal callback; burst flows repeat it between captures. Do not replace this
+boundary with a fixed sleep or a whole-flow retry.
+
 **Run:**
 
 ```bash
@@ -245,6 +252,17 @@ Dev-deployment target:
   places it into an issue, then finalizes the report and asserts the
   saved-report page keeps the placed photo visible without exposing placement
   or manual-edit controls.
+- 2026-08-07 follow-up: repeated single-photo capture waits for the shared
+  route-owned current-generation marker after every upload. This prevents the
+  next native Modal from mounting while the prior upload/refetch/regeneration
+  is still producing long Android frames. The helper first gives the shared
+  `dialog-sheet` a bounded 20-second render budget, then requires its semantic
+  camera action.
+- 2026-08-06 follow-up: module 08 waits for the route-owned automatic
+  regeneration boundary after adding a text note and before opening its row
+  actions. This prevents the note-options modal from mounting while the
+  empty-to-generated report panes are replaced. It repeats the boundary after
+  optimistic note deletion and before opening draft actions.
 - Mobile code (`apps/mobile/**`), Maestro flows (`.maestro/**`), and the
   launch runner (`scripts/ci/run-maestro-launch-smoke.sh`) trigger the
   mobile confidence workflow: the Maestro testID gate, Metro bundle
@@ -279,10 +297,17 @@ parts that fixture flows deliberately avoid:
 - real `expo-camera` through camera permission, route mount, shutter,
   thumbnail render, and discard teardown
 
+The shutter starts disabled under default native wiring. On Android it becomes
+enabled only after CameraX reopens following preferred picture-size rebinding;
+the smoke uses the shared camera-readiness helper before capture.
+
 It does not tap Send or commit captured photos. `modules/09-voice-notes.yaml`
 and `modules/10a-photo-notes-draft.yaml` keep deterministic upload,
 transcription, summary, playback, image upload, and delete coverage in
 fixture mode.
+After draft deletion, cleanup accepts either project home or the Projects
+index. The latter is a valid `dismissOrReplaceTo` stack outcome, so the flow
+reopens the edited project before invoking shared project deletion.
 
 Run against the local API stack and a non-fixture dev-client bundle:
 
@@ -386,6 +411,10 @@ node scripts/dev-e2e-auth-broker.cjs
 maestro test .maestro/account-deletion.yaml
 ```
 
+The local Compose migration one-shot arms storage lifecycle with zero grace
+before the API starts. This is required for `DELETE /me`; production and dev
+deployments retain their separate rolling-deploy arming policy.
+
 ## Archived and pending flows
 
 Top-level `.maestro/*.yaml` files are current entrypoints. Historical
@@ -408,6 +437,14 @@ runs do not pick them up by accident.
 The old P3.14a usage-limits-card flow was folded into
 `modules/15-usage.yaml`, which now asserts the free-plan limits card
 and default buckets as part of `regression-journey.yaml`.
+
+## Scroll positioning
+
+- On Android, a tall container at the viewport edge can expose accessibility
+  bounds for only its visible sliver. Maestro may then treat that sliver as
+  `visibilityPercentage: 100` even though nested controls remain offscreen.
+  Scroll to a bounded leaf control with `centerElement: true`, then assert the
+  container and its descendants.
 
 ## iOS sim quirks
 
@@ -432,6 +469,10 @@ and default buckets as part of `regression-journey.yaml`.
   bottom. When tapping report-card controls that scroll near the
   bottom edge, require full visibility and use `centerElement: true`
   before `tapOn`; otherwise Maestro can tap the sticky recorder area.
+  If the target has just entered from below, Maestro's centering gesture can
+  overshoot it above the viewport. In that case, stop at full visibility with
+  `centerElement: false`, apply one small coordinate-bounded upward swipe, wait
+  for settlement, and tap the leaf action.
 
 ## Known infra quirks
 

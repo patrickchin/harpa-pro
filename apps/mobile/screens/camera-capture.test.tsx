@@ -19,11 +19,27 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { Platform } from 'react-native';
+
+const cameraNativeMock = vi.hoisted(() => ({
+  getAvailablePictureSizesAsync: vi.fn<() => Promise<string[]>>(),
+  takePictureAsync: vi.fn<(options: Record<string, unknown>) => Promise<unknown>>(),
+}));
 
 vi.mock('@/lib/native/expo-camera-shim', () => {
   return {
-    CameraView: (props: Record<string, unknown> & { children?: React.ReactNode }) =>
-      React.createElement('rn-CameraView', props, props.children ?? null),
+    CameraView: React.forwardRef(
+      (
+        props: Record<string, unknown> & { children?: React.ReactNode },
+        ref: React.ForwardedRef<unknown>,
+      ) => {
+        React.useImperativeHandle(ref, () => ({
+          getAvailablePictureSizesAsync: cameraNativeMock.getAvailablePictureSizesAsync,
+          takePictureAsync: cameraNativeMock.takePictureAsync,
+        }));
+        return React.createElement('rn-CameraView', props, props.children ?? null);
+      },
+    ),
     useCameraPermissions: () => [
       { granted: true, canAskAgain: true, status: 'granted', expires: 'never' },
       vi.fn(async () => ({
@@ -79,9 +95,7 @@ function baseProps(overrides: Partial<CameraCaptureProps> = {}): CameraCapturePr
 
 describe('CameraCapture', () => {
   it('renders the requesting spinner when permission is pending', () => {
-    const tree = render(
-      <CameraCapture {...baseProps({ permissionOverride: 'requesting' })} />,
-    );
+    const tree = render(<CameraCapture {...baseProps({ permissionOverride: 'requesting' })} />);
     expect(
       tree.root.findAllByProps({ testID: 'camera-permission-requesting' }).length,
     ).toBeGreaterThan(0);
@@ -129,9 +143,7 @@ describe('CameraCapture', () => {
       />,
     );
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-camera-permission-cancel' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-camera-permission-cancel' }).props.onPress();
     });
     expect(onCancel).toHaveBeenCalledOnce();
   });
@@ -144,15 +156,240 @@ describe('CameraCapture', () => {
         })}
       />,
     );
-    expect(
-      tree.root.findAllByProps({ testID: 'camera-capture-root' }).length,
-    ).toBeGreaterThan(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-camera-shutter' }).length,
-    ).toBeGreaterThan(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-camera-done' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'camera-capture-root' }).length).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-camera-shutter' }).length).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-camera-done' }).length).toBeGreaterThan(0);
+  });
+
+  it('keeps the Android shutter disabled until picture-size rebinding is ready', async () => {
+    const originalOs = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'android',
+    });
+    cameraNativeMock.getAvailablePictureSizesAsync.mockResolvedValue(['1856x1392']);
+
+    try {
+      const tree = render(
+        <CameraCapture
+          {...baseProps({
+            permissionOverride: { granted: true, canAskAgain: true },
+          })}
+        />,
+      );
+
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
+
+      await act(async () => {
+        await tree.root
+          .findByType('rn-CameraView' as unknown as React.ComponentType)
+          .props.onCameraReady();
+      });
+
+      expect(
+        tree.root.findByType('rn-CameraView' as unknown as React.ComponentType).props.pictureSize,
+      ).toBe('1856x1392');
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
+
+      await act(async () => {
+        await tree.root
+          .findByType('rn-CameraView' as unknown as React.ComponentType)
+          .props.onCameraReady();
+      });
+
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: originalOs,
+      });
+    }
+  });
+
+  it('keeps the iOS shutter ready across camera flips', async () => {
+    const originalOs = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'ios',
+    });
+    cameraNativeMock.getAvailablePictureSizesAsync.mockResolvedValueOnce([]);
+
+    try {
+      const tree = render(
+        <CameraCapture
+          {...baseProps({
+            permissionOverride: { granted: true, canAskAgain: true },
+          })}
+        />,
+      );
+
+      await act(async () => {
+        await tree.root
+          .findByType('rn-CameraView' as unknown as React.ComponentType)
+          .props.onCameraReady();
+      });
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+
+      act(() => {
+        tree.root.findByProps({ testID: 'btn-camera-flip' }).props.onPress();
+      });
+
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: originalOs,
+      });
+    }
+  });
+
+  it('ignores Android readiness that completes for the camera before a flip', async () => {
+    const originalOs = Platform.OS;
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'android',
+    });
+    let resolveOldReadiness!: (sizes: string[]) => void;
+    const oldReadiness = new Promise<string[]>((resolve) => {
+      resolveOldReadiness = resolve;
+    });
+    cameraNativeMock.getAvailablePictureSizesAsync
+      .mockImplementationOnce(() => oldReadiness)
+      .mockResolvedValueOnce([]);
+
+    try {
+      const tree = render(
+        <CameraCapture
+          {...baseProps({
+            permissionOverride: { granted: true, canAskAgain: true },
+          })}
+        />,
+      );
+      let oldReadyCallback!: Promise<void>;
+      act(() => {
+        oldReadyCallback = tree.root
+          .findByType('rn-CameraView' as unknown as React.ComponentType)
+          .props.onCameraReady();
+      });
+      act(() => {
+        tree.root.findByProps({ testID: 'btn-camera-flip' }).props.onPress();
+      });
+
+      await act(async () => {
+        resolveOldReadiness([]);
+        await oldReadyCallback;
+      });
+
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
+
+      await act(async () => {
+        await tree.root
+          .findByType('rn-CameraView' as unknown as React.ComponentType)
+          .props.onCameraReady();
+      });
+      expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+    } finally {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: originalOs,
+      });
+    }
+  });
+
+  it('enables the shutter when native picture-size discovery fails', async () => {
+    cameraNativeMock.getAvailablePictureSizesAsync.mockRejectedValueOnce(
+      new Error('size discovery unavailable'),
+    );
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+        })}
+      />,
+    );
+
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
+
+    await act(async () => {
+      await tree.root
+        .findByType('rn-CameraView' as unknown as React.ComponentType)
+        .props.onCameraReady();
+    });
+
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+  });
+
+  it('releases the native capture lock when the fast-mode save callback completes', async () => {
+    let captureOptions: Record<string, unknown> | undefined;
+    cameraNativeMock.getAvailablePictureSizesAsync.mockResolvedValueOnce([]);
+    cameraNativeMock.takePictureAsync.mockImplementationOnce((options) => {
+      captureOptions = options;
+      return new Promise(() => {});
+    });
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+        })}
+      />,
+    );
+
+    await act(async () => {
+      await tree.root
+        .findByType('rn-CameraView' as unknown as React.ComponentType)
+        .props.onCameraReady();
+    });
+
+    act(() => {
+      void tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
+    });
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
+
+    await act(async () => {
+      const onPictureSaved = captureOptions?.onPictureSaved as
+        ((photo: { uri: string; width: number; height: number }) => void) | undefined;
+      onPictureSaved?.({ uri: 'file:///native/shot-1.jpg', width: 1856, height: 1392 });
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'btn-camera-thumb-0' }).length).toBeGreaterThan(0);
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+  });
+
+  it('does not let a delayed save callback unlock a newer native capture', async () => {
+    let firstCaptureOptions: Record<string, unknown> | undefined;
+    cameraNativeMock.getAvailablePictureSizesAsync.mockResolvedValueOnce([]);
+    cameraNativeMock.takePictureAsync
+      .mockImplementationOnce(async (options) => {
+        firstCaptureOptions = options;
+        return {};
+      })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+        })}
+      />,
+    );
+
+    await act(async () => {
+      await tree.root
+        .findByType('rn-CameraView' as unknown as React.ComponentType)
+        .props.onCameraReady();
+      await tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
+    });
+    act(() => {
+      void tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
+    });
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
+
+    await act(async () => {
+      const onPictureSaved = firstCaptureOptions?.onPictureSaved as
+        ((photo: { uri: string; width: number; height: number }) => void) | undefined;
+      onPictureSaved?.({ uri: 'file:///native/shot-1.jpg', width: 1856, height: 1392 });
+    });
+
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(true);
   });
 
   it('shutter appends a capture via the takePicture injection', async () => {
@@ -170,13 +407,12 @@ describe('CameraCapture', () => {
         })}
       />,
     );
+    expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
     await act(async () => {
       await tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
     });
     expect(takePicture).toHaveBeenCalledOnce();
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-camera-thumb-0' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-camera-thumb-0' }).length).toBeGreaterThan(0);
   });
 
   it('flip + flash toggles relabel their controls (mode toggle)', () => {
@@ -192,10 +428,9 @@ describe('CameraCapture', () => {
     act(() => {
       flashBtn.props.onPress();
     });
-    expect(
-      tree.root.findByProps({ testID: 'btn-camera-flash' }).props
-        .accessibilityLabel,
-    ).toBe('Flash Auto');
+    expect(tree.root.findByProps({ testID: 'btn-camera-flash' }).props.accessibilityLabel).toBe(
+      'Flash Auto',
+    );
 
     const flipBtn = tree.root.findByProps({ testID: 'btn-camera-flip' });
     expect(flipBtn.props.accessibilityLabel).toBe('Flip camera');
@@ -203,10 +438,9 @@ describe('CameraCapture', () => {
       flipBtn.props.onPress();
     });
     // Re-query still resolves to a single Pressable host.
-    expect(
-      tree.root.findByProps({ testID: 'btn-camera-flip' }).props
-        .accessibilityLabel,
-    ).toBe('Flip camera');
+    expect(tree.root.findByProps({ testID: 'btn-camera-flip' }).props.accessibilityLabel).toBe(
+      'Flip camera',
+    );
   });
 
   it('Done invokes onCommit with the captured URI list', () => {
@@ -248,9 +482,7 @@ describe('CameraCapture', () => {
 
   it('cancel with captures opens discard dialog → Discard → onCancel', () => {
     const onCancel = vi.fn();
-    const seed: CameraCaptureItem[] = [
-      { uri: 'file:///a.jpg', width: 100, height: 100 },
-    ];
+    const seed: CameraCaptureItem[] = [{ uri: 'file:///a.jpg', width: 100, height: 100 }];
     const tree = render(
       <CameraCapture
         {...baseProps({
@@ -264,18 +496,14 @@ describe('CameraCapture', () => {
       tree.root.findByProps({ testID: 'btn-camera-cancel' }).props.onPress();
     });
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-camera-confirm-discard' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-camera-confirm-discard' }).props.onPress();
     });
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it('tapping a thumbnail removes it from the strip', () => {
     const deleteFile = vi.fn();
-    const seed: CameraCaptureItem[] = [
-      { uri: 'file:///a.jpg', width: 100, height: 100 },
-    ];
+    const seed: CameraCaptureItem[] = [{ uri: 'file:///a.jpg', width: 100, height: 100 }];
     const tree = render(
       <CameraCapture
         {...baseProps({
@@ -286,14 +514,10 @@ describe('CameraCapture', () => {
       />,
     );
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-camera-thumb-0' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-camera-thumb-0' }).props.onPress();
     });
     expect(deleteFile).toHaveBeenCalledWith('file:///a.jpg');
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-camera-thumb-0' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-camera-thumb-0' })).toHaveLength(0);
   });
 
   it('matches snapshot — granted, empty', () => {
@@ -317,9 +541,7 @@ describe('CameraCapture', () => {
         })}
       />,
     );
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-camera-save-to-roll' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-camera-save-to-roll' })).toHaveLength(0);
   });
 
   it('save-to-camera-roll toggle renders the controlled state', () => {
@@ -394,9 +616,9 @@ describe('CameraCapture', () => {
       />,
     );
     // Initial zoom is 0.
-    expect(
-      tree.root.findByType('rn-CameraView' as unknown as React.ComponentType).props.zoom,
-    ).toBe(0);
+    expect(tree.root.findByType('rn-CameraView' as unknown as React.ComponentType).props.zoom).toBe(
+      0,
+    );
 
     const detector = tree.root.findByProps({ testID: 'camera-gesture-surface' });
     // Walk up to the GestureDetector (parent host) and grab its
@@ -447,9 +669,9 @@ describe('CameraCapture', () => {
       tap!.__cfg.onEnd?.({ x: 100, y: 400 });
     });
     expect(onFocusPoint).toHaveBeenCalledWith({ x: 0.25, y: 0.5 });
-    expect(
-      tree.root.findAllByProps({ testID: 'camera-focus-indicator' }).length,
-    ).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ testID: 'camera-focus-indicator' }).length).toBeGreaterThan(
+      0,
+    );
   });
 });
 

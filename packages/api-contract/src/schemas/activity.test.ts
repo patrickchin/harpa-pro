@@ -8,10 +8,13 @@ const baseEvent = {
   actorUserId: 'usr_0123456789ab',
   actorLabel: 'Pat Builder',
   actorEmail: 'pat@example.com',
+  actorState: 'available',
   subjectId: 'prj_01234567',
   subjectLabel: 'City Hall',
+  subjectState: 'available',
   projectId: 'prj_01234567',
   projectLabel: 'City Hall',
+  projectState: 'available',
   requestId: 'req-activity-1',
 };
 
@@ -25,6 +28,7 @@ describe('admin activity schemas', () => {
       subjectLabel: 'Pat Builder',
       projectId: null,
       projectLabel: null,
+      projectState: 'none',
       metadata: { method: 'email_otp' },
     });
     expect(signup.occurredAt).toBe('2026-07-29T10:00:00.000Z');
@@ -102,12 +106,15 @@ describe('admin activity schemas', () => {
       eventType: 'user.signed_up',
       subjectType: 'user',
       actorUserId: null,
-      actorLabel: 'Deleted user',
+      actorLabel: null,
       actorEmail: null,
+      actorState: 'deleted',
       subjectId: null,
-      subjectLabel: 'Deleted user',
+      subjectLabel: null,
+      subjectState: 'deleted',
       projectId: null,
       projectLabel: null,
+      projectState: 'none',
       metadata: { method: 'email_otp' },
     });
 
@@ -163,6 +170,47 @@ describe('admin activity schemas', () => {
       projectState: 'none',
       projectLabel: null,
     });
+  });
+
+  it.each([
+    ['available actor without a label', { actorLabel: null }],
+    ['deleted actor with a label', { actorState: 'deleted', actorLabel: 'Deleted user' }],
+    ['available subject without a label', { subjectLabel: null }],
+    [
+      'deleted subject with a label',
+      { subjectState: 'deleted', subjectLabel: 'Deleted project' },
+    ],
+    ['available project without a label', { projectLabel: null }],
+    [
+      'deleted project with a label',
+      { projectState: 'deleted', projectLabel: 'Deleted project' },
+    ],
+  ])('rejects an %s', (_description, override) => {
+    expect(() =>
+      activity.event.parse({
+        ...baseEvent,
+        eventType: 'project.created',
+        subjectType: 'project',
+        metadata: {},
+        ...override,
+      }),
+    ).toThrow();
+  });
+
+  it('requires project state to agree with project context', () => {
+    expect(() =>
+      activity.event.parse({
+        ...baseEvent,
+        eventType: 'user.signed_up',
+        subjectType: 'user',
+        subjectId: 'usr_0123456789ab',
+        subjectLabel: 'Pat Builder',
+        projectId: null,
+        projectLabel: null,
+        projectState: 'deleted',
+        metadata: { method: 'email_otp' },
+      }),
+    ).toThrow();
   });
 
   it('defaults to milestone events and accepts each level filter', () => {

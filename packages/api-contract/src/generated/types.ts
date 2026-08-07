@@ -5822,11 +5822,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "milestone";
@@ -5844,11 +5850,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "milestone";
@@ -5863,11 +5875,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "milestone";
@@ -5884,11 +5902,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5903,11 +5927,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5922,11 +5952,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5941,11 +5977,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";

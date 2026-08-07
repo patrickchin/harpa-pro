@@ -155,6 +155,13 @@ function requireEntityLabel(
 export const event = eventShape.superRefine((value, ctx) => {
   requireEntityLabel(value.actorState, value.actorLabel, 'actorLabel', ctx);
   requireEntityLabel(value.subjectState, value.subjectLabel, 'subjectLabel', ctx);
+  if (value.actorState === 'deleted' && value.actorEmail !== null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'actorEmail must be null when the actor is deleted',
+      path: ['actorEmail'],
+    });
+  }
 
   const hasProjectId = value.projectId !== null;
   const hasProjectLabel = value.projectLabel !== null;

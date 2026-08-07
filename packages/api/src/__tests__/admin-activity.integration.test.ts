@@ -311,6 +311,46 @@ describe('GET /admin/activity', () => {
     }
   });
 
+  it('never returns an email when the actor join is unavailable', async () => {
+    const missingActorId = makeUserId();
+    const missingActorEventId = newId('aud');
+
+    try {
+      await db.query(
+        `INSERT INTO app.activity_events
+           (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+            project_id, request_id, dedupe_key, metadata)
+         VALUES
+           ($1, '2026-07-29T03:45:00Z', 'report.created', $2, 'report', $3, $4,
+            'request-missing-actor-email', $5, '{"reportNumber":7}')`,
+        [
+          missingActorEventId,
+          missingActorId,
+          reportId,
+          projectId,
+          `report.created:${missingActorEventId}`,
+        ],
+      );
+
+      const response = await createApp().request(`/admin/activity?actorUserId=${missingActorId}`, {
+        headers: await adminHeaders(),
+      });
+      expect(response.status).toBe(200);
+      const body = activitySchemas.listResponse.parse(await response.json());
+
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0]).toMatchObject({
+        id: missingActorEventId,
+        actorUserId: missingActorId,
+        actorLabel: null,
+        actorEmail: null,
+        actorState: 'deleted',
+      });
+    } finally {
+      await db.query(`DELETE FROM app.activity_events WHERE id = $1`, [missingActorEventId]);
+    }
+  });
+
   it('uses a stable cursor and explicit deleted-entity state', async () => {
     const first = activitySchemas.listResponse.parse(
       await (

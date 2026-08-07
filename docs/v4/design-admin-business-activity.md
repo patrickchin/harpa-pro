@@ -156,7 +156,9 @@ prompts, or other free-form content. The admin read query left-joins current
 labels from their source tables. The API reports join availability separately
 from label text: `actorState` and `subjectState` are `available` or `deleted`,
 while `projectState` is `none`, `available`, or `deleted`. Available labels are
-current source values; deleted labels are null. The admin UI derives its
+current source values; deleted labels are null. `actorEmail` must also be null
+when `actorState` is `deleted`, and the response contract rejects a
+contradictory payload before the admin can render or export it. The admin UI derives its
 bracketed deleted-entity placeholder from the explicit state and entity type
 and keeps stable IDs available in filters, the detail drawer, and the
 plain-text view. Display strings are never reserved state markers, so a live
@@ -306,7 +308,8 @@ Items are display-ready and contain current actor/project labels when they
 still exist. Each item also includes `actorState`, `subjectState`, and
 `projectState`; clients must use those fields rather than comparing label
 strings. Deleted actor and subject labels are null, deleted project labels are
-null, and a projectless event uses `projectState: 'none'`. The endpoint has
+null, a deleted actor's email is null, and a projectless event uses
+`projectState: 'none'`. The endpoint has
 fixed newest-first ordering; the first release does not expose arbitrary server
 sorting or a total row count.
 

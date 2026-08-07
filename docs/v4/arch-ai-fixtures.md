@@ -98,6 +98,11 @@ Before writing a fixture, the redactor:
   `<redacted-organization>`.
 - Replace street addresses and postcodes with `<redacted-address>`.
 
+Recorder input and provider base-URL overrides can be large even though neither
+is a public request parameter. Edge normalization uses single-pass character
+scans rather than end-anchored repetition, so a long non-matching suffix cannot
+turn fixture recording or adapter construction into polynomial work.
+
 `redactFixture()` discovers identifiers across the request, provider
 response, and optional private source context, then writes only the
 redacted request and response. This matters when a canonical replay

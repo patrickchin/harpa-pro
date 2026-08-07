@@ -3,21 +3,23 @@ appId: ${MAESTRO_APP_ID}
 # capture-one-photo-note.yaml - helper: add one fixture-camera photo note
 #
 # Pre-condition: Generate screen is visible.
-# Post-condition: Generate screen is visible again; the upload has had a
-# chance to settle before the caller continues.
+# Post-condition: Generate screen is visible again; the upload, canonical
+# refetch, and route-owned auto-regeneration are settled before the caller
+# continues.
 
 - tapOn:
     id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "btn-attachment-camera"
     timeout: 8000
 - tapOn:
     id: "btn-attachment-camera"
-- extendedWaitUntil:
-    visible:
-      id: "btn-camera-shutter"
-    timeout: 15000
+- runFlow: wait-for-camera-shutter-ready.yaml
 - tapOn:
     id: "btn-camera-shutter"
 - extendedWaitUntil:
@@ -38,5 +40,9 @@ appId: ${MAESTRO_APP_ID}
     notVisible:
       id: "batch-grid-tile-0-ring"
     timeout: 30000
+# Repeated callers must not enqueue the next camera interaction while the
+# route is still regenerating from this upload. The current-generation marker
+# includes the upload/refetch epoch and the canonical note-change clock.
+- runFlow: wait-for-auto-regeneration.yaml
 - waitForAnimationToEnd:
     timeout: 1500

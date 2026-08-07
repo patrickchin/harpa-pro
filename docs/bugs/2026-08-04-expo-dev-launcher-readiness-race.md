@@ -21,6 +21,13 @@ request, and the final screenshot showed a healthy green
 flow had retained its older duplicated launch prelude instead of the CI
 smoke's readiness and server-selection boundaries.
 
+The complete local entrypoint audit on 2026-08-07 then reproduced a second
+bounded-wait failure in the standalone CI smoke. Two cache-empty Windows
+bundles took 68.586 and 83.006 seconds for 4,901 modules; React Native started
+after the 90-second post-link assertion had almost expired, and the app became
+ready immediately after Maestro failed. Both artifacts showed a blank app
+surface with no app crash or ANR, while a cache-warm run passed unchanged.
+
 **Root cause.** The #255 log proves a harness design gap: the clear-state flow
 called `openLink` immediately after `launchApp` without first observing Expo
 Dev Launcher readiness. Its [diagnostic artifact][PR #255 diagnostic artifact]
@@ -43,11 +50,12 @@ Metro, API, or authentication failure.
 `Development Build` heading or the known Quickstep dialog. If Quickstep is
 present, tap its semantic `Wait` action and then require `Development Build`
 within 30 seconds before opening the Metro deep link. After `openLink`, observe
-for up to 90 seconds until Quickstep, the Metro server row, or app UI is
+for up to 180 seconds until Quickstep, the Metro server row, or app UI is
 visible; then recover Quickstep conditionally before the existing server-row
-selection and app-UI readiness assertion. The flow never uses coordinate taps
+selection. Allow another 180 seconds for app UI because a cache-empty bundle
+can start only after that row is selected. The flow never uses coordinate taps
 or treats the final launcher/app assertions as optional. The independent
-Maestro process ceiling is 420 seconds, within the job's 30-minute limit, so
+Maestro process ceiling is 600 seconds, within the job's 30-minute limit, so
 the declared fail-closed waits can finish instead of being killed at 180
 seconds.
 
@@ -68,8 +76,8 @@ shared-dev deployment retains its target-specific port-8082 prelude.
 **Test.** `release-confidence-gates.test.sh` requires the bounded launcher-or-
 Quickstep target, exactly two conditional Quickstep checks, exactly two
 semantic `Wait` actions, the strict launcher recheck, and their ordering around
-`openLink` and the Metro server assertion. It also locks the 90-second bounded
-post-link observation and 420-second process ceiling. The YAML parser covers
+`openLink` and the Metro server assertion. It also locks both 180-second cold-
+bundle waits and the 600-second process ceiling. The YAML parser covers
 the declarative flow. The existing artifacts reproduce the interception; the
 updated flow still requires a fresh PR-time Android smoke to validate recovery
 on a real emulator.

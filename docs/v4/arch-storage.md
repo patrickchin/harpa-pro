@@ -428,6 +428,17 @@ old lease-less presigns have expired. Lease enforcement is armed once,
 the grace. See
 [`design-r2-object-lifecycle.md`](design-r2-object-lifecycle.md) for
 the full race analysis and operational queries.
+Local Compose is deliberately different: its migration one-shot arms the
+existing rollout helper with a zero-second grace and enables account deletion
+before seed/API startup. A freshly created disposable stack has no older API
+machine or outstanding presigned upload to protect; changing the migration's
+closed default would still be unsafe for deployed databases.
+Enabling deletion also requires the local `storage-worker` service. The route
+only attempts the immediately due job; the worker drains retries and the final
+exact-key pass scheduled after all signed PUTs expire. It shares the API's
+Postgres/MinIO configuration, waits for migrations and bucket creation,
+restarts unless explicitly stopped, and must start before the API exposes
+account deletion.
 The current rollout row in each deployed database is **UNKNOWN** until an
 operational query verifies it.
 

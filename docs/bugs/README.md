@@ -342,12 +342,29 @@ out of its own scenario. Seed rolling-window fixtures relative to the database
 clock, preserve only the offsets needed for ordering, and keep the browser test
 on the real relative filter.
 
+### R18 — Display strings masquerade as entity state
+
+A renderer that recognizes deletion by comparing a label with a fallback such
+as `Deleted user` makes that string an undocumented reserved value. A live,
+user-named entity can collide with it and be styled, announced, filtered, and
+exported as unavailable even though the database join succeeded. Keep state in
+an explicit contract field, derive it from row presence, and treat display
+labels as opaque data. Every related identity field must agree with that state:
+a deleted actor cannot retain an email. Regression fixtures must include live
+labels that are exactly equal to every human-readable fallback they could
+collide with and contradictory payloads that must fail closed.
+
 ## Bugs
 
 - **2026-06-06** _(R3)_ — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-07** _(R18)_ — Admin activity treated live users and projects named
+  exactly `Deleted user` or `Deleted project` as unavailable because the UI
+  reused fallback label text as deletion state. Fix: add explicit API entity
+  state and collision regressions across contract, API, component, and browser
+  coverage. [detail](2026-08-07-admin-activity-label-state-collision.md)
 - **2026-08-07** — Android Maestro accepted a 37-pixel clipped sliver of the
   finalized report's outer Photos card as fully visible, then failed because
   the nested grid remained below the viewport. Fix: scroll to and center a

@@ -1,11 +1,10 @@
 name: lint-typecheck
 
-# Two-job pattern: a tiny `changes` job computes path-filter outputs,
-# and `lint` (the required-check job) skips when no code paths
-# changed. A skipped required check is treated as passing by branch
-# protection — see
-# https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution
-# Push events always run (we want full coverage on main / dev).
+# Two-job pattern: a tiny `changes` job computes path-filter outputs.
+# The required `lint-typecheck` job always reports and always checks the
+# reviewed Node pins, including on PRs that change only `.nvmrc` or `.npmrc`.
+# Heavy lint/typecheck steps still short-circuit when no code paths changed.
+# Push events always run the full job (we want full coverage on main / dev).
 
 on:
   pull_request:
@@ -24,21 +23,28 @@ jobs:
 
   lint-typecheck:
     needs: changes
-    if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Node version policy
+        run: bash scripts/ci/__tests__/node-version-policy.test.sh
       - uses: ./.github/actions/setup-monorepo
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
       - run: pnpm --filter @harpa/api-contract build
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
       - run: pnpm lint
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
       - run: pnpm typecheck
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
       - name: Removal verification gates
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
         run: |
           bash scripts/check-no-supabase.sh
           bash scripts/check-no-unistyles.sh
           bash scripts/check-scope-tests.sh
           bash scripts/check-mobile-lib-flat.sh
       - name: CI policy tests
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
         # Focused policy checks for dependencies and shell glue. Keeps them
         # honest without spinning up the full integration matrix.
         run: |
@@ -57,7 +63,6 @@ jobs:
           bash scripts/ci/__tests__/verify-storage-worker-started.test.sh
           bash scripts/ci/__tests__/verify-deployed-sha.test.sh
           bash scripts/ci/__tests__/release-confidence-gates.test.sh
-          bash scripts/ci/__tests__/node-version-policy.test.sh
           bash scripts/ci/__tests__/admin-site-separation.test.sh
           bash scripts/ci/__tests__/admin-deploy-smoke-policy.test.sh
           bash scripts/ci/__tests__/cloudflare-pages-build.test.sh
@@ -65,6 +70,7 @@ jobs:
           bash scripts/ci/__tests__/verify-pages-deployment.test.sh
           bash scripts/ci/__tests__/dependabot-trust-policy.test.sh
       - name: Shellcheck CI helpers
+        if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
         # Lint shared shell scripts that ship in CI workflows. Catches
         # syntactic regressions (unquoted vars, broken loops, useless
         # echos) at PR time, before they reach dev/main and break a

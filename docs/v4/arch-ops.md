@@ -7,7 +7,9 @@ GitHub Actions, the Fly API image, and EAS native builds. `.nvmrc` is the
 local source of truth; `package.json` plus `.npmrc` reject other Node majors,
 and the CI policy test prevents workflow-local overrides. Upgrade these pins
 together in one reviewed change so local tools, OTA publication, builds, and
-the deployed API exercise the same runtime.
+the deployed API exercise the same runtime. The required `lint-typecheck`
+context runs the Node policy even when a pull request changes only `.nvmrc` or
+`.npmrc`; the heavier lint and typecheck steps remain path-gated.
 
 Homebrew-installed tools may carry their own Node dependency. That installation
 does not define this repository's runtime; `nvm use` does.

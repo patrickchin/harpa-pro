@@ -20,8 +20,9 @@ network-family autoselection only for its short-lived process, leaving the
 deployed API default unchanged.
 
 **Test.** `scripts/ci/__tests__/node-version-policy.test.sh` prevents runtime
-pin drift, and `admin-cli-network.test.ts` verifies the provisioning process
-disables the failing connection strategy.
+pin drift and must run in the required `lint-typecheck` context even for a
+selector-only change. `admin-cli-network.test.ts` verifies the provisioning
+process disables the failing connection strategy.
 
 **Pattern.** Configuration drift plus a manual-only operational path; no
 existing pattern number.

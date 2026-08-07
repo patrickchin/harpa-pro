@@ -90,6 +90,62 @@ else
   pass "workflows inherit Node from the shared setup action"
 fi
 
+if REPO_ROOT="$REPO_ROOT" node <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
+
+const workflowPath = path.join(
+  process.env.REPO_ROOT,
+  '.github/workflows/lint-typecheck.yml',
+);
+const lines = fs.readFileSync(workflowPath, 'utf8').split('\n');
+const jobStart = lines.findIndex((line) => line === '  lint-typecheck:');
+if (jobStart === -1) {
+  throw new Error('lint-typecheck job is missing');
+}
+
+const nextJobOffset = lines
+  .slice(jobStart + 1)
+  .findIndex((line) => /^  [A-Za-z0-9_-]+:$/.test(line));
+const jobEnd = nextJobOffset === -1 ? lines.length : jobStart + 1 + nextJobOffset;
+const jobLines = lines.slice(jobStart, jobEnd);
+const stepsStart = jobLines.findIndex((line) => line === '    steps:');
+if (stepsStart === -1) {
+  throw new Error('lint-typecheck steps are missing');
+}
+if (jobLines.slice(0, stepsStart).some((line) => line.startsWith('    if:'))) {
+  throw new Error('lint-typecheck must not skip at the job level');
+}
+
+const policyStart = jobLines.findIndex(
+  (line) => line === '      - name: Node version policy',
+);
+if (policyStart === -1) {
+  throw new Error('standalone Node version policy step is missing');
+}
+const nextStepOffset = jobLines
+  .slice(policyStart + 1)
+  .findIndex((line) => line.startsWith('      - '));
+const policyEnd =
+  nextStepOffset === -1 ? jobLines.length : policyStart + 1 + nextStepOffset;
+const policyLines = jobLines.slice(policyStart, policyEnd);
+if (policyLines.some((line) => line.startsWith('        if:'))) {
+  throw new Error('Node version policy step must run unconditionally');
+}
+if (
+  !policyLines.includes(
+    '        run: bash scripts/ci/__tests__/node-version-policy.test.sh',
+  )
+) {
+  throw new Error('Node version policy step runs the wrong command');
+}
+NODE
+then
+  pass "required lint context always runs the Node version policy"
+else
+  fail "required lint context always runs the Node version policy"
+fi
+
 if EXPECTED_NODE_VERSION="$EXPECTED_NODE_VERSION" REPO_ROOT="$REPO_ROOT" node <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');

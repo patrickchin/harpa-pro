@@ -666,8 +666,9 @@ Push to main (production)
     ↳ /readyz and /admin/readyz verified independently
   ↳ Cloudflare Git deploys approved production branches
     ↳ site-prod.yml and admin-prod.yml verify exact SHA + custom domains
-    ↳ dashboard-prod.yml verifies the Pages hostname and any approved custom
-       domain after dashboard production activation
+    ↳ dashboard-prod.yml stays dormant until the repository variable
+       DASHBOARD_PRODUCTION_ENABLED is true, then verifies the Pages hostname
+       and any approved custom domain after dashboard production activation
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass

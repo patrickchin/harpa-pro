@@ -225,6 +225,13 @@ Dev-deployment target:
   `scripts/dev-e2e-api-proxy.cjs` on `8788`,
   `scripts/dev-e2e-r2-proxy.cjs` on `8791`, plus the auth broker on
   `8790`.
+- Treat all three reversed ports as untrusted device inputs. The API proxy
+  accepts only relative request paths and pins them to the operator-controlled
+  HTTPS `E2E_API_TARGET_URL`. It rewrites only SigV4-signed URLs on strict
+  `*.r2.cloudflarestorage.com` or `*.r2.dev` suffixes. The R2 proxy revalidates
+  the same boundary, permits only `GET`, `HEAD`, and `PUT`, fixes transport to
+  HTTPS port 443, and never follows redirects. Invalid targets fail before an
+  outbound socket opens.
 - Dev runs must create unique per-run data and clean it up in-flow;
   they must not truncate the shared dev database.
 - `mo journey --target dev` is the intended future entry point once

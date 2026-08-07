@@ -71,8 +71,7 @@ expect.addSnapshotSerializer({
 type AnyProps = Record<string, unknown> & { children?: React.ReactNode };
 
 function makeRNComponent(name: string) {
-  const Component = (props: AnyProps) =>
-    React.createElement(`rn-${name}`, props, props.children);
+  const Component = (props: AnyProps) => React.createElement(`rn-${name}`, props, props.children);
   Component.displayName = `RN.${name}`;
   return Component;
 }
@@ -97,8 +96,7 @@ vi.mock('react-native', () => {
 
   const Platform = {
     OS: 'ios',
-    select: <T,>(spec: { ios?: T; android?: T; default?: T }) =>
-      spec.ios ?? spec.default,
+    select: <T>(spec: { ios?: T; android?: T; default?: T }) => spec.ios ?? spec.default,
   };
 
   const StyleSheet = {
@@ -124,6 +122,13 @@ vi.mock('react-native', () => {
   const Keyboard = {
     dismiss: () => undefined,
     addListener: () => ({ remove: () => undefined }),
+  };
+
+  const InteractionManager = {
+    runAfterInteractions: (callback: () => void) => {
+      callback();
+      return { cancel: () => undefined };
+    },
   };
 
   // Animated: minimal surface used by the Generate Notes keyboard
@@ -202,6 +207,7 @@ vi.mock('react-native', () => {
     Dimensions,
     useWindowDimensions,
     Keyboard,
+    InteractionManager,
     BackHandler,
     ToastAndroid,
     Animated,
@@ -308,7 +314,12 @@ vi.mock('react-native-reanimated', async () => {
   const ReactNative = await import('react-native');
   const View = ReactNative.View;
   return {
-    default: { View, ScrollView: ReactNative.ScrollView, Text: ReactNative.Text, createAnimatedComponent: (C: unknown) => C },
+    default: {
+      View,
+      ScrollView: ReactNative.ScrollView,
+      Text: ReactNative.Text,
+      createAnimatedComponent: (C: unknown) => C,
+    },
     View,
     ScrollView: ReactNative.ScrollView,
     Text: ReactNative.Text,
@@ -363,7 +374,11 @@ function createAnimationPresetMock(): unknown {
 vi.mock('expo-asset', () => ({
   Asset: {
     loadAsync: vi.fn(async (mod: unknown) => [
-      { localUri: 'file:///fixtures/voice-sample.m4a', uri: 'file:///fixtures/voice-sample.m4a', mod },
+      {
+        localUri: 'file:///fixtures/voice-sample.m4a',
+        uri: 'file:///fixtures/voice-sample.m4a',
+        mod,
+      },
     ]),
     fromModule: (mod: unknown) => ({
       localUri: 'file:///fixtures/voice-sample.m4a',
@@ -396,9 +411,8 @@ vi.mock('expo-constants', () => ({
 // the JS reload time on the BuildBadge. Freeze it in tests so screen
 // snapshots stay deterministic across runs.
 vi.mock('@/lib/config/build-info', async () => {
-  const actual = await vi.importActual<typeof import('./lib/config/build-info')>(
-    '@/lib/config/build-info',
-  );
+  const actual =
+    await vi.importActual<typeof import('./lib/config/build-info')>('@/lib/config/build-info');
   return {
     ...actual,
     buildInfo: {
@@ -513,18 +527,40 @@ vi.mock('react-native-gesture-handler', () => {
       return chain;
     };
     // Populate known methods that store callbacks
-    chain.onBegin = (fn: AnyFn) => { cfg.onBegin = fn; return chain; };
-    chain.onStart = (fn: AnyFn) => { cfg.onStart = fn; return chain; };
-    chain.onUpdate = (fn: AnyFn) => { cfg.onUpdate = fn; return chain; };
-    chain.onEnd = (fn: AnyFn) => { cfg.onEnd = fn; return chain; };
+    chain.onBegin = (fn: AnyFn) => {
+      cfg.onBegin = fn;
+      return chain;
+    };
+    chain.onStart = (fn: AnyFn) => {
+      cfg.onStart = fn;
+      return chain;
+    };
+    chain.onUpdate = (fn: AnyFn) => {
+      cfg.onUpdate = fn;
+      return chain;
+    };
+    chain.onEnd = (fn: AnyFn) => {
+      cfg.onEnd = fn;
+      return chain;
+    };
     // All other chainable config methods (enabled, activeOffsetY, failOffsetX,
     // numberOfTaps, requireExternalGestureToFail, runOnJS, minPointers, etc.)
     const noop = () => chain;
     for (const m of [
-      'enabled', 'activeOffsetY', 'failOffsetX', 'activeOffsetX',
-      'numberOfTaps', 'requireExternalGestureToFail', 'runOnJS',
-      'minPointers', 'maxPointers', 'minDistance', 'shouldCancelWhenOutside',
-      'hitSlop', 'withTestId', 'cancelsTouchesInView',
+      'enabled',
+      'activeOffsetY',
+      'failOffsetX',
+      'activeOffsetX',
+      'numberOfTaps',
+      'requireExternalGestureToFail',
+      'runOnJS',
+      'minPointers',
+      'maxPointers',
+      'minDistance',
+      'shouldCancelWhenOutside',
+      'hitSlop',
+      'withTestId',
+      'cancelsTouchesInView',
     ]) {
       chain[m] = noop;
     }
@@ -560,8 +596,7 @@ vi.mock('react-native-gesture-handler', () => {
 // wrapper that lays out children sequentially.
 vi.mock('react-native-pager-view', () => ({
   __esModule: true,
-  default: (props: AnyProps) =>
-    React.createElement('rn-PagerView', props, props.children),
+  default: (props: AnyProps) => React.createElement('rn-PagerView', props, props.children),
 }));
 
 // `react-native-svg` ships native bindings; render each export as a
@@ -680,9 +715,7 @@ vi.mock('expo-file-system', () => {
     size = 80_000;
     exists = true;
     constructor(...parts: Array<string | { uri: string }>) {
-      this.uri = parts
-        .map((p) => (typeof p === 'string' ? p : p.uri))
-        .join('/');
+      this.uri = parts.map((p) => (typeof p === 'string' ? p : p.uri)).join('/');
     }
     delete() {
       // no-op
@@ -700,9 +733,7 @@ vi.mock('expo-file-system', () => {
   class Directory {
     uri: string;
     constructor(...parts: Array<string | { uri: string }>) {
-      this.uri = parts
-        .map((p) => (typeof p === 'string' ? p : p.uri))
-        .join('/');
+      this.uri = parts.map((p) => (typeof p === 'string' ? p : p.uri)).join('/');
     }
     create() {
       // no-op

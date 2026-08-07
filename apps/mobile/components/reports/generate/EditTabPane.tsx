@@ -51,7 +51,11 @@ export function EditTabPane({ width }: EditTabPaneProps) {
                     : ''}
             </Text>
           </View>
-          <View className={generation.isUpdating ? 'flex-1 opacity-60' : 'flex-1'}>
+          <View
+            collapsable={false}
+            className={generation.isUpdating ? 'flex-1 opacity-60' : 'flex-1'}
+            testID="edit-tab-content"
+          >
             <ReportEditForm
               report={generation.report}
               onChange={generation.setReport}

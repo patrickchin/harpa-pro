@@ -555,6 +555,9 @@ require_fixed ".maestro/account-deletion.yaml" \
 require_fixed ".maestro/store-screenshots.yaml" \
   "- runFlow: helpers/launch-local-dev-client.yaml" \
   "store screenshot flow uses the shared dev-client launch helper"
+require_fixed "scripts/maestro/seed-store-screenshots.sh" \
+  "MSYS_NO_PATHCONV=1 docker run" \
+  "store screenshot seed preserves the container shell path under Git Bash"
 require_fixed ".maestro/helpers/wait-for-camera-shutter-ready.yaml" \
   "id: 'btn-camera-shutter'" \
   "camera readiness helper targets the semantic shutter control"

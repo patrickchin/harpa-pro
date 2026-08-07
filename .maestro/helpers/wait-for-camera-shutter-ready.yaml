@@ -1,0 +1,12 @@
+appId: ${MAESTRO_APP_ID}
+---
+# CameraCapture keeps the shutter disabled until native picture-size discovery
+# is stable. On Android that means CameraX has reopened after applying the
+# selected picture size; during a burst it also proves the prior capture has
+# left the in-flight state.
+
+- extendedWaitUntil:
+    visible:
+      id: 'btn-camera-shutter'
+      enabled: true
+    timeout: 30000

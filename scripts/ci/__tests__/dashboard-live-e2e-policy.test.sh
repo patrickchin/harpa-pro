@@ -80,6 +80,8 @@ require_fixed "$LIVE_SPEC" "async function getReportDebug" \
 require_fixed "$LIVE_SPEC" "expect(reportDebug.lastGeneration?.fixtureMode).toBe('live')" \
   "live journey proves server-selected provider mode"
 require_fixed "$LIVE_SPEC" "finally" "live journey has failure-path cleanup"
+require_fixed "$LIVE_SPEC" "data: {}," \
+  "live session cleanup sends the required JSON content type"
 require_fixed "$LIVE_SPEC" "This report changed on another device" \
   "live journey protects concurrent keyboard edits"
 require_fixed "$LIVE_SPEC" "Confirm removal" \

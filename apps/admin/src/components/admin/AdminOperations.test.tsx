@@ -21,9 +21,67 @@ import AdminOperations from './AdminOperations';
 const adminSession = {
   authenticated: true as const,
   email: 'admin@harpapro.com',
+  csrfToken: 'csrf-current-admin-session-token',
 };
 
 const observedAt = '2026-08-08T05:30:00.000Z';
+const resetAt = '2026-09-01T00:00:00.000Z';
+
+const passDiagnostic = {
+  observedAt,
+  status: 'pass' as const,
+  durationMs: 1_842,
+  target: {
+    accountEmail: 'report-canary@e2e.harpapro.com',
+    projectId: 'prj_01234567',
+    reportId: 'rpt_01234567',
+    reportNumber: 42,
+  },
+  generation: {
+    httpStatus: 200,
+    requestId: 'req-report-canary-1',
+    durationMs: 1_300,
+    requestedAt: '2026-08-08T05:29:58.000Z',
+    finishedAt: '2026-08-08T05:29:59.300Z',
+    reportUpdatedAt: '2026-08-08T05:29:59.500Z',
+    generatedAt: '2026-08-08T05:29:59.300Z',
+    vendor: 'openai',
+    model: 'gpt-5.1',
+    fixtureMode: 'live' as const,
+    idempotentReplay: false,
+  },
+  limits: {
+    plan: 'free' as const,
+    reportGenerate: {
+      limit: 10,
+      used: 2,
+      remaining: 8,
+      resetAt,
+      overridden: false,
+    },
+    aiInputTokens: {
+      limit: 1_000_000,
+      used: 125_000,
+      remaining: 875_000,
+      resetAt,
+      overridden: true,
+    },
+    aiOutputTokens: {
+      limit: null,
+      used: 4_200,
+      remaining: null,
+      resetAt,
+      overridden: false,
+    },
+  },
+  cleanup: 'succeeded' as const,
+};
+
+const unknownDiagnostic = {
+  observedAt,
+  status: 'unknown' as const,
+  reason: 'not_configured' as const,
+};
 
 const applicationProject = {
   id: 'prj_application',
@@ -99,6 +157,54 @@ function mockOperationsFetch(inventory: unknown = availableInventory) {
     }
     throw new Error(`Unexpected request: ${url}`);
   });
+}
+
+function mockDiagnosticFetch(
+  diagnostic: () => Response | Promise<Response>,
+  inventory: unknown = availableInventory,
+) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url === 'https://api.example.test/admin/operations/report-generate') {
+      return diagnostic();
+    }
+    if (url === 'https://api.example.test/admin/operations/neon') {
+      return jsonResponse(inventory);
+    }
+    if (
+      url === 'https://api.example.test/readyz' ||
+      url === 'https://api.example.test/admin/readyz'
+    ) {
+      return new Response(null, { status: 200 });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  });
+}
+
+function diagnosticRequests(fetchMock: ReturnType<typeof vi.spyOn>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/report-generate',
+  );
+}
+
+async function getDiagnosticSection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'Report generation diagnostic',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
+}
+
+async function renderAndRunDiagnostic(body: unknown, status = 200) {
+  const fetchMock = mockDiagnosticFetch(() => jsonResponse(body, status));
+  const user = userEvent.setup();
+  render(<AdminOperations />);
+  const section = await getDiagnosticSection();
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+  await user.click(within(section).getByRole('button', { name: 'Run diagnostic' }));
+  return { fetchMock, section };
 }
 
 beforeEach(() => {
@@ -487,6 +593,274 @@ describe('AdminOperations', () => {
       'database-password',
       'raw-annotation',
     ]) {
+      expect(renderedText).not.toContain(value);
+    }
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('keeps the cost-bearing report diagnostic idle until an administrator runs it', async () => {
+    const fetchMock = mockOperationsFetch(emptyInventory);
+
+    render(<AdminOperations />);
+
+    const diagnosticSection = await getDiagnosticSection();
+    const idleCopy = within(diagnosticSection).getByText('Not run yet in this browser session.');
+    expect(idleCopy.closest('[aria-live="polite"]')).toBeTruthy();
+    expect(
+      within(diagnosticSection).getByText(
+        'Each run updates one synthetic report and may consume AI quota.',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }),
+    ).toHaveProperty('disabled', false);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+  });
+
+  it('keeps shared Refresh read-only and preserves the idle diagnostic state', async () => {
+    const fetchMock = mockOperationsFetch(emptyInventory);
+    const user = userEvent.setup();
+
+    render(<AdminOperations />);
+
+    const diagnosticSection = await getDiagnosticSection();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+    expect(
+      within(diagnosticSection).getByText('Not run yet in this browser session.'),
+    ).toBeTruthy();
+  });
+
+  it('manually posts with the current CSRF token, prevents double-submit, and renders proof', async () => {
+    let resolveDiagnostic!: (response: Response) => void;
+    const diagnosticResponse = new Promise<Response>((resolve) => {
+      resolveDiagnostic = resolve;
+    });
+    const fetchMock = mockDiagnosticFetch(() => diagnosticResponse);
+    const user = userEvent.setup();
+
+    render(<AdminOperations />);
+
+    const diagnosticSection = await getDiagnosticSection();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    const runButton = within(diagnosticSection).getByRole('button', {
+      name: 'Run diagnostic',
+    });
+    await user.click(runButton);
+
+    await waitFor(() => expect(diagnosticRequests(fetchMock)).toHaveLength(1));
+    expect(runButton).toHaveProperty('disabled', true);
+    const progress = within(diagnosticSection).getByText('Running diagnostic…');
+    expect(progress.closest('[aria-live="polite"]')).toBeTruthy();
+
+    await user.click(runButton);
+    expect(diagnosticRequests(fetchMock)).toHaveLength(1);
+
+    const [, requestInit] = diagnosticRequests(fetchMock)[0]!;
+    expect(requestInit).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    const requestHeaders = new Headers(requestInit?.headers);
+    expect(requestHeaders.get('x-admin-csrf')).toBe(adminSession.csrfToken);
+    expect(requestHeaders.has('authorization')).toBe(false);
+
+    await act(async () => {
+      resolveDiagnostic(jsonResponse(passDiagnostic));
+      await diagnosticResponse;
+    });
+
+    expect(await within(diagnosticSection).findByText('Pass')).toBeTruthy();
+    await waitFor(() => expect(runButton).toHaveProperty('disabled', false));
+    for (const value of [
+      'report-canary@e2e.harpapro.com',
+      'prj_01234567',
+      'rpt_01234567',
+      'openai',
+      'gpt-5.1',
+      'req-report-canary-1',
+    ]) {
+      expect(within(diagnosticSection).getByText(value)).toBeTruthy();
+    }
+    expect(within(diagnosticSection).getByText('Report 42')).toBeTruthy();
+    expect(within(diagnosticSection).getByText('Live')).toBeTruthy();
+    expect(within(diagnosticSection).getByText('Sign-out confirmed.')).toBeTruthy();
+    for (const timestamp of [
+      passDiagnostic.observedAt,
+      passDiagnostic.generation.requestedAt,
+      passDiagnostic.generation.finishedAt,
+      passDiagnostic.generation.reportUpdatedAt,
+      passDiagnostic.generation.generatedAt,
+    ]) {
+      expect(diagnosticSection.querySelector(`time[datetime="${timestamp}"]`)).toBeTruthy();
+    }
+
+    expect(within(diagnosticSection).getByText('Free plan')).toBeTruthy();
+    expect(within(diagnosticSection).getByText('Report generations')).toBeTruthy();
+    expect(within(diagnosticSection).getByText('AI input tokens')).toBeTruthy();
+    expect(within(diagnosticSection).getByText('AI output tokens')).toBeTruthy();
+    const renderedProof = diagnosticSection.textContent ?? '';
+    for (const value of [
+      '2 used',
+      '8 remaining',
+      '10 limit',
+      '125,000 used',
+      '875,000 remaining',
+      '1,000,000 limit',
+      '4,200 used',
+      'Unlimited',
+      'Custom limit',
+    ]) {
+      expect(renderedProof).toContain(value);
+    }
+    expect(diagnosticSection.querySelector(`time[datetime="${resetAt}"]`)).toBeTruthy();
+  });
+
+  it('preserves successful proof while showing only reviewed warning copy', async () => {
+    const warningDiagnostic = {
+      ...passDiagnostic,
+      status: 'warning' as const,
+      generation: {
+        ...passDiagnostic.generation,
+        fixtureMode: 'replay' as const,
+        idempotentReplay: true,
+      },
+      limits: null,
+      cleanup: 'failed' as const,
+      warnings: ['replay_only', 'limits_unavailable', 'sign_out_failed'] as const,
+    };
+    const { section } = await renderAndRunDiagnostic(warningDiagnostic);
+
+    expect(await within(section).findByText('Warning')).toBeTruthy();
+    expect(within(section).getByText('Replay')).toBeTruthy();
+    expect(within(section).getByText('openai')).toBeTruthy();
+    expect(within(section).getByText('gpt-5.1')).toBeTruthy();
+    for (const message of [
+      'Replay mode exercised the endpoint and persistence, but not a live AI provider.',
+      'Generation passed, but effective usage limits were unavailable.',
+      'Generation passed, but sign-out could not be confirmed.',
+    ]) {
+      expect(within(section).getByText(message)).toBeTruthy();
+    }
+    expect(within(section).queryByText('Sign-out confirmed.')).toBeNull();
+  });
+
+  it('renders sanitized failed and not-configured observations without implying health', async () => {
+    const failed = {
+      observedAt,
+      status: 'fail' as const,
+      durationMs: 900,
+      phase: 'generate' as const,
+      reason: 'rate_limited' as const,
+      cleanup: 'succeeded' as const,
+    };
+    let result = await renderAndRunDiagnostic(failed);
+
+    expect(await within(result.section).findByText('Failed')).toBeTruthy();
+    expect(within(result.section).getByText('Generate')).toBeTruthy();
+    expect(
+      within(result.section).getByText('Rate limiting prevented report generation.'),
+    ).toBeTruthy();
+    expect(within(result.section).getByText('Sign-out confirmed.')).toBeTruthy();
+    expect(within(result.section).queryByText(/healthy/i)).toBeNull();
+
+    cleanup();
+    result = await renderAndRunDiagnostic(unknownDiagnostic);
+    expect(await within(result.section).findByText('Unknown')).toBeTruthy();
+    expect(
+      within(result.section).getByText('Report-generation diagnostic is not configured.'),
+    ).toBeTruthy();
+    expect(within(result.section).queryByText(/healthy/i)).toBeNull();
+  });
+
+  it('distinguishes rejected admin requests from provider failures and rate limits', async () => {
+    const forbiddenBody = {
+      error: {
+        code: 'FORBIDDEN',
+        message: 'csrf-origin-detail-must-never-render',
+      },
+    };
+    let result = await renderAndRunDiagnostic(forbiddenBody, 403);
+
+    expect(await within(result.section).findByText('Request rejected')).toBeTruthy();
+    expect(
+      within(result.section).getByText(
+        'The admin origin or CSRF check rejected this diagnostic request.',
+      ),
+    ).toBeTruthy();
+    expect(result.section.textContent).not.toContain('csrf-origin-detail-must-never-render');
+    expect(within(result.section).queryByText(/provider failed/i)).toBeNull();
+
+    cleanup();
+    result = await renderAndRunDiagnostic(
+      { error: { code: 'RATE_LIMITED', message: 'raw limiter detail' } },
+      429,
+    );
+    expect(await within(result.section).findByText('Rate limited')).toBeTruthy();
+    expect(
+      within(result.section).getByText('Diagnostic run limit reached. Try again later.'),
+    ).toBeTruthy();
+    expect(result.section.textContent).not.toContain('raw limiter detail');
+  });
+
+  it('returns the whole page to sign-in when a diagnostic request finds an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    const fetchMock = mockDiagnosticFetch(() =>
+      jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'expired-cookie-detail' } }, 401),
+    );
+    const user = userEvent.setup();
+
+    render(<AdminOperations />);
+
+    const diagnosticSection = await getDiagnosticSection();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await user.click(within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }));
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Report generation diagnostic' })).toBeNull();
+    expect(document.body.textContent).not.toContain('expired-cookie-detail');
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects diagnostic responses containing credentials or raw content', async () => {
+    const forbiddenValues = [
+      'test-password-must-never-render',
+      'bearer-token-must-never-render',
+      'admin-cookie-must-never-render',
+      'synthetic-note-content-must-never-render',
+      'raw-model-response-must-never-render',
+      'raw-provider-error-must-never-render',
+    ];
+    const poisonedResponse = {
+      ...passDiagnostic,
+      password: forbiddenValues[0],
+      adminCookie: forbiddenValues[2],
+      target: {
+        ...passDiagnostic.target,
+        bearerToken: forbiddenValues[1],
+      },
+      generation: {
+        ...passDiagnostic.generation,
+        notes: forbiddenValues[3],
+        rawResponse: forbiddenValues[4],
+        providerError: forbiddenValues[5],
+      },
+    };
+    const { section } = await renderAndRunDiagnostic(poisonedResponse);
+
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('The diagnostic returned an invalid response.')).toBeTruthy();
+    const renderedText = document.body.textContent ?? '';
+    for (const value of [...forbiddenValues, adminSession.csrfToken]) {
       expect(renderedText).not.toContain(value);
     }
     expect(window.localStorage.length).toBe(0);

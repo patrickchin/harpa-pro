@@ -5,7 +5,9 @@ Status: implemented.
 This document refines only the browser presentation and interaction model from
 [Admin business activity](design-admin-business-activity.md). The event
 taxonomy, application database ledger, dedicated admin authentication, and
-`GET /admin/activity` contract remain unchanged.
+`GET /admin/activity` query and authorization model remain unchanged. The
+response carries explicit entity-availability state so presentation never has
+to infer deletion from a display label.
 
 ## Problem
 
@@ -57,6 +59,22 @@ icon remains visible beside the placeholder when an event has no project.
 Icons are decorative and `aria-hidden`; each row exposes an explicit accessible
 name with event, actor, subject, project, and occurrence-time labels, while the
 complete visible text remains the source of truth.
+
+The API identifies missing joins with `actorState` and `subjectState`
+(`available` or `deleted`) and `projectState` (`none`, `available`, or
+`deleted`). Labels are current values only when the entity is available; they
+are null when it is deleted, and `actorEmail` is also null whenever
+`actorState` is `deleted`. The response parser rejects contradictory actor
+identity fields before the row, detail drawer, filters, or text export can use
+them. The admin presentation creates lowercase,
+square-bracketed placeholders (`[deleted user]`, `[deleted project]`,
+`[deleted report]`, or `[deleted note]`) from this state and the subject type,
+not from label text. The same wording appears in rows, header-filter choices,
+details, and the plain-text view. Accessible row names describe the entity as
+unavailable. Stable IDs remain in the filter identity line, detail drawer, and
+text view. An event with no project context continues to use an em dash and
+remains distinct from a deleted project. A live user or project named exactly
+`Deleted user` or `Deleted project` remains available and renders verbatim.
 
 Selecting a row still opens the detail drawer for IDs, request ID, and strict
 metadata. Filtering actions are removed from the drawer because the attached
@@ -148,6 +166,9 @@ Every activity event occupies exactly one tab-separated line containing:
 This format supports browser Find, copying, and Save As while retaining the
 safe fields already returned by the admin API. It does not introduce note
 content, transcripts, filenames, storage keys, or other excluded data.
+Explicit deleted-entity state produces the same bracketed placeholders as the
+interactive feed; live labels are exported verbatim, and stable event and
+entity IDs remain unchanged. A deleted actor's email column is empty.
 
 ## Failure and accessibility behavior
 
@@ -182,9 +203,11 @@ Component tests cover:
 - out-of-order request protection;
 - refresh baselines and local `New` markers;
 - cursor pagination; and
-- the generated plain-text Blob.
+- bracketed deleted-entity presentation, unavailable accessible names, stable
+  filter/detail IDs, and the generated plain-text Blob.
 
 The admin Playwright smoke covers the above-feed controls, header popups,
 choice search, immediate filter requests, stable row geometry, duplicate-name
-labels, icon rendering, empty-result recovery, refresh markers, the text view,
-detail inspection, and sign-out against the real local API wiring.
+labels, deleted-entity placeholders, icon rendering, empty-result recovery,
+refresh markers, the text view, detail inspection, and sign-out against the
+real local API wiring.

@@ -15069,6 +15069,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15076,14 +15077,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15139,8 +15163,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",
@@ -15168,6 +15195,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15175,14 +15203,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15228,8 +15279,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",
@@ -15257,6 +15311,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15264,14 +15319,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15326,8 +15404,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",
@@ -15355,6 +15436,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15362,14 +15444,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15415,8 +15520,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",
@@ -15444,6 +15552,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15451,14 +15560,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15504,8 +15636,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",
@@ -15533,6 +15668,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15540,14 +15676,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15593,8 +15752,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",
@@ -15622,6 +15784,7 @@
                               },
                               "actorLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
                               },
                               "actorEmail": {
@@ -15629,14 +15792,37 @@
                                 "nullable": true,
                                 "format": "email"
                               },
+                              "actorState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
+                              },
                               "subjectLabel": {
                                 "type": "string",
+                                "nullable": true,
                                 "minLength": 1
+                              },
+                              "subjectState": {
+                                "type": "string",
+                                "enum": [
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "projectLabel": {
                                 "type": "string",
                                 "nullable": true,
                                 "minLength": 1
+                              },
+                              "projectState": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "available",
+                                  "deleted"
+                                ]
                               },
                               "requestId": {
                                 "type": "string",
@@ -15682,8 +15868,11 @@
                               "actorUserId",
                               "actorLabel",
                               "actorEmail",
+                              "actorState",
                               "subjectLabel",
+                              "subjectState",
                               "projectLabel",
+                              "projectState",
                               "requestId",
                               "level",
                               "eventType",

@@ -22,6 +22,7 @@ import {
   type TranscribeResponse,
   LiveAdapterMissingError,
 } from '../index.js';
+import { stripTrailingSlashes } from './base-url.js';
 import { AdapterError } from './error.js';
 
 const DEFAULT_MODEL = 'whisper-large-v3-turbo';
@@ -42,7 +43,7 @@ interface TranscriptionResponse {
 }
 
 export function createGroqProvider(cfg: GroqAdapterConfig): AiProvider {
-  const baseUrl = (cfg.baseUrl ?? 'https://api.groq.com/openai/v1').replace(/\/+$/, '');
+  const baseUrl = stripTrailingSlashes(cfg.baseUrl ?? 'https://api.groq.com/openai/v1');
   const model = cfg.model ?? DEFAULT_MODEL;
   const fetchFn = cfg.fetchImpl ?? fetch;
 
@@ -61,11 +62,7 @@ export function createGroqProvider(cfg: GroqAdapterConfig): AiProvider {
         throw new AdapterError('groq', 'failed to fetch audio source', err);
       }
       if (!audioRes.ok) {
-        throw new AdapterError(
-          'groq',
-          `audio source HTTP ${audioRes.status}`,
-          req.audioUrl,
-        );
+        throw new AdapterError('groq', `audio source HTTP ${audioRes.status}`, req.audioUrl);
       }
       const audioBlob = await audioRes.blob();
 

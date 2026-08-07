@@ -164,12 +164,16 @@ The tokenless workflows verify stable aliases. They do not publish artifacts.
 
 - `dashboard-dev.yml` checks API compatibility, verifies the exact `dev` SHA,
   and checks SPA routing on `dev.harpa-pro-dashboard.pages.dev`.
-- `dashboard-prod.yml` checks API compatibility and verifies the exact `main`
-  SHA on each configured production hostname.
+- `dashboard-prod.yml` stays dormant unless the repository variable
+  `DASHBOARD_PRODUCTION_ENABLED` is exactly `true`. Both jobs also require the
+  `main` ref, including for manual dispatch. After activation, the workflow
+  checks API compatibility and verifies the exact `main` SHA on each configured
+  production hostname.
 
 Do not enable dashboard production builds during the current dev activation.
-Production activation requires separate approval after `apps/dashboard`
-reaches `main` and the production API compatibility gate passes.
+Keep `DASHBOARD_PRODUCTION_ENABLED` unset until production activation receives
+separate approval, `apps/dashboard` reaches `main`, the Pages production build
+is active, and every configured hostname is ready for exact-SHA verification.
 
 Do not create only a DNS record for `app.harpapro.com`. A later production
 cutover must attach it through the Pages custom-domain flow and wait for an

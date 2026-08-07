@@ -60,6 +60,12 @@ tags:
     duration: 500
 - waitForAnimationToEnd
 
+# Adding a note dirties the draft and starts route-owned regeneration. Opening
+# the row-action modal while that response replaces the report panes can race
+# React Native's Fabric mount transaction, so require the stable postcondition
+# before mounting another overlay.
+- runFlow: ../helpers/wait-for-auto-regeneration.yaml
+
 # --- Open note options menu and delete the note ----------------------------
 - tapOn:
     id: "btn-note-options-.*"
@@ -83,6 +89,10 @@ tags:
     notVisible:
       id: "note-row-.*"
     timeout: 8000
+
+# Deletion is optimistic and dirties the draft again. Let the canonical delete
+# and its route-owned regeneration settle before mounting draft actions.
+- runFlow: ../helpers/wait-for-auto-regeneration.yaml
 
 # --- Clean up: delete the draft and return to project home -----------------
 - tapOn:

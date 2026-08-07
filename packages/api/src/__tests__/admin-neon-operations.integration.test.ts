@@ -2,7 +2,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createApp } from '../app.js';
 import { getAdminPool, resetAdminPool } from '../db/admin-client.js';
 import { resetAdminRateLimiter, setAdminRateLimiter } from '../lib/adminRateLimiter.js';
-import { resetRateLimiter, type RateLimiter, type RateLimiterResult } from '../lib/rateLimiter.js';
+import {
+  resetRateLimiter,
+  setRateLimiter,
+  type RateLimiter,
+  type RateLimiterResult,
+} from '../lib/rateLimiter.js';
 import { setAdminPassword } from '../services/admin-auth.js';
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 
@@ -33,6 +38,12 @@ class RecordingRateLimiter implements RateLimiter {
   async consume(key: string, limit: number, windowMs: number): Promise<RateLimiterResult> {
     this.calls.push({ key, limit, windowMs });
     return { success: true, limit, remaining: limit - 1, reset: Date.now() + windowMs };
+  }
+}
+
+class FailingAppRateLimiter implements RateLimiter {
+  async consume(): Promise<RateLimiterResult> {
+    throw new Error('application rate limiter must not run for dedicated admin operations');
   }
 }
 
@@ -140,6 +151,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   resetRateLimiter();
+  setRateLimiter(new FailingAppRateLimiter());
   adminRateLimiter = new RecordingRateLimiter();
   setAdminRateLimiter(adminRateLimiter);
   fetchImpl = defaultProviderFetch();
@@ -148,6 +160,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   vi.unstubAllGlobals();
+  resetRateLimiter();
   resetAdminRateLimiter();
   await adminFx?.stop();
 }, 60_000);
@@ -201,7 +214,37 @@ describe('GET /admin/operations/neon', () => {
     expect(serialized).not.toContain('secret-integration');
     expect(serialized).not.toContain('annotation');
     expect(
+      adminRateLimiter.calls.find(({ key }) => key.startsWith('admin.auth.ip.1m:fn:')),
+    ).toMatchObject({ limit: 120, windowMs: 60_000 });
+    expect(
       adminRateLimiter.calls.find(({ key }) => key.startsWith('admin.operations.neon.read.1m:fn:')),
     ).toMatchObject({ limit: 12, windowMs: 60_000 });
+  });
+
+  it('keeps private no-store on a route-specific rate-limit response', async () => {
+    class RejectingOperationsLimiter extends RecordingRateLimiter {
+      override async consume(
+        key: string,
+        limit: number,
+        windowMs: number,
+      ): Promise<RateLimiterResult> {
+        const result = await super.consume(key, limit, windowMs);
+        return key.startsWith('admin.operations.neon.read.1m:')
+          ? { ...result, success: false, remaining: 0 }
+          : result;
+      }
+    }
+    setAdminRateLimiter(new RejectingOperationsLimiter());
+
+    const response = await createApp().request('/admin/operations/neon', {
+      headers: {
+        cookie: adminCookie,
+        origin: ADMIN_ORIGIN,
+      },
+    });
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

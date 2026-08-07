@@ -16,6 +16,8 @@ const KEYS = [
   'ADMIN_MIGRATIONS_REQUIRED_HEAD',
   'DATABASE_URL',
   'ADMIN_DATABASE_URL',
+  'ADMIN_NEON_VIEWER_API_KEY',
+  'ADMIN_NEON_ORG_ID',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'ADMIN_CORS_ORIGINS',
@@ -265,6 +267,53 @@ describe('env: admin database isolation', () => {
 
     expect(mod.env.DATABASE_URL).toBe(process.env.DATABASE_URL);
     expect(mod.env.ADMIN_DATABASE_URL).toBe(process.env.ADMIN_DATABASE_URL);
+  });
+});
+
+describe('env: admin Neon observer', () => {
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_NEON_VIEWER_API_KEY).toBeUndefined();
+    expect(mod.env.ADMIN_NEON_ORG_ID).toBeUndefined();
+  });
+
+  it('accepts a viewer key and organization ID together', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+    process.env.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_NEON_VIEWER_API_KEY).toBe('test-neon-viewer-key');
+    expect(mod.env.ADMIN_NEON_ORG_ID).toBe('org-harpa-pro');
+  });
+
+  it('rejects a viewer key without an organization ID', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_ORG_ID/);
+  });
+
+  it('rejects an organization ID without a viewer key', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY/);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('rejects %s observer configuration', async (_description, value) => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = value;
+    process.env.ADMIN_NEON_ORG_ID = value;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY|ADMIN_NEON_ORG_ID/);
   });
 });
 

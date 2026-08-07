@@ -15,9 +15,13 @@ export const eventTypes = [
 export const eventType = z.enum(eventTypes);
 export const eventLevel = z.enum(['milestone', 'detail']);
 export const listLevel = eventLevel.or(z.literal('all'));
+export const entityState = z.enum(['available', 'deleted']);
+export const projectState = z.enum(['none', 'available', 'deleted']);
 
 export type EventType = z.infer<typeof eventType>;
 export type EventLevel = z.infer<typeof eventLevel>;
+export type EntityState = z.infer<typeof entityState>;
+export type ProjectState = z.infer<typeof projectState>;
 
 export const eventRegistry = {
   'user.signed_up': { level: 'milestone', subjectType: 'user' },
@@ -36,14 +40,17 @@ const displayFields = {
   id: activityEventId,
   occurredAt: isoDateTime,
   actorUserId: userId.nullable(),
-  actorLabel: z.string().min(1),
+  actorLabel: z.string().min(1).nullable(),
   actorEmail: z.string().email().nullable(),
-  subjectLabel: z.string().min(1),
+  actorState: entityState,
+  subjectLabel: z.string().min(1).nullable(),
+  subjectState: entityState,
   projectLabel: z.string().min(1).nullable(),
+  projectState,
   requestId: z.string().min(6).max(128).nullable(),
 };
 
-export const event = z.discriminatedUnion('eventType', [
+const eventShape = z.discriminatedUnion('eventType', [
   z
     .object({
       ...displayFields,
@@ -130,6 +137,46 @@ export const event = z.discriminatedUnion('eventType', [
     })
     .strict(),
 ]);
+
+function requireEntityLabel(
+  state: EntityState,
+  label: string | null,
+  path: 'actorLabel' | 'subjectLabel',
+  ctx: z.RefinementCtx,
+): void {
+  if ((state === 'available') === (label !== null)) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: `${path} must be present exactly when the entity is available`,
+    path: [path],
+  });
+}
+
+export const event = eventShape.superRefine((value, ctx) => {
+  requireEntityLabel(value.actorState, value.actorLabel, 'actorLabel', ctx);
+  requireEntityLabel(value.subjectState, value.subjectLabel, 'subjectLabel', ctx);
+  if (value.actorState === 'deleted' && value.actorEmail !== null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'actorEmail must be null when the actor is deleted',
+      path: ['actorEmail'],
+    });
+  }
+
+  const hasProjectId = value.projectId !== null;
+  const hasProjectLabel = value.projectLabel !== null;
+  const validProjectState =
+    (value.projectState === 'none' && !hasProjectId && !hasProjectLabel) ||
+    (value.projectState === 'available' && hasProjectId && hasProjectLabel) ||
+    (value.projectState === 'deleted' && hasProjectId && !hasProjectLabel);
+  if (!validProjectState) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'projectState must agree with projectId and projectLabel',
+      path: ['projectState'],
+    });
+  }
+});
 
 const actorExclusions = z
   .string()

@@ -37,11 +37,14 @@ const reportEvent = {
   actorUserId: 'usr_0123456789ab',
   actorLabel: 'Alice Activity',
   actorEmail: 'alice@example.com',
+  actorState: 'available',
   subjectType: 'report',
   subjectId: 'rpt_01234567',
   subjectLabel: 'Report #7',
+  subjectState: 'available',
   projectId: 'prj_01234567',
   projectLabel: 'Tower Refurbishment',
+  projectState: 'available',
   requestId: 'request-report-1',
   metadata: { reportNumber: 7 },
 } as unknown as activity.Event;
@@ -52,13 +55,16 @@ const deletedEvent = {
   level: 'milestone',
   eventType: 'user.signed_up',
   actorUserId: null,
-  actorLabel: 'Deleted user',
+  actorLabel: null,
   actorEmail: null,
+  actorState: 'deleted',
   subjectType: 'user',
   subjectId: null,
-  subjectLabel: 'Deleted user',
+  subjectLabel: null,
+  subjectState: 'deleted',
   projectId: null,
   projectLabel: null,
+  projectState: 'none',
   requestId: null,
   metadata: { method: 'email_otp' },
 } as unknown as activity.Event;
@@ -101,13 +107,78 @@ const projectEvent = {
   actorUserId: 'usr_0123456789ab',
   actorLabel: 'Alice Activity',
   actorEmail: 'alice@example.com',
+  actorState: 'available',
   subjectType: 'project',
   subjectId: 'prj_23456789',
   subjectLabel: 'Harbour Extension',
+  subjectState: 'available',
   projectId: 'prj_23456789',
   projectLabel: 'Harbour Extension',
+  projectState: 'available',
   requestId: 'request-project-1',
   metadata: {},
+} as unknown as activity.Event;
+
+const reservedLabelEvent = {
+  ...projectEvent,
+  id: 'aud_89abcdef0123',
+  occurredAt: '2026-07-29T03:10:00.000Z',
+  actorUserId: 'usr_89abcdef0123',
+  actorLabel: 'Deleted user',
+  actorEmail: 'deleted-label@example.com',
+  subjectId: 'prj_89abcdef',
+  subjectLabel: 'Deleted project',
+  projectId: 'prj_89abcdef',
+  projectLabel: 'Deleted project',
+  requestId: 'request-live-reserved-labels',
+} as unknown as activity.Event;
+
+const deletedProjectEvent = {
+  ...projectEvent,
+  id: 'aud_abcdef012345',
+  occurredAt: '2026-07-29T02:30:00.000Z',
+  subjectId: 'prj_deadbeef',
+  subjectLabel: null,
+  subjectState: 'deleted',
+  projectId: 'prj_deadbeef',
+  projectLabel: null,
+  projectState: 'deleted',
+  requestId: 'request-deleted-project',
+} as unknown as activity.Event;
+
+const deletedReportEvent = {
+  ...reportEvent,
+  id: 'aud_bcdef0123456',
+  occurredAt: '2026-07-29T02:15:00.000Z',
+  subjectId: 'rpt_deadbeef',
+  subjectLabel: null,
+  subjectState: 'deleted',
+  requestId: 'request-deleted-report',
+} as unknown as activity.Event;
+
+const deletedNoteEvent = {
+  ...reportEvent,
+  id: 'aud_cdef01234567',
+  occurredAt: '2026-07-29T02:10:00.000Z',
+  level: 'detail',
+  eventType: 'note.text_created',
+  subjectType: 'note',
+  subjectId: 'not_deadbeef01',
+  subjectLabel: null,
+  subjectState: 'deleted',
+  requestId: 'request-deleted-note',
+  metadata: {},
+} as unknown as activity.Event;
+
+const deletedActorEvent = {
+  ...reportEvent,
+  id: 'aud_def012345678',
+  occurredAt: '2026-07-29T02:05:00.000Z',
+  actorUserId: 'usr_deadbeef0123',
+  actorLabel: null,
+  actorEmail: null,
+  actorState: 'deleted',
+  requestId: 'request-deleted-actor',
 } as unknown as activity.Event;
 
 const detailEvents = [
@@ -119,11 +190,14 @@ const detailEvents = [
     actorUserId: 'usr_0123456789ab',
     actorLabel: 'Alice Activity',
     actorEmail: 'alice@example.com',
+    actorState: 'available',
     subjectType: 'note',
     subjectId: 'not_0123456789',
     subjectLabel: 'Text note',
+    subjectState: 'available',
     projectId: 'prj_01234567',
     projectLabel: 'Tower Refurbishment',
+    projectState: 'available',
     requestId: 'request-note-text',
     metadata: {},
   },
@@ -135,11 +209,14 @@ const detailEvents = [
     actorUserId: 'usr_0123456789ab',
     actorLabel: 'Alice Activity',
     actorEmail: 'alice@example.com',
+    actorState: 'available',
     subjectType: 'note',
     subjectId: 'not_123456789a',
     subjectLabel: 'Voice note',
+    subjectState: 'available',
     projectId: 'prj_01234567',
     projectLabel: 'Tower Refurbishment',
+    projectState: 'available',
     requestId: 'request-note-voice',
     metadata: {},
   },
@@ -151,11 +228,14 @@ const detailEvents = [
     actorUserId: 'usr_0123456789ab',
     actorLabel: 'Alice Activity',
     actorEmail: 'alice@example.com',
+    actorState: 'available',
     subjectType: 'note',
     subjectId: 'not_23456789ab',
     subjectLabel: 'Image note',
+    subjectState: 'available',
     projectId: 'prj_01234567',
     projectLabel: 'Tower Refurbishment',
+    projectState: 'available',
     requestId: 'request-note-image',
     metadata: {},
   },
@@ -167,11 +247,14 @@ const detailEvents = [
     actorUserId: 'usr_0123456789ab',
     actorLabel: 'Alice Activity',
     actorEmail: 'alice@example.com',
+    actorState: 'available',
     subjectType: 'note',
     subjectId: 'not_3456789abc',
     subjectLabel: 'Document note',
+    subjectState: 'available',
     projectId: 'prj_01234567',
     projectLabel: 'Tower Refurbishment',
+    projectState: 'available',
     requestId: 'request-note-document',
     metadata: {},
   },
@@ -471,7 +554,9 @@ describe('AdminActivity', () => {
       expect(trigger.getAttribute('aria-expanded')).toBe('false');
       expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
     }
-    expect(within(columnHeaders).queryByRole('button', { name: /new|time|event|subject/i })).toBeNull();
+    expect(
+      within(columnHeaders).queryByRole('button', { name: /new|time|event|subject/i }),
+    ).toBeNull();
     expect(columnHeaders.className).toContain(
       'grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)]',
     );
@@ -484,7 +569,7 @@ describe('AdminActivity', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain('cursor=next-page-cursor');
-    expect((await screen.findAllByText('Deleted user')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('[deleted user]')).length).toBeGreaterThan(0);
     const deletedEntry = screen.getByTestId(`activity-row-${deletedEvent.id}`);
     expect(
       within(deletedEntry).getByTestId('event-icon-user.signed_up').getAttribute('data-icon'),
@@ -497,6 +582,180 @@ describe('AdminActivity', () => {
     await user.click(screen.getByTestId(`activity-row-${reportEvent.id}`));
     expect(screen.getByRole('dialog').textContent).toContain('request-report-1');
     expect(screen.getByRole('dialog').textContent).toContain('"reportNumber": 7');
+  });
+
+  it('presents every deleted entity as unavailable while retaining stable IDs and exports', async () => {
+    const createObjectUrl = vi.mocked(URL.createObjectURL);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      activityResponse([
+        deletedProjectEvent,
+        deletedReportEvent,
+        deletedNoteEvent,
+        deletedActorEvent,
+        deletedEvent,
+      ]),
+    );
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    const projectRow = await screen.findByTestId(`activity-row-${deletedProjectEvent.id}`);
+    const projectPlaceholders = within(projectRow).getAllByText('[deleted project]');
+    expect(projectPlaceholders).toHaveLength(2);
+    for (const placeholder of projectPlaceholders) {
+      expect(placeholder.getAttribute('data-entity-placeholder')).toBe('deleted');
+      expect(placeholder.className).toContain('italic');
+      expect(placeholder.className).toContain('text-ink-soft');
+    }
+    expect(projectRow.getAttribute('aria-label') ?? '').toContain(
+      'Subject: deleted project (unavailable). Project: deleted project (unavailable).',
+    );
+    expect(within(projectRow).queryByText('Deleted project')).toBeNull();
+
+    const reportRow = screen.getByTestId(`activity-row-${deletedReportEvent.id}`);
+    expect(within(reportRow).getByText('[deleted report]')).toBeTruthy();
+    expect(reportRow.getAttribute('aria-label') ?? '').toContain(
+      'Subject: deleted report (unavailable).',
+    );
+
+    const noteRow = screen.getByTestId(`activity-row-${deletedNoteEvent.id}`);
+    expect(within(noteRow).getByText('[deleted note]')).toBeTruthy();
+    expect(noteRow.getAttribute('aria-label') ?? '').toContain(
+      'Subject: deleted note (unavailable).',
+    );
+
+    const actorRow = screen.getByTestId(`activity-row-${deletedActorEvent.id}`);
+    expect(within(actorRow).getByText('[deleted user]')).toBeTruthy();
+    expect(actorRow.getAttribute('aria-label') ?? '').toContain(
+      'Actor: deleted user (unavailable).',
+    );
+
+    const redactedUserRow = screen.getByTestId(`activity-row-${deletedEvent.id}`);
+    expect(within(redactedUserRow).getAllByText('[deleted user]')).toHaveLength(2);
+    expect(redactedUserRow.getAttribute('aria-label') ?? '').toContain(
+      'Actor: deleted user (unavailable). Subject: deleted user (unavailable).',
+    );
+
+    await user.click(projectRow);
+    const projectDialog = screen.getByRole('dialog', { name: '[deleted project]' });
+    expect(within(projectDialog).getAllByText('prj_deadbeef')).toHaveLength(2);
+    expect(within(projectDialog).queryByText('Deleted project')).toBeNull();
+    await user.click(within(projectDialog).getByRole('button', { name: 'Close' }));
+
+    await user.click(actorRow);
+    const actorDialog = screen.getByRole('dialog', { name: 'Report #7' });
+    expect(within(actorDialog).getByText('[deleted user]')).toBeTruthy();
+    expect(within(actorDialog).getByText('usr_deadbeef0123')).toBeTruthy();
+
+    await waitFor(() => expect(createObjectUrl).toHaveBeenCalled());
+    const blob = createObjectUrl.mock.calls.at(-1)?.[0] as Blob;
+    const text = await readBlobText(blob);
+    expect(text).toContain('alice@example.com\t[deleted project]\t[deleted project]');
+    expect(text).toContain('Tower Refurbishment\t[deleted report]');
+    expect(text).toContain('Tower Refurbishment\t[deleted note]');
+    expect(text).toContain('[deleted user]\t\tTower Refurbishment\tReport #7');
+    expect(text).toContain(`\tprj_deadbeef\tprj_deadbeef\trequest-deleted-project\t`);
+    expect(text).toContain(
+      `\tusr_deadbeef0123\t${reportEvent.projectId}\t${reportEvent.subjectId}\t`,
+    );
+  });
+
+  it('rejects deleted actors that retain an email before rendering or export', async () => {
+    const leakedEmail = 'retained@example.com';
+    const invalidEvent = {
+      ...deletedActorEvent,
+      actorEmail: leakedEmail,
+    } as activity.Event;
+    const createObjectUrl = vi.mocked(URL.createObjectURL);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([invalidEvent]));
+
+    render(<AdminActivity />);
+
+    expect(await screen.findByText('The activity feed is unavailable.')).toBeTruthy();
+    expect(screen.queryByText(leakedEmail)).toBeNull();
+    expect(createObjectUrl).not.toHaveBeenCalled();
+  });
+
+  it('labels deleted filter choices with bracketed placeholders and stable IDs', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      activityResponse([deletedProjectEvent, deletedActorEvent]),
+    );
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByTestId(`activity-row-${deletedProjectEvent.id}`);
+    await user.click(screen.getByRole('button', { name: 'Filter by user' }));
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    expect(within(userPopup).getByText('[deleted user]', { exact: true })).toBeTruthy();
+    expect(within(userPopup).getByText('usr_deadbeef0123', { exact: true })).toBeTruthy();
+    expect(
+      within(userPopup).getByRole('radio', {
+        name: 'Only [deleted user] — usr_deadbeef0123',
+      }),
+    ).toBeTruthy();
+    expect(
+      within(userPopup).getByRole('checkbox', {
+        name: 'Exclude [deleted user] — usr_deadbeef0123',
+      }),
+    ).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Filter by project' }));
+    const projectPopup = screen.getByRole('dialog', { name: 'Project filter' });
+    expect(within(projectPopup).getByText('[deleted project]', { exact: true })).toBeTruthy();
+    expect(within(projectPopup).getByText('prj_deadbeef', { exact: true })).toBeTruthy();
+    expect(
+      within(projectPopup).getByRole('radio', {
+        name: 'Only [deleted project] — prj_deadbeef',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('keeps live entities named like deleted fallbacks available in UI, filters, and export', async () => {
+    const createObjectUrl = vi.mocked(URL.createObjectURL);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([reservedLabelEvent]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    const row = await screen.findByTestId(`activity-row-${reservedLabelEvent.id}`);
+    expect(within(row).getByText('Deleted user', { exact: true })).toBeTruthy();
+    expect(within(row).getAllByText('Deleted project', { exact: true })).toHaveLength(2);
+    expect(row.querySelector('[data-entity-placeholder="deleted"]')).toBeNull();
+    expect(row.getAttribute('aria-label') ?? '').toContain(
+      'Actor: Deleted user. Subject: Deleted project. Project: Deleted project.',
+    );
+    expect(row.getAttribute('aria-label') ?? '').not.toContain('unavailable');
+
+    await user.click(row);
+    const detail = screen.getByRole('dialog', { name: 'Deleted project' });
+    expect(within(detail).getByText('Deleted user', { exact: true })).toBeTruthy();
+    expect(detail.querySelector('[data-entity-placeholder="deleted"]')).toBeNull();
+    await user.click(within(detail).getByRole('button', { name: 'Close' }));
+
+    await user.click(screen.getByRole('button', { name: 'Filter by user' }));
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    expect(
+      within(userPopup).getByRole('radio', {
+        name: 'Only Deleted user — deleted-label@example.com',
+      }),
+    ).toBeTruthy();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Filter by project' }));
+    const projectPopup = screen.getByRole('dialog', { name: 'Project filter' });
+    expect(
+      within(projectPopup).getByRole('radio', {
+        name: 'Only Deleted project — prj_89abcdef',
+      }),
+    ).toBeTruthy();
+
+    await waitFor(() => expect(createObjectUrl).toHaveBeenCalled());
+    const blob = createObjectUrl.mock.calls.at(-1)?.[0] as Blob;
+    const text = await readBlobText(blob);
+    expect(text).toContain(
+      'Deleted user\tdeleted-label@example.com\tDeleted project\tDeleted project',
+    );
+    expect(text).not.toContain('[deleted user]');
+    expect(text).not.toContain('[deleted project]');
   });
 
   it('defaults to milestones from the past calendar month and offers simpler ranges', async () => {
@@ -700,13 +959,19 @@ describe('AdminActivity', () => {
     expect(within(users).getAllByText('Alice Activity', { exact: true })).toHaveLength(2);
     expect(within(users).getByText('alice@example.com', { exact: true })).toBeTruthy();
     expect(within(users).getByText('usr_abcdef012345', { exact: true })).toBeTruthy();
-    expect(within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` })).toBeTruthy();
-    expect(within(userPopup).getByRole('checkbox', { name: `Exclude ${duplicateAliceLabel}` })).toBeTruthy();
+    expect(
+      within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` }),
+    ).toBeTruthy();
+    expect(
+      within(userPopup).getByRole('checkbox', { name: `Exclude ${duplicateAliceLabel}` }),
+    ).toBeTruthy();
 
     const requestsBeforeSearch = fetchMock.mock.calls.length;
     await user.type(search, 'usr_abcdef012345');
     expect(within(users).getAllByRole('listitem')).toHaveLength(1);
-    expect(within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` })).toBeTruthy();
+    expect(
+      within(userPopup).getByRole('radio', { name: `Only ${duplicateAliceLabel}` }),
+    ).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(requestsBeforeSearch);
     await user.clear(search);
 

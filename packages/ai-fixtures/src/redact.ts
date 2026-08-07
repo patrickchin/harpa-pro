@@ -21,6 +21,9 @@ const ADDRESS_KEY_RE =
 const ORGANIZATION_PLACEHOLDER = '<redacted-organization>';
 const ADDRESS_PLACEHOLDER = '<redacted-address>';
 
+const ORGANIZATION_LEADING_EDGE_CHARS = new Set(['"', "'", '(', '[', '{']);
+const ORGANIZATION_TRAILING_EDGE_CHARS = new Set(['"', "'", ')', ']', '}', ',', '.', ';', ':']);
+
 const ORGANIZATION_SUFFIX_WORDS = new Set([
   'company',
   'construction',
@@ -141,10 +144,7 @@ function collectFromText(value: string, terms: SensitiveTerms): void {
 }
 
 function addOrganization(value: string, organizations: Set<string>): void {
-  const normalized = value
-    .trim()
-    .replace(/^the\s+/i, '')
-    .replace(/^[\s"'([{]+|[\s"')\]},.;:]+$/g, '');
+  const normalized = trimOrganizationEdges(value.trim().replace(/^the\s+/i, ''));
   if (normalized.length < 3 || normalized.length > 160) return;
 
   const words = normalized.split(/\s+/);
@@ -154,6 +154,26 @@ function addOrganization(value: string, organizations: Set<string>): void {
     words.pop();
     addTerm(words.join(' '), organizations, GENERIC_ORGANIZATION_TERMS);
   }
+}
+
+function trimOrganizationEdges(value: string): string {
+  let start = 0;
+  let end = value.length;
+
+  while (
+    start < end &&
+    (value[start]!.trim().length === 0 || ORGANIZATION_LEADING_EDGE_CHARS.has(value[start]!))
+  ) {
+    start += 1;
+  }
+  while (
+    end > start &&
+    (value[end - 1]!.trim().length === 0 || ORGANIZATION_TRAILING_EDGE_CHARS.has(value[end - 1]!))
+  ) {
+    end -= 1;
+  }
+
+  return start === 0 && end === value.length ? value : value.slice(start, end);
 }
 
 function addTerm(

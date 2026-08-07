@@ -180,6 +180,50 @@ require_occurrence_before() {
   fi
 }
 
+require_section_fixed() {
+  local path="$1" start="$2" end="$3" needle="$4" description="$5"
+  if [[ -f "$REPO_ROOT/$path" ]] && awk -v start="$start" -v end="$end" -v needle="$needle" '
+    index($0, start) {
+      in_section = 1
+      next
+    }
+    in_section && index($0, end) {
+      exit found ? 0 : 1
+    }
+    in_section && index($0, needle) {
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$REPO_ROOT/$path"; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+forbid_section_fixed() {
+  local path="$1" start="$2" end="$3" needle="$4" description="$5"
+  if [[ -f "$REPO_ROOT/$path" ]] && awk -v start="$start" -v end="$end" -v needle="$needle" '
+    index($0, start) {
+      in_section = 1
+      next
+    }
+    in_section && index($0, end) {
+      exit found ? 1 : 0
+    }
+    in_section && index($0, needle) {
+      found = 1
+    }
+    END { exit found ? 1 : 0 }
+  ' "$REPO_ROOT/$path"; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 echo "release confidence gates"
 
 require_file ".github/dependabot.yml" \
@@ -363,16 +407,16 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "launcher or Quickstep readiness remains bounded to 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
-  "timeout: 90000" \
-  "post-link launcher or app readiness retains the 90-second cold-bundle budget"
+  "timeout: 180000" \
+  "post-link launcher or app readiness allows a three-minute cold-bundle budget"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "timeout: 30000" \
   "Expo Dev Launcher readiness wait allows 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Continue|Close|Email'" \
-  "timeout: 90000" \
-  "fail-closed Expo app-readiness wait allows 90 seconds"
+  "timeout: 180000" \
+  "fail-closed Expo app-readiness wait allows a three-minute cold-bundle budget"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "id: 'input-email'" \
   "timeout: 30000" \
@@ -420,9 +464,9 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "visible: 'Continue|Close|Email'" \
   "Maestro waits for app readiness only after selecting Metro"
-require_before ".maestro/ci-launch-smoke.yaml" \
-  "timeout: 90000" \
-  "id: 'input-email'" \
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 180000" 2 \
+  "id: 'input-email'" 1 \
   "bounded app-readiness wait precedes the app-control assertion"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "timeout: 30000" \
@@ -511,6 +555,102 @@ require_fixed ".maestro/account-deletion.yaml" \
 require_fixed ".maestro/store-screenshots.yaml" \
   "- runFlow: helpers/launch-local-dev-client.yaml" \
   "store screenshot flow uses the shared dev-client launch helper"
+require_fixed "scripts/maestro/seed-store-screenshots.sh" \
+  "MSYS_NO_PATHCONV=1 docker run" \
+  "store screenshot seed preserves the container shell path under Git Bash"
+require_fixed ".maestro/helpers/wait-for-camera-shutter-ready.yaml" \
+  "id: 'btn-camera-shutter'" \
+  "camera readiness helper targets the semantic shutter control"
+require_fixed ".maestro/helpers/wait-for-camera-shutter-ready.yaml" \
+  "enabled: true" \
+  "camera readiness helper waits for an enabled native shutter"
+require_fixed_count ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 2 \
+  "draft burst waits for stable camera readiness before both captures"
+require_occurrence_before ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 1 \
+  "id: 'btn-camera-shutter'" 1 \
+  "draft burst readiness wait precedes its first capture"
+require_occurrence_before ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 2 \
+  "id: 'btn-camera-shutter'" 2 \
+  "draft burst readiness wait precedes its second capture"
+require_fixed_count ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 2 \
+  "finalized burst waits for stable camera readiness before both captures"
+require_occurrence_before ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 1 \
+  "id: 'btn-camera-shutter'" 1 \
+  "finalized burst readiness wait precedes its first capture"
+require_occurrence_before ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 2 \
+  "id: 'btn-camera-shutter'" 2 \
+  "finalized burst readiness wait precedes its second capture"
+require_before ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "id: 'btn-report-photo-.*'" \
+  "id: 'report-photos-grid'" \
+  "finalized photo verification scrolls to a leaf tile before asserting the nested grid"
+require_fixed_count ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "visibilityPercentage: 100" 2 \
+  "finalized photo and cleanup targets require full visibility"
+require_fixed_count ".maestro/modules/10b-photo-notes-finalized.yaml" \
+  "centerElement: true" 2 \
+  "finalized photo and cleanup targets are centered away from clipped viewport edges"
+require_before ".maestro/store-screenshots.yaml" \
+  "id: 'btn-report-photo-.*'" \
+  "id: 'report-photos-grid'" \
+  "store screenshot flow positions a bounded photo tile before the nested grid"
+require_fixed_count ".maestro/store-screenshots.yaml" \
+  "visibilityPercentage: 100" 1 \
+  "store screenshot photo target requires full visibility"
+require_fixed_count ".maestro/store-screenshots.yaml" \
+  "centerElement: true" 1 \
+  "store screenshot photo target is centered away from viewport clipping"
+require_fixed_count ".maestro/helpers/capture-one-photo-note.yaml" \
+  "- runFlow: wait-for-camera-shutter-ready.yaml" 1 \
+  "shared single-photo capture waits for stable camera readiness"
+require_before ".maestro/helpers/capture-one-photo-note.yaml" \
+  "- runFlow: wait-for-camera-shutter-ready.yaml" \
+  'id: "btn-camera-shutter"' \
+  "shared single-photo readiness wait precedes capture"
+require_adjacent_fixed ".maestro/helpers/capture-one-photo-note.yaml" \
+  'id: "dialog-sheet"' \
+  "timeout: 20000" \
+  "shared capture allows the attachment sheet to render under regeneration load"
+require_before ".maestro/helpers/capture-one-photo-note.yaml" \
+  'id: "dialog-sheet"' \
+  'id: "btn-attachment-camera"' \
+  "shared capture waits for the attachment sheet before requiring its camera action"
+require_fixed_count ".maestro/helpers/capture-one-photo-note.yaml" \
+  "- runFlow: wait-for-auto-regeneration.yaml" 1 \
+  "shared capture settles route-level regeneration before returning"
+require_before ".maestro/helpers/capture-one-photo-note.yaml" \
+  'id: "batch-grid-tile-0-ring"' \
+  "- runFlow: wait-for-auto-regeneration.yaml" \
+  "shared capture waits for upload completion before generation settlement"
+require_fixed_count ".maestro/native-input-smoke.yaml" \
+  "- runFlow: helpers/wait-for-camera-shutter-ready.yaml" 1 \
+  "native camera smoke waits for stable camera readiness"
+require_before ".maestro/native-input-smoke.yaml" \
+  "- runFlow: helpers/wait-for-camera-shutter-ready.yaml" \
+  'id: "btn-camera-shutter"' \
+  "native camera smoke readiness wait precedes capture"
+require_fixed "apps/mobile/screens/camera-capture.test.tsx" \
+  "keeps the Android shutter disabled until picture-size rebinding is ready" \
+  "camera readiness has Android picture-size rebind coverage"
+require_fixed "apps/mobile/components/reports/generate/EditTabPane.tsx" \
+  "collapsable={false}" \
+  "generation opacity keeps a stable Fabric native host"
+require_fixed "apps/mobile/screens/generate-edit-tab.test.tsx" \
+  "keeps the edit form content as a native host across generation updates" \
+  "edit-pane Fabric host stability has transition coverage"
+require_fixed ".maestro/native-input-smoke.yaml" \
+  "id: 'btn-project-edit|btn-new-project'" \
+  "native-input cleanup accepts either valid post-delete navigation target"
+require_before ".maestro/native-input-smoke.yaml" \
+  "- runFlow: helpers/open-project.yaml" \
+  "file: helpers/delete-current-project.yaml" \
+  "native-input cleanup reopens the project before invoking project deletion"
 require_fixed ".maestro/place-photo-on-issue.flow.yml" \
   "- runFlow: modules/01-auth.yaml" \
   "standalone photo-placement flow uses current local launch and email auth"
@@ -657,6 +797,18 @@ require_before ".maestro/helpers/assert-report-generation-write-lock.yaml" \
 require_fixed ".maestro/core-end-to-end.yaml" \
   "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
   "legacy core journey waits for route-level auto-regeneration"
+require_before ".maestro/modules/08-text-notes.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
+  'id: "btn-note-options-.*"' \
+  "text-note deletion waits for route-level auto-regeneration before opening row actions"
+require_occurrence_before ".maestro/modules/08-text-notes.yaml" \
+  'id: "note-row-.*"' 2 \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" 2 \
+  "text-note cleanup observes deletion before waiting for regeneration"
+require_occurrence_before ".maestro/modules/08-text-notes.yaml" \
+  "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" 2 \
+  'id: "btn-draft-options"' 1 \
+  "text-note cleanup waits for regeneration before opening draft actions"
 require_before ".maestro/core-end-to-end.yaml" \
   "id: 'voice-title-.*'" \
   "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
@@ -685,6 +837,69 @@ forbid_fixed ".maestro/modules/17-heavy-usage-stress.yaml" \
 require_fixed ".maestro/place-photo-on-issue.flow.yml" \
   "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
   "photo-placement journey waits for route-level auto-regeneration"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Workers" "# --- Materials" \
+  "visibilityPercentage: 100" \
+  "workers edit positioning requires the whole leaf action"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Workers" "# --- Materials" \
+  "centerElement: false" \
+  "workers edit positioning avoids Maestro's unbounded centering swipe"
+forbid_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Workers" "# --- Materials" \
+  "centerElement: true" \
+  "workers edit positioning cannot reintroduce unbounded centering"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Workers" "# --- Materials" \
+  "start: 50%, 72%" \
+  "workers edit uses a bounded upward positioning gesture"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Workers" "# --- Materials" \
+  "end: 50%, 58%" \
+  "workers edit bounds the upward positioning distance"
+require_occurrence_before ".maestro/helpers/edit-report-cards.yaml" \
+  "id: 'btn-edit-workers'" 1 \
+  "start: 50%, 72%" 1 \
+  "workers edit finds the leaf action before bounded positioning"
+require_occurrence_before ".maestro/helpers/edit-report-cards.yaml" \
+  "start: 50%, 72%" 1 \
+  "id: 'btn-edit-workers'" 2 \
+  "workers edit finishes bounded positioning before tapping"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Materials" "# --- Next steps" \
+  "visibilityPercentage: 100" \
+  "materials edit positioning requires the whole leaf action"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Materials" "# --- Next steps" \
+  "centerElement: false" \
+  "materials edit positioning avoids unbounded centering"
+forbid_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Materials" "# --- Next steps" \
+  "centerElement: true" \
+  "materials edit positioning cannot reintroduce unbounded centering"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Materials" "# --- Next steps" \
+  "start: 50%, 72%" \
+  "materials edit moves the clipped leaf above the sticky recorder"
+require_section_fixed ".maestro/helpers/edit-report-cards.yaml" \
+  "# --- Materials" "# --- Next steps" \
+  "end: 50%, 58%" \
+  "materials edit bounds its upward positioning distance"
+require_occurrence_before ".maestro/helpers/edit-report-cards.yaml" \
+  "id: 'btn-edit-materials'" 1 \
+  "start: 50%, 72%" 2 \
+  "materials edit finds the leaf action before bounded positioning"
+require_occurrence_before ".maestro/helpers/edit-report-cards.yaml" \
+  "start: 50%, 72%" 2 \
+  "id: 'btn-edit-materials'" 2 \
+  "materials edit finishes bounded positioning before tapping"
+require_fixed_count ".maestro/helpers/edit-report-cards.yaml" \
+  "text: 'E2E sealant.*'" 2 \
+  "materials edit scrolls to the saved value before asserting it"
+require_occurrence_before ".maestro/helpers/edit-report-cards.yaml" \
+  "text: 'E2E sealant.*'" 1 \
+  "text: 'E2E sealant.*'" 2 \
+  "materials edit positions the saved value before its assertion"
 require_fixed_count ".maestro/place-photo-on-issue.flow.yml" \
   "- runFlow: helpers/wait-for-auto-regeneration.yaml" 2 \
   "photo placement waits again after the optimistic placement write"
@@ -701,12 +916,46 @@ require_file "apps/mobile/components/reports/generate/GenerateReportActionRow.te
   "report action-row write blocking has unit coverage"
 latest_local_migration="$(basename "$(find "$REPO_ROOT/packages/api/migrations" -maxdepth 1 -type f -name '*.sql' | sort | tail -n 1)")"
 require_fixed_count "docker-compose.yml" \
-  "MIGRATIONS_REQUIRED_HEAD: $latest_local_migration" 2 \
-  "local Compose API and account seed pin the current migration head"
+  "MIGRATIONS_REQUIRED_HEAD: $latest_local_migration" 3 \
+  "local Compose API, account seed, and storage worker pin the current migration head"
 latest_local_admin_migration="$(basename "$(find "$REPO_ROOT/packages/api/admin-migrations" -maxdepth 1 -type f -name '*.sql' | sort | tail -n 1)")"
 require_fixed_count "docker-compose.yml" \
-  "ADMIN_MIGRATIONS_REQUIRED_HEAD: $latest_local_admin_migration" 2 \
-  "local Compose API and account seed override the image's admin head"
+  "ADMIN_MIGRATIONS_REQUIRED_HEAD: $latest_local_admin_migration" 3 \
+  "local Compose API, account seed, and storage worker override the image's admin head"
+require_fixed "docker-compose.yml" \
+  "STORAGE_LEASE_ROLLOUT_GRACE_SEC: '0'" \
+  "fresh local Compose stacks arm storage leases without a rolling-deploy grace"
+require_fixed "docker-compose.yml" \
+  "STORAGE_ACCOUNT_DELETE_ENABLED: 'true'" \
+  "fresh local Compose stacks enable account deletion after migration"
+require_section_fixed "docker-compose.yml" \
+  "  storage-worker:" "  api:" \
+  "migrate:" \
+  "local storage worker waits for the migration one-shot"
+require_section_fixed "docker-compose.yml" \
+  "  storage-worker:" "  api:" \
+  "minio-init:" \
+  "local storage worker waits for the MinIO bucket"
+require_section_fixed "docker-compose.yml" \
+  "  storage-worker:" "  api:" \
+  "R2_FIXTURE_MODE: live" \
+  "local storage worker uses the same live MinIO backend as the API"
+require_section_fixed "docker-compose.yml" \
+  "  storage-worker:" "  api:" \
+  "command: ['pnpm', '--filter', '@harpa/api', 'storage:worker']" \
+  "local Compose runs the durable storage deletion worker"
+require_section_fixed "docker-compose.yml" \
+  "  storage-worker:" "  api:" \
+  "restart: unless-stopped" \
+  "local storage deletion retries survive worker process failures"
+require_section_fixed "docker-compose.yml" \
+  "  api:" "volumes:" \
+  "storage-worker:" \
+  "account-deletion API startup requires the local worker to start"
+require_before "docker-compose.yml" \
+  "pnpm --filter @harpa/api db:migrate &&" \
+  "pnpm --filter @harpa/api storage:arm-leases" \
+  "local Compose completes migrations before arming storage lifecycle"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"
@@ -798,8 +1047,8 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
-  'timeout[[:space:]]+420s.*maestro' \
-  "Maestro CLI execution budgets 420 seconds for bounded recovery"
+  'timeout[[:space:]]+600s.*maestro' \
+  "Maestro CLI execution budgets 600 seconds for bounded recovery"
 # These are literal runner-script strings, not policy-test expansions.
 # shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \

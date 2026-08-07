@@ -173,19 +173,23 @@ describe('admin activity schemas', () => {
   });
 
   it.each([
-    ['available actor without a label', { actorLabel: null }],
-    ['deleted actor with a label', { actorState: 'deleted', actorLabel: 'Deleted user' }],
-    ['available subject without a label', { subjectLabel: null }],
+    ['an available actor without a label', { actorLabel: null }],
+    ['a deleted actor with a label', { actorState: 'deleted', actorLabel: 'Deleted user' }],
     [
-      'deleted subject with a label',
+      'a deleted actor with an email',
+      { actorState: 'deleted', actorLabel: null, actorEmail: 'retained@example.com' },
+    ],
+    ['an available subject without a label', { subjectLabel: null }],
+    [
+      'a deleted subject with a label',
       { subjectState: 'deleted', subjectLabel: 'Deleted project' },
     ],
-    ['available project without a label', { projectLabel: null }],
+    ['an available project without a label', { projectLabel: null }],
     [
-      'deleted project with a label',
+      'a deleted project with a label',
       { projectState: 'deleted', projectLabel: 'Deleted project' },
     ],
-  ])('rejects an %s', (_description, override) => {
+  ])('rejects %s', (_description, override) => {
     expect(() =>
       activity.event.parse({
         ...baseEvent,

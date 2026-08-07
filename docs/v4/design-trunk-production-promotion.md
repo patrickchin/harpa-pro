@@ -5,7 +5,7 @@
 > authorize a provider, branch, workflow, credential, or production change.
 >
 > **Re-evaluated:** 2026-08-07 (Asia/Shanghai) against `origin/dev` at
-> `7aec0fce3c79470c15682a5b29929e006c9b3e60`, the current repository
+> `2346de97d6cd8878b9a8e254319fc1a77ea8eae9`, the current repository
 > workflows and operations docs, live read-only GitHub settings, and current
 > official provider documentation.
 >
@@ -78,8 +78,8 @@ The repository still implements the branch model described in
 The current implementation has changed materially since the July design:
 
 - `origin/main` is `1ca389ac8f28c6cf8fbf0c7f5eca072f8670c129`.
-- `origin/dev` is `7aec0fce3c79470c15682a5b29929e006c9b3e60`.
-- Git reports 8 commits unique to `main` and 46 unique to `dev`.
+- `origin/dev` is `2346de97d6cd8878b9a8e254319fc1a77ea8eae9`.
+- Git reports 8 commits unique to `main` and 47 unique to `dev`.
   They are not identical and cannot be treated as a no-op cutover.
 - Application and administrator data now use two independent Neon projects.
   Each project has `main`, `dev`, preview branches, and its own migration

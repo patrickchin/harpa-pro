@@ -5,11 +5,27 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const apiRoot = resolve(here, '../..');
 
-export function runAdminProvisioningCli(env: NodeJS.ProcessEnv): Promise<{
+export function runAdminProvisioningCli(
+  env: NodeJS.ProcessEnv,
+  options: { assertNetworkPolicyBeforeConnect?: boolean } = {},
+): Promise<{
   code: number | null;
   stderr: string;
   stdout: string;
 }> {
+  const childEnv = options.assertNetworkPolicyBeforeConnect
+    ? {
+        ...env,
+        HARPA_ADMIN_CLI_NETWORK_ASSERT: '1',
+        NODE_OPTIONS: [
+          env.NODE_OPTIONS,
+          `--require=${resolve(here, 'assert-admin-cli-network.cjs')}`,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      }
+    : env;
+
   return new Promise((resolvePromise, reject) => {
     const child = spawn(
       process.execPath,
@@ -23,7 +39,7 @@ export function runAdminProvisioningCli(env: NodeJS.ProcessEnv): Promise<{
       ],
       {
         cwd: apiRoot,
-        env,
+        env: childEnv,
         stdio: ['pipe', 'pipe', 'pipe'],
       },
     );

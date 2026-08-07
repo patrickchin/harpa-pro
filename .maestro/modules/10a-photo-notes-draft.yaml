@@ -60,16 +60,14 @@ tags:
     id: 'btn-attachment-camera'
 
 # --- Camera: capture a two-photo batch → done ------------------------------
-- extendedWaitUntil:
-    visible:
-      id: 'btn-camera-shutter'
-    timeout: 15000
+- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml
 - tapOn:
     id: 'btn-camera-shutter'
 - extendedWaitUntil:
     visible:
       id: 'btn-camera-thumb-0'
     timeout: 8000
+- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml
 - tapOn:
     id: 'btn-camera-shutter'
 - extendedWaitUntil:

@@ -659,6 +659,22 @@ describe('AdminActivity', () => {
     );
   });
 
+  it('rejects deleted actors that retain an email before rendering or export', async () => {
+    const leakedEmail = 'retained@example.com';
+    const invalidEvent = {
+      ...deletedActorEvent,
+      actorEmail: leakedEmail,
+    } as activity.Event;
+    const createObjectUrl = vi.mocked(URL.createObjectURL);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([invalidEvent]));
+
+    render(<AdminActivity />);
+
+    expect(await screen.findByText('The activity feed is unavailable.')).toBeTruthy();
+    expect(screen.queryByText(leakedEmail)).toBeNull();
+    expect(createObjectUrl).not.toHaveBeenCalled();
+  });
+
   it('labels deleted filter choices with bracketed placeholders and stable IDs', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       activityResponse([deletedProjectEvent, deletedActorEvent]),

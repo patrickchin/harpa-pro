@@ -239,4 +239,34 @@ describe('GenerateNotes — Edit tab', () => {
 
     expect(onSetReport).not.toHaveBeenCalled();
   });
+
+  it('keeps the edit form content as a native host across generation updates', () => {
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        initialTab="notes"
+        report={SAMPLE_GENERATED_REPORT}
+        isGeneratingReport
+      />,
+    );
+
+    const before = tree.root.findByProps({ testID: 'edit-tab-content' });
+    expect(before.props.collapsable).toBe(false);
+    expect(before.props.className).toContain('opacity-60');
+
+    act(() => {
+      tree.update(
+        <GenerateNotes
+          {...baseProps}
+          initialTab="notes"
+          report={SAMPLE_GENERATED_REPORT}
+        />,
+      );
+    });
+
+    const after = tree.root.findByProps({ testID: 'edit-tab-content' });
+    expect(after).toBe(before);
+    expect(after.props.collapsable).toBe(false);
+    expect(after.props.className).toBe('flex-1');
+  });
 });

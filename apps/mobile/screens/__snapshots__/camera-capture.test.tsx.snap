@@ -86,11 +86,6 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
           flash="off"
           mode="picture"
           onCameraReady={[Function]}
-          ref={
-            {
-              "current": null,
-            }
-          }
           responsiveOrientationWhenOrientationLocked={false}
           style={
             {
@@ -185,7 +180,7 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
         accessibilityLabel="Take photo"
         accessibilityRole="button"
         className="w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center "
-        disabled={false}
+        disabled={true}
         onPress={[Function]}
         style={[Function]}
         testID="btn-camera-shutter"

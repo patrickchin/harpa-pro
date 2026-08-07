@@ -21,7 +21,8 @@ type RefetchSession = () => Promise<AdminSession | null>;
 
 interface ActorExclusion {
   id: string;
-  label: string;
+  label: string | null;
+  state: activity.EntityState;
 }
 
 interface ActorOption extends ActorExclusion {
@@ -30,7 +31,8 @@ interface ActorOption extends ActorExclusion {
 
 interface ProjectOption {
   id: string;
-  label: string;
+  label: string | null;
+  state: activity.EntityState;
 }
 
 interface Filters {
@@ -79,6 +81,53 @@ const EVENT_LABELS = {
 
 function eventLabel(eventType: activity.EventType): string {
   return EVENT_LABELS[eventType];
+}
+
+type EntityKind = activity.Event['subjectType'];
+
+function deletedEntityPlaceholder(kind: EntityKind): string {
+  return `[deleted ${kind}]`;
+}
+
+function displayEntityLabel(
+  kind: EntityKind,
+  value: string | null,
+  state: activity.EntityState,
+): string {
+  if (state === 'deleted') return deletedEntityPlaceholder(kind);
+  return value ?? `Unknown ${kind}`;
+}
+
+function accessibleEntityLabel(
+  kind: EntityKind,
+  value: string | null,
+  state: activity.EntityState,
+): string {
+  return state === 'deleted' ? `deleted ${kind} (unavailable)` : (value ?? `Unknown ${kind}`);
+}
+
+function EntityLabel({
+  kind,
+  value,
+  state,
+  className = '',
+}: {
+  kind: EntityKind;
+  value: string | null;
+  state: activity.EntityState;
+  className?: string;
+}) {
+  const deleted = state === 'deleted';
+  return (
+    <span
+      className={[className, deleted ? 'font-normal italic text-ink-soft' : '']
+        .filter(Boolean)
+        .join(' ')}
+      data-entity-placeholder={deleted ? 'deleted' : undefined}
+    >
+      {displayEntityLabel(kind, value, state)}
+    </span>
+  );
 }
 
 const DETAIL_LEVEL_OPTIONS = [
@@ -330,9 +379,13 @@ function activityRowLabel(event: activity.Event, isNew: boolean): string {
   return [
     isNew ? 'New activity.' : null,
     `Event: ${eventLabel(event.eventType)}.`,
-    `Actor: ${event.actorLabel}.`,
-    `Subject: ${event.subjectLabel}.`,
-    `Project: ${event.projectLabel ?? 'No project'}.`,
+    `Actor: ${accessibleEntityLabel('user', event.actorLabel, event.actorState)}.`,
+    `Subject: ${accessibleEntityLabel(event.subjectType, event.subjectLabel, event.subjectState)}.`,
+    `Project: ${
+      event.projectState === 'none'
+        ? 'No project'
+        : accessibleEntityLabel('project', event.projectLabel, event.projectState)
+    }.`,
     `Occurred at ${displayTime(event.occurredAt)}.`,
   ]
     .filter((part): part is string => part !== null)
@@ -347,10 +400,14 @@ function activityTextLine(event: activity.Event): string {
   return [
     event.occurredAt,
     event.eventType,
-    oneLineField(event.actorLabel),
+    oneLineField(displayEntityLabel('user', event.actorLabel, event.actorState)),
     oneLineField(event.actorEmail),
-    oneLineField(event.projectLabel),
-    oneLineField(event.subjectLabel),
+    oneLineField(
+      event.projectState === 'none'
+        ? null
+        : displayEntityLabel('project', event.projectLabel, event.projectState),
+    ),
+    oneLineField(displayEntityLabel(event.subjectType, event.subjectLabel, event.subjectState)),
     event.id,
     event.actorUserId ?? '',
     event.projectId ?? '',
@@ -360,15 +417,25 @@ function activityTextLine(event: activity.Event): string {
   ].join('\t');
 }
 
+function actorIdentityLabel(actor: ActorOption): string {
+  const emailOrId = actor.email ?? actor.id;
+  return actor.state === 'deleted' && actor.email ? `${actor.id} — ${actor.email}` : emailOrId;
+}
+
 function actorOptionLabel(actor: ActorOption): string {
-  return `${actor.label} — ${actor.email ?? actor.id}`;
+  return `${displayEntityLabel('user', actor.label, actor.state)} — ${actorIdentityLabel(actor)}`;
 }
 
 function projectOptionLabel(project: ProjectOption): string {
-  return `${project.label} — ${project.id}`;
+  return `${displayEntityLabel('project', project.label, project.state)} — ${project.id}`;
 }
 
-function compareLabels(leftLabel: string, rightLabel: string, leftId: string, rightId: string): number {
+function compareLabels(
+  leftLabel: string,
+  rightLabel: string,
+  leftId: string,
+  rightId: string,
+): number {
   const labelOrder = leftLabel.localeCompare(rightLabel);
   return labelOrder !== 0 ? labelOrder : leftId.localeCompare(rightId);
 }
@@ -508,23 +575,35 @@ function ActivityFeed({
           id: event.actorUserId,
           label: event.actorLabel,
           email: event.actorEmail,
+          state: event.actorState,
         });
       }
       return [...byId.values()].sort((left, right) =>
-        compareLabels(left.label, right.label, left.id, right.id),
+        compareLabels(
+          displayEntityLabel('user', left.label, left.state),
+          displayEntityLabel('user', right.label, right.state),
+          left.id,
+          right.id,
+        ),
       );
     });
     setKnownProjects((current) => {
       const byId = new Map(current.map((project) => [project.id, project]));
       for (const event of events) {
-        if (!event.projectId || !event.projectLabel) continue;
+        if (!event.projectId || event.projectState === 'none') continue;
         byId.set(event.projectId, {
           id: event.projectId,
           label: event.projectLabel,
+          state: event.projectState,
         });
       }
       return [...byId.values()].sort((left, right) =>
-        compareLabels(left.label, right.label, left.id, right.id),
+        compareLabels(
+          displayEntityLabel('project', left.label, left.state),
+          displayEntityLabel('project', right.label, right.state),
+          left.id,
+          right.id,
+        ),
       );
     });
   }, []);
@@ -650,9 +729,7 @@ function ActivityFeed({
 
   function toggleActorExclusion(actor: ActorExclusion, checked: boolean) {
     setFilters((current) => {
-      const alreadyExcluded = current.excludedActors.some(
-        (excluded) => excluded.id === actor.id,
-      );
+      const alreadyExcluded = current.excludedActors.some((excluded) => excluded.id === actor.id);
       if (checked) {
         if (alreadyExcluded || current.excludedActors.length >= MAX_EXCLUDED_ACTORS) {
           return current;
@@ -1066,16 +1143,33 @@ function ActivityFeed({
                               name="user"
                               testId="actor-icon"
                             />
-                            {event.actorLabel}
+                            <EntityLabel
+                              kind="user"
+                              state={event.actorState}
+                              value={event.actorLabel}
+                            />
                           </span>
-                          <span className="font-medium text-accent-ink">{event.subjectLabel}</span>
+                          <EntityLabel
+                            className="font-medium text-accent-ink"
+                            kind={event.subjectType}
+                            state={event.subjectState}
+                            value={event.subjectLabel}
+                          />
                           <span className="inline-flex items-center gap-1.5 text-ink-soft">
                             <ActivityIcon
                               className="size-3.5 shrink-0"
                               name="folder"
                               testId="project-icon"
                             />
-                            <span>{event.projectLabel ?? '—'}</span>
+                            {event.projectState !== 'none' ? (
+                              <EntityLabel
+                                kind="project"
+                                state={event.projectState}
+                                value={event.projectLabel}
+                              />
+                            ) : (
+                              <span>—</span>
+                            )}
                           </span>
                         </button>
                       </li>
@@ -1121,9 +1215,7 @@ function ActivityFeed({
                 <p className="text-[10px] font-bold uppercase tracking-wide text-accent-ink">
                   {openFilter} column
                 </p>
-                <h2 className="text-sm font-semibold text-ink">
-                  Filter by {openFilter}
-                </h2>
+                <h2 className="text-sm font-semibold text-ink">Filter by {openFilter}</h2>
               </div>
               <button
                 aria-label={`Close ${openFilter} filter`}
@@ -1175,9 +1267,11 @@ function ActivityFeed({
                         key={actor.id}
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-ink">{actor.label}</p>
+                          <p className="truncate text-sm font-semibold text-ink">
+                            <EntityLabel kind="user" state={actor.state} value={actor.label} />
+                          </p>
                           <p className="truncate text-xs text-ink-soft">
-                            {actor.email ?? actor.id}
+                            {actorIdentityLabel(actor)}
                           </p>
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
@@ -1265,7 +1359,11 @@ function ActivityFeed({
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-ink">
-                            {project.label}
+                            <EntityLabel
+                              kind="project"
+                              state={project.state}
+                              value={project.label}
+                            />
                           </p>
                           <p className="truncate font-mono text-xs text-ink-soft">{project.id}</p>
                         </div>
@@ -1318,7 +1416,11 @@ function ActivityFeed({
                   {eventLabel(selected.eventType)}
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-ink" id="activity-detail-title">
-                  {selected.subjectLabel}
+                  <EntityLabel
+                    kind={selected.subjectType}
+                    state={selected.subjectState}
+                    value={selected.subjectLabel}
+                  />
                 </h2>
               </div>
               <button
@@ -1337,9 +1439,8 @@ function ActivityFeed({
               <dd className="break-all text-ink-soft">{selected.occurredAt}</dd>
               <dt className="font-medium text-ink">Actor</dt>
               <dd className="break-all text-ink-soft">
-                {selected.actorEmail
-                  ? `${selected.actorLabel} — ${selected.actorEmail}`
-                  : selected.actorLabel}
+                <EntityLabel kind="user" state={selected.actorState} value={selected.actorLabel} />
+                {selected.actorEmail ? ` — ${selected.actorEmail}` : null}
               </dd>
               <dt className="font-medium text-ink">Actor ID</dt>
               <dd className="break-all text-ink-soft">{selected.actorUserId ?? 'Deleted'}</dd>

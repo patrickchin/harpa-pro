@@ -116,9 +116,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
     );
   }
 
-  await expect(
-    activityFilters.getByRole('radio', { name: 'Past month' }),
-  ).toBeChecked();
+  await expect(activityFilters.getByRole('radio', { name: 'Past month' })).toBeChecked();
 
   const desktopViewport = page.viewportSize();
   expect(desktopViewport).not.toBeNull();
@@ -168,7 +166,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(page.getByText('All time', { exact: true })).toBeInViewport();
   await page.setViewportSize(desktopViewport!);
   const rows = feed.locator('[data-testid^="activity-row-"]');
-  await expect(rows).toHaveCount(1);
+  await expect(rows).toHaveCount(5);
   const row = rows.first();
   await expect(row).toContainText('Report created');
   await expect(row).toContainText('Admin Activity E2E');
@@ -192,6 +190,26 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   ]);
   expect(eventWeight).toBeGreaterThan(projectWeight);
 
+  const reservedLabelRow = feed.getByRole('button', {
+    name: /Event: Project created\. Actor: Deleted user\. Subject: Deleted project\. Project: Deleted project\./,
+  });
+  await expect(reservedLabelRow).toBeVisible();
+  await expect(reservedLabelRow.getByText('Deleted user', { exact: true })).toBeVisible();
+  await expect(reservedLabelRow.getByText('Deleted project', { exact: true })).toHaveCount(2);
+  await expect(reservedLabelRow.locator('[data-entity-placeholder="deleted"]')).toHaveCount(0);
+  await expect(reservedLabelRow).not.toHaveAccessibleName(/unavailable/);
+
+  const deletedProjectRow = feed.getByRole('button', {
+    name: /Subject: deleted project \(unavailable\)\. Project: deleted project \(unavailable\)\./,
+  });
+  await expect(deletedProjectRow.getByText('[deleted project]')).toHaveCount(2);
+  await expect(deletedProjectRow.getByText('[deleted project]').first()).toHaveCSS(
+    'font-style',
+    'italic',
+  );
+  await expect(feed.getByText('[deleted report]', { exact: true })).toBeVisible();
+  await expect(feed.getByText('[deleted user]', { exact: true })).toHaveCount(2);
+
   await row.click();
   const detail = page.getByRole('dialog', { name: 'Report #7' });
   await expect(detail).toBeVisible();
@@ -199,6 +217,19 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(detail.locator('pre')).toContainText('"reportNumber": 7');
   await detail.getByRole('button', { name: 'Close' }).click();
   await expect(detail).toBeHidden();
+
+  await reservedLabelRow.click();
+  const reservedLabelDetail = page.getByRole('dialog', { name: 'Deleted project' });
+  await expect(reservedLabelDetail).toBeVisible();
+  await expect(reservedLabelDetail.getByText('Deleted user', { exact: true })).toBeVisible();
+  await expect(reservedLabelDetail.locator('[data-entity-placeholder="deleted"]')).toHaveCount(0);
+  await reservedLabelDetail.getByRole('button', { name: 'Close' }).click();
+
+  await deletedProjectRow.click();
+  const deletedProjectDetail = page.getByRole('dialog', { name: '[deleted project]' });
+  await expect(deletedProjectDetail).toBeVisible();
+  await expect(deletedProjectDetail.getByText(/^prj_/).first()).toBeVisible();
+  await deletedProjectDetail.getByRole('button', { name: 'Close' }).click();
 
   const detailResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -215,14 +246,15 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(detailLevel.getByRole('radio', { name: 'Detailed activity' })).toBeChecked();
 
   const detailRows = feed.locator('[data-testid^="activity-row-"]');
-  await expect(detailRows).toHaveCount(4);
+  await expect(detailRows).toHaveCount(5);
   await expect(detailRows).toContainText([
     'Text note added',
     'Voice note added',
     'Image uploaded',
     'Document uploaded',
+    '[deleted note]',
   ]);
-  await expect(feed.locator('[data-icon="message-square-text"]')).toBeVisible();
+  await expect(feed.locator('[data-icon="message-square-text"]').first()).toBeVisible();
   await expect(feed.locator('[data-icon="mic"]')).toBeVisible();
   await expect(feed.locator('[data-icon="image"]')).toBeVisible();
   await expect(feed.locator('[data-icon="file-text"]')).toBeVisible();
@@ -247,6 +279,12 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(userFilter).toHaveCSS('position', 'fixed');
   await expect(userFilter).toHaveAttribute('aria-modal', 'false');
   expect((await row.boundingBox())?.y).toBeCloseTo(rowYBeforePopup!, 0);
+  await userFilter.getByRole('searchbox', { name: 'Search users' }).fill('deleted user');
+  await expect(
+    userFilter.getByRole('radio', {
+      name: 'Only Deleted user — deleted-label-live@e2e.harpapro.com',
+    }),
+  ).toBeVisible();
   await userFilter.getByRole('searchbox', { name: 'Search users' }).fill('activity');
   const onlyActorLabel = 'Only Admin Activity E2E — activity-actor@e2e.harpapro.com';
   const onlyActor = userFilter.getByRole('radio', {
@@ -268,6 +306,17 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await page.getByRole('button', { name: 'Filter by project' }).click();
   await expect(userFilter).toHaveCount(0);
   const projectFilter = page.getByRole('dialog', { name: 'Project filter' });
+  await expect(
+    projectFilter.getByRole('radio', {
+      name: /^Only \[deleted project\] — prj_/,
+    }),
+  ).toBeVisible();
+  await projectFilter.getByRole('searchbox', { name: 'Search projects' }).fill('deleted project');
+  await expect(
+    projectFilter.getByRole('radio', {
+      name: /^Only Deleted project — prj_/,
+    }),
+  ).toBeVisible();
   await projectFilter.getByRole('searchbox', { name: 'Search projects' }).fill('admin activity');
   const onlyProject = projectFilter.getByRole('radio', {
     name: /^Only Admin Activity E2E Project — prj_/,
@@ -287,8 +336,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
 
   await page.getByRole('button', { name: 'Filter by user' }).click();
   const reopenedUserFilter = page.getByRole('dialog', { name: 'User filter' });
-  const actorExclusionLabel =
-    'Exclude Admin Activity E2E — activity-actor@e2e.harpapro.com';
+  const actorExclusionLabel = 'Exclude Admin Activity E2E — activity-actor@e2e.harpapro.com';
   const actorExclusion = reopenedUserFilter.getByRole('checkbox', {
     name: actorExclusionLabel,
   });
@@ -320,7 +368,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   });
   await actorExclusion.click();
   expect((await removeExclusionResponsePromise).status()).toBe(200);
-  await expect(detailRows).toHaveCount(4);
+  await expect(detailRows).toHaveCount(5);
   await page.keyboard.press('Escape');
   await expect(reopenedUserFilter).toHaveCount(0);
 
@@ -335,6 +383,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(textPage.locator('body')).toContainText('Admin Activity E2E');
   await expect(textPage.locator('body')).toContainText('Admin Activity E2E Project');
   await expect(textPage.locator('body')).toContainText('Voice note');
+  await expect(textPage.locator('body')).toContainText('[deleted note]');
   await textPage.close();
 
   const milestoneResponsePromise = page.waitForResponse((response) => {

@@ -36,7 +36,7 @@ const applicationProject = {
   branchCount: { status: 'available' as const, count: 147 },
   branchDetails: {
     status: 'available' as const,
-    truncated: true,
+    truncated: false,
     branches: [
       {
         id: 'br_main',
@@ -263,7 +263,7 @@ describe('AdminOperations', () => {
     expect(within(projectCard).queryByText('2 branches')).toBeNull();
     expect(within(projectCard).getByText('main')).toBeTruthy();
     expect(within(projectCard).getByText('dev')).toBeTruthy();
-    expect(within(projectCard).getByText('Showing 2 of 147 branches.')).toBeTruthy();
+    expect(within(projectCard).getByText('2 active branch details returned.')).toBeTruthy();
 
     const branchScroller = within(projectCard).getByRole('region', {
       name: 'Branches for Application database',
@@ -300,6 +300,32 @@ describe('AdminOperations', () => {
     expect(within(projectCard).getByText('12 branches')).toBeTruthy();
     expect(within(projectCard).getByText('Branch details unavailable.')).toBeTruthy();
     expect(within(projectCard).getByText('Provider request timed out.')).toBeTruthy();
+  });
+
+  it('labels truncated branch details without conflating their size with the exact count', async () => {
+    mockOperationsFetch({
+      ...availableInventory,
+      status: 'partial',
+      unavailableProjectCount: 1,
+      projects: [
+        {
+          ...applicationProject,
+          branchDetails: { ...applicationProject.branchDetails, truncated: true },
+        },
+      ],
+    });
+
+    render(<AdminOperations />);
+
+    const inventoryHeading = await screen.findByRole('heading', { name: 'Neon inventory' });
+    const inventorySection = inventoryHeading.closest('section')!;
+    expect(within(inventorySection).getByText('Partial Neon inventory')).toBeTruthy();
+    const projectCard = within(inventorySection)
+      .getByRole('heading', { level: 3, name: 'Application database' })
+      .closest('article')!;
+    expect(within(projectCard).getByText('147 branches')).toBeTruthy();
+    expect(within(projectCard).getByText('2 active branch details returned.')).toBeTruthy();
+    expect(within(projectCard).getByText('Branch detail list is truncated.')).toBeTruthy();
   });
 
   it('renders an explicit empty state when the viewer has no accessible projects', async () => {
@@ -404,9 +430,15 @@ describe('AdminOperations', () => {
 
     render(<AdminOperations />);
 
+    const inventoryHeading = await screen.findByRole('heading', { name: 'Neon inventory' });
+    const inventorySection = inventoryHeading.closest('section')!;
+    expect(await within(inventorySection).findByText('Unknown')).toBeTruthy();
     expect(
-      await screen.findByRole('heading', { level: 3, name: 'Application database' }),
-    ).toBeTruthy();
+      within(inventorySection).queryByRole('heading', {
+        level: 3,
+        name: 'Application database',
+      }),
+    ).toBeNull();
     const inventoryCall = fetchMock.mock.calls.find(
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );

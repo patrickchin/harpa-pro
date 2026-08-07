@@ -44,31 +44,7 @@
     const closeButton = dialog.querySelector<HTMLButtonElement>(
       "[data-docs-screenshot-dialog-close]",
     );
-    const panel = dialog.querySelector<HTMLElement>(
-      ".docs-screenshot-dialog-panel",
-    );
-    const imageRegion = dialog.querySelector<HTMLElement>(
-      ".docs-screenshot-dialog-image",
-    );
     let activeTrigger: HTMLAnchorElement | null = null;
-
-    const fitPanelToImage = () => {
-      if (!dialog.open || !image || !imageRegion || !panel) return;
-
-      panel.style.removeProperty("width");
-      const imageWidth = image.getBoundingClientRect().width;
-      const regionStyle = getComputedStyle(imageRegion);
-      const panelStyle = getComputedStyle(panel);
-      const horizontalChrome =
-        Number.parseFloat(regionStyle.paddingLeft) +
-        Number.parseFloat(regionStyle.paddingRight) +
-        Number.parseFloat(panelStyle.borderLeftWidth) +
-        Number.parseFloat(panelStyle.borderRightWidth);
-      panel.style.width = `${Math.ceil(imageWidth + horizontalChrome)}px`;
-    };
-
-    image?.addEventListener("load", fitPanelToImage);
-    window.addEventListener("resize", fitPanelToImage);
 
     document
       .querySelectorAll<HTMLAnchorElement>("[data-docs-screenshot-trigger]")
@@ -105,7 +81,6 @@
           title.textContent = `Full screenshot for ${stepTitle}`;
           caption.textContent = stepTitle;
           dialog.showModal();
-          fitPanelToImage();
         });
       });
 

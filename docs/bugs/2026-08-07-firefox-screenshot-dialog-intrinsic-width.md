@@ -12,13 +12,15 @@ constraint, while Firefox contributed the image's much wider intrinsic width
 before applying the height fit. The Playwright project ran Chromium only, so
 the browser difference escaped the regression.
 
-**Fix.** After opening, measure the rendered image and set the panel width to
-that width plus its padding and borders. Add Firefox to the site Playwright
-projects and CI browser installation.
+**Fix.** Size the shared 1290 × 2796 portrait layout entirely in CSS from its
+aspect ratio and viewport-bound height. Add Firefox to the site Playwright
+projects and CI browser installation; reject script-driven panel geometry with
+a source guard.
 
-**Test.** At 1366 × 768, the shared dialog journey now runs in Chromium and
-Firefox and requires the panel to be no more than 32 pixels wider than the
-rendered screenshot.
+**Test.** At 1366 × 768 and 1920 × 1080, the shared dialog journey now runs in
+Chromium and Firefox and requires the panel to be no more than 32 pixels wider
+than the rendered screenshot. A unit test enforces both the CSS-only boundary
+and the shared screenshot dimensions that support it.
 
 **Pattern.** No existing numbered pattern; keep browser-dependent intrinsic
 sizing under multi-browser E2E coverage.

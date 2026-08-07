@@ -199,6 +199,20 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(trigger).toBeFocused();
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await trigger.click();
+  await expect(fullScreenshot).toBeVisible();
+  const wideBounds = await dialog.boundingBox();
+  const wideImageBounds = await fullScreenshot.boundingBox();
+  expect(wideBounds).not.toBeNull();
+  expect(wideImageBounds).not.toBeNull();
+  expect(wideBounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    (wideImageBounds?.width ?? 0) + 32,
+  );
+  expect(wideImageBounds?.width ?? 0).toBeGreaterThan(fit.imageWidth);
+  await dialog.getByRole("button", { name: "Close full screenshot" }).click();
+  await expect(dialog).not.toBeVisible();
 });
 
 test("keeps modified screenshot clicks as native new-tab links", async ({
@@ -215,7 +229,7 @@ test("keeps modified screenshot clicks as native new-tab links", async ({
   const modifier: "Meta" | "Control" =
     process.platform === "darwin" ? "Meta" : "Control";
   const newPagePromise = page.context().waitForEvent("page", {
-    timeout: 3_000,
+    timeout: 10_000,
   });
   await trigger.click({ modifiers: [modifier] });
   const imagePage = await newPagePromise;

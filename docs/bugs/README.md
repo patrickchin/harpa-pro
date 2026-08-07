@@ -383,7 +383,7 @@ Most recent first. One line per bug — open the linked file only for the full r
   coverage. [detail](2026-08-07-admin-activity-label-state-collision.md)
 - **2026-08-07** — The portrait screenshot dialog stayed almost full-width in
   Firefox after a Chromium-only `fit-content` repair passed. Fix: size the
-  panel from the rendered image and run the regression in both browsers.
+  shared portrait layout in CSS and run the regression in both browsers.
   [detail](2026-08-07-firefox-screenshot-dialog-intrinsic-width.md)
 - **2026-08-07** — Android Maestro accepted a 37-pixel clipped sliver of the
   finalized report's outer Photos card as fully visible, then failed because

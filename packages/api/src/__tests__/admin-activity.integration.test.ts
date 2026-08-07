@@ -253,6 +253,62 @@ describe('GET /admin/activity', () => {
     });
   });
 
+  it('reports live entities named like deleted fallbacks as available', async () => {
+    const liveUserId = makeUserId();
+    const liveProjectId = makeProjectId();
+    const liveEventId = newId('aud');
+
+    await seedAuthUsers(fx.url, [
+      {
+        id: liveUserId,
+        email: 'deleted-label-live@example.com',
+        displayName: 'Deleted user',
+      },
+    ]);
+
+    try {
+      await db.query(
+        `INSERT INTO app.projects(id, name, owner_id)
+         VALUES ($1, 'Deleted project', $2)`,
+        [liveProjectId, liveUserId],
+      );
+      await db.query(
+        `INSERT INTO app.activity_events
+           (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+            project_id, request_id, dedupe_key, metadata)
+         VALUES
+           ($1, '2026-07-29T03:30:00Z', 'project.created', $2, 'project', $3::text, $3,
+            'request-live-reserved-labels', $4, '{}')`,
+        [liveEventId, liveUserId, liveProjectId, `project.created:${liveProjectId}`],
+      );
+
+      const response = await createApp().request(
+        `/admin/activity?actorUserId=${liveUserId}`,
+        { headers: await adminHeaders() },
+      );
+      expect(response.status).toBe(200);
+      const rawBody = (await response.json()) as {
+        items: Array<Record<string, unknown>>;
+        nextCursor: string | null;
+      };
+
+      expect(rawBody.items).toHaveLength(1);
+      expect(rawBody.items[0]).toMatchObject({
+        id: liveEventId,
+        actorLabel: 'Deleted user',
+        actorState: 'available',
+        subjectLabel: 'Deleted project',
+        subjectState: 'available',
+        projectLabel: 'Deleted project',
+        projectState: 'available',
+      });
+    } finally {
+      await db.query(`DELETE FROM app.activity_events WHERE id = $1`, [liveEventId]);
+      await db.query(`DELETE FROM app.projects WHERE id = $1`, [liveProjectId]);
+      await db.query(`DELETE FROM public."user" WHERE id = $1`, [liveUserId]);
+    }
+  });
+
   it('uses a stable cursor and deleted-entity fallbacks', async () => {
     const first = activitySchemas.listResponse.parse(
       await (

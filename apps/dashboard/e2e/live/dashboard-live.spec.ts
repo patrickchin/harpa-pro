@@ -580,6 +580,7 @@ async function cleanupProjectsByName(
 async function revokeSession(request: APIRequestContext, token: string): Promise<void> {
   const response = await request.post(`${apiUrl}/api/auth/sign-out`, {
     headers: authHeaders(token),
+    data: {},
   });
   if (response.ok() || response.status() === 401) return;
   await expectOk(response, 'revoke dashboard session');

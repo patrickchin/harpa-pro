@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { operations } from './index.js';
 import * as schemas from './schemas/index.js';
 
 describe('api-contract', () => {
@@ -10,6 +11,7 @@ describe('api-contract', () => {
     expect(schemas.files).toBeDefined();
     expect(schemas.voice).toBeDefined();
     expect(schemas.settings).toBeDefined();
+    expect(operations.neonInventoryObservation).toBeDefined();
   });
 
   it('isoDateTime accepts ISO-8601 and rejects garbage', () => {

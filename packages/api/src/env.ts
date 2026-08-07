@@ -75,6 +75,18 @@ const Env = z
      * sessions. It must never point at the application database.
      */
     ADMIN_DATABASE_URL: postgresConnectionUrl.optional(),
+    /**
+     * Optional read-only Neon inventory observer for the admin operations page.
+     * This dedicated personal key must belong to a Viewer and must never reuse
+     * the branch-management NEON_API_KEY held by CI. Both values are paired by
+     * the refinements below.
+     */
+    ADMIN_NEON_VIEWER_API_KEY: z.string().trim().min(1).optional(),
+    ADMIN_NEON_ORG_ID: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9-]{1,60}$/, 'must be a Neon organization ID')
+      .optional(),
     BETTER_AUTH_SECRET: z.string().min(16).default(DEV_BETTER_AUTH_SECRET),
     BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
     /**
@@ -307,6 +319,14 @@ const Env = z
   .refine((e) => !!e.DEMO_ACCOUNT_EMAILS === !!e.DEMO_ACCOUNT_PASSWORD, {
     path: ['DEMO_ACCOUNT_PASSWORD'],
     message: 'DEMO_ACCOUNT_EMAILS and DEMO_ACCOUNT_PASSWORD must be set together',
+  })
+  .refine((e) => !e.ADMIN_NEON_VIEWER_API_KEY || !!e.ADMIN_NEON_ORG_ID, {
+    path: ['ADMIN_NEON_ORG_ID'],
+    message: 'ADMIN_NEON_VIEWER_API_KEY and ADMIN_NEON_ORG_ID must be set together',
+  })
+  .refine((e) => !e.ADMIN_NEON_ORG_ID || !!e.ADMIN_NEON_VIEWER_API_KEY, {
+    path: ['ADMIN_NEON_VIEWER_API_KEY'],
+    message: 'ADMIN_NEON_VIEWER_API_KEY and ADMIN_NEON_ORG_ID must be set together',
   })
   .refine(
     (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',

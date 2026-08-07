@@ -255,14 +255,19 @@ describe('AdminOperations', () => {
     const inventoryHeading = await screen.findByRole('heading', { name: 'Neon inventory' });
     const inventorySection = inventoryHeading.closest('section')!;
     expect(within(inventorySection).getByText('1 visible project')).toBeTruthy();
+    expect(inventorySection.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
 
     const projectCard = within(inventorySection)
       .getByRole('heading', { level: 3, name: 'Application database' })
       .closest('article')!;
+    expect(within(projectCard).getByText('prj_application')).toBeTruthy();
+    expect(projectCard.querySelector('time[datetime="2026-05-01T00:00:00.000Z"]')).toBeTruthy();
     expect(within(projectCard).getByText('147 branches')).toBeTruthy();
     expect(within(projectCard).queryByText('2 branches')).toBeNull();
     expect(within(projectCard).getByText('main')).toBeTruthy();
     expect(within(projectCard).getByText('dev')).toBeTruthy();
+    expect(within(projectCard).getByText('br_main')).toBeTruthy();
+    expect(within(projectCard).getByText('br_dev')).toBeTruthy();
     expect(within(projectCard).getByText('2 active branch details returned.')).toBeTruthy();
 
     const branchScroller = within(projectCard).getByRole('region', {
@@ -270,6 +275,31 @@ describe('AdminOperations', () => {
     });
     expect(branchScroller.className).toContain('overflow-y-auto');
     expect(branchScroller.className).toMatch(/\bmax-h-/);
+  });
+
+  it('returns to the signed-out guard when the Neon observer rejects an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized.' } }, 401);
+      }
+      if (
+        url === 'https://api.example.test/readyz' ||
+        url === 'https://api.example.test/admin/readyz'
+      ) {
+        return new Response(null, { status: 200 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
+    expect(screen.queryByText('Neon inventory is temporarily unavailable.')).toBeNull();
+    expect(authMock.logout).not.toHaveBeenCalled();
   });
 
   it('preserves verified project facts when the Neon observation is partial', async () => {

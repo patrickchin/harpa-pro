@@ -27,6 +27,7 @@ const SKIP_PREFIXES: readonly string[] = [
   // admin database. Its readiness probe must not touch either limiter.
   '/admin/auth',
   '/admin/activity',
+  '/admin/operations',
   '/admin/readyz',
   '/openapi.json',
   // Apple swcd and Android PackageManager fetch universal-link manifests

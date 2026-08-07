@@ -22,6 +22,7 @@ import { adminRoutes } from './routes/admin.js';
 import { adminActivityRoutes } from './routes/admin-activity.js';
 import { adminAuthRoutes } from './routes/admin-auth.js';
 import { adminReadyz } from './routes/admin-readyz.js';
+import { adminOperationsRoutes } from './routes/admin-operations.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
@@ -185,6 +186,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', settingsRoutes);
   app.route('/', adminAuthRoutes);
   app.route('/', adminActivityRoutes);
+  app.route('/', adminOperationsRoutes);
   app.route('/', adminRoutes);
 
   // OpenAPI spec

@@ -65,10 +65,12 @@ does not define this repository's runtime; `nvm use` does.
   - PR branch `pr-<n>` →
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
-  - `/` renders the activity console and `/operations` renders read-only service
-    monitoring; unknown browser paths return a static 404. `/admin/activity`
-    remains an API resource path. Data requests require the dedicated API admin
-    session. See [Separate admin site](design-separate-admin-site.md).
+  - `/` renders the activity console. `/operations` renders read-only Harpa
+    readiness, service links, and bounded Neon inventory. Unknown browser paths
+    return a static 404. `/admin/activity` and `/admin/operations/neon` remain
+    API resource paths. Data requests require the dedicated API admin session.
+    See [Separate admin site](design-separate-admin-site.md) and
+    [Admin Neon inventory](design-admin-neon-inventory.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
   Repository builds use the shared Node 24.19.0 runtime.
@@ -414,6 +416,43 @@ live variants (`.env.local`, `.env.dev`, and `.env.prod`) are gitignored.
 Deployment-resolved values, such as `ADMIN_DATABASE_URL`, do not mirror
 Doppler.
 
+### Neon inventory observer
+
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are an optional paired
+runtime configuration. The normal Doppler-to-Fly import supplies them to the
+intended environment. They are not browser or Cloudflare Pages variables. The
+API accepts both variables or neither and rejects a partial pair at boot.
+
+The key belongs to one fixed, dedicated Neon observer. Give that user
+organization role `Viewer`, or role `Collaborator` with explicit project-level
+`Viewer` grants. The API requires every visible project to belong to the
+configured organization and report effective permission `VIEWER`. It fails
+closed before branch calls if Neon omits this proof or shows a higher role.
+Never use the GitHub Actions `NEON_API_KEY`, which can manage preview branches
+and connection URIs.
+
+Provision and prove the observer in this order:
+
+1. Create the dedicated Neon user and apply only the required Viewer grants.
+2. Verify the organization and effective project permissions in Neon.
+3. Create a personal key for that user and record only non-secret creation
+   metadata.
+4. Add both observer variables to the intended Doppler config.
+5. Dispatch the protected API deployment for that environment.
+6. Verify that Fly lists both secret names and that `/healthz.gitCommit` equals
+   the expected full Git SHA.
+7. Verify the admin Pages `/_cf-pages-deployment.json` marker at that SHA. Then
+   call `GET /admin/operations/neon` with a dedicated admin session and confirm
+   the `private, no-store` response reports `VIEWER` for every returned
+   project.
+
+A merge, a Pages marker, or `/readyz` alone does not prove live inventory. If
+the pair is absent, the UI shows `Unknown` and the API makes no Neon request.
+The route lists at most 20 projects and at most 100 active branch details per
+project, with no retries. The count endpoint has no deleted-branch selector,
+while the active-detail request explicitly excludes deleted branches. Neon has
+no documented remaining-credit API, so the console remains the billing source.
+
 An administrator's login password is not a deployment secret. The
 `admin:set-password --password-stdin` command hashes it into the independent
 admin database, and the operator stores the original in a password manager.
@@ -439,6 +478,9 @@ are true:
   into the image.
 - `BETTER_AUTH_SECRET` is explicitly set to at least 32 characters and
   is not the checked-in development fallback.
+- `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are both absent or both
+  present. They remain optional because an unconfigured inventory is a typed
+  `Unknown` state.
 - AI is live (`AI_LIVE=1`, `AI_FIXTURE_MODE=live`) with OpenAI and Groq
   keys.
 - R2 is live with an account ID or explicit endpoint plus both access
@@ -548,6 +590,9 @@ the canonical `BETTER_AUTH_URL` themselves:
 - production: `https://api.harpapro.com`.
 
 The API fails boot when a non-preview deployment uses any other auth base URL.
+The optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair survives
+the normal Doppler import because it is API runtime configuration. The CI
+`NEON_API_KEY` stays excluded and never reaches Fly.
 The filter also excludes Doppler metadata, Neon control-plane values,
 Cloudflare tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only
 flags. Before importing, the workflow removes any legacy

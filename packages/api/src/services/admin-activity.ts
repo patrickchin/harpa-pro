@@ -11,13 +11,16 @@ interface ActivityRow extends Record<string, unknown> {
   occurred_at: string;
   event_type: z.infer<typeof activitySchemas.eventType>;
   actor_user_id: string | null;
-  actor_label: string;
+  actor_label: string | null;
   actor_email: string | null;
+  actor_state: z.infer<typeof activitySchemas.entityState>;
   subject_type: 'user' | 'project' | 'report' | 'note';
   subject_id: string | null;
-  subject_label: string;
+  subject_label: string | null;
+  subject_state: z.infer<typeof activitySchemas.entityState>;
   project_id: string | null;
   project_label: string | null;
+  project_state: z.infer<typeof activitySchemas.projectState>;
   request_id: string | null;
   metadata: unknown;
 }
@@ -97,40 +100,60 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
       e.occurred_at,
       e.event_type,
       e.actor_user_id,
-      COALESCE(
-        NULLIF(actor.display_name, ''),
-        NULLIF(actor.name, ''),
-        actor.email,
-        'Deleted user'
-      ) AS actor_label,
+      CASE
+        WHEN actor.id IS NULL THEN NULL
+        ELSE COALESCE(
+          NULLIF(actor.display_name, ''),
+          NULLIF(actor.name, ''),
+          actor.email
+        )
+      END AS actor_label,
       actor.email AS actor_email,
+      CASE
+        WHEN actor.id IS NULL THEN 'deleted'
+        ELSE 'available'
+      END AS actor_state,
       e.subject_type,
       e.subject_id,
       CASE e.subject_type
-        WHEN 'user' THEN COALESCE(
-          NULLIF(subject_user.display_name, ''),
-          NULLIF(subject_user.name, ''),
-          subject_user.email,
-          'Deleted user'
-        )
-        WHEN 'project' THEN COALESCE(subject_project.name, 'Deleted project')
+        WHEN 'user' THEN CASE
+          WHEN subject_user.id IS NULL THEN NULL
+          ELSE COALESCE(
+            NULLIF(subject_user.display_name, ''),
+            NULLIF(subject_user.name, ''),
+            subject_user.email
+          )
+        END
+        WHEN 'project' THEN subject_project.name
         WHEN 'report' THEN CASE
-          WHEN subject_report.id IS NULL THEN 'Deleted report'
+          WHEN subject_report.id IS NULL THEN NULL
           ELSE 'Report #' || subject_report.number::text
         END
         WHEN 'note' THEN CASE
-          WHEN subject_note.id IS NULL THEN 'Deleted note'
+          WHEN subject_note.id IS NULL THEN NULL
           WHEN subject_note.kind = 'text' THEN 'Text note'
           WHEN subject_note.kind = 'voice' THEN 'Voice note'
           WHEN subject_note.kind = 'image' THEN 'Image note'
           WHEN subject_note.kind = 'document' THEN 'Document note'
         END
       END AS subject_label,
+      CASE
+        WHEN e.subject_type = 'user' AND subject_user.id IS NULL THEN 'deleted'
+        WHEN e.subject_type = 'project' AND subject_project.id IS NULL THEN 'deleted'
+        WHEN e.subject_type = 'report' AND subject_report.id IS NULL THEN 'deleted'
+        WHEN e.subject_type = 'note' AND subject_note.id IS NULL THEN 'deleted'
+        ELSE 'available'
+      END AS subject_state,
       e.project_id,
       CASE
         WHEN e.project_id IS NULL THEN NULL
-        ELSE COALESCE(project.name, 'Deleted project')
+        ELSE project.name
       END AS project_label,
+      CASE
+        WHEN e.project_id IS NULL THEN 'none'
+        WHEN project.id IS NULL THEN 'deleted'
+        ELSE 'available'
+      END AS project_state,
       e.request_id,
       e.metadata
     FROM app.activity_events e
@@ -165,11 +188,14 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
     actorUserId: row.actor_user_id,
     actorLabel: row.actor_label,
     actorEmail: row.actor_email,
+    actorState: row.actor_state,
     subjectType: row.subject_type,
     subjectId: row.subject_id,
     subjectLabel: row.subject_label,
+    subjectState: row.subject_state,
     projectId: row.project_id,
     projectLabel: row.project_label,
+    projectState: row.project_state,
     requestId: row.request_id,
     metadata: row.metadata,
   }));

@@ -5,7 +5,9 @@ Status: implemented.
 This document refines only the browser presentation and interaction model from
 [Admin business activity](design-admin-business-activity.md). The event
 taxonomy, application database ledger, dedicated admin authentication, and
-`GET /admin/activity` contract remain unchanged.
+`GET /admin/activity` query and authorization model remain unchanged. The
+response carries explicit entity-availability state so presentation never has
+to infer deletion from a display label.
 
 ## Problem
 
@@ -58,14 +60,18 @@ Icons are decorative and `aria-hidden`; each row exposes an explicit accessible
 name with event, actor, subject, project, and occurrence-time labels, while the
 complete visible text remains the source of truth.
 
-Deleted-entity labels returned by the API are fallback values, not historical
-names. The admin presentation renders them as lowercase, square-bracketed
-placeholders (`[deleted user]`, `[deleted project]`, `[deleted report]`, or
-`[deleted note]`) in muted italic text. The same wording appears in rows,
-header-filter choices, details, and the plain-text view. Accessible row names
-describe the entity as unavailable. Stable IDs remain in the filter identity
-line, detail drawer, and text view. An event with no project context continues
-to use an em dash and remains distinct from a deleted project.
+The API identifies missing joins with `actorState` and `subjectState`
+(`available` or `deleted`) and `projectState` (`none`, `available`, or
+`deleted`). Labels are current values only when the entity is available; they
+are null when it is deleted. The admin presentation creates lowercase,
+square-bracketed placeholders (`[deleted user]`, `[deleted project]`,
+`[deleted report]`, or `[deleted note]`) from this state and the subject type,
+not from label text. The same wording appears in rows, header-filter choices,
+details, and the plain-text view. Accessible row names describe the entity as
+unavailable. Stable IDs remain in the filter identity line, detail drawer, and
+text view. An event with no project context continues to use an em dash and
+remains distinct from a deleted project. A live user or project named exactly
+`Deleted user` or `Deleted project` remains available and renders verbatim.
 
 Selecting a row still opens the detail drawer for IDs, request ID, and strict
 metadata. Filtering actions are removed from the drawer because the attached
@@ -157,8 +163,9 @@ Every activity event occupies exactly one tab-separated line containing:
 This format supports browser Find, copying, and Save As while retaining the
 safe fields already returned by the admin API. It does not introduce note
 content, transcripts, filenames, storage keys, or other excluded data.
-Deleted-entity fallback labels use the same bracketed placeholders as the
-interactive feed; stable event and entity IDs remain unchanged.
+Explicit deleted-entity state produces the same bracketed placeholders as the
+interactive feed; live labels are exported verbatim, and stable event and
+entity IDs remain unchanged.
 
 ## Failure and accessibility behavior
 

@@ -153,10 +153,14 @@ without duplicating the activity row.
 The event row does not copy email addresses, display names, project names,
 report or note bodies, transcripts, filenames, client names, addresses, AI
 prompts, or other free-form content. The admin read query left-joins current
-labels from their source tables. If an entity has been deleted, the API returns
-a `Deleted user/project/report/note` fallback. The admin UI presents that value
-as a bracketed deleted-entity placeholder and keeps stable IDs available in
-filters, the detail drawer, and the plain-text view.
+labels from their source tables. The API reports join availability separately
+from label text: `actorState` and `subjectState` are `available` or `deleted`,
+while `projectState` is `none`, `available`, or `deleted`. Available labels are
+current source values; deleted labels are null. The admin UI derives its
+bracketed deleted-entity placeholder from the explicit state and entity type
+and keeps stable IDs available in filters, the detail drawer, and the
+plain-text view. Display strings are never reserved state markers, so a live
+entity named exactly `Deleted user` or `Deleted project` remains available.
 
 This trades perfect historical labels for less duplicated personal and client
 data. Historical label snapshots can be added later only with an explicit
@@ -299,8 +303,12 @@ The response follows the existing envelope:
 ```
 
 Items are display-ready and contain current actor/project labels when they
-still exist. The endpoint has fixed newest-first ordering; the first release
-does not expose arbitrary server sorting or a total row count.
+still exist. Each item also includes `actorState`, `subjectState`, and
+`projectState`; clients must use those fields rather than comparing label
+strings. Deleted actor and subject labels are null, deleted project labels are
+null, and a projectless event uses `projectState: 'none'`. The endpoint has
+fixed newest-first ordering; the first release does not expose arbitrary server
+sorting or a total row count.
 
 Responses include `Cache-Control: private, no-store`. Callers without a valid
 dedicated admin session get `401`. An app bearer token or Better Auth cookie

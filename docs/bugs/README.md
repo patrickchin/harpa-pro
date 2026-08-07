@@ -359,6 +359,12 @@ Most recent first. One line per bug — open the linked file only for the full r
   native readiness and share an enabled-shutter wait across current Maestro
   camera flows.
   [detail](2026-08-07-camera-shutter-native-readiness.md)
+- **2026-08-07** — The loopback Maestro API/R2 bridge accepted absolute or
+  arbitrary outbound targets, hostname substring checks accepted lookalikes,
+  and AI-fixture cleanup used four polynomial regex paths. Fix: pin the API
+  origin, require signed HTTPS R2 allowlists, use linear scans, and exercise the
+  real proxy factories with adversarial regressions.
+  [detail](2026-08-07-dev-e2e-proxy-ssrf.md)
 - **2026-08-06** _(R5)_ — Fresh local Compose databases applied the storage
   lifecycle migration but never armed its rollout gate, so account deletion
   deterministically returned 503. Fix: arm the disposable local stack with

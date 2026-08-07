@@ -24,9 +24,7 @@ describe('createGroqProvider — transcribe', () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(audioResponse())
-      .mockResolvedValueOnce(
-        jsonResponse(200, { text: 'site arrival 8:15', duration: 22.4 }),
-      );
+      .mockResolvedValueOnce(jsonResponse(200, { text: 'site arrival 8:15', duration: 22.4 }));
     const p = createGroqProvider({ apiKey: 'gsk-test', fetchImpl });
 
     const out = await p.transcribe({ audioUrl: 'https://r2.example/audio.m4a' });
@@ -42,9 +40,7 @@ describe('createGroqProvider — transcribe', () => {
     const [url, init] = fetchImpl.mock.calls[1]!;
     expect(url).toBe('https://api.groq.com/openai/v1/audio/transcriptions');
     expect(init?.method).toBe('POST');
-    expect((init?.headers as Record<string, string>).authorization).toBe(
-      'Bearer gsk-test',
-    );
+    expect((init?.headers as Record<string, string>).authorization).toBe('Bearer gsk-test');
     expect(init?.body).toBeInstanceOf(FormData);
     const form = init?.body as FormData;
     expect(form.get('model')).toBe('whisper-large-v3-turbo');
@@ -75,11 +71,18 @@ describe('createGroqProvider — transcribe', () => {
       fetchImpl,
     });
     await p.transcribe({ audioUrl: 'https://r2/x' });
-    expect(fetchImpl.mock.calls[1]![0]).toBe(
-      'https://groq.proxy/v1/audio/transcriptions',
-    );
+    expect(fetchImpl.mock.calls[1]![0]).toBe('https://groq.proxy/v1/audio/transcriptions');
     const form = fetchImpl.mock.calls[1]![1]?.body as FormData;
     expect(form.get('model')).toBe('distil-whisper-large-v3-en');
+  });
+
+  it('normalizes adversarial base URLs without polynomial backtracking', () => {
+    const baseUrl = `https://groq.proxy/${'/'.repeat(20_000)}x`;
+    const started = performance.now();
+
+    createGroqProvider({ apiKey: 'k', baseUrl, fetchImpl: vi.fn() });
+
+    expect(performance.now() - started).toBeLessThan(250);
   });
 
   it('throws when the audio URL itself returns non-OK', async () => {
@@ -139,17 +142,13 @@ describe('createGroqProvider — transcribe', () => {
       .mockResolvedValueOnce(audioResponse())
       .mockResolvedValueOnce(jsonResponse(200, { duration: 1 }));
     const p = createGroqProvider({ apiKey: 'k', fetchImpl });
-    await expect(p.transcribe({ audioUrl: 'https://r2/x' })).rejects.toThrow(
-      /missing `text`/,
-    );
+    await expect(p.transcribe({ audioUrl: 'https://r2/x' })).rejects.toThrow(/missing `text`/);
   });
 });
 
 describe('createGroqProvider — chat', () => {
   it('throws LiveAdapterMissingError (openai owns chat)', () => {
     const p = createGroqProvider({ apiKey: 'k' });
-    expect(() => p.chat({ model: 'm', userPrompt: 'x' })).toThrow(
-      LiveAdapterMissingError,
-    );
+    expect(() => p.chat({ model: 'm', userPrompt: 'x' })).toThrow(LiveAdapterMissingError);
   });
 });

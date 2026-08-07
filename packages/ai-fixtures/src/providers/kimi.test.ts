@@ -74,9 +74,9 @@ describe('createKimiProvider — chat', () => {
   });
 
   it('respects baseUrl override', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      jsonResponse(200, { choices: [{ message: { content: 'x' } }] }),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(200, { choices: [{ message: { content: 'x' } }] }));
     const p = createKimiProvider({
       apiKey: 'sk',
       baseUrl: 'https://proxy.example.com/v1/',
@@ -86,10 +86,19 @@ describe('createKimiProvider — chat', () => {
     expect(fetchImpl.mock.calls[0]![0]).toBe('https://proxy.example.com/v1/chat/completions');
   });
 
+  it('normalizes adversarial base URLs without polynomial backtracking', () => {
+    const baseUrl = `https://proxy.example.com/${'/'.repeat(20_000)}x`;
+    const started = performance.now();
+
+    createKimiProvider({ apiKey: 'sk', baseUrl, fetchImpl: vi.fn() });
+
+    expect(performance.now() - started).toBeLessThan(250);
+  });
+
   it('forwards response_format: json_object', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      jsonResponse(200, { choices: [{ message: { content: '{}' } }] }),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(200, { choices: [{ message: { content: '{}' } }] }));
     const p = createKimiProvider({ apiKey: 'sk', fetchImpl });
     await p.chat({ model: 'm', userPrompt: 'u', responseFormat: 'json_object' });
     const init = fetchImpl.mock.calls[0]![1];
@@ -108,9 +117,7 @@ describe('createKimiProvider — chat', () => {
   });
 
   it('throws on network failure', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockRejectedValue(new TypeError('fetch failed'));
+    const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('fetch failed'));
     const p = createKimiProvider({ apiKey: 'k', fetchImpl });
     await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(/network/);
   });
@@ -126,13 +133,9 @@ describe('createKimiProvider — chat', () => {
   });
 
   it('throws on missing choices content', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(jsonResponse(200, { choices: [] }));
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { choices: [] }));
     const p = createKimiProvider({ apiKey: 'k', fetchImpl });
-    await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(
-      /missing choices\[0\]/,
-    );
+    await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(/missing choices\[0\]/);
   });
 });
 

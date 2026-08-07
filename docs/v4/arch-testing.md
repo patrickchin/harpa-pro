@@ -134,6 +134,15 @@ Each AI-touching route has a test that:
   once after `openLink`: a 90-second union wait observes Quickstep,
   the Metro server row, or app UI before conditional recovery, server
   selection, and app assertions.
+- Shared-development device runs expose the host-side API, R2, and auth helpers
+  through `adb reverse`; loopback binding is not an authorization boundary.
+  `dev-e2e-api-proxy.cjs` accepts only relative paths and constructs outbound
+  requests from the configured HTTPS API hostname plus that path. JSON response
+  rewriting and `dev-e2e-r2-proxy.cjs` share one signed-R2 validator: strict
+  Cloudflare R2 hostname suffixes, SigV4 fields, no credentials/custom ports,
+  and `GET|HEAD|PUT` only. The R2 proxy uses HTTPS directly and does not follow
+  redirects. A PR-gated Node test starts the real server factories and proves
+  rejected inputs cannot reach a loopback sentinel.
 - Both semantic Quickstep `Wait` fallbacks remain even with global dialog
   suppression. They recover a dialog already present at either transition;
   the flow still fails closed unless the final `input-email` testID renders.
@@ -166,7 +175,10 @@ Each AI-touching route has a test that:
   15-minute build ceiling. API migrations are image-baked, so a new database
   on a cached image can still expose an old schema. Unit and policy tests pin
   the build command and derive the newest SQL migration, requiring both local
-  Compose head pins to match it.
+  Compose head pins to match it. The local migration one-shot then arms the
+  storage-lifecycle rollout with zero grace before seeding or API startup;
+  unlike a rolling deployment, a disposable local stack has no older machine
+  or outstanding presign to drain.
 - Fixture-mode saved reports prefer the API row's persisted body. The static
   sample is only a body-absent rendering fallback, so finalized edits and
   attachment placements remain observable in local end-to-end tests.
@@ -189,9 +201,14 @@ Each AI-touching route has a test that:
   timeline's oldest-first first page. Photo placement is another report-body write: its pending
   and error states block generation/finalize actions and the current-generation
   marker, and its response advances the expected body version synchronously.
-  Regression modules 11 and 17 delegate to the shared helper rather than
-  tapping auto-generation controls; placement repeats the helper after its
-  optimistic write.
+  Regression module 08 delegates before opening text-note row actions and
+  again after note deletion before draft actions. The shared single-photo
+  capture helper delegates after every upload, so module 10c cannot start the
+  next native attachment Modal while the prior canonical refetch and
+  regeneration still load the UI thread. The helper gives `dialog-sheet` a
+  bounded 20-second render budget before requiring its camera action. Modules
+  11 and 17 delegate rather than tapping auto-generation controls; placement
+  repeats the helper after its optimistic write.
   Maestro then requires the clean API
   generation timestamp to cover the canonical note-change clock, requires the
   mutation to settle, and waits for the stable, enabled `btn-finalize-report`
@@ -202,6 +219,41 @@ Each AI-touching route has a test that:
   journey additionally waits for its provider-owned voice pipeline to expose a
   saved title before entering the readiness gate. Active journeys do not
   conditionally tap a transient Generate / Update action.
+- The off-screen Edit pane keeps its generation-opacity wrapper
+  non-collapsable. This prevents Fabric from flattening its native host while
+  the same generating-to-current mount batch updates the report form. See
+  [`design-generate-pane-fabric-stability.md`](design-generate-pane-fabric-stability.md).
+- The non-fixture native-input smoke accepts both valid destinations after
+  deleting its draft. If Back collapses to the Projects index, it reopens the
+  current project before shared project cleanup; recorder and camera assertions
+  therefore cannot pass only to fail on a router-stack assumption.
+- Native camera journeys use
+  `.maestro/helpers/wait-for-camera-shutter-ready.yaml` rather than sleeping.
+  `CameraCapture` keeps the shutter disabled through size discovery and, on
+  Android, through CameraX's picture-size rebind. The enabled state also
+  requires the current capture to complete; either the fast-mode promise or
+  saved-photo callback can release that lock, while attempt ordering prevents
+  a delayed callback from unlocking a newer capture. Android lens flips also
+  invalidate pending readiness discovery; iOS retains readiness because its
+  device update emits no second ready event. Burst journeys wait again between
+  captures, and static policy pins each wait before its matching shutter tap.
+  See
+  [`design-camera-native-readiness.md`](design-camera-native-readiness.md).
+- Saved-report photo verification scrolls to a centered photo tile before
+  asserting the surrounding grid. Android can report only the visible sliver
+  of a tall parent card as its accessibility bounds, causing Maestro to accept
+  `visibilityPercentage: 100` while the card's children are still below the
+  viewport. Static policy pins the leaf-before-container ordering and centered
+  positioning.
+- Report-card edit controls must also remain above the Generate screen's sticky
+  recorder. For a leaf entering from below, do not use Maestro's unbounded
+  `centerElement` action: it can find the fully visible control, swipe it above
+  the viewport, and continue in the wrong direction. Workers and Materials edit
+  coverage stop at full visibility, apply one coordinate-bounded upward
+  gesture, and wait for settlement before the semantic tap. The saved material
+  value is then positioned with a non-centering leaf scroll before assertion.
+  Static policy pins these local sequences without banning valid centering
+  elsewhere.
 
 ### Docs site (Playwright)
 
@@ -298,7 +350,7 @@ documented in [`arch-ops.md`](arch-ops.md).
 | `site-prod.yml`               | push to `main`                                                | Verify the exact SHA on every native public-site production hostname                                   |
 | `dashboard-preview.yml`       | PR to `dev` or `main`                                         | Verify exact head-SHA Git preview, SPA routing, and live browser checks on the stable alias            |
 | `dashboard-dev.yml`           | push to `dev`                                                 | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment                           |
-| `dashboard-prod.yml`          | push to `main`                                                | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
+| `dashboard-prod.yml`          | push to `main` with `DASHBOARD_PRODUCTION_ENABLED=true`       | Verify the exact SHA and SPA routes on approved dashboard production hostnames                         |
 
 ### Dependency security automation
 

@@ -457,6 +457,11 @@ Most recent first. One line per bug — open the linked file only for the full r
   rows could grow indefinitely while middleware tests stayed green. Fix: start
   GC at boot and cover the server entry point plus real-Postgres
   concurrency/cleanup. [detail](2026-07-31-app-rate-limit-gc-not-started.md)
+- **2026-07-31** — Local, CI, OTA, and Fly processes selected Node 20, 22, or
+  Homebrew's 26, while the admin provisioning CLI timed out under Node 22/24 on
+  dual-stack DNS without usable IPv6. Fix: pin Node 24.19.0 everywhere, enforce
+  the pin in CI, and scope IPv4-first resolution to the one-off CLI.
+  [detail](2026-07-31-node-runtime-admin-cli-timeout.md)
 - **2026-07-30** _(R15)_ — The persisted React Query cache used one global MMKV key and hydrated before auth resolved, so expired sessions or direct account switches could briefly render the previous account's projects and reports. Fix: authenticate first, namespace snapshots by user id, block descendants while clearing memory on identity changes, and discard the legacy blob. [detail](2026-07-30-query-cache-cross-session.md)
 - **2026-07-29** — A manually dispatched API workflow called reusable mobile OTA with inherited `workflow_dispatch` context, so the callee tried blank native registration and could force redundant manual publication. Fix: discriminate successful API calls with their call-only input, skip registration, and evaluate them with effective `workflow_call` policy semantics. [detail](2026-07-29-reusable-ota-dispatch-context.md)
 - **2026-07-29** — The first `api-dev` deploy after PR #205 stopped before lifecycle arming when `storage-worker=1` tried to collapse Fly's active/standby pair; later recovery proved Fly can leave an updated Machine stopped and render the clone's same tagged image as `tag@digest`. Fix: remove broad scaling, explicitly start only the exact stopped/no-standby candidate, and compare a narrowly validated canonical tag, at most one explicit digest, and exact release metadata at every fresh proof. [detail](2026-07-29-fly-worker-scale-confirmation.md)

@@ -11,6 +11,9 @@ This repository contains the current v4 application. See
 ## Quick start
 
 ```bash
+nvm install       # reads the exact release from .nvmrc
+nvm use
+corepack enable
 pnpm install
 pnpm dev                              # workspaces with a dev script
 pnpm --filter @harpa/mobile start     # Expo dev-client server

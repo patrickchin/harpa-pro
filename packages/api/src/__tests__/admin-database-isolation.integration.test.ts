@@ -50,10 +50,13 @@ describe('admin database application-ledger sentinel', () => {
       DATABASE_URL: 'postgres://app:test@application-alias.invalid:5432/harpa',
       ADMIN_DATABASE_URL: appFx.url,
     };
-    const result = await runAdminProvisioningCli(cliEnv);
+    const result = await runAdminProvisioningCli(cliEnv, {
+      assertNetworkPolicyBeforeConnect: true,
+    });
 
     expect(result.code).toBe(1);
     expect(result.stdout).toBe('');
+    expect(result.stderr).not.toContain('[admin-cli-network-test]');
     expect(result.stderr).toMatch(
       /provisioning failed: refusing administrator provisioning.*application migration ledger/,
     );

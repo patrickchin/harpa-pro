@@ -1,5 +1,19 @@
 # Observability and operations
 
+## Node runtime
+
+The repository uses Node `24.19.0` everywhere: local NVM selection,
+GitHub Actions, the Fly API image, and EAS native builds. `.nvmrc` is the
+local source of truth; `package.json` plus `.npmrc` reject other Node majors,
+and the CI policy test prevents workflow-local overrides. Upgrade these pins
+together in one reviewed change so local tools, OTA publication, builds, and
+the deployed API exercise the same runtime. The required `lint-typecheck`
+context runs the Node policy even when a pull request changes only `.nvmrc` or
+`.npmrc`; the heavier lint and typecheck steps remain path-gated.
+
+Homebrew-installed tools may carry their own Node dependency. That installation
+does not define this repository's runtime; `nvm use` does.
+
 ## Hosting
 
 - **API**: Fly.io:
@@ -56,8 +70,8 @@
     remains an API resource path. Data requests require the dedicated API admin
     session. See [Separate admin site](design-separate-admin-site.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
-  and require Node 22.12.0 or newer. Shared CI currently uses the Node 22
-  channel. Node 24 standardization is tracked separately.
+  and retain a Node 22.12.0 compatibility floor in their workspace manifests.
+  Repository builds use the shared Node 24.19.0 runtime.
 - **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
   Pages project `harpa-pro-dashboard`.
   - React 19 builds with Vite 8 and Tailwind CSS 4. Vite 8 shares the static
@@ -405,6 +419,11 @@ An administrator's login password is not a deployment secret. The
 admin database, and the operator stores the original in a password manager.
 Before hashing or writing, the command rejects a matching application
 endpoint and a connected target containing `app._migrations`.
+The one-off command also selects IPv4 first and disables Node's network-family
+autoselection before importing the pool. On dual-stack DNS networks without a
+working IPv6 route, Node 22 and 24 can otherwise spend the entire five-second
+pool timeout racing an unreachable address. These settings are scoped to the
+provisioning process and do not change the deployed API pool.
 
 ### API production boot contract
 

@@ -85,10 +85,7 @@ tags:
     visible:
       id: "camera-capture-root"
     timeout: 15000
-- extendedWaitUntil:
-    visible:
-      id: "btn-camera-shutter"
-    timeout: 8000
+- runFlow: helpers/wait-for-camera-shutter-ready.yaml
 - tapOn:
     id: "btn-camera-shutter"
 - extendedWaitUntil:
@@ -123,6 +120,19 @@ tags:
     timeout: 15000
 - tapOn:
     id: "btn-back"
+
+# Deleting a draft uses dismissOrReplaceTo. Depending on the existing router
+# stack, Back can land on project home or collapse to the projects index.
+- extendedWaitUntil:
+    visible:
+      id: 'btn-project-edit|btn-new-project'
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: 'btn-new-project'
+    commands:
+      - runFlow: helpers/open-project.yaml
 - runFlow:
     file: helpers/delete-current-project.yaml
     env:

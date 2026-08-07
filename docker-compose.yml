@@ -4,12 +4,14 @@
 #
 # Brings up:
 #   pg       Postgres 16 on host :5433 (volume-backed, survives restarts).
-#   migrate  Runs `pnpm --filter @harpa/api db:migrate` once against pg,
-#            exits 0. Re-runs on every `compose up` (drizzle migrations
-#            are idempotent).
+#   migrate  Applies migrations, then immediately arms storage-lifecycle
+#            enforcement for this isolated local stack. Re-runs on every
+#            `compose up` (both operations are monotonic/idempotent).
 #   seed-test-accounts
 #            Seeds password-login accounts from TEST_ACCOUNT_EMAILS.
-#   api     `tsx watch src/server.ts` on :8787, fixture-mode (no real
+#   storage-worker
+#            Drains durable immediate/delayed MinIO deletion jobs and retries.
+#   api      `tsx watch src/server.ts` on :8787, fixture-mode (no real
 #            Twilio / AI / R2). Source dirs are bind-mounted so edits
 #            on the host trigger a server restart inside the container.
 #
@@ -92,7 +94,16 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
-    command: ['pnpm', '--filter', '@harpa/api', 'db:migrate']
+      # No old API machines or outstanding presigns exist in this disposable
+      # local stack, so production's rolling-deploy grace is unnecessary.
+      STORAGE_LEASE_ROLLOUT_GRACE_SEC: '0'
+      STORAGE_ACCOUNT_DELETE_ENABLED: 'true'
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pnpm --filter @harpa/api db:migrate &&
+        pnpm --filter @harpa/api storage:arm-leases
     restart: 'no'
 
   seed-test-accounts:
@@ -117,6 +128,30 @@ services:
     command: ['pnpm', '--filter', '@harpa/api', 'db:seed-test-account']
     restart: 'no'
 
+  storage-worker:
+    build:
+      context: .
+      dockerfile: infra/fly/Dockerfile
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: development
+      # The image bakes empty migration-head args, which are invalid when the
+      # shared env parser loads. Pin the same local heads as the API service.
+      MIGRATIONS_REQUIRED_HEAD: 0028_report_version_monotonic.sql
+      ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
+      DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
+      R2_FIXTURE_MODE: live
+      R2_ENDPOINT: http://minio:9000
+      R2_BUCKET: harpa-pro
+      R2_ACCESS_KEY_ID: minio
+      R2_SECRET_ACCESS_KEY: minio-dev-secret
+    command: ['pnpm', '--filter', '@harpa/api', 'storage:worker']
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -126,6 +161,8 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+      storage-worker:
+        condition: service_started
     environment:
       # Override Dockerfile's NODE_ENV=production so env.ts doesn't
       # require MIGRATIONS_REQUIRED_HEAD inside the local compose stack.

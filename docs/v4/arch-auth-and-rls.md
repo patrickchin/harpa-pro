@@ -17,7 +17,7 @@ The browser admin console deliberately does not use Better Auth. Its
 explicitly provisioned identities and revocable sessions live in the
 independent `harpa-pro-admin` Neon project, reached through
 `ADMIN_DATABASE_URL`. An app user or session never grants access to the
-business-activity console.
+browser-admin console.
 
 Separately, every authenticated DB call goes through
 **`withScopedConnection`**, which sets a per-request Postgres role and
@@ -26,9 +26,10 @@ user. These two concerns are independent: better-auth owns the session
 lifecycle; `withScopedConnection` owns query isolation.
 
 Admin authentication is a third, isolated concern. `withAdminSession`
-validates the dedicated browser cookie against the admin database before
-`GET /admin/activity` reads the application database. The two databases have
-no joins or cross-database foreign keys.
+validates the dedicated browser cookie against the admin database before a
+browser-admin data route runs. `GET /admin/activity` then reads the application
+database. `GET /admin/operations/neon` requests bounded provider metadata. The
+two databases have no joins or cross-database foreign keys.
 
 ## Auth flow
 
@@ -161,11 +162,30 @@ The stable cross-site development origin uses
 `SameSite=None; Secure; Partitioned`. No password or raw session token enters
 browser storage, URLs, application logs, or the application database.
 
-`withAdminSession()` is the sole authorization middleware for
-`GET /admin/activity`. It does not inspect `public."user".is_admin` and
-rejects Better Auth bearer tokens and cookies. Existing programmatic admin
-routes retain their app-admin authorization until their app-user audit
-foreign keys receive a separate design and migration.
+`withAdminSession()` is the sole authorization middleware for browser-admin
+data routes. It protects `GET /admin/activity` and
+`GET /admin/operations/neon`. It does not inspect
+`public."user".is_admin` and rejects Better Auth bearer tokens and cookies.
+Existing programmatic admin routes retain their app-admin authorization until
+their app-user audit foreign keys receive a separate design and migration.
+
+### Neon observer boundary
+
+The operations route uses one fixed, dedicated Neon observer. The observer has
+organization role `Viewer`, or role `Collaborator` with explicit project-level
+`Viewer` grants. Every visible project must belong to
+`ADMIN_NEON_ORG_ID` and report `effective_project_permission=VIEWER` before
+the API requests branch data. Missing permission evidence or any higher
+permission fails closed as `Unknown` and prevents branch calls.
+
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are optional server-only
+variables. They must be both set or both absent. Partial configuration fails
+environment validation at boot. When both variables are absent, the route
+returns a typed `Unknown` result without contacting Neon.
+
+The observer key is a personal key for the dedicated user. It is not the CI
+`NEON_API_KEY`, which can manage branches and connection URIs. The observer
+variables never enter browser storage, URLs, response bodies, or logs.
 
 ## Drizzle schema (CLI-generated)
 
@@ -438,6 +458,9 @@ wiring**, not a DI stub):
   origin. Cookie tests cover the HTTPS cross-site attributes and local
   HTTP fallback. The waitlist CORS tests protect its separate public
   policy.
+- The admin operations scope test rejects anonymous, Better Auth, and legacy
+  app-admin sessions before any provider call. It allows only a dedicated
+  browser-admin session.
 - Project role scope tests run owner, editor, viewer, and non-member
   writes against Postgres. Viewer denials do not rely only on hidden UI.
 
@@ -530,6 +553,8 @@ introduces that data contract.
 | `ADMIN_CORS_ORIGINS`             | API       | Exact browser origins trusted only for credentialed `/admin/*` requests              |
 | `ADMIN_DATABASE_URL`             | API       | Direct Neon connection to the independent `harpa_admin` database                     |
 | `ADMIN_MIGRATIONS_REQUIRED_HEAD` | API image | Admin migration filename expected by `/admin/readyz`                                 |
+| `ADMIN_NEON_ORG_ID`              | API       | Optional Harpa Pro Neon organization scope paired with the Viewer API key            |
+| `ADMIN_NEON_VIEWER_API_KEY`      | API       | Optional personal key for the fixed, read-only Neon observer                         |
 | `RESEND_API_KEY`                 | API       | Resend transport for OTP emails                                                      |
 | `EMAIL_OTP_LIVE`                 | API       | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test)          |
 | `TEST_ACCOUNT_EMAILS`            | API       | Password-bypass allowlist                                                            |

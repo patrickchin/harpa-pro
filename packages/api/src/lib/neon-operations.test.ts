@@ -72,6 +72,14 @@ function options(fetchImpl: typeof fetch) {
   };
 }
 
+function deferredResponse() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe('observeAdminNeonInventory', () => {
@@ -91,6 +99,18 @@ describe('observeAdminNeonInventory', () => {
       reason: 'not_configured',
     });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('accepts Neon omitting its optional unavailable-project list', async () => {
+    const fetchImpl = fetchMock(() => json({ projects: [], pagination: {} }));
+
+    await expect(observeAdminNeonInventory(options(fetchImpl))).resolves.toMatchObject({
+      status: 'available',
+      projectsTruncated: false,
+      unavailableProjectCount: 0,
+      projects: [],
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
   it('uses env/global-fetch defaults for bounded GETs and returns only allowlisted fields', async () => {
@@ -131,16 +151,20 @@ describe('observeAdminNeonInventory', () => {
     const calls = fetchImpl.mock.calls.map(([input, init]) => ({ url: urlOf(input), init }));
     const projects = calls.find(({ url }) => url.pathname === `${ROOT}/projects`)!;
     expect(projects.url.origin).toBe('https://console.neon.tech');
-    expect(Object.fromEntries(projects.url.searchParams)).toMatchObject({
+    expect(Object.fromEntries(projects.url.searchParams)).toEqual({
       org_id: 'org-harpa-pro',
       limit: '20',
       timeout: '5000',
     });
     const branches = calls.find(({ url }) => url.pathname.endsWith('/branches'))!;
-    expect(Object.fromEntries(branches.url.searchParams)).toMatchObject({
+    expect(Object.fromEntries(branches.url.searchParams)).toEqual({
       limit: '100',
       include_deleted: 'false',
+      sort_by: 'updated_at',
+      sort_order: 'desc',
     });
+    const branchCount = calls.find(({ url }) => url.pathname.endsWith('/branches/count'))!;
+    expect(Object.fromEntries(branchCount.url.searchParams)).toEqual({});
     for (const { init } of calls) {
       expect(init?.method).toBe('GET');
       expect(new Headers(init?.headers).get('authorization')).toBe('Bearer default-viewer-key');
@@ -250,6 +274,118 @@ describe('observeAdminNeonInventory', () => {
     });
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(JSON.stringify(result)).not.toContain(providerSecret);
+  });
+
+  it('maps malformed project discovery to invalid_response without follow-up calls', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      json({
+        projects: 'not-an-array',
+        raw_provider_error: 'postgres://secret:password@private.neon.tech/db',
+      }),
+    );
+
+    await expect(observeAdminNeonInventory(options(fetchImpl))).resolves.toEqual({
+      observedAt: NOW.toISOString(),
+      status: 'unknown',
+      reason: 'invalid_response',
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('marks branch details invalid when Neon returns a branch for another project', async () => {
+    const fetchImpl = fetchMock((url) => {
+      if (url.pathname === `${ROOT}/projects`) {
+        return json({ projects: [project()], unavailable_project_ids: [], pagination: {} });
+      }
+      if (url.pathname.endsWith('/branches/count')) return json({ count: 1 });
+      return json({
+        branches: [{ ...branch(), project_id: 'project-other' }],
+        pagination: {},
+      });
+    });
+
+    const result = await observeAdminNeonInventory(options(fetchImpl));
+
+    expect(result).toMatchObject({
+      status: 'partial',
+      projects: [
+        {
+          id: 'project-0',
+          branchCount: { status: 'available', count: 1 },
+          branchDetails: { status: 'unknown', reason: 'invalid_response' },
+        },
+      ],
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it('uses one ten-second abort budget for the complete observation', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi.fn<typeof fetch>((_input, init) => {
+        return new Promise((_resolve, reject) => {
+          const rejectAbort = () =>
+            reject(Object.assign(new Error('provider request aborted'), { name: 'AbortError' }));
+          if (init?.signal?.aborted) rejectAbort();
+          else init?.signal?.addEventListener('abort', rejectAbort, { once: true });
+        });
+      });
+      const settled = vi.fn();
+      const observation = observeAdminNeonInventory(options(fetchImpl));
+      void observation.then(settled);
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(observation).resolves.toEqual({
+        observedAt: NOW.toISOString(),
+        status: 'unknown',
+        reason: 'timeout',
+      });
+      expect(fetchImpl).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('runs projects serially while fetching one project count and details concurrently', async () => {
+    const firstCount = deferredResponse();
+    const firstDetails = deferredResponse();
+    const branchPaths: string[] = [];
+    const fetchImpl = fetchMock((url) => {
+      if (url.pathname === `${ROOT}/projects`) {
+        return json({
+          projects: [project(0), project(1)],
+          unavailable_project_ids: [],
+          pagination: {},
+        });
+      }
+
+      branchPaths.push(url.pathname);
+      if (url.pathname.includes('/project-0/branches/count')) return firstCount.promise;
+      if (url.pathname.includes('/project-0/branches')) return firstDetails.promise;
+      if (url.pathname.endsWith('/branches/count')) return json({ count: 0 });
+      return json({ branches: [], pagination: {} });
+    });
+
+    const observation = observeAdminNeonInventory(options(fetchImpl));
+    await vi.waitFor(() => expect(branchPaths).toHaveLength(2));
+    expect(branchPaths).toEqual([
+      `${ROOT}/projects/project-0/branches/count`,
+      `${ROOT}/projects/project-0/branches`,
+    ]);
+
+    firstCount.resolve(json({ count: 0 }));
+    firstDetails.resolve(json({ branches: [], pagination: {} }));
+    await observation;
+
+    expect(branchPaths).toEqual([
+      `${ROOT}/projects/project-0/branches/count`,
+      `${ROOT}/projects/project-0/branches`,
+      `${ROOT}/projects/project-1/branches/count`,
+      `${ROOT}/projects/project-1/branches`,
+    ]);
   });
 
   it('caps one observation at 20 projects and 100 branch details', async () => {

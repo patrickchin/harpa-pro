@@ -16003,6 +16003,540 @@
           }
         }
       }
+    },
+    "/admin/operations/neon": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded, read-only Neon organization inventory.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available"
+                          ]
+                        },
+                        "projectsTruncated": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        },
+                        "unavailableProjectCount": {
+                          "type": "number",
+                          "enum": [
+                            0
+                          ]
+                        },
+                        "projects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "regionId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "pgVersion": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string"
+                              },
+                              "effectivePermission": {
+                                "type": "string",
+                                "enum": [
+                                  "VIEWER"
+                                ]
+                              },
+                              "branchCount": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "available"
+                                    ]
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "count"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "branchDetails": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "available"
+                                    ]
+                                  },
+                                  "truncated": {
+                                    "type": "boolean",
+                                    "enum": [
+                                      false
+                                    ]
+                                  },
+                                  "branches": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "parentId": {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "minLength": 1
+                                        },
+                                        "currentState": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "default": {
+                                          "type": "boolean"
+                                        },
+                                        "protected": {
+                                          "type": "boolean"
+                                        },
+                                        "createdAt": {
+                                          "type": "string"
+                                        },
+                                        "updatedAt": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "parentId",
+                                        "currentState",
+                                        "default",
+                                        "protected",
+                                        "createdAt",
+                                        "updatedAt"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "maxItems": 100
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "truncated",
+                                  "branches"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "regionId",
+                              "pgVersion",
+                              "createdAt",
+                              "updatedAt",
+                              "effectivePermission",
+                              "branchCount",
+                              "branchDetails"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 20
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "projectsTruncated",
+                        "unavailableProjectCount",
+                        "projects"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "partial"
+                          ]
+                        },
+                        "projectsTruncated": {
+                          "type": "boolean"
+                        },
+                        "unavailableProjectCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "projects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "regionId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "pgVersion": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string"
+                              },
+                              "effectivePermission": {
+                                "type": "string",
+                                "enum": [
+                                  "VIEWER"
+                                ]
+                              },
+                              "branchCount": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available"
+                                        ]
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "count"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unknown"
+                                        ]
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                          "not_configured",
+                                          "unsafe_permissions",
+                                          "timeout",
+                                          "rate_limited",
+                                          "forbidden",
+                                          "not_found",
+                                          "invalid_response",
+                                          "provider_unavailable"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "branchDetails": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available"
+                                        ]
+                                      },
+                                      "truncated": {
+                                        "type": "boolean"
+                                      },
+                                      "branches": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "parentId": {
+                                              "type": "string",
+                                              "nullable": true,
+                                              "minLength": 1
+                                            },
+                                            "currentState": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "default": {
+                                              "type": "boolean"
+                                            },
+                                            "protected": {
+                                              "type": "boolean"
+                                            },
+                                            "createdAt": {
+                                              "type": "string"
+                                            },
+                                            "updatedAt": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name",
+                                            "parentId",
+                                            "currentState",
+                                            "default",
+                                            "protected",
+                                            "createdAt",
+                                            "updatedAt"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "maxItems": 100
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "truncated",
+                                      "branches"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unknown"
+                                        ]
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                          "not_configured",
+                                          "unsafe_permissions",
+                                          "timeout",
+                                          "rate_limited",
+                                          "forbidden",
+                                          "not_found",
+                                          "invalid_response",
+                                          "provider_unavailable"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "regionId",
+                              "pgVersion",
+                              "createdAt",
+                              "updatedAt",
+                              "effectivePermission",
+                              "branchCount",
+                              "branchDetails"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 20
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "projectsTruncated",
+                        "unavailableProjectCount",
+                        "projects"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured",
+                            "unsafe_permissions",
+                            "timeout",
+                            "rate_limited",
+                            "forbidden",
+                            "not_found",
+                            "invalid_response",
+                            "provider_unavailable"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

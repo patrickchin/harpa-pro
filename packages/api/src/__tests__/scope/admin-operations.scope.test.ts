@@ -162,3 +162,33 @@ describe('scope: GET /admin/operations/neon', () => {
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer scope-neon-viewer-key');
   });
 });
+
+describe('scope: POST /admin/operations/report-generate', () => {
+  it('rejects a regular application bearer session before starting the diagnostic runner', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+    const response = await createApp().request('/admin/operations/report-generate', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        origin: ADMIN_ORIGIN,
+        'x-admin-csrf': 'A'.repeat(43),
+      },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a legacy app-admin bearer session before starting the diagnostic runner', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+    const response = await createApp().request('/admin/operations/report-generate', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        origin: ADMIN_ORIGIN,
+        'x-admin-csrf': 'A'.repeat(43),
+      },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+});

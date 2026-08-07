@@ -124,6 +124,14 @@ describe('AdminOperations', () => {
       'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
       'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
     ]);
+    for (const [, init] of fetchMock.mock.calls.slice(2)) {
+      expect(init).toMatchObject({
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      expect(new Headers(init?.headers).has('authorization')).toBe(false);
+    }
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'GitHub public repository' }),
@@ -234,6 +242,33 @@ describe('AdminOperations', () => {
       'https://github.com/patrickchin/harpa-pro/pulls',
     );
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('identifies GitHub secondary throttling and provides retry guidance', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith('/readyz')) return new Response(null, { status: 200 });
+      if (url.includes('api.github.com')) {
+        return new Response(JSON.stringify({ message: 'You have exceeded a secondary rate limit.' }), {
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '12',
+            'X-RateLimit-Reset': '1786140366',
+          },
+        });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(
+      await screen.findByText('GitHub temporarily throttled requests for this browser/IP.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Retry after 60 seconds.')).toBeTruthy();
+    expect(screen.getByText('12 of 60 requests remain')).toBeTruthy();
   });
 
   it('does not expose service links without an admin session and supports sign-out', async () => {

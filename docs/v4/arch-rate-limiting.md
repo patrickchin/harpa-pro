@@ -45,6 +45,7 @@ These paths skip the global application limiter:
 - `/readyz`
 - `/admin/auth/*`
 - `/admin/activity`
+- `/admin/operations/neon`
 - `/admin/readyz`
 - `/openapi.json`
 - `/.well-known/*`
@@ -87,13 +88,14 @@ The hourly and daily signup counters are additive.
 Admin counters live in the independent admin database when Postgres mode is
 active.
 
-| Route or surface                     | Key                        | Limit |     Window |
-| ------------------------------------ | -------------------------- | ----: | ---------: |
-| All admin auth and activity requests | Trusted Fly client IP      |   120 |   1 minute |
-| `POST /admin/auth/login`             | Trusted Fly client IP      |     3 |   1 minute |
-| `POST /admin/auth/login`             | Trusted Fly client IP      |    20 | 15 minutes |
-| Failed admin login                   | SHA-256 of canonical email |     5 | 15 minutes |
-| `GET /admin/activity`                | Admin identity and session |   120 |   1 minute |
+| Route or surface                         | Key                        | Limit |     Window |
+| ---------------------------------------- | -------------------------- | ----: | ---------: |
+| All admin auth and protected data routes | Trusted Fly client IP      |   120 |   1 minute |
+| `POST /admin/auth/login`                 | Trusted Fly client IP      |     3 |   1 minute |
+| `POST /admin/auth/login`                 | Trusted Fly client IP      |    20 | 15 minutes |
+| Failed admin login                       | SHA-256 of canonical email |     5 | 15 minutes |
+| `GET /admin/activity`                    | Admin identity and session |   120 |   1 minute |
+| `GET /admin/operations/neon`             | Admin identity and session |    12 |   1 minute |
 
 The login route checks the IP budgets before password verification. It
 consumes the email budget before verification but rejects on that budget only
@@ -104,6 +106,10 @@ out by rotating IP addresses.
 In production, `adminClientIp()` accepts a valid `Fly-Client-IP`. Missing or
 invalid Fly metadata uses the shared `unknown` bucket. Local and test
 requests can use the general IP helper.
+
+The Neon inventory route must pass both its trusted-IP and identity/session
+budgets. One allowed request lists at most 20 projects and at most 100 active
+branch details per project. Provider requests have no retry loop.
 
 ## Authentication-route boundary
 
@@ -205,6 +211,8 @@ Current tests cover these properties:
 - `__tests__/admin-rate-limit.integration.test.ts` covers admin login
   budgets and key selection.
 - `__tests__/admin-activity.integration.test.ts` covers the activity budget.
+- `__tests__/admin-neon-operations.integration.test.ts` covers the Neon
+  inventory identity/session budget and its 12-request limit.
 - `__tests__/server-rate-limit-gc.test.ts` checks cleanup scheduler startup.
 - `scripts/check-no-process-env-rate-limit.sh` blocks raw
   `process.env.RATE_LIMIT_*` access outside `env.ts`.

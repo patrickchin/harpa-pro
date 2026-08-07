@@ -385,6 +385,11 @@ maestro test .maestro/store-screenshots.yaml
 adb shell settings delete global policy_control || true
 ```
 
+The seed script scopes `MSYS_NO_PATHCONV=1` to its container-only
+`minio/mc` command. This keeps `/bin/sh` inside the container when the
+runbook is executed from Git Bash on Windows, while the earlier host fixture
+paths still receive Git Bash's normal Docker path conversion.
+
 `EXPO_PUBLIC_USE_FIXTURES=false` keeps report and usage data backed by
 the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` uses
 deterministic screenshot-only input paths such as the canned voice

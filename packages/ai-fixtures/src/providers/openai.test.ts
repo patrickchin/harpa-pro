@@ -82,40 +82,45 @@ describe('createOpenAiProvider — chat', () => {
   });
 
   it('respects baseUrl override', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      jsonResponse(200, { choices: [{ message: { content: 'x' } }] }),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(200, { choices: [{ message: { content: 'x' } }] }));
     const p = createOpenAiProvider({
       apiKey: 'sk',
       baseUrl: 'https://proxy.example.com/v1/',
       fetchImpl,
     });
     await p.chat({ model: 'm', userPrompt: 'u' });
-    expect(fetchImpl.mock.calls[0]![0]).toBe(
-      'https://proxy.example.com/v1/chat/completions',
-    );
+    expect(fetchImpl.mock.calls[0]![0]).toBe('https://proxy.example.com/v1/chat/completions');
+  });
+
+  it('normalizes adversarial base URLs without polynomial backtracking', () => {
+    const baseUrl = `https://proxy.example.com/${'/'.repeat(20_000)}x`;
+    const started = performance.now();
+
+    createOpenAiProvider({ apiKey: 'sk', baseUrl, fetchImpl: vi.fn() });
+
+    expect(performance.now() - started).toBeLessThan(250);
   });
 
   it('throws on 4xx with truncated body in detail', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('bad key', { status: 401 }),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('bad key', { status: 401 }));
     const p = createOpenAiProvider({ apiKey: 'bad', fetchImpl });
     await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(/HTTP 401/);
   });
 
   it('throws on 5xx', async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('boom', { status: 502 }),
-    );
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('boom', { status: 502 }));
     const p = createOpenAiProvider({ apiKey: 'k', fetchImpl });
     await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(/HTTP 502/);
   });
 
   it('throws on network failure', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockRejectedValue(new TypeError('fetch failed'));
+    const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('fetch failed'));
     const p = createOpenAiProvider({ apiKey: 'k', fetchImpl });
     await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(/network/);
   });
@@ -133,9 +138,7 @@ describe('createOpenAiProvider — chat', () => {
   it('throws on missing choices content', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { choices: [] }));
     const p = createOpenAiProvider({ apiKey: 'k', fetchImpl });
-    await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(
-      /missing choices\[0\]/,
-    );
+    await expect(p.chat({ model: 'm', userPrompt: 'u' })).rejects.toThrow(/missing choices\[0\]/);
   });
 });
 

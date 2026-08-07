@@ -6,6 +6,7 @@
   "build": {
 
     "development": {
+      "node": "24.19.0",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
@@ -22,6 +23,7 @@
       "ios": { "simulator": true }
     },
     "preview": {
+      "node": "24.19.0",
       "distribution": "store",
       "channel": "preview",
       "environment": "preview",
@@ -33,6 +35,7 @@
       }
     },
     "production": {
+      "node": "24.19.0",
       "distribution": "store",
       "channel": "production",
       "autoIncrement": true,

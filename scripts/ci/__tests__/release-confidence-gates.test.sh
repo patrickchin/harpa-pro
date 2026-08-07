@@ -407,16 +407,16 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "launcher or Quickstep readiness remains bounded to 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Close|Email"' \
-  "timeout: 90000" \
-  "post-link launcher or app readiness retains the 90-second cold-bundle budget"
+  "timeout: 180000" \
+  "post-link launcher or app readiness allows a three-minute cold-bundle budget"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "timeout: 30000" \
   "Expo Dev Launcher readiness wait allows 30 seconds"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Continue|Close|Email'" \
-  "timeout: 90000" \
-  "fail-closed Expo app-readiness wait allows 90 seconds"
+  "timeout: 180000" \
+  "fail-closed Expo app-readiness wait allows a three-minute cold-bundle budget"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "id: 'input-email'" \
   "timeout: 30000" \
@@ -464,9 +464,9 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "visible: 'Continue|Close|Email'" \
   "Maestro waits for app readiness only after selecting Metro"
-require_before ".maestro/ci-launch-smoke.yaml" \
-  "timeout: 90000" \
-  "id: 'input-email'" \
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 180000" 2 \
+  "id: 'input-email'" 1 \
   "bounded app-readiness wait precedes the app-control assertion"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "timeout: 30000" \
@@ -1047,8 +1047,8 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
-  'timeout[[:space:]]+420s.*maestro' \
-  "Maestro CLI execution budgets 420 seconds for bounded recovery"
+  'timeout[[:space:]]+600s.*maestro' \
+  "Maestro CLI execution budgets 600 seconds for bounded recovery"
 # These are literal runner-script strings, not policy-test expansions.
 # shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \

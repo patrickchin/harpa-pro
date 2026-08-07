@@ -24,7 +24,7 @@ still finishes with a strict `input-email` assertion.
 success, physical-device refusal, write failure, and a fail-closed read-back
 mismatch. `release-confidence-gates.test.sh` pins the shared CI delegation and
 ordering before APK installation. Its existing assertions keep exactly two
-semantic Quickstep fallbacks, the 420-second Maestro ceiling, and the final
+semantic Quickstep fallbacks, the 600-second Maestro ceiling, and the final
 `input-email` wait and assertion.
 
 **Pattern.** Recurrence of the Expo Dev Launcher synchronization failure in

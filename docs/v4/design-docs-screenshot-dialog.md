@@ -28,7 +28,10 @@ The dialog must:
   scrolling on a 1366 × 768 laptop-class desktop viewport, while preserving
   its aspect ratio and keeping the dialog viewport-bound at smaller sizes; and
 - derive the panel width from the height-fitted portrait image, allowing a long
-  title to wrap instead of widening the dialog around it.
+  title to wrap instead of widening the dialog around it. The enhanced dialog
+  measures that rendered image after opening because Chromium and Firefox do
+  not resolve intrinsic `fit-content` sizing for a height-constrained image in
+  the same way.
 
 The image URL is assigned only when the dialog opens. This avoids loading each
 full-resolution screenshot during the initial guide render.
@@ -43,5 +46,6 @@ fallback. A modified-click test verifies that the browser can still open the
 raw image in a new tab without opening the dialog. The desktop regression also
 checks that the image area does not overflow, that all four image bounds stay
 inside it, that the rendered image keeps its intrinsic aspect ratio, and that
-the surrounding dialog chrome adds no more than 80 pixels to the image width.
-The exercised guide step uses the longest current screenshot title.
+the surrounding dialog chrome adds no more than 32 pixels to the image width.
+The exercised guide step uses the longest current screenshot title. The same
+regression runs in Chromium and Firefox.

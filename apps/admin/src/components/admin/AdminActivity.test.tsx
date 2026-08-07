@@ -110,6 +110,20 @@ const projectEvent = {
   metadata: {},
 } as unknown as activity.Event;
 
+const reservedLabelEvent = {
+  ...projectEvent,
+  id: 'aud_89abcdef0123',
+  occurredAt: '2026-07-29T03:10:00.000Z',
+  actorUserId: 'usr_89abcdef0123',
+  actorLabel: 'Deleted user',
+  actorEmail: 'deleted-label@example.com',
+  subjectId: 'prj_89abcdef',
+  subjectLabel: 'Deleted project',
+  projectId: 'prj_89abcdef',
+  projectLabel: 'Deleted project',
+  requestId: 'request-live-reserved-labels',
+} as unknown as activity.Event;
+
 const deletedProjectEvent = {
   ...projectEvent,
   id: 'aud_abcdef012345',
@@ -652,6 +666,54 @@ describe('AdminActivity', () => {
         name: 'Only [deleted project] — prj_deadbeef',
       }),
     ).toBeTruthy();
+  });
+
+  it('keeps live entities named like deleted fallbacks available in UI, filters, and export', async () => {
+    const createObjectUrl = vi.mocked(URL.createObjectURL);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([reservedLabelEvent]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    const row = await screen.findByTestId(`activity-row-${reservedLabelEvent.id}`);
+    expect(within(row).getByText('Deleted user', { exact: true })).toBeTruthy();
+    expect(within(row).getAllByText('Deleted project', { exact: true })).toHaveLength(2);
+    expect(row.querySelector('[data-entity-placeholder="deleted"]')).toBeNull();
+    expect(row.getAttribute('aria-label') ?? '').toContain(
+      'Actor: Deleted user. Subject: Deleted project. Project: Deleted project.',
+    );
+    expect(row.getAttribute('aria-label') ?? '').not.toContain('unavailable');
+
+    await user.click(row);
+    const detail = screen.getByRole('dialog', { name: 'Deleted project' });
+    expect(within(detail).getByText('Deleted user', { exact: true })).toBeTruthy();
+    expect(detail.querySelector('[data-entity-placeholder="deleted"]')).toBeNull();
+    await user.click(within(detail).getByRole('button', { name: 'Close' }));
+
+    await user.click(screen.getByRole('button', { name: 'Filter by user' }));
+    const userPopup = screen.getByRole('dialog', { name: 'User filter' });
+    expect(
+      within(userPopup).getByRole('radio', {
+        name: 'Only Deleted user — deleted-label@example.com',
+      }),
+    ).toBeTruthy();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Filter by project' }));
+    const projectPopup = screen.getByRole('dialog', { name: 'Project filter' });
+    expect(
+      within(projectPopup).getByRole('radio', {
+        name: 'Only Deleted project — prj_89abcdef',
+      }),
+    ).toBeTruthy();
+
+    await waitFor(() => expect(createObjectUrl).toHaveBeenCalled());
+    const blob = createObjectUrl.mock.calls.at(-1)?.[0] as Blob;
+    const text = await readBlobText(blob);
+    expect(text).toContain(
+      'Deleted user\tdeleted-label@example.com\tDeleted project\tDeleted project',
+    );
+    expect(text).not.toContain('[deleted user]');
+    expect(text).not.toContain('[deleted project]');
   });
 
   it('defaults to milestones from the past calendar month and offers simpler ranges', async () => {

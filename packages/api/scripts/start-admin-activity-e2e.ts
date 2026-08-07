@@ -20,6 +20,7 @@ const SITE_PORT = portFromEnv('ADMIN_E2E_SITE_PORT', 3102);
 const API_BASE_URL = `http://localhost:${API_PORT}`;
 const SITE_ORIGIN = `http://localhost:${SITE_PORT}`;
 const ACTOR_EMAIL = 'activity-actor@e2e.harpapro.com';
+const RESERVED_LABEL_ACTOR_EMAIL = 'deleted-label-live@e2e.harpapro.com';
 const ADMIN_EMAIL = 'admin-activity@harpapro.com';
 const ADMIN_PASSWORD = 'admin-activity-e2e-password';
 
@@ -73,10 +74,25 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
       emailVerified: true,
     }));
   if (!user) throw new Error(`unable to create ${ACTOR_EMAIL}`);
+  const reservedLabelExisting = await authContext.internalAdapter.findUserByEmail(
+    RESERVED_LABEL_ACTOR_EMAIL,
+  );
+  const reservedLabelUser =
+    reservedLabelExisting?.user ??
+    (await authContext.internalAdapter.createUser({
+      email: RESERVED_LABEL_ACTOR_EMAIL,
+      name: RESERVED_LABEL_ACTOR_EMAIL,
+      emailVerified: true,
+    }));
+  if (!reservedLabelUser) {
+    throw new Error(`unable to create ${RESERVED_LABEL_ACTOR_EMAIL}`);
+  }
 
   const projectId = newId('prj');
+  const reservedLabelProjectId = newId('prj');
   const reportId = newId('rpt');
   const reportEventId = newId('aud');
+  const reservedLabelEventId = newId('aud');
   const deletedProjectId = newId('prj');
   const deletedReportId = newId('rpt');
   const deletedNoteId = newId('not');
@@ -109,9 +125,20 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
       [user.id, 'Admin Activity E2E'],
     );
     await client.query(
+      `UPDATE public."user"
+       SET name = $2, display_name = $2, email_verified = true, is_admin = false
+       WHERE id = $1`,
+      [reservedLabelUser.id, 'Deleted user'],
+    );
+    await client.query(
       `INSERT INTO app.projects (id, name, owner_id)
        VALUES ($1, $2, $3)`,
       [projectId, 'Admin Activity E2E Project', user.id],
+    );
+    await client.query(
+      `INSERT INTO app.projects (id, name, owner_id)
+       VALUES ($1, $2, $3)`,
+      [reservedLabelProjectId, 'Deleted project', reservedLabelUser.id],
     );
     await client.query(
       `INSERT INTO app.project_members (project_id, user_id, role)
@@ -165,6 +192,20 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
         `note.voice_created:${noteIds.voice}`,
         `note.image_created:${noteIds.image}`,
         `note.document_created:${noteIds.document}`,
+      ],
+    );
+    await client.query(
+      `INSERT INTO app.activity_events
+         (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+          project_id, request_id, dedupe_key, metadata)
+       VALUES
+         ($1, CURRENT_TIMESTAMP - INTERVAL '5 minutes 30 seconds', 'project.created', $2,
+          'project', $3::text, $3, 'request-live-reserved-labels-e2e', $4, '{}')`,
+      [
+        reservedLabelEventId,
+        reservedLabelUser.id,
+        reservedLabelProjectId,
+        `project.created:${reservedLabelProjectId}`,
       ],
     );
     await client.query(

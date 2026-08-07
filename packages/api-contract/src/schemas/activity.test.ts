@@ -115,6 +115,56 @@ describe('admin activity schemas', () => {
     expect(parsed.subjectId).toBeNull();
   });
 
+  it('represents entity availability independently from display labels', () => {
+    const live = activity.event.parse({
+      ...baseEvent,
+      eventType: 'project.created',
+      subjectType: 'project',
+      actorLabel: 'Deleted user',
+      actorState: 'available',
+      subjectLabel: 'Deleted project',
+      subjectState: 'available',
+      projectLabel: 'Deleted project',
+      projectState: 'available',
+      metadata: {},
+    });
+
+    expect(live).toMatchObject({
+      actorLabel: 'Deleted user',
+      actorState: 'available',
+      subjectLabel: 'Deleted project',
+      subjectState: 'available',
+      projectLabel: 'Deleted project',
+      projectState: 'available',
+    });
+
+    const deleted = activity.event.parse({
+      ...baseEvent,
+      eventType: 'user.signed_up',
+      subjectType: 'user',
+      actorUserId: null,
+      actorLabel: null,
+      actorEmail: null,
+      actorState: 'deleted',
+      subjectId: null,
+      subjectLabel: null,
+      subjectState: 'deleted',
+      projectId: null,
+      projectLabel: null,
+      projectState: 'none',
+      metadata: { method: 'email_otp' },
+    });
+
+    expect(deleted).toMatchObject({
+      actorState: 'deleted',
+      actorLabel: null,
+      subjectState: 'deleted',
+      subjectLabel: null,
+      projectState: 'none',
+      projectLabel: null,
+    });
+  });
+
   it('defaults to milestone events and accepts each level filter', () => {
     expect(activity.listQuery.parse({}).level).toBe('milestone');
 

@@ -108,7 +108,7 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   await page.goto("/docs/guides/generate-ai-report");
 
   const trigger = page.getByRole("link", {
-    name: "View full screenshot for Start a report",
+    name: "View full screenshot for Finalize and review together",
   });
   const guideUrl = page.url();
   const screenshotUrl = await trigger.getAttribute("href");
@@ -117,11 +117,11 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
 
   await expect(page).toHaveURL(guideUrl);
   const dialog = page.getByRole("dialog", {
-    name: "Full screenshot for Start a report",
+    name: "Full screenshot for Finalize and review together",
   });
   await expect(dialog).toBeVisible();
   const fullScreenshot = dialog.getByRole("img", {
-    name: "Harpa Pro Reports list with the New report button",
+    name: "Finalized Harpa Pro report with its member Review discussion",
   });
   await expect(fullScreenshot).toHaveAttribute("src", screenshotUrl ?? "");
   await expect
@@ -131,7 +131,9 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
       ),
     )
     .toBe(true);
-  await expect(dialog.getByText("Start a report", { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText("Finalize and review together", { exact: true }),
+  ).toBeVisible();
 
   const bounds = await dialog.boundingBox();
   const viewport = page.viewportSize();
@@ -174,6 +176,9 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   });
   expect(fit.naturalWidth).toBeGreaterThan(0);
   expect(fit.naturalHeight).toBeGreaterThan(0);
+  expect(bounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    fit.imageWidth + 80,
+  );
   expect(fit.regionScrollHeight).toBeLessThanOrEqual(
     fit.regionClientHeight + 1,
   );

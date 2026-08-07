@@ -17,6 +17,7 @@ import {
   type ChatResponse,
   LiveAdapterMissingError,
 } from '../index.js';
+import { stripTrailingSlashes } from './base-url.js';
 import { AdapterError } from './error.js';
 
 export interface OpenAiAdapterConfig {
@@ -37,7 +38,7 @@ interface ChatCompletionResponse {
 }
 
 export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
-  const baseUrl = (cfg.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const baseUrl = stripTrailingSlashes(cfg.baseUrl ?? 'https://api.openai.com/v1');
   const fetchFn = cfg.fetchImpl ?? fetch;
 
   return {

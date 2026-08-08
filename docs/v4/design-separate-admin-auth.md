@@ -238,8 +238,8 @@ project must prove effective `VIEWER` permission before detail calls.
 One observation makes at most 22 fixed Neon `GET` requests under one shared
 10-second deadline. It does not retry or follow project pagination. The
 browser calls the route once after session confirmation and again only on
-manual **Refresh**. The full operations page makes 13 fixed GET reads on load
-and 26 total after one Refresh. It does not poll. The report generation live
+manual **Refresh**. The full operations page makes 16 fixed GET reads on load
+and 32 total after one Refresh. It does not poll. The report generation live
 canary remains a separate manual POST.
 
 Neon percentages use published Free-plan references and are not credit
@@ -262,6 +262,34 @@ The route is read-only and accepts no request body, query, or provider selector.
 Every response sets `Cache-Control: private, no-store`. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the credential and provider
 boundaries.
+
+### `GET /admin/operations/sentry` (draft)
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any Sentry request. Better Auth bearer tokens, Better Auth cookies, and the
+retired application `is_admin` bit cannot authorize the route. A separate
+12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route supports read-only requests and accepts no request body, query,
+provider selector, or write method. Every response sets
+`Cache-Control: private, no-store`.
+Set the optional `ADMIN_SENTRY_ORG_SLUG`, `ADMIN_SENTRY_READ_TOKEN`,
+`ADMIN_SENTRY_PROJECT_SLUGS`, `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`, and
+`ADMIN_SENTRY_ENVIRONMENT` together, or leave all five values absent.
+`ADMIN_SENTRY_REGION` is optional, defaults to `global`, and accepts only
+`global`, `us`, or `de`.
+
+One observation makes exactly two fixed Sentry `GET` requests under one shared
+10-second deadline. The requests run in parallel. The route does not retry,
+follow pagination, write to Sentry, or expose a polling path.
+
+The response is aggregate only. It returns bounded unresolved issue-group
+counts, bounded mobile-session totals, reviewed caveats, and bounded unknown
+reasons. It never returns issue titles, event data, people, project names,
+provider diagnostics, or the token itself. See
+[Admin Sentry observer](design-admin-sentry-observer.md) for the complete draft
+contract.
 
 ### `GET /admin/operations/fly-inventory` (draft)
 
@@ -286,8 +314,8 @@ provider errors, private IPs, raw Machine configuration, and Volume internals
 never cross the boundary.
 
 Machine state and process group do not prove Harpa readiness or worker
-liveness. Remaining Fly credit stays `Unknown`. The full page makes 13 fixed
-GET reads on load and 26 after one manual **Refresh**. See
+liveness. Remaining Fly credit stays `Unknown`. The full page makes 16 fixed
+GET reads on load and 32 after one manual **Refresh**. See
 [Admin Fly inventory](design-admin-fly-inventory.md) for the complete draft
 contract.
 
@@ -377,6 +405,8 @@ independent admin database in deployed environments:
 - Neon Free usage reads: 12 per dedicated admin identity and session per
   minute;
 - R2 capacity reads: 12 per dedicated admin identity and session per minute;
+- Sentry reads: 12 per dedicated admin identity and session per minute in the
+  draft stack.
 - Fly inventory reads: 12 per dedicated admin identity and session per minute
   in the draft stack;
 - storage lifecycle reads: 12 per dedicated admin identity and session per
@@ -397,8 +427,8 @@ Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity,
-Neon inventory, Neon Free usage, R2 capacity, Fly inventory, and storage
-lifecycle requests only read data. The draft AI usage request is also
+Neon inventory, Neon Free usage, R2 capacity, Sentry, Fly inventory, and
+storage lifecycle requests only read data. The draft AI usage request is also
 read-only. The report generation live canary is the first protected admin
 mutation other than logout. It also requires the exact Origin and a
 session-derived CSRF token carried in `X-Admin-CSRF`. The token stays in
@@ -478,6 +508,12 @@ unchanged.
 - A dedicated admin request to the R2 route consumes both its trusted-IP and
   identity/session budgets.
 - Anonymous, Better Auth, and legacy app-admin sessions cannot call the draft
+  Sentry observer route.
+- A dedicated admin request to the draft Sentry route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets. One observation uses
+  exactly two provider reads, no provider write, and only aggregate response
+  fields.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the draft
   Fly provider route.
 - A dedicated admin request to the draft Fly route consumes both its
   trusted-IP and 12-per-minute identity/session budgets. Its fixed plan makes
@@ -485,7 +521,7 @@ unchanged.
 - Anonymous, Better Auth, and legacy app-admin sessions cannot read storage
   lifecycle state through `/admin/operations/storage-lifecycle`.
 - A dedicated storage lifecycle request consumes both budgets and runs one
-  fixed statement. Component tests prove 13/26 reads and no polling.
+  fixed statement. Component tests prove 16/32 reads and no polling.
 - Anonymous, Better Auth, and legacy app-admin sessions cannot run the draft
   AI usage aggregate.
 - A dedicated admin request to the draft AI usage route consumes both its

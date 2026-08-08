@@ -697,21 +697,31 @@ export const r2CapacityObservation = z
     });
   });
 
-const diagnosticDurationMs = z.number().int().nonnegative().max(75_000);
-const diagnosticText = z.string().trim().min(1).max(256);
+const diagnosticDurationMs = z.number().int().nonnegative().max(75_000).safe();
+const diagnosticObservationDurationMs = z.number().int().nonnegative().max(80_000).safe();
+const diagnosticIdentifier = z
+  .string()
+  .trim()
+  .min(1)
+  .max(256)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/);
+const diagnosticPreviewText = z.string().refine((value) => [...value].length <= 400, {
+  message: 'preview text must contain at most 400 Unicode code points',
+});
+const nullableDiagnosticPreviewText = diagnosticPreviewText.nullable();
 
-export const reportGenerateDiagnosticWarnings = [
-  'replay_only',
-  'limits_unavailable',
-  'sign_out_failed',
-] as const;
+export const reportGenerateDiagnosticWarnings = ['limits_unavailable', 'sign_out_failed'] as const;
 export const reportGenerateDiagnosticWarning = z.enum(reportGenerateDiagnosticWarnings);
 
 export const reportGenerateDiagnosticPhases = [
   'sign_in',
   'target_read',
+  'mode_gate',
   'generate',
   'proof_read',
+  'usage_window',
+  'usage_proof',
+  'preview',
   'limits',
   'sign_out',
 ] as const;
@@ -722,6 +732,11 @@ export const reportGenerateDiagnosticFailureReasons = [
   'target_not_found',
   'target_not_draft',
   'conflict',
+  'live_mode_required',
+  'live_proof_failed',
+  'usage_proof_missing',
+  'usage_proof_ambiguous',
+  'preview_invalid',
   'usage_limit_exceeded',
   'rate_limited',
   'provider_error',
@@ -736,31 +751,196 @@ export const reportGenerateDiagnosticTarget = z
     accountEmail: email,
     projectId,
     reportId,
-    reportNumber: z.number().int().positive(),
+    reportNumber: z.number().int().positive().safe(),
   })
   .strict();
 
 export const reportGenerateDiagnosticGeneration = z
   .object({
     httpStatus: z.literal(200),
-    requestId: diagnosticText.nullable(),
+    requestId: diagnosticIdentifier.nullable(),
     durationMs: diagnosticDurationMs,
     requestedAt: isoDateTime,
     finishedAt: isoDateTime,
     reportUpdatedAt: isoDateTime,
     generatedAt: isoDateTime,
-    vendor: diagnosticText,
-    model: diagnosticText,
-    fixtureMode: z.enum(['live', 'replay']),
-    idempotentReplay: z.boolean(),
+    vendor: diagnosticIdentifier,
+    model: diagnosticIdentifier,
+    fixtureMode: z.literal('live'),
+    idempotentReplay: z.literal(false),
+  })
+  .strict()
+  .superRefine((generation, ctx) => {
+    const generatedAt = Date.parse(generation.generatedAt);
+    const requestedAt = Date.parse(generation.requestedAt);
+    const finishedAt = Date.parse(generation.finishedAt);
+    const reportUpdatedAt = Date.parse(generation.reportUpdatedAt);
+
+    if (generatedAt > requestedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['generatedAt'],
+        message: 'generation proof must not be newer than the request lower bound',
+      });
+    }
+    if (finishedAt < requestedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['finishedAt'],
+        message: 'request completion must not precede the request lower bound',
+      });
+    }
+    if (reportUpdatedAt < finishedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reportUpdatedAt'],
+        message: 'report update must not precede request completion',
+      });
+    }
+  });
+
+export const reportGenerateDiagnosticUsage = z
+  .object({
+    inputTokens: safeCount,
+    outputTokens: safeCount,
+    cachedTokens: safeCount,
+    latencyMs: diagnosticDurationMs,
+    matched: z.literal(true),
+  })
+  .strict()
+  .superRefine((usage, ctx) => {
+    if (usage.inputTokens + usage.outputTokens === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['outputTokens'],
+        message: 'live usage proof must contain at least one token',
+      });
+    }
+    if (usage.cachedTokens > usage.inputTokens) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['cachedTokens'],
+        message: 'cached tokens must not exceed input tokens',
+      });
+    }
+  });
+
+export const reportGenerateDiagnosticPreviewWorker = z
+  .object({
+    role: diagnosticPreviewText,
+    count: nullableDiagnosticPreviewText,
+    hours: nullableDiagnosticPreviewText,
+    notes: nullableDiagnosticPreviewText,
   })
   .strict();
 
+export const reportGenerateDiagnosticPreviewMaterial = z
+  .object({
+    name: diagnosticPreviewText,
+    quantity: nullableDiagnosticPreviewText,
+    unit: nullableDiagnosticPreviewText,
+    status: nullableDiagnosticPreviewText,
+    condition: nullableDiagnosticPreviewText,
+    notes: nullableDiagnosticPreviewText,
+  })
+  .strict();
+
+export const reportGenerateDiagnosticPreviewIssue = z
+  .object({
+    title: diagnosticPreviewText,
+    severity: nullableDiagnosticPreviewText,
+    description: nullableDiagnosticPreviewText,
+    action: nullableDiagnosticPreviewText,
+  })
+  .strict();
+
+export const reportGenerateDiagnosticPreviewSection = z
+  .object({
+    title: diagnosticPreviewText,
+    body: diagnosticPreviewText,
+  })
+  .strict();
+
+export const reportGenerateDiagnosticPreviewSample = z
+  .object({
+    title: nullableDiagnosticPreviewText,
+    summary: nullableDiagnosticPreviewText,
+    weather: z
+      .object({
+        condition: nullableDiagnosticPreviewText,
+        temperature: nullableDiagnosticPreviewText,
+        wind: nullableDiagnosticPreviewText,
+        impact: nullableDiagnosticPreviewText,
+      })
+      .strict()
+      .nullable(),
+    workers: z.array(reportGenerateDiagnosticPreviewWorker).max(5),
+    materials: z.array(reportGenerateDiagnosticPreviewMaterial).max(5),
+    issues: z.array(reportGenerateDiagnosticPreviewIssue).max(5),
+    nextSteps: z.array(diagnosticPreviewText).max(5),
+    summarySections: z.array(reportGenerateDiagnosticPreviewSection).max(5),
+  })
+  .strict();
+
+export const reportGenerateDiagnosticPreviewCounts = z
+  .object({
+    workers: safeCount,
+    materials: safeCount,
+    issues: safeCount,
+    nextSteps: safeCount,
+    summarySections: safeCount,
+    imageAttachments: safeCount,
+    documentAttachments: safeCount,
+  })
+  .strict();
+
+const diagnosticPreviewArrayNames = [
+  'workers',
+  'materials',
+  'issues',
+  'nextSteps',
+  'summarySections',
+] as const;
+
+export const reportGenerateDiagnosticPreview = z
+  .object({
+    schemaValid: z.literal(true),
+    sample: reportGenerateDiagnosticPreviewSample,
+    counts: reportGenerateDiagnosticPreviewCounts,
+    truncated: z.boolean(),
+    bodySha256: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict()
+  .superRefine((preview, ctx) => {
+    let requiresTruncation =
+      preview.counts.imageAttachments > 0 || preview.counts.documentAttachments > 0;
+
+    for (const name of diagnosticPreviewArrayNames) {
+      const expectedSampleSize = Math.min(preview.counts[name], 5);
+      if (preview.sample[name].length !== expectedSampleSize) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['sample', name],
+          message: 'preview sample size must match the bounded structural count',
+        });
+      }
+      if (preview.counts[name] > preview.sample[name].length) requiresTruncation = true;
+    }
+
+    if (requiresTruncation && !preview.truncated) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['truncated'],
+        message: 'preview must disclose omitted structural or attachment data',
+      });
+    }
+  });
+
 export const reportGenerateDiagnosticLimitSummary = z
   .object({
-    limit: z.number().int().nonnegative().nullable(),
-    used: z.number().int().nonnegative(),
-    remaining: z.number().int().nonnegative().nullable(),
+    limit: safeCount.nullable(),
+    used: safeCount,
+    remaining: safeCount.nullable(),
     resetAt: isoDateTime,
     overridden: z.boolean(),
   })
@@ -779,14 +959,7 @@ export const unknownReportGenerateDiagnosticObservation = z
   .object({
     observedAt: isoDateTime,
     status: z.literal('unknown'),
-    reason: z.literal('not_configured'),
-  })
-  .strict();
-
-const reportGenerateDiagnosticPassGeneration = reportGenerateDiagnosticGeneration
-  .extend({
-    fixtureMode: z.literal('live'),
-    idempotentReplay: z.literal(false),
+    reason: z.enum(['not_configured', 'not_enabled']),
   })
   .strict();
 
@@ -794,9 +967,11 @@ export const passedReportGenerateDiagnosticObservation = z
   .object({
     observedAt: isoDateTime,
     status: z.literal('pass'),
-    durationMs: diagnosticDurationMs,
+    durationMs: diagnosticObservationDurationMs,
     target: reportGenerateDiagnosticTarget,
-    generation: reportGenerateDiagnosticPassGeneration,
+    generation: reportGenerateDiagnosticGeneration,
+    preview: reportGenerateDiagnosticPreview,
+    usage: reportGenerateDiagnosticUsage,
     limits: reportGenerateDiagnosticLimits,
     cleanup: z.literal('succeeded'),
   })
@@ -814,9 +989,11 @@ export const warningReportGenerateDiagnosticObservation = z
   .object({
     observedAt: isoDateTime,
     status: z.literal('warning'),
-    durationMs: diagnosticDurationMs,
+    durationMs: diagnosticObservationDurationMs,
     target: reportGenerateDiagnosticTarget,
     generation: reportGenerateDiagnosticGeneration,
+    preview: reportGenerateDiagnosticPreview,
+    usage: reportGenerateDiagnosticUsage,
     limits: reportGenerateDiagnosticLimits.nullable(),
     cleanup: z.enum(['succeeded', 'failed']),
     warnings: uniqueReportGenerateDiagnosticWarnings,
@@ -827,7 +1004,7 @@ export const failedReportGenerateDiagnosticObservation = z
   .object({
     observedAt: isoDateTime,
     status: z.literal('fail'),
-    durationMs: diagnosticDurationMs,
+    durationMs: diagnosticObservationDurationMs,
     phase: reportGenerateDiagnosticPhase,
     reason: reportGenerateDiagnosticFailureReason,
     cleanup: z.enum(['not_started', 'succeeded', 'failed']),
@@ -845,9 +1022,6 @@ export const reportGenerateDiagnosticObservation = z
     if (observation.status !== 'warning') return;
 
     const expectedWarnings: ReportGenerateDiagnosticWarning[] = [];
-    if (observation.generation.fixtureMode !== 'live' || observation.generation.idempotentReplay) {
-      expectedWarnings.push('replay_only');
-    }
     if (observation.limits === null) expectedWarnings.push('limits_unavailable');
     if (observation.cleanup === 'failed') expectedWarnings.push('sign_out_failed');
 
@@ -895,6 +1069,26 @@ export type ReportGenerateDiagnosticFailureReason = z.infer<
 >;
 export type ReportGenerateDiagnosticTarget = z.infer<typeof reportGenerateDiagnosticTarget>;
 export type ReportGenerateDiagnosticGeneration = z.infer<typeof reportGenerateDiagnosticGeneration>;
+export type ReportGenerateDiagnosticUsage = z.infer<typeof reportGenerateDiagnosticUsage>;
+export type ReportGenerateDiagnosticPreviewWorker = z.infer<
+  typeof reportGenerateDiagnosticPreviewWorker
+>;
+export type ReportGenerateDiagnosticPreviewMaterial = z.infer<
+  typeof reportGenerateDiagnosticPreviewMaterial
+>;
+export type ReportGenerateDiagnosticPreviewIssue = z.infer<
+  typeof reportGenerateDiagnosticPreviewIssue
+>;
+export type ReportGenerateDiagnosticPreviewSection = z.infer<
+  typeof reportGenerateDiagnosticPreviewSection
+>;
+export type ReportGenerateDiagnosticPreviewSample = z.infer<
+  typeof reportGenerateDiagnosticPreviewSample
+>;
+export type ReportGenerateDiagnosticPreviewCounts = z.infer<
+  typeof reportGenerateDiagnosticPreviewCounts
+>;
+export type ReportGenerateDiagnosticPreview = z.infer<typeof reportGenerateDiagnosticPreview>;
 export type ReportGenerateDiagnosticLimitSummary = z.infer<
   typeof reportGenerateDiagnosticLimitSummary
 >;

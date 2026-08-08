@@ -216,7 +216,7 @@ request. Unsupported provider credit and billing balances stay `Unknown`.
 The browser calls all read-only operations routes once after session
 confirmation and again only on manual **Refresh**. The page makes 10
 authenticated reads on load and 20 total after one Refresh. It does not poll.
-The report diagnostic remains a separate manual POST.
+The report generation live canary remains a separate manual POST.
 
 `POST /admin/operations/report-generate` is deliberately separate from the
 read-only refresh path. It requires the dedicated admin cookie, an exact
@@ -225,14 +225,26 @@ trusted-IP budget, and a three-run-per-15-minute identity/session budget. It
 accepts no target or provider input from the browser and returns
 `Cache-Control: private, no-store` on success and rejection.
 
-The route calls the real application HTTP endpoints using one fixed
-allowlisted test account and pre-provisioned draft report. One run replaces
-that synthetic report body, records one AI usage event, and attempts to revoke
-its temporary application session immediately. Cleanup failure is explicit in
-the observation. It is a bounded synthetic canary mutation, not a read-only
-probe. It never creates an account, project, report, or note, and it never
-exposes credentials, prompt content, report content, or raw provider errors. See
-[`design-admin-report-generate-diagnostic.md`](design-admin-report-generate-diagnostic.md).
+`ADMIN_REPORT_LIVE_CANARY_ENABLED` defaults to `0`. The environment parser
+accepts `1` only for the exact development API and admin origins, a non-preview
+build, live AI mode, and a complete fixed synthetic target. The disabled route
+returns `unknown/not_enabled` without an application request or
+application-database query. Pull-request previews and production cannot enable
+the canary.
+
+An enabled run calls the real application HTTP routes with one fixed
+allowlisted test account and pre-provisioned draft report. It rejects replay,
+record mode, and idempotent replay. A pass requires a validated report body,
+one matching live `app.llm_usage_events` row, and proof that the exact
+temporary Bearer session is absent. The response includes only bounded usage,
+limits, structural counts, a report hash, and an escaped synthetic preview.
+A warning retains proven live output only when limits are unavailable or the
+runner cannot confirm exact sign-out. Replay never becomes a warning.
+
+One run replaces the synthetic report body and records one live usage event.
+It never creates an account, project, report, note, file, or comment. Page
+load, shared Refresh, timers, and background work never start the canary. See
+[`design-admin-report-live-canary.md`](design-admin-report-live-canary.md).
 
 The following programmatic routes still use an application Better Auth
 session plus `public.user.is_admin`. They are not part of the browser admin

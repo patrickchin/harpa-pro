@@ -16571,7 +16571,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Bounded report-generation diagnostic observation.",
+            "description": "Bounded live canary report-generation observation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16591,7 +16591,8 @@
                         "reason": {
                           "type": "string",
                           "enum": [
-                            "not_configured"
+                            "not_configured",
+                            "not_enabled"
                           ]
                         }
                       },
@@ -16616,8 +16617,8 @@
                         },
                         "durationMs": {
                           "type": "integer",
-                          "minimum": 0,
-                          "maximum": 75000
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         "target": {
                           "type": "object",
@@ -16638,8 +16639,9 @@
                             },
                             "reportNumber": {
                               "type": "integer",
-                              "minimum": 0,
-                              "exclusiveMinimum": true
+                              "minimum": -9007199254740991,
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -16663,12 +16665,13 @@
                               "type": "string",
                               "nullable": true,
                               "minLength": 1,
-                              "maxLength": 256
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
                             },
                             "durationMs": {
                               "type": "integer",
-                              "minimum": 0,
-                              "maximum": 75000
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
                             },
                             "requestedAt": {
                               "type": "string"
@@ -16685,12 +16688,14 @@
                             "vendor": {
                               "type": "string",
                               "minLength": 1,
-                              "maxLength": 256
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
                             },
                             "model": {
                               "type": "string",
                               "minLength": 1,
-                              "maxLength": 256
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
                             },
                             "fixtureMode": {
                               "type": "string",
@@ -16720,6 +16725,304 @@
                           ],
                           "additionalProperties": false
                         },
+                        "preview": {
+                          "type": "object",
+                          "properties": {
+                            "schemaValid": {
+                              "type": "boolean",
+                              "enum": [
+                                true
+                              ]
+                            },
+                            "sample": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 5
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "counts": {
+                              "type": "object",
+                              "properties": {
+                                "workers": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "materials": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "issues": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "nextSteps": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "summarySections": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "imageAttachments": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "documentAttachments": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections",
+                                "imageAttachments",
+                                "documentAttachments"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            },
+                            "bodySha256": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{64}$"
+                            }
+                          },
+                          "required": [
+                            "schemaValid",
+                            "sample",
+                            "counts",
+                            "truncated",
+                            "bodySha256"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "usage": {
+                          "type": "object",
+                          "properties": {
+                            "inputTokens": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "outputTokens": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "cachedTokens": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "latencyMs": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "matched": {
+                              "type": "boolean",
+                              "enum": [
+                                true
+                              ]
+                            }
+                          },
+                          "required": [
+                            "inputTokens",
+                            "outputTokens",
+                            "cachedTokens",
+                            "latencyMs",
+                            "matched"
+                          ],
+                          "additionalProperties": false
+                        },
                         "limits": {
                           "type": "object",
                           "properties": {
@@ -16737,16 +17040,19 @@
                                 "limit": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "used": {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "remaining": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "resetAt": {
                                   "type": "string"
@@ -16770,16 +17076,19 @@
                                 "limit": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "used": {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "remaining": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "resetAt": {
                                   "type": "string"
@@ -16803,16 +17112,19 @@
                                 "limit": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "used": {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "remaining": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "resetAt": {
                                   "type": "string"
@@ -16852,6 +17164,8 @@
                         "durationMs",
                         "target",
                         "generation",
+                        "preview",
+                        "usage",
                         "limits",
                         "cleanup"
                       ],
@@ -16871,8 +17185,8 @@
                         },
                         "durationMs": {
                           "type": "integer",
-                          "minimum": 0,
-                          "maximum": 75000
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         "target": {
                           "type": "object",
@@ -16893,8 +17207,9 @@
                             },
                             "reportNumber": {
                               "type": "integer",
-                              "minimum": 0,
-                              "exclusiveMinimum": true
+                              "minimum": -9007199254740991,
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -16918,12 +17233,13 @@
                               "type": "string",
                               "nullable": true,
                               "minLength": 1,
-                              "maxLength": 256
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
                             },
                             "durationMs": {
                               "type": "integer",
-                              "minimum": 0,
-                              "maximum": 75000
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
                             },
                             "requestedAt": {
                               "type": "string"
@@ -16940,22 +17256,26 @@
                             "vendor": {
                               "type": "string",
                               "minLength": 1,
-                              "maxLength": 256
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
                             },
                             "model": {
                               "type": "string",
                               "minLength": 1,
-                              "maxLength": 256
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
                             },
                             "fixtureMode": {
                               "type": "string",
                               "enum": [
-                                "live",
-                                "replay"
+                                "live"
                               ]
                             },
                             "idempotentReplay": {
-                              "type": "boolean"
+                              "type": "boolean",
+                              "enum": [
+                                false
+                              ]
                             }
                           },
                           "required": [
@@ -16970,6 +17290,304 @@
                             "model",
                             "fixtureMode",
                             "idempotentReplay"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "preview": {
+                          "type": "object",
+                          "properties": {
+                            "schemaValid": {
+                              "type": "boolean",
+                              "enum": [
+                                true
+                              ]
+                            },
+                            "sample": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 5
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 5
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "counts": {
+                              "type": "object",
+                              "properties": {
+                                "workers": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "materials": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "issues": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "nextSteps": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "summarySections": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "imageAttachments": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "documentAttachments": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections",
+                                "imageAttachments",
+                                "documentAttachments"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            },
+                            "bodySha256": {
+                              "type": "string",
+                              "pattern": "^[a-f0-9]{64}$"
+                            }
+                          },
+                          "required": [
+                            "schemaValid",
+                            "sample",
+                            "counts",
+                            "truncated",
+                            "bodySha256"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "usage": {
+                          "type": "object",
+                          "properties": {
+                            "inputTokens": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "outputTokens": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "cachedTokens": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "latencyMs": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "matched": {
+                              "type": "boolean",
+                              "enum": [
+                                true
+                              ]
+                            }
+                          },
+                          "required": [
+                            "inputTokens",
+                            "outputTokens",
+                            "cachedTokens",
+                            "latencyMs",
+                            "matched"
                           ],
                           "additionalProperties": false
                         },
@@ -16991,16 +17609,19 @@
                                 "limit": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "used": {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "remaining": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "resetAt": {
                                   "type": "string"
@@ -17024,16 +17645,19 @@
                                 "limit": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "used": {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "remaining": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "resetAt": {
                                   "type": "string"
@@ -17057,16 +17681,19 @@
                                 "limit": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "used": {
                                   "type": "integer",
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "remaining": {
                                   "type": "integer",
                                   "nullable": true,
-                                  "minimum": 0
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 },
                                 "resetAt": {
                                   "type": "string"
@@ -17105,13 +17732,12 @@
                           "items": {
                             "type": "string",
                             "enum": [
-                              "replay_only",
                               "limits_unavailable",
                               "sign_out_failed"
                             ]
                           },
                           "minItems": 1,
-                          "maxItems": 3
+                          "maxItems": 2
                         }
                       },
                       "required": [
@@ -17120,6 +17746,8 @@
                         "durationMs",
                         "target",
                         "generation",
+                        "preview",
+                        "usage",
                         "limits",
                         "cleanup",
                         "warnings"
@@ -17140,16 +17768,20 @@
                         },
                         "durationMs": {
                           "type": "integer",
-                          "minimum": 0,
-                          "maximum": 75000
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         "phase": {
                           "type": "string",
                           "enum": [
                             "sign_in",
                             "target_read",
+                            "mode_gate",
                             "generate",
                             "proof_read",
+                            "usage_window",
+                            "usage_proof",
+                            "preview",
                             "limits",
                             "sign_out"
                           ]
@@ -17161,6 +17793,11 @@
                             "target_not_found",
                             "target_not_draft",
                             "conflict",
+                            "live_mode_required",
+                            "live_proof_failed",
+                            "usage_proof_missing",
+                            "usage_proof_ambiguous",
+                            "preview_invalid",
                             "usage_limit_exceeded",
                             "rate_limited",
                             "provider_error",

@@ -149,6 +149,263 @@ export const neonInventoryObservation = z
     });
   });
 
+export const r2CapacityReasons = [
+  'not_configured',
+  'timeout',
+  'rate_limited',
+  'forbidden',
+  'invalid_response',
+  'provider_unavailable',
+] as const;
+export const r2CapacityReason = z.enum(r2CapacityReasons);
+
+export const r2CapacityCaveats = [
+  'storage_snapshot_not_gb_month',
+  'storage_metrics_may_lag',
+  'infrequent_access_not_covered_by_free_tier',
+  'operations_estimated_from_analytics',
+  'unclassified_operations_excluded',
+  'bucket_inventory_truncated',
+] as const;
+export const r2CapacityCaveat = z.enum(r2CapacityCaveats);
+
+const safeCount = z.number().int().nonnegative().safe();
+const uniqueR2CapacityCaveats = z
+  .array(r2CapacityCaveat)
+  .min(3)
+  .max(r2CapacityCaveats.length)
+  .refine((caveats) => new Set(caveats).size === caveats.length, {
+    message: 'R2 capacity caveats must be unique',
+  });
+
+export const r2Bucket = z
+  .object({
+    name: nonBlank,
+    jurisdiction: z.enum(['default', 'eu', 'fedramp', 'unknown']),
+    location: z.enum(['apac', 'eeur', 'enam', 'weur', 'wnam', 'oc']).nullable(),
+    defaultStorageClass: z.enum(['standard', 'infrequent_access', 'unknown']),
+    createdAt: isoDateTime.nullable(),
+  })
+  .strict();
+
+export const availableR2BucketInventory = z
+  .object({
+    status: z.literal('available'),
+    truncated: z.boolean(),
+    items: z.array(r2Bucket).max(100),
+  })
+  .strict();
+
+const completeR2BucketInventory = availableR2BucketInventory
+  .extend({ truncated: z.literal(false) })
+  .strict();
+
+export const unknownR2BucketInventory = z
+  .object({
+    status: z.literal('unknown'),
+    reason: r2CapacityReason,
+  })
+  .strict();
+
+export const r2BucketInventory = z.discriminatedUnion('status', [
+  availableR2BucketInventory,
+  unknownR2BucketInventory,
+]);
+
+export const r2StorageClassSnapshot = z
+  .object({
+    publishedPayloadBytes: safeCount,
+    publishedMetadataBytes: safeCount,
+    publishedObjects: safeCount,
+    uploadingPayloadBytes: safeCount,
+    uploadingMetadataBytes: safeCount,
+    uploadingObjects: safeCount,
+  })
+  .strict();
+
+export const availableR2StorageObservation = z
+  .object({
+    status: z.literal('available'),
+    standard: r2StorageClassSnapshot,
+    infrequentAccess: r2StorageClassSnapshot,
+  })
+  .strict();
+
+export const unknownR2StorageObservation = z
+  .object({
+    status: z.literal('unknown'),
+    reason: r2CapacityReason,
+  })
+  .strict();
+
+export const r2StorageObservation = z.discriminatedUnion('status', [
+  availableR2StorageObservation,
+  unknownR2StorageObservation,
+]);
+
+function r2OperationEstimate(allowance: 1_000_000 | 10_000_000) {
+  return z
+    .object({
+      estimatedUsed: safeCount,
+      publishedAllowance: z.literal(allowance),
+      estimatedRemaining: safeCount,
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+      const expectedRemaining = Math.max(0, allowance - value.estimatedUsed);
+      if (value.estimatedRemaining === expectedRemaining) return;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['estimatedRemaining'],
+        message: 'estimatedRemaining must match the published allowance minus estimatedUsed',
+      });
+    });
+}
+
+export const availableR2OperationsObservation = z
+  .object({
+    status: z.literal('available'),
+    windowStart: isoDateTime,
+    windowEnd: isoDateTime,
+    classA: r2OperationEstimate(1_000_000),
+    classB: r2OperationEstimate(10_000_000),
+    freeRequests: safeCount,
+    unclassifiedRequests: safeCount,
+  })
+  .strict();
+
+const completeR2OperationsObservation = availableR2OperationsObservation
+  .extend({ unclassifiedRequests: z.literal(0) })
+  .strict();
+
+export const unknownR2OperationsObservation = z
+  .object({
+    status: z.literal('unknown'),
+    reason: r2CapacityReason,
+  })
+  .strict();
+
+export const r2OperationsObservation = z.discriminatedUnion('status', [
+  availableR2OperationsObservation,
+  unknownR2OperationsObservation,
+]);
+
+export const r2FreeTierReference = z
+  .object({
+    storageGbMonth: z.literal(10),
+    classAOperations: z.literal(1_000_000),
+    classBOperations: z.literal(10_000_000),
+    appliesTo: z.literal('standard_only'),
+  })
+  .strict();
+
+export const availableR2CapacityObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('available'),
+    freeTierReference: r2FreeTierReference,
+    buckets: completeR2BucketInventory,
+    storage: availableR2StorageObservation,
+    operations: completeR2OperationsObservation,
+    caveats: uniqueR2CapacityCaveats,
+  })
+  .strict();
+
+export const partialR2CapacityObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('partial'),
+    freeTierReference: r2FreeTierReference,
+    buckets: r2BucketInventory,
+    storage: r2StorageObservation,
+    operations: r2OperationsObservation,
+    caveats: uniqueR2CapacityCaveats,
+  })
+  .strict();
+
+export const unknownR2CapacityObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('unknown'),
+    reason: r2CapacityReason,
+  })
+  .strict();
+
+export const r2CapacityObservation = z
+  .discriminatedUnion('status', [
+    availableR2CapacityObservation,
+    partialR2CapacityObservation,
+    unknownR2CapacityObservation,
+  ])
+  .superRefine((observation, ctx) => {
+    if (observation.status === 'unknown') return;
+
+    const caveats = new Set(observation.caveats);
+    const missingRequired = [
+      'storage_snapshot_not_gb_month',
+      'storage_metrics_may_lag',
+      'operations_estimated_from_analytics',
+    ].filter((caveat) => !caveats.has(caveat as (typeof r2CapacityCaveats)[number]));
+    for (const caveat of missingRequired) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['caveats'],
+        message: `${caveat} is required on non-unknown R2 observations`,
+      });
+    }
+
+    const infrequentAccessHasData =
+      observation.storage.status === 'available' &&
+      Object.values(observation.storage.infrequentAccess).some((value) => value > 0);
+    if (infrequentAccessHasData && !caveats.has('infrequent_access_not_covered_by_free_tier')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['caveats'],
+        message: 'infrequent_access_not_covered_by_free_tier is required when IA data exists',
+      });
+    }
+
+    const unclassifiedRequests =
+      observation.operations.status === 'available'
+        ? observation.operations.unclassifiedRequests
+        : 0;
+    if (unclassifiedRequests > 0 && !caveats.has('unclassified_operations_excluded')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['caveats'],
+        message: 'unclassified_operations_excluded is required when unclassified requests exist',
+      });
+    }
+
+    const bucketsTruncated =
+      observation.buckets.status === 'available' && observation.buckets.truncated;
+    if (bucketsTruncated && !caveats.has('bucket_inventory_truncated')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['caveats'],
+        message: 'bucket_inventory_truncated is required when bucket inventory is truncated',
+      });
+    }
+
+    if (observation.status === 'available') {
+      return;
+    }
+
+    const hasIncompleteSignal =
+      observation.buckets.status === 'unknown' ||
+      observation.storage.status === 'unknown' ||
+      observation.operations.status === 'unknown' ||
+      bucketsTruncated ||
+      unclassifiedRequests > 0;
+
+    if (hasIncompleteSignal) return;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'partial observations require an incompleteness signal',
+    });
+  });
+
 const diagnosticDurationMs = z.number().int().nonnegative().max(75_000);
 const diagnosticText = z.string().trim().min(1).max(256);
 
@@ -321,6 +578,16 @@ export type NeonBranchCount = z.infer<typeof neonBranchCount>;
 export type NeonBranchDetails = z.infer<typeof neonBranchDetails>;
 export type NeonProject = z.infer<typeof neonProject>;
 export type NeonInventoryObservation = z.infer<typeof neonInventoryObservation>;
+export type R2CapacityReason = z.infer<typeof r2CapacityReason>;
+export type R2CapacityCaveat = z.infer<typeof r2CapacityCaveat>;
+export type R2Bucket = z.infer<typeof r2Bucket>;
+export type R2BucketInventory = z.infer<typeof r2BucketInventory>;
+export type R2StorageClassSnapshot = z.infer<typeof r2StorageClassSnapshot>;
+export type R2StorageObservation = z.infer<typeof r2StorageObservation>;
+export type R2OperationEstimate = z.infer<ReturnType<typeof r2OperationEstimate>>;
+export type R2OperationsObservation = z.infer<typeof r2OperationsObservation>;
+export type R2FreeTierReference = z.infer<typeof r2FreeTierReference>;
+export type R2CapacityObservation = z.infer<typeof r2CapacityObservation>;
 export type ReportGenerateDiagnosticWarning = z.infer<typeof reportGenerateDiagnosticWarning>;
 export type ReportGenerateDiagnosticPhase = z.infer<typeof reportGenerateDiagnosticPhase>;
 export type ReportGenerateDiagnosticFailureReason = z.infer<

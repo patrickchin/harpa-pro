@@ -6425,6 +6425,234 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/r2-capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Cloudflare R2 capacity observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            freeTierReference: {
+                                /** @enum {number} */
+                                storageGbMonth: 10;
+                                /** @enum {number} */
+                                classAOperations: 1000000;
+                                /** @enum {number} */
+                                classBOperations: 10000000;
+                                /** @enum {string} */
+                                appliesTo: "standard_only";
+                            };
+                            buckets: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {boolean} */
+                                truncated: false;
+                                items: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    jurisdiction: "default" | "eu" | "fedramp" | "unknown";
+                                    /** @enum {string|null} */
+                                    location: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc" | null;
+                                    /** @enum {string} */
+                                    defaultStorageClass: "standard" | "infrequent_access" | "unknown";
+                                    createdAt: string | null;
+                                }[];
+                            };
+                            storage: {
+                                /** @enum {string} */
+                                status: "available";
+                                standard: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                                infrequentAccess: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                            };
+                            operations: {
+                                /** @enum {string} */
+                                status: "available";
+                                windowStart: string;
+                                windowEnd: string;
+                                classA: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 1000000;
+                                    estimatedRemaining: number;
+                                };
+                                classB: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 10000000;
+                                    estimatedRemaining: number;
+                                };
+                                freeRequests: number;
+                                /** @enum {number} */
+                                unclassifiedRequests: 0;
+                            };
+                            caveats: ("storage_snapshot_not_gb_month" | "storage_metrics_may_lag" | "infrequent_access_not_covered_by_free_tier" | "operations_estimated_from_analytics" | "unclassified_operations_excluded" | "bucket_inventory_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            freeTierReference: {
+                                /** @enum {number} */
+                                storageGbMonth: 10;
+                                /** @enum {number} */
+                                classAOperations: 1000000;
+                                /** @enum {number} */
+                                classBOperations: 10000000;
+                                /** @enum {string} */
+                                appliesTo: "standard_only";
+                            };
+                            buckets: {
+                                /** @enum {string} */
+                                status: "available";
+                                truncated: boolean;
+                                items: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    jurisdiction: "default" | "eu" | "fedramp" | "unknown";
+                                    /** @enum {string|null} */
+                                    location: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc" | null;
+                                    /** @enum {string} */
+                                    defaultStorageClass: "standard" | "infrequent_access" | "unknown";
+                                    createdAt: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            storage: {
+                                /** @enum {string} */
+                                status: "available";
+                                standard: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                                infrequentAccess: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            operations: {
+                                /** @enum {string} */
+                                status: "available";
+                                windowStart: string;
+                                windowEnd: string;
+                                classA: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 1000000;
+                                    estimatedRemaining: number;
+                                };
+                                classB: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 10000000;
+                                    estimatedRemaining: number;
+                                };
+                                freeRequests: number;
+                                unclassifiedRequests: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            caveats: ("storage_snapshot_not_gb_month" | "storage_metrics_may_lag" | "infrequent_access_not_covered_by_free_tier" | "operations_estimated_from_analytics" | "unclassified_operations_excluded" | "bucket_inventory_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

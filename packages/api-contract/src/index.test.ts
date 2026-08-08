@@ -12,6 +12,8 @@ describe('api-contract', () => {
     expect(schemas.voice).toBeDefined();
     expect(schemas.settings).toBeDefined();
     expect(operations.neonInventoryObservation).toBeDefined();
+    expect(operations.sentryObservation).toBeDefined();
+    expect(schemas.operations.sentryObservation).toBe(operations.sentryObservation);
   });
 
   it('isoDateTime accepts ISO-8601 and rejects garbage', () => {

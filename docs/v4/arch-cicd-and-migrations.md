@@ -7,8 +7,8 @@
 > locks, readiness checks, and pre-deploy branches are implemented. The limits
 > in this document are part of the operating contract.
 
-The application `.notx.sql` required-head parser and AI usage index additions
-below are an unmerged draft stack.
+The application `.notx.sql` required-head parser, AI usage index, and migration
+lock polling below are an unmerged draft stack.
 
 ## Why this doc exists
 
@@ -34,7 +34,10 @@ recovery points. The image contains the required migration heads.
 - **Apply.** The application and admin migration streams run serially inside
   the Fly release machine via `db:migrate` and `db:migrate:admin`. They use
   independent `DATABASE_URL` and `ADMIN_DATABASE_URL` secrets, ledgers, and
-  advisory locks. Fly only promotes the new image if both commands exit 0.
+  session-level advisory locks. The application migrator polls
+  `pg_try_advisory_lock` because it can run `.notx.sql` concurrent index work.
+  Each unsuccessful poll statement finishes before the next attempt. Fly only
+  promotes the new image if both commands exit 0.
 - **Guard.** CI does not apply production migrations. It checks filename
   syntax, duplicate numeric prefixes, and the presence of both migration
   streams. It does not detect edits, renames, or deletions of applied files.
@@ -101,7 +104,7 @@ Fly preview separately verifies GitHub's synthetic merge SHA first.
 │      └─ Fly builds image                                               │
 │      └─ Fly starts a release machine                                   │
 │           └─ release_command runs db:migrate then db:migrate:admin      │
-│               • each migrator acquires its own advisory lock           │
+│               • each migrator acquires its own session advisory lock   │
 │               • each applies pending files in lexical order            │
 │               • exits non-zero on first failure → Fly aborts rollout   │
 │      └─ Fly rolls the image onto app and storage-worker Machines       │
@@ -423,8 +426,18 @@ period is still active.
 
 ### `packages/api/src/db/migrate.ts`
 
-- Wrap the apply loop in `pg_advisory_lock(<constant key>)` /
-  `pg_advisory_unlock`. Key is a fixed bigint (documented inline).
+- Poll `pg_try_advisory_lock(<constant key>)` until the application migrator
+  gets its session-level lock. The key is a fixed bigint documented inline.
+- A false result completes its database statement before the migrator waits
+  100 milliseconds in JavaScript. The next poll starts a new statement.
+- Keep the lock across the full apply loop, including `.notx.sql` files. This
+  preserves one-writer serialization for `CREATE INDEX CONCURRENTLY`.
+- Release the lock with `pg_advisory_unlock` in the existing `finally` block.
+  A query error or an invalid lock result fails the migration.
+- This polling prevents a contender from holding a blocking lock-wait
+  statement while concurrent index work waits for older transaction snapshots.
+  See the
+  [migration-lock deadlock entry](../bugs/2026-08-08-migration-lock-concurrent-index-deadlock.md).
 - Log `applying <file>` to stdout _before_ each `client.query(sql)`, so a
   hang or crash names the offender. Log `applied <file> in <ms>ms` after.
 - On error, log the file name + first SQL line of the failing statement and
@@ -503,9 +516,12 @@ Under `packages/api/src/__tests__/`:
   It checks `llm_usage_events_created_at_idx` on `created_at DESC` and requires
   `pg_index.indisvalid = true`. It also proves that a same-name invalid index
   makes the no-`IF NOT EXISTS` rerun fail without a ledger row.
-- `migrate.advisory-lock.integration.test.ts` — two concurrent
-  `migrate(url)` calls against the same Testcontainers DB; assert no
-  duplicate `app._migrations` rows, no SQL error, both return clean.
+- `migrate.advisory-lock.integration.test.ts` — run two concurrent
+  `migrate(url)` calls against the same Testcontainers DB. A dedicated fixture
+  holds a write transaction open while the first migrator runs
+  `CREATE INDEX CONCURRENTLY`. It proves that the second session polls without
+  an ungranted advisory-lock waiter, then both calls finish. The full migration
+  set also runs concurrently with no deadlock or duplicate ledger row.
 - `migrate.failing-file.integration.test.ts` — point the migrator at a
   fixture dir whose third file is invalid SQL; assert process exits non-zero,
   stderr names the failing file, `app._migrations` has rows 1 and 2 only.
@@ -584,18 +600,18 @@ database restore.
 
 ### Scenario matrix
 
-| Scenario                                                                  | What happens                                                                                                                                                                                               | Manual step                                                                                                                                                  |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pre-deploy recovery branch fails                                          | `api-prod.yml` exits before `flyctl deploy`. Production remains unchanged.                                                                                                                                 | Fix Neon credentials or availability. Then rerun the workflow. Do not bypass the gate.                                                                       |
-| Migration syntax error in file N                                          | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema). | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back.                                                   |
-| Non-transactional file (`*.notx.sql`) fails mid-way                       | Loader has NOT recorded it in `app._migrations`. Partial side-effects (e.g. half-built index) may exist. Release machine exits non-zero, Fly aborts rollout.                                               | Manual: drop the partial object, fix the SQL, re-deploy. Documented inline in the offending file's header comment. Discouraged — prefer transactional files. |
-| Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly halts the unhealthy rollout. The previous image must remain schema-compatible.                                                                                                                         | Inspect Machine state before any retry. Keep the forward schema and ship a fix-forward.                                                                      |
-| `/readyz` reports `head-mismatch` on a running prod machine               | The image and application migration ledger do not agree.                                                                                                                                                   | Stop. Compare the image SHA, expected head, and ledger before any deploy.                                                                                    |
-| Concurrent deploys race the migrator                                      | `pg_advisory_lock` serialises them; the second waits, then no-ops (all files already applied).                                                                                                             | None.                                                                                                                                                        |
-| Need to revert a feature (code only)                                      | See "Code rollback" above.                                                                                                                                                                                 | None at the DB layer.                                                                                                                                        |
-| Bad data shipped (corrupting migration, regression writing garbage)       | Code and each affected database need a coordinated rollback.                                                                                                                                               | Use the data rollback procedure above.                                                                                                                       |
-| Recovery branch missing or older than needed                              | Recovery depends on the configured Neon restore window.                                                                                                                                                    | Verify the window. Then select an exact timestamp in Neon.                                                                                                   |
-| Production lifecycle arming stalls                                        | The deployment state is unknown. Account deletion can remain disabled.                                                                                                                                     | Query `app.storage_lifecycle_rollout`. Retry only after recording its current values.                                                                        |
+| Scenario                                                                  | What happens                                                                                                                                                                                                  | Manual step                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pre-deploy recovery branch fails                                          | `api-prod.yml` exits before `flyctl deploy`. Production remains unchanged.                                                                                                                                    | Fix Neon credentials or availability. Then rerun the workflow. Do not bypass the gate.                                                                       |
+| Migration syntax error in file N                                          | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema).    | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back.                                                   |
+| Non-transactional file (`*.notx.sql`) fails mid-way                       | Loader has NOT recorded it in `app._migrations`. Partial side-effects (e.g. half-built index) may exist. Release machine exits non-zero, Fly aborts rollout.                                                  | Manual: drop the partial object, fix the SQL, re-deploy. Documented inline in the offending file's header comment. Discouraged — prefer transactional files. |
+| Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly halts the unhealthy rollout. The previous image must remain schema-compatible.                                                                                                                            | Inspect Machine state before any retry. Keep the forward schema and ship a fix-forward.                                                                      |
+| `/readyz` reports `head-mismatch` on a running prod machine               | The image and application migration ledger do not agree.                                                                                                                                                      | Stop. Compare the image SHA, expected head, and ledger before any deploy.                                                                                    |
+| Concurrent deploys race the application migrator                          | One migrator holds the session advisory lock. A contender polls with `pg_try_advisory_lock`; each false-result statement finishes before its next attempt. After acquisition, it reads the ledger and no-ops. | None.                                                                                                                                                        |
+| Need to revert a feature (code only)                                      | See "Code rollback" above.                                                                                                                                                                                    | None at the DB layer.                                                                                                                                        |
+| Bad data shipped (corrupting migration, regression writing garbage)       | Code and each affected database need a coordinated rollback.                                                                                                                                                  | Use the data rollback procedure above.                                                                                                                       |
+| Recovery branch missing or older than needed                              | Recovery depends on the configured Neon restore window.                                                                                                                                                       | Verify the window. Then select an exact timestamp in Neon.                                                                                                   |
+| Production lifecycle arming stalls                                        | The deployment state is unknown. Account deletion can remain disabled.                                                                                                                                        | Query `app.storage_lifecycle_rollout`. Retry only after recording its current values.                                                                        |
 
 There are no down migrations. Migration files are append-only by convention.
 The current CI guard does not enforce that convention.

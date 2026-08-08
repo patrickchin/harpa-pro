@@ -51,6 +51,8 @@ export default defineConfig({
     {
       command:
         `PUBLIC_API_BASE_URL=${apiBaseUrl} ` +
+        `PUBLIC_SITE_BASE_URL=${adminOrigin} ` +
+        `PUBLIC_DASHBOARD_URL=${adminOrigin} ` +
         `corepack pnpm build && corepack pnpm exec astro preview --host localhost --port ${adminPort}`,
       url: `${adminOrigin}/`,
       reuseExistingServer: false,

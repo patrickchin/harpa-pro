@@ -78,7 +78,9 @@ interface DeploymentState {
   api: ApiIdentityState;
   product: ReadinessState;
   admin: ReadinessState;
-  pages: PagesMarkerState;
+  publicPages: PagesMarkerState;
+  adminPages: PagesMarkerState;
+  dashboardPages: PagesMarkerState;
 }
 
 interface GitHubBranchHead {
@@ -331,7 +333,9 @@ const INITIAL_DEPLOYMENT_STATE: DeploymentState = {
   api: { status: 'loading' },
   product: { status: 'loading' },
   admin: { status: 'loading' },
-  pages: { status: 'loading' },
+  publicPages: { status: 'loading' },
+  adminPages: { status: 'loading' },
+  dashboardPages: { status: 'loading' },
 };
 
 class GitHubRequestError extends Error {
@@ -578,12 +582,12 @@ function isSafeIdentifier(value: unknown, maximumLength = 160): value is string 
   );
 }
 
-function isSafeBranchLabel(value: unknown): value is string {
+function isPagesBranch(value: unknown): value is string {
   return (
     typeof value === 'string' &&
     value.length > 0 &&
     value.length <= 160 &&
-    /^[A-Za-z0-9@][A-Za-z0-9@._/+!-]*$/.test(value)
+    /^(?:main|dev|pr-[1-9][0-9]*)$/.test(value)
   );
 }
 
@@ -689,7 +693,7 @@ function parsePagesMarker(value: unknown): PagesMarker | null {
     !isRecord(value) ||
     !hasOnlyKeys(value, ['commit', 'branch']) ||
     !isFullSha(value.commit) ||
-    !isSafeBranchLabel(value.branch)
+    !isPagesBranch(value.branch)
   ) {
     return null;
   }
@@ -747,11 +751,14 @@ async function loadReadiness(path: '/readyz' | '/admin/readyz'): Promise<Readine
   }
 }
 
-async function loadPagesMarker(): Promise<PagesMarkerState> {
+async function loadPagesMarker(
+  url: string,
+  credentials: 'omit' | 'same-origin',
+): Promise<PagesMarkerState> {
   try {
-    const response = await fetch('/_cf-pages-deployment.json', {
+    const response = await fetch(url, {
       method: 'GET',
-      credentials: 'same-origin',
+      credentials,
       cache: 'no-store',
     });
     if (!response.ok) return { status: 'unknown' };
@@ -1407,22 +1414,28 @@ function ReadinessCard({
   );
 }
 
-function PagesIdentityCard({ state }: { state: PagesMarkerState }) {
+function PagesIdentityCard({
+  name,
+  source,
+  state,
+}: {
+  name: string;
+  source: string;
+  state: PagesMarkerState;
+}) {
   const badgeState =
     state.status === 'loading' ? 'checking' : state.status === 'ready' ? 'observed' : 'unknown';
 
   return (
     <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
-        <h3 className="font-semibold text-ink">Administrator Pages identity</h3>
+        <h3 className="font-semibold text-ink">{name}</h3>
         <EvidenceBadge state={badgeState} />
       </div>
       {state.status === 'loading' ? (
-        <p className="mt-3 text-sm text-ink-soft">Checking the same-origin Pages marker…</p>
+        <p className="mt-3 text-sm text-ink-soft">Checking the {source} Pages marker…</p>
       ) : state.status === 'unknown' ? (
-        <p className="mt-3 text-sm text-ink-soft">
-          The same-origin Pages deployment marker is unavailable.
-        </p>
+        <p className="mt-3 text-sm text-ink-soft">The {source} Pages marker is unavailable.</p>
       ) : (
         <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
           <dt className="text-ink-soft">Commit</dt>
@@ -3754,7 +3767,7 @@ function Operations({
   onSessionExpired: () => void;
   onSignOut: () => void;
 }) {
-  const { apiBaseUrl } = getPublicEnv();
+  const { apiBaseUrl, siteBaseUrl, dashboardUrl } = getPublicEnv();
   const [deployment, setDeployment] = useState<DeploymentState>(INITIAL_DEPLOYMENT_STATE);
   const [storageLifecycle, setStorageLifecycle] = useState<StorageLifecycleState>({
     status: 'idle',
@@ -3790,6 +3803,8 @@ function Operations({
         ,
         ,
         ,
+        ,
+        ,
         lifecycle,
         inventory,
         usageObservation,
@@ -3807,9 +3822,17 @@ function Operations({
         loadReadiness('/admin/readyz').then((admin) => {
           if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
         }),
-        loadPagesMarker().then((pages) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
+        loadPagesMarker(`${siteBaseUrl}/_cf-pages-deployment.json`, 'omit').then((publicPages) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, publicPages }));
         }),
+        loadPagesMarker('/_cf-pages-deployment.json', 'same-origin').then((adminPages) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, adminPages }));
+        }),
+        loadPagesMarker(`${dashboardUrl}/_cf-pages-deployment.json`, 'omit').then(
+          (dashboardPages) => {
+            if (isCurrent()) setDeployment((current) => ({ ...current, dashboardPages }));
+          },
+        ),
         loadStorageLifecycle(),
         loadNeonInventory(),
         loadNeonUsage(),
@@ -3840,7 +3863,7 @@ function Operations({
     } finally {
       if (isCurrent()) setRefreshing(false);
     }
-  }, [onSessionExpired]);
+  }, [dashboardUrl, onSessionExpired, siteBaseUrl]);
 
   useEffect(() => {
     void refresh();
@@ -3909,7 +3932,21 @@ function Operations({
             state={deployment.admin}
             href={`${apiBaseUrl}/admin/readyz`}
           />
-          <PagesIdentityCard state={deployment.pages} />
+          <PagesIdentityCard
+            name="Public site Pages identity"
+            source="public-site"
+            state={deployment.publicPages}
+          />
+          <PagesIdentityCard
+            name="Administrator Pages identity"
+            source="same-origin administrator"
+            state={deployment.adminPages}
+          />
+          <PagesIdentityCard
+            name="Office dashboard Pages identity"
+            source="office-dashboard"
+            state={deployment.dashboardPages}
+          />
         </div>
         <p className="mt-3 text-sm text-ink-soft">
           Build identity, readiness, provider metadata, and exact promotion proof are different

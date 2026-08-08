@@ -381,6 +381,794 @@ describe('admin operations Neon inventory schema', () => {
   });
 });
 
+const neonUsagePeriodStart = '2026-08-01T00:00:00.000Z';
+const neonUsagePeriodEnd = '2026-09-01T00:00:00.000Z';
+
+const neonUsageReasons = [
+  'not_configured',
+  'unsupported_plan',
+  'unsafe_permissions',
+  'timeout',
+  'rate_limited',
+  'forbidden',
+  'not_found',
+  'invalid_response',
+  'provider_unavailable',
+] as const;
+
+const neonUsageProjectReasons = [
+  'timeout',
+  'rate_limited',
+  'forbidden',
+  'not_found',
+  'invalid_response',
+  'provider_unavailable',
+] as const;
+
+const neonUsageCaveats = [
+  'provider_values_may_lag',
+  'free_plan_published_reference',
+  'storage_uses_published_reference',
+  'transfer_requires_complete_project_coverage',
+  'not_invoice_or_credit_balance',
+  'published_allowances_can_change',
+] as const;
+
+const availableNeonUsageProject = {
+  id: 'tiny-tree-06262558',
+  name: 'harpa-pro',
+  status: 'available',
+  effectivePermission: 'VIEWER',
+  periodStart: neonUsagePeriodStart,
+  periodEnd: neonUsagePeriodEnd,
+  compute: {
+    used: 90_000,
+    allowance: 360_000,
+    unit: 'cu_seconds',
+  },
+  storage: {
+    used: 125_000_000,
+    allowance: 500_000_000,
+    unit: 'bytes',
+  },
+  transferBytes: 1_250_000_000,
+} as const;
+
+const unknownNeonUsageProject = {
+  id: 'floral-brook-39718990',
+  name: 'harpa-pro-admin',
+  status: 'unknown',
+  effectivePermission: 'VIEWER',
+  reason: 'timeout',
+} as const;
+
+const availableNeonOrganizationTransfer = {
+  status: 'available',
+  periodStart: neonUsagePeriodStart,
+  periodEnd: neonUsagePeriodEnd,
+  used: availableNeonUsageProject.transferBytes,
+  allowance: 5_000_000_000,
+  unit: 'bytes',
+} as const;
+
+const availableNeonUsageObservation = {
+  observedAt,
+  status: 'available',
+  organizationId: 'org-harpa-pro-12345678',
+  plan: 'free',
+  projectsTruncated: false,
+  unavailableProjectCount: 0,
+  projects: [availableNeonUsageProject],
+  organizationTransfer: availableNeonOrganizationTransfer,
+  caveats: neonUsageCaveats,
+} as const;
+
+const partialNeonUsageObservation = {
+  ...availableNeonUsageObservation,
+  status: 'partial',
+  projectsTruncated: true,
+  unavailableProjectCount: 1,
+  projects: [availableNeonUsageProject, unknownNeonUsageProject],
+  organizationTransfer: {
+    status: 'unknown',
+    reason: 'incomplete_project_coverage',
+  },
+} as const;
+
+const unknownNeonUsageObservation = {
+  observedAt,
+  status: 'unknown',
+  reason: 'not_configured',
+} as const;
+
+describe('admin operations Neon Free usage schema', () => {
+  it.each([
+    ['available', availableNeonUsageObservation],
+    ['partial', partialNeonUsageObservation],
+    ['unknown', unknownNeonUsageObservation],
+  ] as const)('accepts an exact %s observation', (_status, observation) => {
+    expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each(neonUsageReasons)('accepts the redacted %s unknown reason', (reason) => {
+    expect(() =>
+      operations.neonUsageObservation.parse({
+        ...unknownNeonUsageObservation,
+        reason,
+      }),
+    ).not.toThrow();
+  });
+
+  it.each(neonUsageProjectReasons)(
+    'accepts the redacted %s reason for an unknown project detail',
+    (reason) => {
+      const observation = {
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        projects: [{ ...unknownNeonUsageProject, reason }],
+        organizationTransfer: {
+          status: 'unknown',
+          reason: 'incomplete_project_coverage',
+        },
+      };
+
+      expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+    },
+  );
+
+  it('accepts invalid_response only when otherwise valid project transfer values overflow', () => {
+    const observation = {
+      ...availableNeonUsageObservation,
+      status: 'partial',
+      projects: [
+        {
+          ...availableNeonUsageProject,
+          transferBytes: Number.MAX_SAFE_INTEGER,
+        },
+        {
+          ...availableNeonUsageProject,
+          id: 'floral-brook-39718990',
+          name: 'harpa-pro-admin',
+          transferBytes: 1,
+        },
+      ],
+      organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+    };
+
+    expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('accepts period_mismatch only with two distinct valid project periods', () => {
+    const observation = {
+      ...availableNeonUsageObservation,
+      status: 'partial',
+      projects: [
+        availableNeonUsageProject,
+        {
+          ...availableNeonUsageProject,
+          id: 'floral-brook-39718990',
+          name: 'harpa-pro-admin',
+          periodStart: '2026-07-15T00:00:00.000Z',
+          periodEnd: '2026-08-15T00:00:00.000Z',
+          transferBytes: 250_000,
+        },
+      ],
+      organizationTransfer: { status: 'unknown', reason: 'period_mismatch' },
+    };
+
+    expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    [
+      'incomplete_project_coverage without incomplete project evidence',
+      {
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        organizationTransfer: {
+          status: 'unknown',
+          reason: 'incomplete_project_coverage',
+        },
+      },
+    ],
+    [
+      'period_mismatch with only one project period',
+      {
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        organizationTransfer: { status: 'unknown', reason: 'period_mismatch' },
+      },
+    ],
+    [
+      'period_mismatch with identical project periods',
+      {
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        projects: [
+          availableNeonUsageProject,
+          {
+            ...availableNeonUsageProject,
+            id: 'floral-brook-39718990',
+            name: 'harpa-pro-admin',
+          },
+        ],
+        organizationTransfer: { status: 'unknown', reason: 'period_mismatch' },
+      },
+    ],
+    [
+      'invalid_response with a safe aligned aggregate',
+      {
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+      },
+    ],
+    [
+      'invalid_response when incomplete coverage is the stronger evidence',
+      {
+        ...partialNeonUsageObservation,
+        organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+      },
+    ],
+    [
+      'invalid_response when distinct periods are the stronger evidence',
+      {
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        projects: [
+          availableNeonUsageProject,
+          {
+            ...availableNeonUsageProject,
+            id: 'floral-brook-39718990',
+            name: 'harpa-pro-admin',
+            periodStart: '2026-07-15T00:00:00.000Z',
+            periodEnd: '2026-08-15T00:00:00.000Z',
+          },
+        ],
+        organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+      },
+    ],
+  ] as const)('rejects %s', (_description, observation) => {
+    expect(operations.neonUsageObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each(['not_configured', 'unsupported_plan', 'unsafe_permissions'] as const)(
+    'rejects top-level-only reason %s on an unknown project detail',
+    (reason) => {
+      expect(
+        operations.neonUsageObservation.safeParse({
+          ...partialNeonUsageObservation,
+          projects: [{ ...unknownNeonUsageProject, reason }],
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('rejects a project-detail reason on unknown organization transfer', () => {
+    const observation = {
+      ...availableNeonUsageObservation,
+      status: 'partial',
+      organizationTransfer: { status: 'unknown', reason: 'timeout' },
+    };
+
+    expect(operations.neonUsageObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it('rejects provider text as an unknown reason', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...unknownNeonUsageObservation,
+        reason: 'Neon returned owner@example.com from a paid project',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a complete Free observation with no visible projects', () => {
+    const observation = {
+      ...availableNeonUsageObservation,
+      projects: [],
+      organizationTransfer: { status: 'unknown', reason: 'no_projects' },
+    };
+
+    expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    {
+      ...availableNeonUsageObservation,
+      organizationTransfer: { status: 'unknown', reason: 'no_projects' },
+    },
+    {
+      ...availableNeonUsageObservation,
+      status: 'partial',
+      projects: [],
+      projectsTruncated: true,
+      organizationTransfer: { status: 'unknown', reason: 'no_projects' },
+    },
+    {
+      ...availableNeonUsageObservation,
+      status: 'partial',
+      projects: [],
+      unavailableProjectCount: 1,
+      organizationTransfer: { status: 'unknown', reason: 'no_projects' },
+    },
+  ] as const)(
+    'rejects no_projects without exact complete empty discovery evidence',
+    (observation) => {
+      expect(operations.neonUsageObservation.safeParse(observation).success).toBe(false);
+    },
+  );
+
+  it('accepts exactly 20 projects and rejects a twenty-first', () => {
+    const projects = Array.from({ length: 20 }, (_, index) => ({
+      ...availableNeonUsageProject,
+      id: `project-${index}`,
+      name: `Project ${index}`,
+      transferBytes: index + 1,
+    }));
+    const used = projects.reduce((sum, project) => sum + project.transferBytes, 0);
+    const atLimit = {
+      ...availableNeonUsageObservation,
+      projects,
+      organizationTransfer: {
+        ...availableNeonOrganizationTransfer,
+        used,
+      },
+    };
+
+    expect(() => operations.neonUsageObservation.parse(atLimit)).not.toThrow();
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...atLimit,
+        projects: [
+          ...projects,
+          {
+            ...availableNeonUsageProject,
+            id: 'project-20',
+            name: 'Project 20',
+            transferBytes: 21,
+          },
+        ],
+        organizationTransfer: {
+          ...atLimit.organizationTransfer,
+          used: used + 21,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(['launch', 'scale', 'FREE', 'free_v3', null] as const)(
+    'rejects plan evidence %s on a percentage observation',
+    (planEvidence) => {
+      expect(
+        operations.neonUsageObservation.safeParse({
+          ...availableNeonUsageObservation,
+          plan: planEvidence,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(['EDITOR', 'ADMIN', 'viewer', null, undefined] as const)(
+    'rejects project permission evidence %s on available and unknown details',
+    (effectivePermission) => {
+      for (const project of [availableNeonUsageProject, unknownNeonUsageProject]) {
+        expect(
+          operations.neonUsageObservation.safeParse({
+            ...availableNeonUsageObservation,
+            status: 'partial',
+            projects: [{ ...project, effectivePermission }],
+            organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+          }).success,
+        ).toBe(false);
+      }
+    },
+  );
+
+  it.each([
+    [
+      'a truncated project list',
+      {
+        projectsTruncated: true,
+        organizationTransfer: { status: 'unknown', reason: 'incomplete_project_coverage' },
+      },
+    ],
+    [
+      'a provider-reported unavailable project',
+      {
+        unavailableProjectCount: 1,
+        organizationTransfer: { status: 'unknown', reason: 'incomplete_project_coverage' },
+      },
+    ],
+    [
+      'an unknown project detail',
+      {
+        projects: [availableNeonUsageProject, unknownNeonUsageProject],
+        organizationTransfer: { status: 'unknown', reason: 'incomplete_project_coverage' },
+      },
+    ],
+  ] as const)('accepts partial status with %s', (_description, override) => {
+    const observation = {
+      ...availableNeonUsageObservation,
+      status: 'partial',
+      ...override,
+    };
+
+    expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('rejects partial status without an incompleteness signal', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        status: 'partial',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects partial status with an available organization-transfer total', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        projectsTruncated: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'project-list truncation',
+      {
+        ...availableNeonUsageObservation,
+        projectsTruncated: true,
+      },
+    ],
+    [
+      'a provider-reported unavailable project',
+      {
+        ...availableNeonUsageObservation,
+        unavailableProjectCount: 1,
+      },
+    ],
+    [
+      'an unknown project',
+      {
+        ...availableNeonUsageObservation,
+        projects: [availableNeonUsageProject, unknownNeonUsageProject],
+      },
+    ],
+    [
+      'unknown organization transfer',
+      {
+        ...availableNeonUsageObservation,
+        organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+      },
+    ],
+  ] as const)('rejects available status with %s', (_description, observation) => {
+    expect(operations.neonUsageObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each([
+    [
+      'the compute allowance',
+      {
+        projects: [
+          {
+            ...availableNeonUsageProject,
+            compute: {
+              ...availableNeonUsageProject.compute,
+              allowance: 359_999,
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'the storage allowance',
+      {
+        projects: [
+          {
+            ...availableNeonUsageProject,
+            storage: {
+              ...availableNeonUsageProject.storage,
+              allowance: 536_870_912,
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'the organization transfer allowance',
+      {
+        organizationTransfer: {
+          ...availableNeonOrganizationTransfer,
+          allowance: 5_368_709_120,
+        },
+      },
+    ],
+    [
+      'the compute unit',
+      {
+        projects: [
+          {
+            ...availableNeonUsageProject,
+            compute: { ...availableNeonUsageProject.compute, unit: 'seconds' },
+          },
+        ],
+      },
+    ],
+    [
+      'the storage unit',
+      {
+        projects: [
+          {
+            ...availableNeonUsageProject,
+            storage: { ...availableNeonUsageProject.storage, unit: 'gb' },
+          },
+        ],
+      },
+    ],
+    [
+      'the organization transfer unit',
+      {
+        organizationTransfer: {
+          ...availableNeonOrganizationTransfer,
+          unit: 'gb',
+        },
+      },
+    ],
+  ] as const)('rejects a non-literal value for %s', (_description, override) => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        ...override,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'negative compute use',
+      {
+        compute: { ...availableNeonUsageProject.compute, used: -1 },
+      },
+    ],
+    [
+      'fractional storage use',
+      {
+        storage: { ...availableNeonUsageProject.storage, used: 1.5 },
+      },
+    ],
+    [
+      'unsafe transfer use',
+      {
+        transferBytes: Number.MAX_SAFE_INTEGER + 1,
+      },
+    ],
+  ] as const)('rejects %s', (_description, projectOverride) => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        projects: [{ ...availableNeonUsageProject, ...projectOverride }],
+        organizationTransfer: { status: 'unknown', reason: 'invalid_response' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an organization transfer sum that differs from complete projects', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        organizationTransfer: {
+          ...availableNeonOrganizationTransfer,
+          used: availableNeonUsageProject.transferBytes + 1,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts provider usage above every published Free-plan reference', () => {
+    const project = {
+      ...availableNeonUsageProject,
+      compute: {
+        ...availableNeonUsageProject.compute,
+        used: 400_000,
+      },
+      storage: {
+        ...availableNeonUsageProject.storage,
+        used: 600_000_000,
+      },
+      transferBytes: 6_000_000_000,
+    };
+    const observation = {
+      ...availableNeonUsageObservation,
+      projects: [project],
+      organizationTransfer: {
+        ...availableNeonOrganizationTransfer,
+        used: project.transferBytes,
+      },
+    };
+
+    expect(operations.neonUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['negative', -1],
+    ['fractional', 1.5],
+    ['unsafe', Number.MAX_SAFE_INTEGER + 1],
+  ] as const)('rejects %s organization-transfer usage', (_description, used) => {
+    const result = operations.neonUsageObservation.safeParse({
+      ...availableNeonUsageObservation,
+      projects: [],
+      organizationTransfer: {
+        ...availableNeonOrganizationTransfer,
+        used,
+      },
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ['organizationTransfer', 'used'] }),
+        ]),
+      );
+    }
+  });
+
+  it.each([
+    [
+      'a reversed project period',
+      {
+        projects: [
+          {
+            ...availableNeonUsageProject,
+            periodStart: neonUsagePeriodEnd,
+            periodEnd: neonUsagePeriodStart,
+          },
+        ],
+      },
+    ],
+    [
+      'a project period that differs from organization transfer',
+      {
+        projects: [
+          {
+            ...availableNeonUsageProject,
+            periodStart: '2026-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+    ],
+    [
+      'a reversed organization transfer period',
+      {
+        organizationTransfer: {
+          ...availableNeonOrganizationTransfer,
+          periodStart: neonUsagePeriodEnd,
+          periodEnd: neonUsagePeriodStart,
+        },
+      },
+    ],
+  ] as const)('rejects %s', (_description, override) => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        ...override,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects duplicate project IDs', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        status: 'partial',
+        projects: [availableNeonUsageProject, unknownNeonUsageProject, unknownNeonUsageProject],
+        organizationTransfer: { status: 'unknown', reason: 'incomplete_project_coverage' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['a missing caveat', neonUsageCaveats.slice(0, -1)],
+    ['a duplicate caveat', [...neonUsageCaveats, neonUsageCaveats[0]]],
+    ['an out-of-order caveat tuple', [...neonUsageCaveats].reverse()],
+    ['an unreviewed caveat', [...neonUsageCaveats.slice(0, -1), 'provider_credit_remaining']],
+  ] as const)('rejects %s', (_description, caveats) => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        caveats,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['top-level provider response', { rawProviderResponse: {} }],
+    ['top-level API key', { apiKey: 'neon-secret' }],
+    ['organization name', { organizationName: 'Internal organization' }],
+  ] as const)('rejects leaked %s', (_description, leakedField) => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        ...leakedField,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['owner ID', { ownerId: 'owner-secret' }],
+    ['connection URI', { connectionUri: 'postgres://user:password@example.neon.tech/db' }],
+    ['proxy host', { proxyHost: 'ep-secret.neon.tech' }],
+    ['branch logical limit', { branchLogicalSizeLimitBytes: 536_870_912 }],
+    ['byte-hour storage', { dataStorageBytesHour: 123_456 }],
+    ['written data', { writtenDataBytes: 123_456 }],
+  ] as const)('rejects leaked project %s', (_description, leakedField) => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...availableNeonUsageObservation,
+        projects: [{ ...availableNeonUsageProject, ...leakedField }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an unknown project that retains usage or provider text', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...partialNeonUsageObservation,
+        projects: [
+          availableNeonUsageProject,
+          {
+            ...unknownNeonUsageProject,
+            transferBytes: 1,
+            providerMessage: 'upstream timeout for owner@example.com',
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects raw provider text as a nested unknown reason', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...partialNeonUsageObservation,
+        projects: [
+          availableNeonUsageProject,
+          {
+            ...unknownNeonUsageProject,
+            reason: 'project detail timed out for owner@example.com',
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects raw provider text as an organization-transfer reason', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...partialNeonUsageObservation,
+        organizationTransfer: {
+          status: 'unknown',
+          reason: 'project floral-brook failed for owner@example.com',
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects unknown observations that retain organization or project facts', () => {
+    expect(
+      operations.neonUsageObservation.safeParse({
+        ...unknownNeonUsageObservation,
+        organizationId: availableNeonUsageObservation.organizationId,
+        projects: [availableNeonUsageProject],
+      }).success,
+    ).toBe(false);
+  });
+});
+
 const reportDiagnosticTarget = {
   accountEmail: 'report-canary@e2e.harpapro.com',
   projectId: 'prj_01234567',

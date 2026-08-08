@@ -30,8 +30,8 @@ const ADMIN_PASSWORD = 'neon usage operations admin password deliberately long';
 const NEON_API_KEY = 'route-default-neon-usage-viewer-key';
 const ORGANIZATION_ID = 'org-harpa-pro';
 const PROJECT_ID = 'project-usage-integration';
-const PERIOD_START = '2026-08-01T00:00:00Z';
-const PERIOD_END = '2026-09-01T00:00:00Z';
+const PERIOD_START = '2026-08-01T00:00:00.000Z';
+const PERIOD_END = '2026-09-01T00:00:00.000Z';
 const EXPECTED_CAVEATS = [
   'provider_values_may_lag',
   'free_plan_published_reference',

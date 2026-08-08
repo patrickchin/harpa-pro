@@ -65,11 +65,11 @@ does not define this repository's runtime; `nvm use` does.
   - PR branch `pr-<n>` →
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
-  - `/` renders the activity console. `/operations` renders read-only Harpa
-    readiness, service links, and bounded Neon inventory, plus a separate
-    manual report-generation canary that is explicitly disclosed as a
-    synthetic mutation. Unknown browser paths return a static 404.
-    `/admin/activity`, `/admin/operations/neon`, and
+  - `/` renders the activity console. `/operations` renders read-only service
+    monitoring, a no-token public GitHub branch/PR snapshot, bounded Neon
+    inventory, and a separate manual report-generation diagnostic that is
+    explicitly disclosed as a synthetic mutation. Unknown browser paths return
+    a static 404. `/admin/activity`, `/admin/operations/neon`, and
     `/admin/operations/report-generate` remain API resource paths. Data and
     diagnostic requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),

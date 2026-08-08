@@ -20,6 +20,12 @@ const KEYS = [
   'ADMIN_NEON_ORG_ID',
   'ADMIN_CLOUDFLARE_ACCOUNT_ID',
   'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN',
+  'ADMIN_SENTRY_ORG_SLUG',
+  'ADMIN_SENTRY_READ_TOKEN',
+  'ADMIN_SENTRY_PROJECT_SLUGS',
+  'ADMIN_SENTRY_MOBILE_PROJECT_SLUG',
+  'ADMIN_SENTRY_ENVIRONMENT',
+  'ADMIN_SENTRY_REGION',
   'ADMIN_FLY_ORG_SLUG',
   'ADMIN_FLY_READ_ONLY_API_TOKEN',
   'ADMIN_FLY_APP_NAMES',
@@ -409,6 +415,193 @@ describe('env: admin Cloudflare R2 observer', () => {
     });
 
     await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+});
+
+describe('env: admin Sentry observer', () => {
+  const completeObserver = {
+    ADMIN_SENTRY_ORG_SLUG: 'harpa-pro',
+    ADMIN_SENTRY_READ_TOKEN: 'test-sentry-read-token',
+    ADMIN_SENTRY_PROJECT_SLUGS: 'harpa-pro-api,harpa-pro-mobile',
+    ADMIN_SENTRY_MOBILE_PROJECT_SLUG: 'harpa-pro-mobile',
+    ADMIN_SENTRY_ENVIRONMENT: 'production',
+  } as const;
+
+  const requiredKeys = Object.keys(completeObserver) as Array<keyof typeof completeObserver>;
+  const invalidSlugs = [
+    ['path traversal', '../harpa-pro'],
+    ['slash', 'harpa/pro'],
+    ['underscore', 'harpa_pro'],
+    ['dot', 'harpa.pro'],
+    ['leading hyphen', '-harpa-pro'],
+    ['trailing hyphen', 'harpa-pro-'],
+    ['more than 63 characters', 'a'.repeat(64)],
+  ] as const;
+
+  it('accepts the observer being wholly unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    for (const key of requiredKeys) expect(mod.env[key]).toBeUndefined();
+    expect(mod.env.ADMIN_SENTRY_REGION).toBeUndefined();
+  });
+
+  it('accepts all required fields together and defaults the region to global', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_ORG_SLUG).toBe('harpa-pro');
+    expect(mod.env.ADMIN_SENTRY_READ_TOKEN).toBe('test-sentry-read-token');
+    expect(mod.env.ADMIN_SENTRY_PROJECT_SLUGS).toBe('harpa-pro-api,harpa-pro-mobile');
+    expect(mod.env.ADMIN_SENTRY_MOBILE_PROJECT_SLUG).toBe('harpa-pro-mobile');
+    expect(mod.env.ADMIN_SENTRY_ENVIRONMENT).toBe('production');
+    expect(mod.env.ADMIN_SENTRY_REGION).toBe('global');
+  });
+
+  it.each(['global', 'us', 'de'] as const)('accepts the fixed %s region', async (region) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_SENTRY_REGION: region });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_REGION).toBe(region);
+  });
+
+  it.each(['production', 'preview', 'development'] as const)(
+    'accepts the exact %s environment',
+    async (environment) => {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, {
+        ADMIN_SENTRY_ENVIRONMENT: environment,
+      });
+
+      const mod = await freshImportEnv();
+
+      expect(mod.env.ADMIN_SENTRY_ENVIRONMENT).toBe(environment);
+    },
+  );
+
+  it.each([
+    ['one', 'harpa-pro-mobile'],
+    ['three', 'harpa-pro-api,harpa-pro-mobile,harpa-pro-dashboard'],
+  ] as const)('accepts %s reviewed project slug values', async (_count, projectSlugs) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_PROJECT_SLUGS: projectSlugs,
+    });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_PROJECT_SLUGS).toBe(projectSlugs);
+    expect(mod.env.ADMIN_SENTRY_MOBILE_PROJECT_SLUG).toBe('harpa-pro-mobile');
+  });
+
+  it.each(requiredKeys)('rejects a partial observer missing %s', async (missingKey) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+    delete process.env[missingKey];
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(missingKey));
+  });
+
+  it('rejects a region without the five required observer fields', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_SENTRY_REGION = 'us';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_(ORG_SLUG|REGION)/);
+  });
+
+  it.each([...requiredKeys, 'ADMIN_SENTRY_REGION'] as const)(
+    'rejects an empty or whitespace-only %s',
+    async (key) => {
+      for (const value of ['', '   ']) {
+        process.env.NODE_ENV = 'development';
+        Object.assign(process.env, completeObserver, {
+          ADMIN_SENTRY_REGION: 'global',
+          [key]: value,
+        });
+
+        await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+      }
+    },
+  );
+
+  it.each([
+    ['organization slug', 'ADMIN_SENTRY_ORG_SLUG', 'Harpa-Pro'],
+    ['organization URL', 'ADMIN_SENTRY_ORG_SLUG', 'https://sentry.io/harpa-pro'],
+    ['project uppercase', 'ADMIN_SENTRY_PROJECT_SLUGS', 'harpa-pro-api,Harpa-Pro-Mobile'],
+    ['project URL', 'ADMIN_SENTRY_PROJECT_SLUGS', 'harpa-pro-api,https://sentry.io/x'],
+    ['mobile uppercase', 'ADMIN_SENTRY_MOBILE_PROJECT_SLUG', 'Harpa-Pro-Mobile'],
+    ['environment alias', 'ADMIN_SENTRY_ENVIRONMENT', 'prod'],
+    ['arbitrary region', 'ADMIN_SENTRY_REGION', 'eu'],
+  ] as const)('rejects malformed %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each(invalidSlugs)('rejects an organization slug with %s', async (_description, slug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_SENTRY_ORG_SLUG: slug });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_ORG_SLUG/);
+  });
+
+  it.each(invalidSlugs)('rejects a project slug with %s', async (_description, slug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_PROJECT_SLUGS: `${slug},harpa-pro-mobile`,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_PROJECT_SLUGS/);
+  });
+
+  it.each(invalidSlugs)('rejects a mobile project slug with %s', async (_description, slug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_MOBILE_PROJECT_SLUG: slug,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_MOBILE_PROJECT_SLUG/);
+  });
+
+  it('rejects duplicate, empty, and more than three project slugs', async () => {
+    for (const projectSlugs of [
+      'harpa-pro-api, harpa-pro-api',
+      'harpa-pro-api,,harpa-pro-mobile',
+      'one,two,three,four',
+    ]) {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, {
+        ADMIN_SENTRY_PROJECT_SLUGS: projectSlugs,
+      });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_PROJECT_SLUGS/);
+    }
+  });
+
+  it('rejects a mobile project outside the reviewed project allowlist', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_MOBILE_PROJECT_SLUG: 'unreviewed-mobile',
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_MOBILE_PROJECT_SLUG/);
+  });
+
+  it('normalizes surrounding project-list whitespace before export', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_PROJECT_SLUGS: ' harpa-pro-api , harpa-pro-mobile ',
+    });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_PROJECT_SLUGS).toBe('harpa-pro-api,harpa-pro-mobile');
   });
 });
 

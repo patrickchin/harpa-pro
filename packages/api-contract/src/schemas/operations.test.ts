@@ -3035,6 +3035,718 @@ describe('admin operations R2 capacity schema', () => {
   });
 });
 
+const sentryRequiredCaveats = [
+  'issue_groups_not_events',
+  'mobile_sessions_only',
+  'telemetry_coverage_applies',
+] as const;
+
+const sentryAvailableObservation = {
+  observedAt,
+  status: 'available',
+  unresolvedErrors: {
+    status: 'available',
+    count: 3,
+    countKind: 'exact',
+    cap: 100,
+  },
+  mobileSessions: {
+    status: 'available',
+    window: 'last_24_hours',
+    windowStart: '2026-08-07T08:00:00.000Z',
+    windowEnd: observedAt,
+    totalSessions: 10,
+    healthySessions: 7,
+    erroredSessions: 1,
+    abnormalSessions: 1,
+    crashedSessions: 1,
+  },
+  caveats: sentryRequiredCaveats,
+} as const;
+
+const sentryLowerBoundObservation = {
+  ...sentryAvailableObservation,
+  status: 'partial',
+  unresolvedErrors: {
+    ...sentryAvailableObservation.unresolvedErrors,
+    countKind: 'lower_bound',
+  },
+  caveats: [...sentryRequiredCaveats, 'issue_count_truncated'],
+} as const;
+
+const sentryUnknownObservation = {
+  observedAt,
+  status: 'unknown',
+  reason: 'not_configured',
+} as const;
+
+const sentryObservationReasons = [
+  'not_configured',
+  'forbidden',
+  'not_found',
+  'rate_limited',
+  'timeout',
+  'invalid_response',
+  'provider_unavailable',
+  'no_session_data',
+] as const;
+
+describe('admin operations Sentry observation schema', () => {
+  it.each(sentryObservationReasons)('accepts the redacted unknown reason %s', (reason) => {
+    const observation = { ...sentryUnknownObservation, reason };
+
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('rejects non-allowlisted unknown reasons and unknown-observation fields', () => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryUnknownObservation,
+        reason: 'unauthorized',
+      }).success,
+    ).toBe(false);
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryUnknownObservation,
+        rawError: 'provider returned a sensitive diagnostic',
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['an exact complete observation', sentryAvailableObservation],
+    [
+      'an exact issue count with unavailable mobile sessions',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        mobileSessions: { status: 'unknown', reason: 'no_session_data' },
+      },
+    ],
+    [
+      'available mobile sessions with unavailable issues',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: { status: 'unknown', reason: 'timeout' },
+      },
+    ],
+    ['a lower-bound issue count', sentryLowerBoundObservation],
+    [
+      'a lower-bound issue count with unavailable mobile sessions',
+      {
+        ...sentryLowerBoundObservation,
+        mobileSessions: { status: 'unknown', reason: 'no_session_data' },
+      },
+    ],
+  ] as const)('accepts %s', (_description, observation) => {
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each(sentryObservationReasons)(
+    'accepts nested unknown observations with reason %s',
+    (reason) => {
+      const issueUnknown = {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: { status: 'unknown', reason },
+      };
+      const sessionUnknown = {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        mobileSessions: { status: 'unknown', reason },
+      };
+
+      expect(operations.sentryObservation.parse(issueUnknown)).toStrictEqual(issueUnknown);
+      expect(operations.sentryObservation.parse(sessionUnknown)).toStrictEqual(sessionUnknown);
+    },
+  );
+
+  it.each([
+    [
+      'unresolved issue groups',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: {
+          status: 'unknown',
+          reason: 'provider returned a sensitive diagnostic',
+        },
+      },
+    ],
+    [
+      'mobile sessions',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        mobileSessions: {
+          status: 'unknown',
+          reason: 'provider returned a sensitive diagnostic',
+        },
+      },
+    ],
+  ] as const)('rejects a non-allowlisted nested reason for %s', (_description, observation) => {
+    expect(operations.sentryObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each([
+    [
+      'available status with unavailable issues',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: { status: 'unknown', reason: 'timeout' },
+      },
+    ],
+    [
+      'available status with unavailable mobile sessions',
+      {
+        ...sentryAvailableObservation,
+        mobileSessions: { status: 'unknown', reason: 'timeout' },
+      },
+    ],
+    [
+      'available status with a lower-bound issue count',
+      {
+        ...sentryLowerBoundObservation,
+        status: 'available',
+      },
+    ],
+    [
+      'partial status with two exact available slices',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+      },
+    ],
+    [
+      'partial status with two unavailable slices',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: { status: 'unknown', reason: 'timeout' },
+        mobileSessions: { status: 'unknown', reason: 'rate_limited' },
+      },
+    ],
+  ] as const)('rejects %s', (_description, observation) => {
+    expect(operations.sentryObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each(sentryRequiredCaveats)(
+    'requires the mandatory caveat %s for every non-unknown observation',
+    (missingCaveat) => {
+      expect(
+        operations.sentryObservation.safeParse({
+          ...sentryAvailableObservation,
+          caveats: sentryRequiredCaveats.filter((caveat) => caveat !== missingCaveat),
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['lower-bound issues', sentryLowerBoundObservation],
+    [
+      'unavailable issues',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: { status: 'unknown', reason: 'timeout' },
+      },
+    ],
+    [
+      'unavailable mobile sessions',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        mobileSessions: { status: 'unknown', reason: 'no_session_data' },
+      },
+    ],
+  ] as const)(
+    'enforces the caveat allowlist and uniqueness for partial %s',
+    (_description, observation) => {
+      const invalidCaveatSets = [
+        observation.caveats.filter((caveat) => caveat !== sentryRequiredCaveats[0]),
+        [...observation.caveats, observation.caveats[0]],
+        [...observation.caveats, 'provider_dashboard_may_disagree'],
+      ];
+
+      for (const caveats of invalidCaveatSets) {
+        expect(operations.sentryObservation.safeParse({ ...observation, caveats }).success).toBe(
+          false,
+        );
+      }
+    },
+  );
+
+  it('accepts unique mandatory caveats without imposing tuple order', () => {
+    const observation = {
+      ...sentryAvailableObservation,
+      caveats: [...sentryRequiredCaveats].reverse(),
+    };
+
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['duplicate caveats', [...sentryRequiredCaveats, sentryRequiredCaveats[0]]],
+    ['an unreviewed caveat', [...sentryRequiredCaveats, 'zero_means_no_errors']],
+  ] as const)('rejects %s', (_description, caveats) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        caveats,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('correlates the issue-count kind with the truncation caveat', () => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryLowerBoundObservation,
+        caveats: sentryRequiredCaveats,
+      }).success,
+    ).toBe(false);
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        caveats: [...sentryRequiredCaveats, 'issue_count_truncated'],
+      }).success,
+    ).toBe(false);
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: { status: 'unknown', reason: 'timeout' },
+        caveats: [...sentryRequiredCaveats, 'issue_count_truncated'],
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['an unreviewed count kind', { countKind: 'estimated' }],
+    ['a missing count kind', { countKind: undefined }],
+    ['a cap below the fixed first-page limit', { cap: 99 }],
+    ['a cap above the fixed first-page limit', { cap: 101 }],
+  ] as const)('rejects %s', (_description, overrides) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          ...overrides,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([-1, 1.5, 101, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects out-of-bounds unresolved issue-group count %s',
+    (count) => {
+      expect(
+        operations.sentryObservation.safeParse({
+          ...sentryAvailableObservation,
+          unresolvedErrors: { ...sentryAvailableObservation.unresolvedErrors, count },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('accepts the fixed first-page issue-group count cap', () => {
+    const observation = {
+      ...sentryAvailableObservation,
+      unresolvedErrors: {
+        ...sentryAvailableObservation.unresolvedErrors,
+        count: 100,
+      },
+    };
+
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    [
+      'an exact count',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: { ...sentryAvailableObservation.unresolvedErrors, count: 0 },
+      },
+    ],
+    [
+      'a lower-bound count',
+      {
+        ...sentryLowerBoundObservation,
+        unresolvedErrors: { ...sentryLowerBoundObservation.unresolvedErrors, count: 0 },
+      },
+    ],
+  ] as const)('accepts zero as %s', (_description, observation) => {
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  const sessionCountFields = [
+    'totalSessions',
+    'healthySessions',
+    'erroredSessions',
+    'abnormalSessions',
+    'crashedSessions',
+  ] as const;
+
+  it.each(sessionCountFields)('requires the fixed mobile-session field %s', (field) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        mobileSessions: {
+          ...sentryAvailableObservation.mobileSessions,
+          [field]: undefined,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(
+    sessionCountFields.flatMap((field) =>
+      [-1, 1.5, Number.MAX_SAFE_INTEGER + 1].map((value) => [field, value] as const),
+    ),
+  )('rejects unsafe mobile-session count %s=%s', (field, value) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        mobileSessions: {
+          ...sentryAvailableObservation.mobileSessions,
+          [field]: value,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts the maximum safe mobile-session total when its fixed fields correlate', () => {
+    const observation = {
+      ...sentryAvailableObservation,
+      mobileSessions: {
+        ...sentryAvailableObservation.mobileSessions,
+        totalSessions: Number.MAX_SAFE_INTEGER,
+        healthySessions: Number.MAX_SAFE_INTEGER,
+        erroredSessions: 0,
+        abnormalSessions: 0,
+        crashedSessions: 0,
+      },
+    };
+
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('accepts zero healthy sessions when the other fixed counts produce a positive total', () => {
+    const observation = {
+      ...sentryAvailableObservation,
+      mobileSessions: {
+        ...sentryAvailableObservation.mobileSessions,
+        totalSessions: 10,
+        healthySessions: 0,
+        erroredSessions: 7,
+        abnormalSessions: 1,
+        crashedSessions: 2,
+      },
+    };
+
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['a zero total', { totalSessions: 0, healthySessions: 0, erroredSessions: 0 }],
+    ['a total smaller than the four status counts', { totalSessions: 9 }],
+    ['a total larger than the four status counts', { totalSessions: 11 }],
+    [
+      'an unsafe sum even though each status count is safe',
+      {
+        totalSessions: Number.MAX_SAFE_INTEGER,
+        healthySessions: Number.MAX_SAFE_INTEGER,
+        erroredSessions: 1,
+        abnormalSessions: 0,
+        crashedSessions: 0,
+      },
+    ],
+  ] as const)('rejects %s', (_description, overrides) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        mobileSessions: { ...sentryAvailableObservation.mobileSessions, ...overrides },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['the exact 23-hour lower bound', '2026-08-07T09:00:00.000Z'],
+    ['the exact 25-hour upper bound', '2026-08-07T07:00:00.000Z'],
+  ] as const)('accepts %s for the provider session window', (_description, windowStart) => {
+    const observation = {
+      ...sentryAvailableObservation,
+      mobileSessions: { ...sentryAvailableObservation.mobileSessions, windowStart },
+    };
+
+    expect(operations.sentryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['a window shorter than 23 hours', '2026-08-07T09:00:00.001Z'],
+    ['a window longer than 25 hours', '2026-08-07T06:59:59.999Z'],
+    ['a zero-duration window', observedAt],
+    ['a reversed window', '2026-08-08T08:00:00.001Z'],
+    ['a malformed window', 'last Tuesday'],
+  ] as const)('rejects %s', (_description, windowStart) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        mobileSessions: { ...sentryAvailableObservation.mobileSessions, windowStart },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['a non-fixed session window', { window: 'last_7_days' }],
+    ['a missing session window', { window: undefined }],
+    ['a malformed window end', { windowEnd: 'not-a-date' }],
+  ] as const)('rejects %s', (_description, overrides) => {
+    expect(
+      operations.sentryObservation.safeParse({
+        ...sentryAvailableObservation,
+        mobileSessions: { ...sentryAvailableObservation.mobileSessions, ...overrides },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['available observedAt', sentryAvailableObservation, 'observedAt'],
+    ['available caveats', sentryAvailableObservation, 'caveats'],
+    ['partial observedAt', sentryLowerBoundObservation, 'observedAt'],
+    ['partial caveats', sentryLowerBoundObservation, 'caveats'],
+    ['unknown observedAt', sentryUnknownObservation, 'observedAt'],
+  ] as const)(
+    'rejects an omitted required top-level %s field',
+    (_description, observation, field) => {
+      expect(
+        operations.sentryObservation.safeParse({ ...observation, [field]: undefined }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['exact count', sentryAvailableObservation, 'count'],
+    ['exact cap', sentryAvailableObservation, 'cap'],
+    ['lower-bound count', sentryLowerBoundObservation, 'count'],
+    ['lower-bound cap', sentryLowerBoundObservation, 'cap'],
+  ] as const)(
+    'rejects an omitted required issue-group %s field',
+    (_description, observation, field) => {
+      expect(
+        operations.sentryObservation.safeParse({
+          ...observation,
+          unresolvedErrors: { ...observation.unresolvedErrors, [field]: undefined },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['available windowStart', sentryAvailableObservation, 'windowStart'],
+    ['available windowEnd', sentryAvailableObservation, 'windowEnd'],
+    ['partial windowStart', sentryLowerBoundObservation, 'windowStart'],
+    ['partial windowEnd', sentryLowerBoundObservation, 'windowEnd'],
+  ] as const)(
+    'rejects an omitted required mobile-session %s field',
+    (_description, observation, field) => {
+      expect(
+        operations.sentryObservation.safeParse({
+          ...observation,
+          mobileSessions: { ...observation.mobileSessions, [field]: undefined },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['top-level token', { ...sentryAvailableObservation, token: 'secret-token' }],
+    [
+      'top-level organization identifier',
+      { ...sentryAvailableObservation, organizationSlug: 'private-org' },
+    ],
+    [
+      'top-level project identifiers',
+      { ...sentryAvailableObservation, projectSlugs: ['private-project'] },
+    ],
+    [
+      'provider headers',
+      { ...sentryAvailableObservation, providerHeaders: { Link: 'private-cursor' } },
+    ],
+    [
+      'raw provider error',
+      { ...sentryAvailableObservation, rawError: 'token rejected for private-org' },
+    ],
+    [
+      'issue ID',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: { ...sentryAvailableObservation.unresolvedErrors, id: '123' },
+      },
+    ],
+    [
+      'issue short ID',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: { ...sentryAvailableObservation.unresolvedErrors, shortId: 'API-123' },
+      },
+    ],
+    [
+      'issue title',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          title: 'Sensitive issue title',
+        },
+      },
+    ],
+    [
+      'issue culprit',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          culprit: 'private.handler',
+        },
+      },
+    ],
+    [
+      'issue message',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          message: 'Sensitive provider message',
+        },
+      },
+    ],
+    [
+      'issue stack trace',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          stacktrace: ['private frame'],
+        },
+      },
+    ],
+    [
+      'issue tags',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: { ...sentryAvailableObservation.unresolvedErrors, tags: [] },
+      },
+    ],
+    [
+      'issue user',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: { ...sentryAvailableObservation.unresolvedErrors, user: { id: '7' } },
+      },
+    ],
+    [
+      'issue email address',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          email: 'private@example.invalid',
+        },
+      },
+    ],
+    [
+      'issue URL',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          url: 'https://sentry.io/private',
+        },
+      },
+    ],
+    [
+      'issue project identifier',
+      {
+        ...sentryAvailableObservation,
+        unresolvedErrors: {
+          ...sentryAvailableObservation.unresolvedErrors,
+          projectSlug: 'private-project',
+        },
+      },
+    ],
+    [
+      'mobile project identifier',
+      {
+        ...sentryAvailableObservation,
+        mobileSessions: {
+          ...sentryAvailableObservation.mobileSessions,
+          projectSlug: 'private-mobile',
+        },
+      },
+    ],
+    [
+      'mobile release identifier',
+      {
+        ...sentryAvailableObservation,
+        mobileSessions: {
+          ...sentryAvailableObservation.mobileSessions,
+          release: 'private.release@1.2.3',
+        },
+      },
+    ],
+    [
+      'raw session groups',
+      {
+        ...sentryAvailableObservation,
+        mobileSessions: {
+          ...sentryAvailableObservation.mobileSessions,
+          rawSessionGroups: [{ by: { 'session.status': 'healthy' } }],
+        },
+      },
+    ],
+    [
+      'generic session-status arrays',
+      {
+        ...sentryAvailableObservation,
+        mobileSessions: {
+          ...sentryAvailableObservation.mobileSessions,
+          sessionCounts: [{ status: 'healthy', sessions: 10 }],
+        },
+      },
+    ],
+    [
+      'nested unknown error text',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        mobileSessions: {
+          status: 'unknown',
+          reason: 'provider_unavailable',
+          rawError: 'sensitive provider message',
+        },
+      },
+    ],
+    [
+      'unknown issue-group error text',
+      {
+        ...sentryAvailableObservation,
+        status: 'partial',
+        unresolvedErrors: {
+          status: 'unknown',
+          reason: 'provider_unavailable',
+          rawError: 'sensitive provider message',
+        },
+      },
+    ],
+  ] as const)('rejects leaked %s', (_description, observation) => {
+    expect(operations.sentryObservation.safeParse(observation).success).toBe(false);
+  });
+});
+
 const storageLifecycleCaveats = [
   'db_state_not_worker_liveness',
   'queue_counts_not_provider_health',

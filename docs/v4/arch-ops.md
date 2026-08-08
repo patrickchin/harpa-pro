@@ -65,15 +65,17 @@ does not define this repository's runtime; `nvm use` does.
   - PR branch `pr-<n>` →
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
-  - `/` renders the activity console. `/operations` renders read-only service
-    monitoring, a no-token public GitHub branch/PR snapshot, bounded Neon
-    inventory, and a separate manual report-generation diagnostic that is
-    explicitly disclosed as a synthetic mutation. Unknown browser paths return
-    a static 404. `/admin/activity`, `/admin/operations/neon`, and
+  - `/` renders the activity console. `/operations` renders read-only Harpa
+    readiness, service links, a no-token public GitHub branch/PR snapshot,
+    bounded Neon inventory, and bounded R2 capacity. A separate manual
+    report-generation diagnostic is explicitly disclosed as a synthetic
+    mutation. Unknown browser paths return a static 404. `/admin/activity`,
+    `/admin/operations/neon`, `/admin/operations/r2-capacity`, and
     `/admin/operations/report-generate` remain API resource paths. Data and
     diagnostic requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),
-    [Admin Neon inventory](design-admin-neon-inventory.md), and
+    [Admin Neon inventory](design-admin-neon-inventory.md),
+    [Admin R2 capacity](design-admin-r2-capacity.md), and
     [Admin report-generation diagnostic](design-admin-report-generate-diagnostic.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
@@ -457,6 +459,58 @@ project, with no retries. The count endpoint has no deleted-branch selector,
 while the active-detail request explicitly excludes deleted branches. Neon has
 no documented remaining-credit API, so the console remains the billing source.
 
+### Cloudflare R2 capacity observer
+
+`ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+`ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are an optional paired runtime
+configuration. The normal Doppler-to-Fly import supplies them only to the
+intended environment. They are not browser or Cloudflare Pages variables. A
+partial pair fails API boot. An absent pair returns `Unknown` without a
+Cloudflare request.
+
+Create one dedicated, account-scoped token with only these permissions:
+
+- `Workers R2 Storage Read`.
+- `Account Analytics: Read`.
+
+The analytics permission has a broader read scope than R2. Give the token a
+bounded lifetime and record its rotation date. Use Client IP filtering when
+the environment has stable egress. If stable egress is unavailable, record
+that exception and the residual risk before enablement.
+
+Do not reuse R2 S3 credentials, a Pages token, the CI
+`CLOUDFLARE_API_TOKEN`, or any write token. The observer makes at most three
+fixed read requests under one 10-second timeout. It does not retry or follow
+bucket pagination. The API never returns the token, account ID, raw provider
+errors, object keys, or provider envelopes.
+
+The storage metrics are current snapshots without a provider timestamp. They
+are not exact remaining GB-month capacity. The Standard free-tier reference
+does not apply to Infrequent Access storage. Month-to-date Class A and Class B
+headroom is a conservative estimate from analytics, not a provider balance or
+invoice.
+
+Enable and prove the observer in this order:
+
+1. Merge and deploy the code with both values absent.
+2. Confirm that the card shows `Not configured` and makes no provider request.
+3. Create the dedicated token for the intended account and environment.
+4. Review its two permissions, account scope, lifetime, rotation date, and IP
+   filter or recorded exception.
+5. Add both values to the intended Doppler config and deploy the API.
+6. Verify the Fly release SHA and `/healthz.gitCommit` at the expected full
+   Git SHA.
+7. Verify the admin Pages deployment marker at the matching source head.
+8. Sign in through the dedicated admin site and press **Refresh** once.
+9. Confirm three or fewer fixed provider requests, a redacted response, and no
+   secret or raw provider content in logs.
+10. Compare the displayed snapshot with the Cloudflare R2 dashboard while the
+    estimation caveats remain visible.
+
+Development approval does not authorize production enablement. Repeat the
+token review and deployment proof before enabling production. See
+[Admin R2 capacity](design-admin-r2-capacity.md) for the full contract.
+
 ### Report-generation diagnostic
 
 The report canary uses three optional, non-secret target values:
@@ -520,6 +574,10 @@ are true:
   is not the checked-in development fallback.
 - `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are both absent or both
   present. They remain optional because an unconfigured inventory is a typed
+  `Unknown` state.
+- `ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+  `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are both absent or both present.
+  They remain optional because an unconfigured R2 observation is a typed
   `Unknown` state.
 - The three `ADMIN_REPORT_DIAGNOSTIC_*` target values are all absent or form a
   complete target whose email belongs to `TEST_ACCOUNT_EMAILS`. They remain
@@ -638,9 +696,10 @@ the normal Doppler import because it is API runtime configuration. The three
 optional `ADMIN_REPORT_DIAGNOSTIC_*` values also survive that import; they are
 fixed runtime target metadata, not browser build variables. The CI
 `NEON_API_KEY` stays excluded and never reaches Fly.
-The filter also excludes Doppler metadata, Neon control-plane values,
-Cloudflare tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only
-flags. Before importing, the workflow removes any legacy
+The optional Cloudflare observer pair also survives the normal import. The
+filter excludes Doppler metadata, Neon control-plane values, CI Cloudflare
+tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only flags.
+Before importing, the workflow removes any legacy
 `ADMIN_CORS_ORIGINS` Fly secret so the checked-in Fly TOML value cannot remain
 shadowed.
 
@@ -699,6 +758,16 @@ otherwise healthy mobile/product API from service. Deployment workflows
 verify `/admin/readyz` separately after deploy; it checks the admin
 connection and `admin._migrations` head and fails the deployment workflow
 without coupling Fly routing to admin availability.
+
+The administrator operations page may display `/healthz` build identity, both
+readiness heads, and its same-origin Pages marker as read-only corroborating
+evidence. This does not replace the workflow checks below. In particular, Fly
+pull-request previews can report the synthetic merge ref while Pages reports
+the pull-request head, so a cross-surface SHA difference is not by itself
+deployment drift. `/healthz` browser CORS is noncredentialed and limited to the
+exact configured administrator origins; `/readyz` and `/admin/readyz` retain
+their credentialed administrator-origin policy. See
+[Admin deployment identity](design-admin-deployment-identity.md).
 
 ```
 PR open / push

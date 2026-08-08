@@ -17294,6 +17294,917 @@
           }
         }
       }
+    },
+    "/admin/operations/r2-capacity": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded, read-only Cloudflare R2 capacity observation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available"
+                          ]
+                        },
+                        "freeTierReference": {
+                          "type": "object",
+                          "properties": {
+                            "storageGbMonth": {
+                              "type": "number",
+                              "enum": [
+                                10
+                              ]
+                            },
+                            "classAOperations": {
+                              "type": "number",
+                              "enum": [
+                                1000000
+                              ]
+                            },
+                            "classBOperations": {
+                              "type": "number",
+                              "enum": [
+                                10000000
+                              ]
+                            },
+                            "appliesTo": {
+                              "type": "string",
+                              "enum": [
+                                "standard_only"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "storageGbMonth",
+                            "classAOperations",
+                            "classBOperations",
+                            "appliesTo"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "buckets": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "available"
+                              ]
+                            },
+                            "truncated": {
+                              "type": "boolean",
+                              "enum": [
+                                false
+                              ]
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "jurisdiction": {
+                                    "type": "string",
+                                    "enum": [
+                                      "default",
+                                      "eu",
+                                      "fedramp",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "location": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      "apac",
+                                      "eeur",
+                                      "enam",
+                                      "weur",
+                                      "wnam",
+                                      "oc"
+                                    ]
+                                  },
+                                  "defaultStorageClass": {
+                                    "type": "string",
+                                    "enum": [
+                                      "standard",
+                                      "infrequent_access",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "jurisdiction",
+                                  "location",
+                                  "defaultStorageClass",
+                                  "createdAt"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 100
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "truncated",
+                            "items"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "storage": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "available"
+                              ]
+                            },
+                            "standard": {
+                              "type": "object",
+                              "properties": {
+                                "publishedPayloadBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "publishedMetadataBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "publishedObjects": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "uploadingPayloadBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "uploadingMetadataBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "uploadingObjects": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "publishedPayloadBytes",
+                                "publishedMetadataBytes",
+                                "publishedObjects",
+                                "uploadingPayloadBytes",
+                                "uploadingMetadataBytes",
+                                "uploadingObjects"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "infrequentAccess": {
+                              "type": "object",
+                              "properties": {
+                                "publishedPayloadBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "publishedMetadataBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "publishedObjects": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "uploadingPayloadBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "uploadingMetadataBytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "uploadingObjects": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "publishedPayloadBytes",
+                                "publishedMetadataBytes",
+                                "publishedObjects",
+                                "uploadingPayloadBytes",
+                                "uploadingMetadataBytes",
+                                "uploadingObjects"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "standard",
+                            "infrequentAccess"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "operations": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "available"
+                              ]
+                            },
+                            "windowStart": {
+                              "type": "string"
+                            },
+                            "windowEnd": {
+                              "type": "string"
+                            },
+                            "classA": {
+                              "type": "object",
+                              "properties": {
+                                "estimatedUsed": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "publishedAllowance": {
+                                  "type": "number",
+                                  "enum": [
+                                    1000000
+                                  ]
+                                },
+                                "estimatedRemaining": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "estimatedUsed",
+                                "publishedAllowance",
+                                "estimatedRemaining"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "classB": {
+                              "type": "object",
+                              "properties": {
+                                "estimatedUsed": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "publishedAllowance": {
+                                  "type": "number",
+                                  "enum": [
+                                    10000000
+                                  ]
+                                },
+                                "estimatedRemaining": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "estimatedUsed",
+                                "publishedAllowance",
+                                "estimatedRemaining"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "freeRequests": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "unclassifiedRequests": {
+                              "type": "number",
+                              "enum": [
+                                0
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "windowStart",
+                            "windowEnd",
+                            "classA",
+                            "classB",
+                            "freeRequests",
+                            "unclassifiedRequests"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "storage_snapshot_not_gb_month",
+                              "storage_metrics_may_lag",
+                              "infrequent_access_not_covered_by_free_tier",
+                              "operations_estimated_from_analytics",
+                              "unclassified_operations_excluded",
+                              "bucket_inventory_truncated"
+                            ]
+                          },
+                          "minItems": 3,
+                          "maxItems": 6
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "freeTierReference",
+                        "buckets",
+                        "storage",
+                        "operations",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "partial"
+                          ]
+                        },
+                        "freeTierReference": {
+                          "type": "object",
+                          "properties": {
+                            "storageGbMonth": {
+                              "type": "number",
+                              "enum": [
+                                10
+                              ]
+                            },
+                            "classAOperations": {
+                              "type": "number",
+                              "enum": [
+                                1000000
+                              ]
+                            },
+                            "classBOperations": {
+                              "type": "number",
+                              "enum": [
+                                10000000
+                              ]
+                            },
+                            "appliesTo": {
+                              "type": "string",
+                              "enum": [
+                                "standard_only"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "storageGbMonth",
+                            "classAOperations",
+                            "classBOperations",
+                            "appliesTo"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "buckets": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available"
+                                  ]
+                                },
+                                "truncated": {
+                                  "type": "boolean"
+                                },
+                                "items": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "jurisdiction": {
+                                        "type": "string",
+                                        "enum": [
+                                          "default",
+                                          "eu",
+                                          "fedramp",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "location": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                          "apac",
+                                          "eeur",
+                                          "enam",
+                                          "weur",
+                                          "wnam",
+                                          "oc"
+                                        ]
+                                      },
+                                      "defaultStorageClass": {
+                                        "type": "string",
+                                        "enum": [
+                                          "standard",
+                                          "infrequent_access",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "createdAt": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "jurisdiction",
+                                      "location",
+                                      "defaultStorageClass",
+                                      "createdAt"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "maxItems": 100
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "truncated",
+                                "items"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_configured",
+                                    "timeout",
+                                    "rate_limited",
+                                    "forbidden",
+                                    "invalid_response",
+                                    "provider_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "storage": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available"
+                                  ]
+                                },
+                                "standard": {
+                                  "type": "object",
+                                  "properties": {
+                                    "publishedPayloadBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "publishedMetadataBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "publishedObjects": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "uploadingPayloadBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "uploadingMetadataBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "uploadingObjects": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "publishedPayloadBytes",
+                                    "publishedMetadataBytes",
+                                    "publishedObjects",
+                                    "uploadingPayloadBytes",
+                                    "uploadingMetadataBytes",
+                                    "uploadingObjects"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "infrequentAccess": {
+                                  "type": "object",
+                                  "properties": {
+                                    "publishedPayloadBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "publishedMetadataBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "publishedObjects": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "uploadingPayloadBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "uploadingMetadataBytes": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "uploadingObjects": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "publishedPayloadBytes",
+                                    "publishedMetadataBytes",
+                                    "publishedObjects",
+                                    "uploadingPayloadBytes",
+                                    "uploadingMetadataBytes",
+                                    "uploadingObjects"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "standard",
+                                "infrequentAccess"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_configured",
+                                    "timeout",
+                                    "rate_limited",
+                                    "forbidden",
+                                    "invalid_response",
+                                    "provider_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "operations": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available"
+                                  ]
+                                },
+                                "windowStart": {
+                                  "type": "string"
+                                },
+                                "windowEnd": {
+                                  "type": "string"
+                                },
+                                "classA": {
+                                  "type": "object",
+                                  "properties": {
+                                    "estimatedUsed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "publishedAllowance": {
+                                      "type": "number",
+                                      "enum": [
+                                        1000000
+                                      ]
+                                    },
+                                    "estimatedRemaining": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "estimatedUsed",
+                                    "publishedAllowance",
+                                    "estimatedRemaining"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "classB": {
+                                  "type": "object",
+                                  "properties": {
+                                    "estimatedUsed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "publishedAllowance": {
+                                      "type": "number",
+                                      "enum": [
+                                        10000000
+                                      ]
+                                    },
+                                    "estimatedRemaining": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "estimatedUsed",
+                                    "publishedAllowance",
+                                    "estimatedRemaining"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "freeRequests": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "unclassifiedRequests": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "windowStart",
+                                "windowEnd",
+                                "classA",
+                                "classB",
+                                "freeRequests",
+                                "unclassifiedRequests"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_configured",
+                                    "timeout",
+                                    "rate_limited",
+                                    "forbidden",
+                                    "invalid_response",
+                                    "provider_unavailable"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "storage_snapshot_not_gb_month",
+                              "storage_metrics_may_lag",
+                              "infrequent_access_not_covered_by_free_tier",
+                              "operations_estimated_from_analytics",
+                              "unclassified_operations_excluded",
+                              "bucket_inventory_truncated"
+                            ]
+                          },
+                          "minItems": 3,
+                          "maxItems": 6
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "freeTierReference",
+                        "buckets",
+                        "storage",
+                        "operations",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured",
+                            "timeout",
+                            "rate_limited",
+                            "forbidden",
+                            "invalid_response",
+                            "provider_unavailable"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

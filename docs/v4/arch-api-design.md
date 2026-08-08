@@ -150,6 +150,7 @@ The browser admin surface uses a dedicated admin identity and cookie.
 | `POST` | `/admin/auth/logout`                | Revoke an admin session               |
 | `GET`  | `/admin/activity`                   | Read the business-activity feed       |
 | `GET`  | `/admin/operations/neon`            | Read bounded Neon inventory data      |
+| `GET`  | `/admin/operations/r2-capacity`     | Read bounded R2 capacity data         |
 | `POST` | `/admin/operations/report-generate` | Run the fixed synthetic report canary |
 
 `GET /admin/operations/neon` uses `withAdminSession()`. Better Auth and the
@@ -168,6 +169,21 @@ explicitly excludes deleted branches. Clients must not present the bounded
 active-detail list as the total count. The route returns no connection data,
 provider error body, or billing-credit claim. Neon has no documented
 remaining-credit API, so that value stays `Unknown`.
+
+`GET /admin/operations/r2-capacity` uses the same dedicated admin boundary.
+It has a separate 12-request-per-minute identity and session budget. Every
+response sets `Cache-Control: private, no-store`.
+
+The route accepts the optional `ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+`ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` pair. If the pair is absent, the
+route returns `Unknown` without a provider call. One observation makes at most
+three fixed Cloudflare requests under one 10-second timeout. It does not retry
+or follow bucket pagination.
+
+The response separates the current storage snapshot from the month-to-date
+operation estimate. It never claims exact remaining GB-month capacity or
+returns credentials, raw provider errors, or object metadata. See
+[`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
 
 `POST /admin/operations/report-generate` is deliberately separate from the
 read-only refresh path. It requires the dedicated admin cookie, an exact

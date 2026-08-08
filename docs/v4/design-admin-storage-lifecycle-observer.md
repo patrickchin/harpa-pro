@@ -240,7 +240,7 @@ results.
 - Do not expose row-level queue contents, even to an authenticated admin page.
 - Do not infer that a queue backlog means provider outage, stuck deploy, or
   guaranteed data loss.
-- Do not infer worker liveness from `claimed`, `staleClaims`, or any other
+- Do not infer worker liveness from `activeClaims`, `staleClaims`, or any other
   database-only field.
 - Do not add polling. Check once on page load and again only on manual
   **Refresh**.

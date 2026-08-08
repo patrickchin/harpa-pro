@@ -497,7 +497,7 @@ Unsupported money, token, invoice, and provider credit balances stay
 `Unknown`.
 
 The browser calls each read route once after session confirmation and again
-only on manual **Refresh**. The page makes 11 fixed GET reads on load and 22
+only on manual **Refresh**. The page makes 12 fixed GET reads on load and 24
 total after one Refresh. It does not poll. The report generation live canary
 remains a separate manual POST and does not run in either read cycle.
 
@@ -579,6 +579,81 @@ Enable and prove the observer in this order:
 Development approval does not authorize production enablement. Repeat the
 token review and deployment proof before enabling production. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the full contract.
+
+### Fly inventory observer
+
+The Fly inventory stack remains an unmerged draft. It does not provision an
+observer token or enable live inventory. The API accepts this optional runtime
+triplet:
+
+- `ADMIN_FLY_ORG_SLUG`.
+- `ADMIN_FLY_READ_ONLY_API_TOKEN`.
+- `ADMIN_FLY_APP_NAMES`.
+
+All three values must be absent or present together. Partial, blank, malformed,
+duplicate, or over-limit values fail API boot. An absent triplet returns
+`Unknown` without contacting Fly.
+
+`ADMIN_FLY_APP_NAMES` contains one to ten unique, exact app names. The
+organization slug and each app name use a conservative lowercase DNS-label
+shape. The API returns no metadata or counts for an app outside this allowlist.
+
+Create a dedicated organization token with the narrowest documented command:
+
+```sh
+fly tokens create readonly --org <org> --name <name> --expiry <duration>
+```
+
+Review the token's organization and read-only scope before use. Do not reuse a
+deploy token, `fly auth login` token, `FLY_API_TOKEN`, or another write-capable
+credential. The API cannot infer token policy from successful `GET` requests.
+
+The observer uses only fixed `GET` requests to
+`https://api.machines.dev`. It uses one 10-second deadline,
+`redirect: 'error'`, and no retry. It lists the organization once. It then
+reads app detail, Machines, and Volumes for each verified app. Apps run
+serially, while the three fixed reads for one app may overlap. Ten configured
+apps produce at most 31 provider calls. The observer has no write path.
+
+The response returns at most ten apps, 50 Machines per app, and 50 Volumes per
+app. It truncates longer provider arrays and marks the observation partial. A
+1,000-row input bound protects each provider app, Machine, and Volume array.
+Payloads above any input bound fail closed as invalid. The observer does not
+follow pagination or use Fly's internal GraphQL API.
+
+The response allowlist excludes private IPs, raw Machine configuration, image
+details, services, checks, events, unreviewed metadata, and Volume internals.
+It also removes provider headers, error text, and raw payloads. The nullable
+process group comes only from the reviewed Machine metadata field.
+
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Volume `size_gb` is allocation, not current use, free space, or
+remaining plan capacity. Fly does not document a stable remaining-credit REST
+field, so the dashboard remains the billing source.
+
+The browser requests the route once after session confirmation and once on
+manual **Refresh**. The full page makes 12 fixed GET reads on load and 24 after
+one Refresh. It does not poll or trigger the report generation live canary.
+
+Do not add the triplet until the operator reviews this draft. After approval,
+enable and prove the observer in this order:
+
+1. Merge and deploy the code with all three values absent.
+2. Confirm that the card shows `Not configured` without a provider request.
+3. Create the dedicated read-only token for the intended organization.
+4. Review its organization, scope, expiry, and rotation record.
+5. Add the exact app allowlist and all three values to the intended Doppler
+   config.
+6. Deploy the API and verify `/healthz.gitCommit` at the expected full SHA.
+7. Verify the admin Pages marker at the matching source head.
+8. Sign in through the dedicated admin site and press **Refresh** once.
+9. Confirm the fixed call plan, bounds, redaction, and absence of secret logs.
+10. Compare the inventory with the Fly dashboard while Fly credit stays
+    `Unknown`.
+
+Development approval does not authorize production enablement. Review and
+approve the production triplet separately. See
+[Admin Fly inventory](design-admin-fly-inventory.md) for the full contract.
 
 ### Report generation live canary
 
@@ -671,6 +746,9 @@ are true:
   `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are both absent or both present.
   They remain optional because an unconfigured R2 observation is a typed
   `Unknown` state.
+- `ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+  `ADMIN_FLY_APP_NAMES` are all absent or form one valid triplet. They remain
+  optional because an unconfigured Fly inventory is a typed `Unknown` state.
 - The three `ADMIN_REPORT_DIAGNOSTIC_*` target values are all absent or form a
   complete target whose email belongs to `TEST_ACCOUNT_EMAILS`. They remain
   optional because an unconfigured canary is a typed `Unknown` state.
@@ -796,6 +874,8 @@ variables. The CI `NEON_API_KEY` stays excluded and never reaches Fly.
 The optional Cloudflare observer pair also survives the normal import. The
 filter excludes Doppler metadata, Neon control-plane values, CI Cloudflare
 tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only flags.
+The optional Fly observer triplet also survives the normal import because each
+name starts with `ADMIN_FLY_`, not the excluded CI-only `FLY_` prefix.
 Before importing, the workflow removes any legacy
 `ADMIN_CORS_ORIGINS` Fly secret so the checked-in Fly TOML value cannot remain
 shadowed.

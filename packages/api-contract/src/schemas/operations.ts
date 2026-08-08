@@ -862,6 +862,227 @@ export const storageLifecycleObservation = z
     }
   });
 
+export const flyInventoryReasons = [
+  'not_configured',
+  'timeout',
+  'rate_limited',
+  'forbidden',
+  'not_found',
+  'invalid_response',
+  'provider_unavailable',
+] as const;
+export const flyInventoryReason = z.enum(flyInventoryReasons);
+
+const flyProcessGroup = z
+  .string()
+  .regex(
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
+    'must be a lowercase DNS label of at most 63 characters',
+  );
+
+export const flyMachine = z
+  .object({
+    id: nonBlank,
+    name: nonBlank,
+    state: nonBlank,
+    processGroup: flyProcessGroup.nullable(),
+    region: nonBlank,
+    cpuKind: nonBlank,
+    cpus: safeCount,
+    memoryMb: safeCount,
+    createdAt: isoDateTime,
+    updatedAt: isoDateTime,
+  })
+  .strict();
+
+export const availableFlyMachineInventory = z
+  .object({
+    status: z.literal('available'),
+    truncated: z.boolean(),
+    items: z.array(flyMachine).max(50),
+  })
+  .strict();
+
+const completeFlyMachineInventory = availableFlyMachineInventory
+  .extend({ truncated: z.literal(false) })
+  .strict();
+
+export const unknownFlyMachineInventory = z
+  .object({
+    status: z.literal('unknown'),
+    reason: flyInventoryReason,
+  })
+  .strict();
+
+export const flyMachineInventory = z.discriminatedUnion('status', [
+  availableFlyMachineInventory,
+  unknownFlyMachineInventory,
+]);
+
+export const flyVolume = z
+  .object({
+    id: nonBlank,
+    name: nonBlank,
+    state: nonBlank,
+    sizeGb: safeCount,
+    region: nonBlank,
+    encrypted: z.boolean(),
+    attachedMachineId: nonBlank.nullable(),
+    createdAt: isoDateTime,
+    snapshotRetentionDays: safeCount.nullable(),
+    autoBackupEnabled: z.boolean().nullable(),
+  })
+  .strict();
+
+function validateFlyVolumeSum(
+  inventory: { returnedAllocatedGb: number; items: Array<{ sizeGb: number }> },
+  ctx: z.RefinementCtx,
+): void {
+  let returnedSum = 0;
+  for (const item of inventory.items) {
+    returnedSum += item.sizeGb;
+    if (!Number.isSafeInteger(returnedSum)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['returnedAllocatedGb'],
+        message: 'returned Volume allocation sum must remain a safe integer',
+      });
+      return;
+    }
+  }
+
+  if (inventory.returnedAllocatedGb === returnedSum) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ['returnedAllocatedGb'],
+    message: 'returnedAllocatedGb must equal the sum of returned Volume sizes',
+  });
+}
+
+export const availableFlyVolumeInventory = z
+  .object({
+    status: z.literal('available'),
+    truncated: z.boolean(),
+    returnedAllocatedGb: safeCount,
+    items: z.array(flyVolume).max(50),
+  })
+  .strict()
+  .superRefine(validateFlyVolumeSum);
+
+const completeFlyVolumeInventory = z
+  .object({
+    status: z.literal('available'),
+    truncated: z.literal(false),
+    returnedAllocatedGb: safeCount,
+    items: z.array(flyVolume).max(50),
+  })
+  .strict()
+  .superRefine(validateFlyVolumeSum);
+
+export const unknownFlyVolumeInventory = z
+  .object({
+    status: z.literal('unknown'),
+    reason: flyInventoryReason,
+  })
+  .strict();
+
+export const flyVolumeInventory = z.union([availableFlyVolumeInventory, unknownFlyVolumeInventory]);
+
+export const flyApp = z
+  .object({
+    id: nonBlank,
+    name: nonBlank,
+    status: nonBlank,
+    network: nonBlank.nullable(),
+    reportedMachineCount: safeCount,
+    reportedVolumeCount: safeCount,
+    machines: flyMachineInventory,
+    volumes: flyVolumeInventory,
+  })
+  .strict();
+
+const completeFlyApp = z
+  .object({
+    id: nonBlank,
+    name: nonBlank,
+    status: nonBlank,
+    network: nonBlank.nullable(),
+    reportedMachineCount: safeCount,
+    reportedVolumeCount: safeCount,
+    machines: completeFlyMachineInventory,
+    volumes: completeFlyVolumeInventory,
+  })
+  .strict();
+
+const configuredFlyAppCount = z.number().int().min(1).max(10).safe();
+
+export const availableFlyInventoryObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('available'),
+    organizationSlug: nonBlank,
+    configuredAppCount: configuredFlyAppCount,
+    unavailableConfiguredAppCount: z.literal(0),
+    apps: z.array(completeFlyApp).min(1).max(10),
+  })
+  .strict();
+
+export const partialFlyInventoryObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('partial'),
+    organizationSlug: nonBlank,
+    configuredAppCount: configuredFlyAppCount,
+    unavailableConfiguredAppCount: safeCount.max(10),
+    apps: z.array(flyApp).min(1).max(10),
+  })
+  .strict();
+
+export const unknownFlyInventoryObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('unknown'),
+    reason: flyInventoryReason,
+  })
+  .strict();
+
+export const flyInventoryObservation = z
+  .discriminatedUnion('status', [
+    availableFlyInventoryObservation,
+    partialFlyInventoryObservation,
+    unknownFlyInventoryObservation,
+  ])
+  .superRefine((observation, ctx) => {
+    if (observation.status === 'unknown') return;
+
+    if (
+      observation.apps.length + observation.unavailableConfiguredAppCount !==
+      observation.configuredAppCount
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['configuredAppCount'],
+        message: 'configured app count must equal returned plus unavailable configured apps',
+      });
+    }
+
+    if (observation.status !== 'partial') return;
+    const hasIncompleteApp = observation.apps.some(
+      (app) =>
+        app.machines.status === 'unknown' ||
+        app.volumes.status === 'unknown' ||
+        (app.machines.status === 'available' && app.machines.truncated) ||
+        (app.volumes.status === 'available' && app.volumes.truncated),
+    );
+    if (observation.unavailableConfiguredAppCount > 0 || hasIncompleteApp) return;
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'partial observations require an incompleteness signal',
+    });
+  });
+
 const diagnosticDurationMs = z.number().int().nonnegative().max(75_000).safe();
 const diagnosticObservationDurationMs = z.number().int().nonnegative().max(80_000).safe();
 const diagnosticIdentifier = z
@@ -1232,6 +1453,13 @@ export type StorageLifecycleCaveat = z.infer<typeof storageLifecycleCaveat>;
 export type StorageLifecycleRollout = z.infer<typeof storageLifecycleRollout>;
 export type StorageLifecycleJobs = z.infer<typeof storageLifecycleJobs>;
 export type StorageLifecycleObservation = z.infer<typeof storageLifecycleObservation>;
+export type FlyInventoryReason = z.infer<typeof flyInventoryReason>;
+export type FlyMachine = z.infer<typeof flyMachine>;
+export type FlyMachineInventory = z.infer<typeof flyMachineInventory>;
+export type FlyVolume = z.infer<typeof flyVolume>;
+export type FlyVolumeInventory = z.infer<typeof flyVolumeInventory>;
+export type FlyApp = z.infer<typeof flyApp>;
+export type FlyInventoryObservation = z.infer<typeof flyInventoryObservation>;
 export type ReportGenerateDiagnosticWarning = z.infer<typeof reportGenerateDiagnosticWarning>;
 export type ReportGenerateDiagnosticPhase = z.infer<typeof reportGenerateDiagnosticPhase>;
 export type ReportGenerateDiagnosticFailureReason = z.infer<

@@ -1,4 +1,7 @@
 import type {
+  FlyApp,
+  FlyInventoryObservation,
+  FlyInventoryReason,
   NeonInventoryObservation,
   NeonInventoryReason,
   NeonProject,
@@ -140,6 +143,12 @@ type R2CapacityState =
   | { status: 'ready'; observation: R2CapacityObservation };
 type R2CapacityFetchResult =
   { status: 'ready'; observation: R2CapacityObservation } | { status: 'unauthorized' };
+type FlyInventoryState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; observation: FlyInventoryObservation };
+type FlyInventoryFetchResult =
+  { status: 'ready'; observation: FlyInventoryObservation } | { status: 'unauthorized' };
 type StorageLifecycleState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -179,6 +188,7 @@ type AvailableStorageLifecycleObservation = Extract<
 type ActiveNeonUsageObservation = Exclude<NeonUsageObservation, { status: 'unknown' }>;
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
 const CLOUDFLARE_CONSOLE_URL = 'https://dash.cloudflare.com/';
+const FLY_DASHBOARD_URL = 'https://fly.io/dashboard';
 const GITHUB_REPOSITORY_URL = 'https://github.com/patrickchin/harpa-pro';
 const GITHUB_API_URL = 'https://api.github.com/repos/patrickchin/harpa-pro';
 const GITHUB_ACCEPT = 'application/vnd.github+json';
@@ -983,6 +993,81 @@ async function loadR2Capacity(): Promise<R2CapacityFetchResult> {
   };
 }
 
+function unknownFlyInventoryObservation(reason: FlyInventoryReason): FlyInventoryObservation {
+  return {
+    observedAt: new Date().toISOString(),
+    status: 'unknown',
+    reason,
+  };
+}
+
+function flyReasonCopy(reason: FlyInventoryReason): string {
+  switch (reason) {
+    case 'not_configured':
+      return 'Fly inventory is not configured.';
+    case 'timeout':
+      return 'Fly request timed out.';
+    case 'rate_limited':
+      return 'Fly inventory request was rate limited.';
+    case 'forbidden':
+      return 'Fly denied access to this inventory.';
+    case 'not_found':
+      return 'The requested Fly inventory was not found.';
+    case 'invalid_response':
+      return 'Fly inventory returned an invalid response.';
+    case 'provider_unavailable':
+      return 'Fly inventory is temporarily unavailable.';
+  }
+}
+
+function flyResponseFailureReason(status: number): FlyInventoryReason {
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'not_found';
+  if (status === 408 || status === 504) return 'timeout';
+  if (status === 429) return 'rate_limited';
+  return 'provider_unavailable';
+}
+
+async function loadFlyInventory(): Promise<FlyInventoryFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/fly-inventory`, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownFlyInventoryObservation('provider_unavailable'),
+    };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (!response.ok) {
+    return {
+      status: 'ready',
+      observation: unknownFlyInventoryObservation(flyResponseFailureReason(response.status)),
+    };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownFlyInventoryObservation('invalid_response'),
+    };
+  }
+
+  const parsed = operationSchemas.flyInventoryObservation.safeParse(body);
+  return {
+    status: 'ready',
+    observation: parsed.success ? parsed.data : unknownFlyInventoryObservation('invalid_response'),
+  };
+}
+
 function unknownStorageLifecycleObservation(
   reason: StorageLifecycleReason,
 ): StorageLifecycleObservation {
@@ -1748,6 +1833,276 @@ function NeonUsage({ state }: { state: NeonUsageState }) {
         ) : (
           <NeonUsageDetails observation={state.observation} />
         )}
+      </div>
+    </section>
+  );
+}
+
+function reportedCountLabel(count: number, singular: 'Machine' | 'Volume'): string {
+  return `${count} ${count === 1 ? singular : `${singular}s`} reported`;
+}
+
+function detailCountLabel(count: number, singular: 'Machine' | 'Volume'): string {
+  return `${count} ${singular} ${count === 1 ? 'detail' : 'details'} returned from a separate snapshot.`;
+}
+
+function FlyMachineList({ app }: { app: FlyApp }) {
+  if (app.machines.status === 'unknown') {
+    return (
+      <div className="mt-4 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+        <p className="font-semibold text-ink">Machine inventory unavailable.</p>
+        <p className="mt-1">{flyReasonCopy(app.machines.reason)}</p>
+      </div>
+    );
+  }
+
+  const machines = app.machines;
+  return (
+    <div className="mt-4">
+      <p className="text-sm text-ink-soft">{detailCountLabel(machines.items.length, 'Machine')}</p>
+      {machines.truncated && (
+        <p className="mt-1 text-sm font-medium text-amber-800">Machine detail list is truncated.</p>
+      )}
+      <div
+        aria-label={`Machines for ${app.name}`}
+        className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-hairline"
+        role="region"
+        tabIndex={0}
+      >
+        {machines.items.length === 0 ? (
+          <p className="p-4 text-sm text-ink-soft">No Machine details returned.</p>
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {machines.items.map((machine) => (
+              <li className="p-4" key={machine.id}>
+                <p className="font-medium text-ink">{machine.name}</p>
+                <p className="mt-1 break-all text-xs text-ink-soft">{machine.id}</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {machine.state} · {machine.region}
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Process group · {machine.processGroup ?? 'not reported'}
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {machine.cpuKind} · {machine.cpus} {machine.cpus === 1 ? 'CPU' : 'CPUs'} ·{' '}
+                  {machine.memoryMb} MB
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Created <time dateTime={machine.createdAt}>{machine.createdAt}</time>
+                  {' · '}updated <time dateTime={machine.updatedAt}>{machine.updatedAt}</time>
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function backupCopy(enabled: boolean | null): string {
+  if (enabled === true) return 'Automatic backups enabled';
+  if (enabled === false) return 'Automatic backups disabled';
+  return 'Automatic backup setting unavailable';
+}
+
+function snapshotRetentionCopy(days: number | null): string {
+  if (days === null) return 'Snapshot retention unavailable';
+  return `Snapshots retained ${days} ${days === 1 ? 'day' : 'days'}`;
+}
+
+function FlyVolumeList({ app }: { app: FlyApp }) {
+  if (app.volumes.status === 'unknown') {
+    return (
+      <div className="mt-4 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+        <p className="font-semibold text-ink">Volume inventory unavailable.</p>
+        <p className="mt-1">{flyReasonCopy(app.volumes.reason)}</p>
+      </div>
+    );
+  }
+
+  const volumes = app.volumes;
+  return (
+    <div className="mt-4">
+      <p className="text-sm text-ink-soft">{detailCountLabel(volumes.items.length, 'Volume')}</p>
+      <p className="mt-1 text-xs text-ink-soft">
+        {volumes.returnedAllocatedGb} GB allocated across returned Volume details
+        {volumes.truncated ? '; this is not an app-wide total.' : '.'}
+      </p>
+      {volumes.truncated && (
+        <p className="mt-1 text-sm font-medium text-amber-800">Volume detail list is truncated.</p>
+      )}
+      <div
+        aria-label={`Volumes for ${app.name}`}
+        className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-hairline"
+        role="region"
+        tabIndex={0}
+      >
+        {volumes.items.length === 0 ? (
+          <p className="p-4 text-sm text-ink-soft">No Volume details returned.</p>
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {volumes.items.map((volume) => (
+              <li className="p-4" key={volume.id}>
+                <p className="font-medium text-ink">{volume.name}</p>
+                <p className="mt-1 break-all text-xs text-ink-soft">{volume.id}</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {volume.state} · {volume.region} ·{' '}
+                  {volume.encrypted ? 'Encrypted' : 'Unencrypted'}
+                </p>
+                <p className="mt-1 text-sm font-medium text-ink">{volume.sizeGb} GB allocated</p>
+                <p className="mt-1 break-all text-xs text-ink-soft">
+                  {volume.attachedMachineId
+                    ? `Attached to ${volume.attachedMachineId}`
+                    : 'Not attached to a Machine'}
+                </p>
+                <div className="mt-1 space-y-1 text-xs text-ink-soft">
+                  <p>{snapshotRetentionCopy(volume.snapshotRetentionDays)}</p>
+                  <p>{backupCopy(volume.autoBackupEnabled)}</p>
+                </div>
+                <p className="mt-1 text-xs text-ink-soft">
+                  Created <time dateTime={volume.createdAt}>{volume.createdAt}</time>
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FlyAppCard({ app }: { app: FlyApp }) {
+  return (
+    <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-ink">{app.name}</h3>
+          <p className="mt-1 break-all text-xs text-ink-soft">{app.id}</p>
+          <p className="mt-1 text-xs text-ink-soft">
+            {app.status} · {app.network ? `network ${app.network}` : 'network unavailable'}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-ink">
+            {reportedCountLabel(app.reportedMachineCount, 'Machine')}
+          </span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-ink">
+            {reportedCountLabel(app.reportedVolumeCount, 'Volume')}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h4 className="font-semibold text-ink">Machines</h4>
+        <FlyMachineList app={app} />
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h4 className="font-semibold text-ink">Volumes</h4>
+        <FlyVolumeList app={app} />
+      </div>
+    </article>
+  );
+}
+
+function FlyInventory({ state }: { state: FlyInventoryState }) {
+  if (state.status === 'idle') return null;
+
+  return (
+    <section className="mt-8" aria-labelledby="fly-inventory-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-ink" id="fly-inventory-title">
+            Fly inventory
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-ink-soft">
+            Read-only provider inventory for reviewed Harpa apps.
+          </p>
+        </div>
+        <a
+          className="inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
+          href={FLY_DASHBOARD_URL}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Open Fly dashboard ↗
+        </a>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-hairline bg-card p-5 shadow-sm">
+        <p className="text-sm font-semibold text-ink">Remaining Fly credit: Unknown</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          Use the Fly dashboard for current billing information.
+        </p>
+      </div>
+
+      <div className="mt-4" aria-live="polite">
+        {state.status === 'loading' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 text-sm text-ink-soft shadow-sm">
+            Loading Fly inventory…
+          </div>
+        ) : state.observation.status === 'unknown' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+            <p className="font-semibold text-ink">Unknown</p>
+            <p className="mt-2 text-sm text-ink-soft">{flyReasonCopy(state.observation.reason)}</p>
+            <p className="mt-2 text-xs text-ink-soft">
+              Observed{' '}
+              <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+              {state.observation.status === 'partial' && (
+                <p className="font-semibold text-amber-800">Partial Fly inventory</p>
+              )}
+              <p
+                className={
+                  state.observation.status === 'partial'
+                    ? 'mt-2 text-sm text-ink'
+                    : 'text-sm text-ink'
+                }
+              >
+                {state.observation.apps.length} configured{' '}
+                {state.observation.apps.length === 1 ? 'app' : 'apps'} observed
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Organization {state.observation.organizationSlug}.
+              </p>
+              {state.observation.unavailableConfiguredAppCount > 0 && (
+                <p className="mt-1 text-sm text-ink-soft">
+                  {state.observation.unavailableConfiguredAppCount} configured{' '}
+                  {state.observation.unavailableConfiguredAppCount === 1
+                    ? 'app unavailable.'
+                    : 'apps unavailable.'}
+                </p>
+              )}
+              <p className="mt-2 text-xs text-ink-soft">
+                Observed{' '}
+                <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              {state.observation.apps.map((app) => (
+                <FlyAppCard app={app} key={app.id} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-hairline bg-card p-5 shadow-sm">
+        <h3 className="font-semibold text-ink">Interpretation notes</h3>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+          <li>
+            Machine state and process group are provider inventory, not Harpa readiness or
+            Machine/worker liveness.
+          </li>
+          <li>Volume size is allocated capacity, not used or free storage.</li>
+          <li>Provider-reported counts and returned details are separate snapshots.</li>
+        </ul>
       </div>
     </section>
   );
@@ -2955,6 +3310,7 @@ function Operations({
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
   const [neonUsage, setNeonUsage] = useState<NeonUsageState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
+  const [flyInventory, setFlyInventory] = useState<FlyInventoryState>({ status: 'idle' });
   const [reportCanary, setReportCanary] = useState<ReportCanaryState>({
     status: 'idle',
   });
@@ -2972,9 +3328,10 @@ function Operations({
     setNeonInventory({ status: 'loading' });
     setNeonUsage({ status: 'loading' });
     setR2Capacity({ status: 'loading' });
+    setFlyInventory({ status: 'loading' });
     setGitHub({ status: 'checking' });
     try {
-      const [, , , , lifecycle, inventory, usageObservation, capacity, githubStatus] =
+      const [, , , , lifecycle, inventory, usageObservation, capacity, fly, githubStatus] =
         await Promise.all([
           loadApiIdentity().then((api) => {
             if (isCurrent()) setDeployment((current) => ({ ...current, api }));
@@ -2992,6 +3349,7 @@ function Operations({
           loadNeonInventory(),
           loadNeonUsage(),
           loadR2Capacity(),
+          loadFlyInventory(),
           loadGitHubStatus(),
         ]);
       if (!isCurrent()) return;
@@ -3000,7 +3358,8 @@ function Operations({
         lifecycle.status === 'unauthorized' ||
         inventory.status === 'unauthorized' ||
         usageObservation.status === 'unauthorized' ||
-        capacity.status === 'unauthorized'
+        capacity.status === 'unauthorized' ||
+        fly.status === 'unauthorized'
       ) {
         onSessionExpired();
         return;
@@ -3009,6 +3368,7 @@ function Operations({
       setNeonInventory(inventory);
       setNeonUsage(usageObservation);
       setR2Capacity(capacity);
+      setFlyInventory(fly);
     } finally {
       if (isCurrent()) setRefreshing(false);
     }
@@ -3101,6 +3461,8 @@ function Operations({
       <NeonUsage state={neonUsage} />
 
       <NeonInventory state={neonInventory} />
+
+      <FlyInventory state={flyInventory} />
 
       <GitHubRepositoryStatus state={github} />
 

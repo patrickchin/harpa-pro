@@ -25,6 +25,9 @@ vi.mock('../../env.js', async (importOriginal) => {
       ...actual.env,
       ADMIN_CLOUDFLARE_ACCOUNT_ID: '0123456789abcdef0123456789abcdef',
       ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: 'scope-r2-observer-token',
+      ADMIN_FLY_APP_NAMES: 'harpa-pro-api',
+      ADMIN_FLY_ORG_SLUG: 'harpa-pro',
+      ADMIN_FLY_READ_ONLY_API_TOKEN: 'scope-fly-read-only-token',
       ADMIN_NEON_VIEWER_API_KEY: 'scope-neon-viewer-key',
       ADMIN_NEON_ORG_ID: 'org-harpa-pro',
     },
@@ -214,6 +217,32 @@ describe('scope: GET /admin/operations/r2-capacity', () => {
   it('rejects a legacy app-admin bearer session before observing Cloudflare', async () => {
     const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
     const response = await createApp().request('/admin/operations/r2-capacity', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+});
+
+describe('scope: GET /admin/operations/fly-inventory', () => {
+  it('rejects an anonymous request before observing Fly', async () => {
+    const response = await createApp().request('/admin/operations/fly-inventory');
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a regular Better Auth bearer session before observing Fly', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+    const response = await createApp().request('/admin/operations/fly-inventory', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a legacy app-admin bearer session before observing Fly', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+    const response = await createApp().request('/admin/operations/fly-inventory', {
       headers: { authorization: `Bearer ${token}` },
     });
 

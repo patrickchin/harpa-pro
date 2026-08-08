@@ -155,6 +155,212 @@ describe('admin operations OpenAPI contract', () => {
     }
   });
 
+  it('publishes the exact Fly inventory observer as an admin-session read-only GET', () => {
+    const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
+    const path = doc.paths?.['/admin/operations/fly-inventory'];
+    const operation = path?.get;
+
+    expect(operation).toBeDefined();
+    expect(Object.keys(path ?? {}).sort()).toEqual(['get']);
+    expect(operation?.security).toEqual([{ adminSession: [] }]);
+    expect(operation?.parameters).toBeUndefined();
+    expect(operation?.requestBody).toBeUndefined();
+    expect(Object.keys(operation?.responses ?? {}).sort()).toEqual(['200', '401', '429']);
+    expect(operation?.responses).toMatchObject({
+      200: {
+        description: expect.stringMatching(/read-only.*Fly.*inventory/i),
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      401: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      429: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+    });
+
+    const successResponse = operation?.responses?.[200];
+    const successSchema =
+      successResponse && 'content' in successResponse
+        ? successResponse.content?.['application/json']?.schema
+        : undefined;
+    expect(schemaPropertyNames(successSchema)).toEqual(
+      [
+        'apps',
+        'attachedMachineId',
+        'autoBackupEnabled',
+        'configuredAppCount',
+        'cpuKind',
+        'cpus',
+        'createdAt',
+        'encrypted',
+        'id',
+        'items',
+        'machines',
+        'memoryMb',
+        'name',
+        'network',
+        'observedAt',
+        'organizationSlug',
+        'processGroup',
+        'reason',
+        'region',
+        'reportedMachineCount',
+        'reportedVolumeCount',
+        'returnedAllocatedGb',
+        'sizeGb',
+        'snapshotRetentionDays',
+        'state',
+        'status',
+        'truncated',
+        'unavailableConfiguredAppCount',
+        'updatedAt',
+        'volumes',
+      ].sort(),
+    );
+
+    const objectNodes = schemaObjectNodes(successSchema);
+    const topLevelBranches = objectNodes.filter((node) => {
+      const properties = asSchemaObject(node.properties);
+      return properties?.observedAt !== undefined && properties.status !== undefined;
+    });
+    expect(topLevelBranches).toHaveLength(3);
+    const topLevelBranch = (status: string): SchemaObject => {
+      const matches = topLevelBranches.filter((node) =>
+        schemaStringLiterals(schemaProperty(node, 'status')).has(status),
+      );
+      expect(matches).toHaveLength(1);
+      const branch = matches[0];
+      if (!branch) throw new Error(`missing top-level ${status} Fly schema branch`);
+      return branch;
+    };
+    expectClosedObjectSchema(topLevelBranch('available'), [
+      'observedAt',
+      'status',
+      'organizationSlug',
+      'configuredAppCount',
+      'unavailableConfiguredAppCount',
+      'apps',
+    ]);
+    expectClosedObjectSchema(topLevelBranch('partial'), [
+      'observedAt',
+      'status',
+      'organizationSlug',
+      'configuredAppCount',
+      'unavailableConfiguredAppCount',
+      'apps',
+    ]);
+    expectClosedObjectSchema(topLevelBranch('unknown'), ['observedAt', 'status', 'reason']);
+
+    const exactNestedObjects = [
+      {
+        marker: 'reportedMachineCount',
+        keys: [
+          'id',
+          'name',
+          'status',
+          'network',
+          'reportedMachineCount',
+          'reportedVolumeCount',
+          'machines',
+          'volumes',
+        ],
+      },
+      {
+        marker: 'cpuKind',
+        keys: [
+          'id',
+          'name',
+          'state',
+          'processGroup',
+          'region',
+          'cpuKind',
+          'cpus',
+          'memoryMb',
+          'createdAt',
+          'updatedAt',
+        ],
+      },
+      {
+        marker: 'sizeGb',
+        keys: [
+          'id',
+          'name',
+          'state',
+          'sizeGb',
+          'region',
+          'encrypted',
+          'attachedMachineId',
+          'createdAt',
+          'snapshotRetentionDays',
+          'autoBackupEnabled',
+        ],
+      },
+      {
+        marker: 'returnedAllocatedGb',
+        keys: ['status', 'truncated', 'returnedAllocatedGb', 'items'],
+      },
+    ] as const;
+    for (const { marker, keys } of exactNestedObjects) {
+      const matches = objectNodes.filter(
+        (node) => asSchemaObject(node.properties)?.[marker] !== undefined,
+      );
+      expect(matches.length).toBeGreaterThan(0);
+      matches.forEach((node) => expectClosedObjectSchema(node, keys));
+    }
+
+    const literals = schemaStringLiterals(successSchema);
+    for (const required of [
+      'available',
+      'partial',
+      'unknown',
+      'not_configured',
+      'timeout',
+      'rate_limited',
+      'forbidden',
+      'not_found',
+      'invalid_response',
+      'provider_unavailable',
+    ]) {
+      expect(literals).toContain(required);
+    }
+
+    const serializedSchema = JSON.stringify(successSchema);
+    for (const forbiddenProperty of [
+      'billing_email',
+      'billingEmail',
+      'private_ip',
+      'privateIp',
+      'instance_id',
+      'instanceId',
+      'image_ref',
+      'imageRef',
+      'config',
+      'metadata',
+      'env',
+      'services',
+      'checks',
+      'events',
+      'zone',
+      'attached_alloc_id',
+      'attachedAllocId',
+      'host_dedication_key',
+      'hostDedicationKey',
+      'fstype',
+      'blocks',
+      'providerMessage',
+      'remainingCredit',
+    ]) {
+      expect(serializedSchema).not.toContain(`"${forbiddenProperty}"`);
+    }
+  });
+
   it('publishes the exact storage-lifecycle observer as an admin-session read-only GET', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
     const path = doc.paths?.['/admin/operations/storage-lifecycle'];

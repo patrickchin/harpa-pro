@@ -89,6 +89,17 @@ const Env = z
       .regex(/^[a-z0-9-]{1,60}$/, 'must be a Neon organization ID')
       .optional(),
     /**
+     * Optional read-only Cloudflare R2 observer for the admin operations page.
+     * The account ID and token must be paired. The token must never reuse S3,
+     * Pages, or CI write credentials.
+     */
+    ADMIN_CLOUDFLARE_ACCOUNT_ID: z
+      .string()
+      .trim()
+      .regex(/^[a-f0-9]{32}$/, 'must be a lowercase 32-character Cloudflare account ID')
+      .optional(),
+    ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: z.string().trim().min(1).optional(),
+    /**
      * Optional fixed synthetic target for the bounded admin report-generation
      * diagnostic. All three values must be absent or present together. The
      * email must also be an exact TEST_ACCOUNT_EMAILS member; the existing
@@ -337,6 +348,16 @@ const Env = z
   .refine((e) => !e.ADMIN_NEON_ORG_ID || !!e.ADMIN_NEON_VIEWER_API_KEY, {
     path: ['ADMIN_NEON_VIEWER_API_KEY'],
     message: 'ADMIN_NEON_VIEWER_API_KEY and ADMIN_NEON_ORG_ID must be set together',
+  })
+  .refine((e) => !e.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN || !!e.ADMIN_CLOUDFLARE_ACCOUNT_ID, {
+    path: ['ADMIN_CLOUDFLARE_ACCOUNT_ID'],
+    message:
+      'ADMIN_CLOUDFLARE_ACCOUNT_ID and ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN must be set together',
+  })
+  .refine((e) => !e.ADMIN_CLOUDFLARE_ACCOUNT_ID || !!e.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN, {
+    path: ['ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN'],
+    message:
+      'ADMIN_CLOUDFLARE_ACCOUNT_ID and ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN must be set together',
   })
   .refine(
     (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',

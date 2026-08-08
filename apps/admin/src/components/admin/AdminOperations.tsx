@@ -2,6 +2,12 @@ import type {
   NeonInventoryObservation,
   NeonInventoryReason,
   NeonProject,
+  R2Bucket,
+  R2CapacityCaveat,
+  R2CapacityObservation,
+  R2CapacityReason,
+  R2OperationEstimate,
+  R2StorageClassSnapshot,
   ReportGenerateDiagnosticObservation,
 } from '@harpa/api-contract';
 import { operations as operationSchemas } from '@harpa/api-contract/schemas';
@@ -35,6 +41,12 @@ type NeonInventoryState =
   | { status: 'ready'; observation: NeonInventoryObservation };
 type NeonInventoryFetchResult =
   { status: 'ready'; observation: NeonInventoryObservation } | { status: 'unauthorized' };
+type R2CapacityState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; observation: R2CapacityObservation };
+type R2CapacityFetchResult =
+  { status: 'ready'; observation: R2CapacityObservation } | { status: 'unauthorized' };
 type ReportDiagnosticState =
   | { status: 'idle' }
   | { status: 'running' }
@@ -62,6 +74,7 @@ type ReportDiagnosticWarning = Extract<
 >['warnings'][number];
 
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
+const CLOUDFLARE_CONSOLE_URL = 'https://dash.cloudflare.com/';
 
 const buttonClass =
   'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
@@ -267,6 +280,75 @@ async function loadNeonInventory(): Promise<NeonInventoryFetchResult> {
   return {
     status: 'ready',
     observation: parsed.success ? parsed.data : unknownNeonObservation('invalid_response'),
+  };
+}
+
+function unknownR2CapacityObservation(reason: R2CapacityReason): R2CapacityObservation {
+  return {
+    observedAt: new Date().toISOString(),
+    status: 'unknown',
+    reason,
+  };
+}
+
+function r2ReasonCopy(reason: R2CapacityReason): string {
+  switch (reason) {
+    case 'not_configured':
+      return 'R2 capacity is not configured.';
+    case 'timeout':
+      return 'Cloudflare request timed out.';
+    case 'rate_limited':
+      return 'R2 capacity observation was rate limited.';
+    case 'forbidden':
+      return 'Cloudflare denied access to this capacity observation.';
+    case 'invalid_response':
+      return 'R2 capacity returned an invalid response.';
+    case 'provider_unavailable':
+      return 'R2 capacity is temporarily unavailable.';
+  }
+}
+
+function r2ResponseFailureReason(status: number): R2CapacityReason {
+  if (status === 403) return 'forbidden';
+  if (status === 429) return 'rate_limited';
+  if (status === 408 || status === 504) return 'timeout';
+  return 'provider_unavailable';
+}
+
+async function loadR2Capacity(): Promise<R2CapacityFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/r2-capacity`, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownR2CapacityObservation('provider_unavailable'),
+    };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (!response.ok) {
+    return {
+      status: 'ready',
+      observation: unknownR2CapacityObservation(r2ResponseFailureReason(response.status)),
+    };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { status: 'ready', observation: unknownR2CapacityObservation('invalid_response') };
+  }
+
+  const parsed = operationSchemas.r2CapacityObservation.safeParse(body);
+  return {
+    status: 'ready',
+    observation: parsed.success ? parsed.data : unknownR2CapacityObservation('invalid_response'),
   };
 }
 
@@ -504,6 +586,302 @@ function NeonInventory({ state }: { state: NeonInventoryState }) {
               </div>
             )}
           </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+const r2Number = new Intl.NumberFormat('en-US');
+
+function r2StatusTone(status: 'available' | 'partial' | 'unknown'): string {
+  if (status === 'available') return 'bg-emerald-100 text-emerald-800';
+  if (status === 'partial') return 'bg-amber-100 text-amber-800';
+  return 'bg-secondary text-ink-soft';
+}
+
+function R2StatusBadge({ status }: { status: 'available' | 'partial' | 'unknown' }) {
+  const label = status[0]!.toUpperCase() + status.slice(1);
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${r2StatusTone(status)}`}>
+      {label}
+    </span>
+  );
+}
+
+function StorageSnapshot({ label, snapshot }: { label: string; snapshot: R2StorageClassSnapshot }) {
+  const publishedObjectLabel = snapshot.publishedObjects === 1 ? 'object' : 'objects';
+  const uploadingObjectLabel = snapshot.uploadingObjects === 1 ? 'object' : 'objects';
+
+  return (
+    <article className="rounded-lg bg-secondary p-4">
+      <h4 className="font-semibold text-ink">{label}</h4>
+      <ul className="mt-3 space-y-1 text-sm text-ink-soft">
+        <li>{r2Number.format(snapshot.publishedPayloadBytes)} payload bytes</li>
+        <li>{r2Number.format(snapshot.publishedMetadataBytes)} metadata bytes</li>
+        <li>
+          {r2Number.format(snapshot.publishedObjects)} published {publishedObjectLabel}
+        </li>
+        <li>{r2Number.format(snapshot.uploadingPayloadBytes)} uploading payload bytes</li>
+        <li>{r2Number.format(snapshot.uploadingMetadataBytes)} uploading metadata bytes</li>
+        <li>
+          {r2Number.format(snapshot.uploadingObjects)} uploading {uploadingObjectLabel}
+        </li>
+      </ul>
+    </article>
+  );
+}
+
+function OperationEstimate({ label, estimate }: { label: string; estimate: R2OperationEstimate }) {
+  return (
+    <article className="rounded-lg bg-secondary p-4">
+      <h4 className="font-semibold text-ink">{label}</h4>
+      <p className="mt-2 text-sm text-ink-soft">
+        {r2Number.format(estimate.estimatedUsed)} used
+        {' · '}
+        {r2Number.format(estimate.estimatedRemaining)} estimated remaining
+      </p>
+      <p className="mt-1 text-xs text-ink-soft">
+        {r2Number.format(estimate.publishedAllowance)} published free-tier reference
+      </p>
+    </article>
+  );
+}
+
+function storageClassLabel(storageClass: R2Bucket['defaultStorageClass']): string {
+  if (storageClass === 'standard') return 'Standard';
+  if (storageClass === 'infrequent_access') return 'Infrequent Access';
+  return 'Unknown storage class';
+}
+
+function jurisdictionLabel(jurisdiction: R2Bucket['jurisdiction']): string {
+  if (jurisdiction === 'default') return 'Default jurisdiction';
+  if (jurisdiction === 'eu') return 'EU jurisdiction';
+  if (jurisdiction === 'fedramp') return 'FedRAMP jurisdiction';
+  return 'Unknown jurisdiction';
+}
+
+function R2BucketList({
+  buckets,
+}: {
+  buckets: Extract<R2CapacityObservation, { status: 'available' | 'partial' }>['buckets'];
+}) {
+  if (buckets.status === 'unknown') {
+    return (
+      <div className="mt-5 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+        <p className="font-semibold text-ink">Bucket inventory unavailable.</p>
+        <p className="mt-1">{r2ReasonCopy(buckets.reason)}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 border-t border-hairline pt-5">
+      <h3 className="font-semibold text-ink">
+        {r2Number.format(buckets.items.length)} visible{' '}
+        {buckets.items.length === 1 ? 'bucket' : 'buckets'}
+      </h3>
+      <div
+        aria-label="R2 buckets"
+        className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-hairline"
+        role="region"
+        tabIndex={0}
+      >
+        {buckets.items.length === 0 ? (
+          <p className="p-4 text-sm text-ink-soft">No visible R2 buckets.</p>
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {buckets.items.map((bucket) => (
+              <li className="p-4" key={bucket.name}>
+                <p className="break-all font-medium text-ink">{bucket.name}</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {jurisdictionLabel(bucket.jurisdiction)}
+                  {' · '}
+                  {bucket.location ? bucket.location.toUpperCase() : 'Location unavailable'}
+                  {' · '}
+                  {storageClassLabel(bucket.defaultStorageClass)}
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {bucket.createdAt ? (
+                    <>
+                      Created <time dateTime={bucket.createdAt}>{bucket.createdAt}</time>
+                    </>
+                  ) : (
+                    'Creation time unavailable'
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function r2CaveatCopy(
+  caveat: R2CapacityCaveat,
+  observation: Extract<R2CapacityObservation, { status: 'available' | 'partial' }>,
+): string {
+  switch (caveat) {
+    case 'storage_snapshot_not_gb_month':
+      return 'Current storage is a snapshot, not remaining GB-month capacity.';
+    case 'storage_metrics_may_lag':
+      return 'Storage metrics may lag.';
+    case 'infrequent_access_not_covered_by_free_tier':
+      return 'Infrequent Access storage is outside the Standard-storage free tier.';
+    case 'operations_estimated_from_analytics':
+      return 'Operation headroom is a conservative account-wide estimate from analytics and published mappings; storage-class eligibility is unavailable, so this is not a provider billing balance.';
+    case 'unclassified_operations_excluded': {
+      const count =
+        observation.operations.status === 'available'
+          ? observation.operations.unclassifiedRequests
+          : null;
+      return count === null
+        ? 'Unclassified successful requests were excluded from the operation estimates.'
+        : `${r2Number.format(count)} successful ${count === 1 ? 'request was' : 'requests were'} unclassified and excluded from the operation estimates.`;
+    }
+    case 'bucket_inventory_truncated':
+      return 'Bucket inventory is truncated; more buckets may exist.';
+  }
+}
+
+function R2CapacityDetails({
+  observation,
+}: {
+  observation: Extract<R2CapacityObservation, { status: 'available' | 'partial' }>;
+}) {
+  return (
+    <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-xs text-ink-soft">
+          Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
+        </p>
+        <R2StatusBadge status={observation.status} />
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Published free-tier reference</h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <p className="rounded-lg bg-secondary p-4 text-sm text-ink">
+            {r2Number.format(observation.freeTierReference.storageGbMonth)} GB-month
+          </p>
+          <p className="rounded-lg bg-secondary p-4 text-sm text-ink">
+            {r2Number.format(observation.freeTierReference.classAOperations)} Class A operations
+          </p>
+          <p className="rounded-lg bg-secondary p-4 text-sm text-ink">
+            {r2Number.format(observation.freeTierReference.classBOperations)} Class B operations
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Current storage snapshot</h3>
+        {observation.storage.status === 'unknown' ? (
+          <div className="mt-3 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+            <p className="font-semibold text-ink">Storage snapshot unavailable.</p>
+            <p className="mt-1">{r2ReasonCopy(observation.storage.reason)}</p>
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <StorageSnapshot label="Standard storage" snapshot={observation.storage.standard} />
+            <StorageSnapshot
+              label="Infrequent Access"
+              snapshot={observation.storage.infrequentAccess}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Month-to-date operation estimates</h3>
+        {observation.operations.status === 'unknown' ? (
+          <div className="mt-3 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+            <p className="font-semibold text-ink">Operation estimates unavailable.</p>
+            <p className="mt-1">{r2ReasonCopy(observation.operations.reason)}</p>
+          </div>
+        ) : (
+          <>
+            <p className="mt-2 text-xs text-ink-soft">
+              Window{' '}
+              <time dateTime={observation.operations.windowStart}>
+                {observation.operations.windowStart}
+              </time>
+              {' to '}
+              <time dateTime={observation.operations.windowEnd}>
+                {observation.operations.windowEnd}
+              </time>
+            </p>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <OperationEstimate label="Class A" estimate={observation.operations.classA} />
+              <OperationEstimate label="Class B" estimate={observation.operations.classB} />
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">
+              {r2Number.format(observation.operations.freeRequests)} free operations
+              {' · '}
+              {r2Number.format(observation.operations.unclassifiedRequests)} unclassified successful
+              operations
+            </p>
+          </>
+        )}
+      </div>
+
+      <R2BucketList buckets={observation.buckets} />
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Interpretation notes</h3>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+          {observation.caveats.map((caveat) => (
+            <li key={caveat}>{r2CaveatCopy(caveat, observation)}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function R2Capacity({ state }: { state: R2CapacityState }) {
+  if (state.status === 'idle') return null;
+
+  return (
+    <section className="mt-8" aria-labelledby="r2-capacity-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-ink" id="r2-capacity-title">
+            R2 capacity
+          </h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Read-only account snapshots and conservative free-tier operation estimates.
+          </p>
+        </div>
+        <a
+          className="inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
+          href={CLOUDFLARE_CONSOLE_URL}
+          rel="noreferrer"
+          target="_blank"
+        >
+          Open Cloudflare console ↗
+        </a>
+      </div>
+
+      <div className="mt-4" aria-live="polite">
+        {state.status === 'loading' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 text-sm text-ink-soft shadow-sm">
+            Loading R2 capacity…
+          </div>
+        ) : state.observation.status === 'unknown' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-xs text-ink-soft">
+                Observed{' '}
+                <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+              </p>
+              <R2StatusBadge status="unknown" />
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">{r2ReasonCopy(state.observation.reason)}</p>
+          </div>
+        ) : (
+          <R2CapacityDetails observation={state.observation} />
         )}
       </div>
     </section>
@@ -852,6 +1230,7 @@ function Operations({
   const { apiBaseUrl } = getPublicEnv();
   const [probes, setProbes] = useState(INITIAL_PROBES);
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
+  const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
   const [reportDiagnostic, setReportDiagnostic] = useState<ReportDiagnosticState>({
     status: 'idle',
   });
@@ -862,18 +1241,21 @@ function Operations({
     setRefreshing(true);
     setProbes(INITIAL_PROBES);
     setNeonInventory({ status: 'loading' });
+    setR2Capacity({ status: 'loading' });
     try {
-      const [product, admin, inventory] = await Promise.all([
+      const [product, admin, inventory, capacity] = await Promise.all([
         runProbe('/readyz'),
         runProbe('/admin/readyz'),
         loadNeonInventory(),
+        loadR2Capacity(),
       ]);
       setProbes({ product, admin });
-      if (inventory.status === 'unauthorized') {
+      if (inventory.status === 'unauthorized' || capacity.status === 'unauthorized') {
         onSessionExpired();
         return;
       }
       setNeonInventory(inventory);
+      setR2Capacity(capacity);
     } finally {
       setRefreshing(false);
     }
@@ -972,6 +1354,8 @@ function Operations({
       <ReportDiagnostic state={reportDiagnostic} onRun={() => void handleRunDiagnostic()} />
 
       <NeonInventory state={neonInventory} />
+
+      <R2Capacity state={r2Capacity} />
 
       <div className="mt-8 grid gap-8">
         {SERVICE_GROUPS.map((group) => (

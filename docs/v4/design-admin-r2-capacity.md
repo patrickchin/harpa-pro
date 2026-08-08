@@ -6,7 +6,7 @@ is provisioned by this change.
 ## Goal
 
 Add a read-only Cloudflare R2 capacity card to the dedicated administrator
-operations page. The card answers four bounded questions:
+operations page. The card answers five bounded questions:
 
 1. How many R2 buckets are visible to the observer?
 2. What is the current account storage and object-count snapshot?
@@ -14,6 +14,8 @@ operations page. The card answers four bounded questions:
    calendar month?
 4. How do those operation counts compare with Cloudflare's published free-tier
    reference?
+5. Which ingress and egress facts are unavailable from the documented R2
+   metrics?
 
 The card must distinguish provider measurements, Harpa-derived estimates, and
 values that the documented APIs cannot establish. It must never present a
@@ -33,7 +35,10 @@ Cloudflare documents the following read surfaces:
   retention.
 - [R2 pricing](https://developers.cloudflare.com/r2/pricing/) publishes a
   monthly Standard-storage free-tier reference of 10 GB-month, 1,000,000
-  Class A operations, and 10,000,000 Class B operations.
+  Class A operations, and 10,000,000 Class B operations. Direct R2 egress is
+  free, but that price does not measure transferred bytes.
+- [R2 audit logs](https://developers.cloudflare.com/r2/platform/audit-logs/)
+  omit `GetObject` and `PutObject` operations.
 - [Analytics API token configuration](https://developers.cloudflare.com/analytics/graphql-api/getting-started/authentication/api-token-auth/)
   documents the `Account Analytics: Read` permission, Client IP filtering, and
   token time-to-live controls.
@@ -53,6 +58,18 @@ so the account-wide total may include Infrequent Access activity that is not
 eligible for the Standard free tier. Subtracting that total from the published
 allowance is a conservative operational estimate, not an eligible-use balance
 or invoice.
+
+The documented operations dataset exposes request counts, not transferred
+bytes. The documented storage dataset exposes stored payload and metadata
+bytes, not ingress or egress bytes. Harpa uploads and downloads use direct
+signed R2 URLs, so the application API does not observe completed transfer
+bytes. A storage change, an operation count, or a signed-URL count cannot stand
+in for transfer volume.
+
+This slice keeps ingress and egress volume `Unknown`. It states that direct R2
+egress is free, but it does not claim a byte total. Exact transfer metering
+needs a separate design and authorization because it adds infrastructure,
+state, retention, and privacy obligations.
 
 ## Credential boundary
 
@@ -285,7 +302,9 @@ Add an **R2 capacity** card beneath the infrastructure section. It shows:
 - observation time and Available, Partial, or Unknown state;
 - the three published free-tier reference values;
 - current Standard and Infrequent Access storage/object snapshots;
+- one human-readable **Published stored now** total, with the exact byte count;
 - estimated Class A and Class B month-to-date used and remaining values;
+- explicit `Unknown` rows for ingress volume and egress volume;
 - free and unclassified operation counts;
 - a bounded, accessible, vertically scrollable bucket inventory; and
 - the existing Cloudflare console link.
@@ -298,6 +317,17 @@ Required explanatory copy states:
   provider billing balance, and may conservatively include operations against
   storage classes that are not free-tier eligible; and
 - Infrequent Access is outside the Standard-storage free tier.
+- the documented R2 metrics do not expose ingress or egress bytes;
+- direct R2 egress is free, but this observer cannot measure bytes served; and
+- Harpa uploads and downloads use direct signed URLs.
+
+The published total is a browser-derived sum of the Standard and Infrequent
+Access published payload and metadata fields. It excludes pending uploads. The
+UI uses integer arithmetic, so a valid large response does not lose precision.
+The UI does not calculate a storage percentage from the 10 GB-month reference.
+
+This transparency extension does not change the route, response schema,
+credential, provider request plan, or three-request ceiling.
 
 Unknown reasons use reviewed static copy. The UI never displays a raw provider
 message. Invalid or extra response fields fail strict parsing and render a safe
@@ -328,7 +358,10 @@ wiring rather than a route-level collaborator stub (Pitfall 13).
 Admin component tests cover loading, available, partial, unknown, truncation,
 unclassified operations, Infrequent Access, shared Refresh, expired-session
 sign-out, strict parsing, safe copy, and absence of browser storage or an
-Authorization header.
+Authorization header. They also cover the exact published-byte sum,
+human-readable formatting, excluded pending uploads, large safe-integer inputs,
+explicit Unknown transfer rows, free-egress copy, and the unchanged provider
+request count.
 
 Regenerate OpenAPI and generated types, then run contract, API, admin, scope,
 spec-drift, typecheck, lint, build, coverage, and documentation-link gates.

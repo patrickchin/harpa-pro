@@ -3543,3 +3543,769 @@ describe('admin operations storage lifecycle observation schema', () => {
     ).toBe(false);
   });
 });
+
+const flyMachine = {
+  id: 'machine-api-01',
+  name: 'api-machine-01',
+  state: 'started',
+  processGroup: 'app',
+  region: 'sin',
+  cpuKind: 'shared',
+  cpus: 2,
+  memoryMb: 512,
+  createdAt: '2026-08-01T08:00:00.000Z',
+  updatedAt: '2026-08-08T07:55:00.000Z',
+};
+
+const flyVolume = {
+  id: 'vol-storage-01',
+  name: 'storage_data',
+  state: 'created',
+  sizeGb: 10,
+  region: 'sin',
+  encrypted: true,
+  attachedMachineId: 'machine-storage-01',
+  createdAt: '2026-08-01T08:00:00.000Z',
+  snapshotRetentionDays: 5,
+  autoBackupEnabled: true,
+};
+
+const flyApp = {
+  id: 'harpa-pro-api',
+  name: 'harpa-pro-api',
+  status: 'deployed',
+  network: 'default',
+  reportedMachineCount: 1,
+  reportedVolumeCount: 1,
+  machines: {
+    status: 'available',
+    truncated: false,
+    items: [flyMachine],
+  },
+  volumes: {
+    status: 'available',
+    truncated: false,
+    returnedAllocatedGb: 10,
+    items: [flyVolume],
+  },
+};
+
+const flyAvailableObservation = {
+  observedAt,
+  status: 'available',
+  organizationSlug: 'harpa-pro',
+  configuredAppCount: 1,
+  unavailableConfiguredAppCount: 0,
+  apps: [flyApp],
+};
+
+const flyPartialObservation = {
+  ...flyAvailableObservation,
+  status: 'partial',
+  apps: [
+    {
+      ...flyApp,
+      volumes: { status: 'unknown', reason: 'timeout' },
+    },
+  ],
+};
+
+const flyUnknownObservation = {
+  observedAt,
+  status: 'unknown',
+  reason: 'not_configured',
+};
+
+describe('admin operations Fly inventory schema', () => {
+  it.each([
+    ['available', flyAvailableObservation],
+    ['partial', flyPartialObservation],
+    ['unknown', flyUnknownObservation],
+  ] as const)('accepts an exact %s observation', (_status, observation) => {
+    expect(operations.flyInventoryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    'not_configured',
+    'timeout',
+    'rate_limited',
+    'forbidden',
+    'not_found',
+    'invalid_response',
+    'provider_unavailable',
+  ] as const)('accepts the redacted unknown/%s reason', (reason) => {
+    const observation = { ...flyUnknownObservation, reason };
+
+    expect(operations.flyInventoryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('rejects a reason outside the redacted enum at every unknown boundary', () => {
+    const candidates = [
+      { ...flyUnknownObservation, reason: 'private provider response body' },
+      {
+        ...flyPartialObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: {
+              status: 'unknown',
+              reason: 'private provider response body',
+            },
+          },
+        ],
+      },
+      {
+        ...flyPartialObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              status: 'unknown',
+              reason: 'private provider response body',
+            },
+          },
+        ],
+      },
+    ];
+
+    for (const candidate of candidates) {
+      expect(operations.flyInventoryObservation.safeParse(candidate).success).toBe(false);
+    }
+  });
+
+  it('accepts nullable reviewed app, Machine, and Volume fields', () => {
+    const observation = {
+      ...flyAvailableObservation,
+      apps: [
+        {
+          ...flyApp,
+          network: null,
+          machines: {
+            ...flyApp.machines,
+            items: [{ ...flyMachine, processGroup: null }],
+          },
+          volumes: {
+            ...flyApp.volumes,
+            items: [
+              {
+                ...flyVolume,
+                attachedMachineId: null,
+                snapshotRetentionDays: null,
+                autoBackupEnabled: null,
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    expect(operations.flyInventoryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('requires an explicit nullable process group on every Machine row', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: {
+              ...flyApp.machines,
+              items: [{ ...flyMachine, processGroup: undefined }],
+            },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('does not correlate provider-reported counts with later detail snapshots', () => {
+    const observation = {
+      ...flyAvailableObservation,
+      apps: [
+        {
+          ...flyApp,
+          reportedMachineCount: 7,
+          reportedVolumeCount: 0,
+        },
+      ],
+    };
+
+    expect(operations.flyInventoryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    [
+      'an unavailable configured app',
+      {
+        ...flyAvailableObservation,
+        configuredAppCount: 2,
+        unavailableConfiguredAppCount: 1,
+      },
+    ],
+    [
+      'unknown Machine details',
+      {
+        ...flyAvailableObservation,
+        apps: [{ ...flyApp, machines: { status: 'unknown', reason: 'timeout' } }],
+      },
+    ],
+    [
+      'unknown Volume details',
+      {
+        ...flyAvailableObservation,
+        apps: [{ ...flyApp, volumes: { status: 'unknown', reason: 'timeout' } }],
+      },
+    ],
+    [
+      'truncated Machine details',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: { ...flyApp.machines, truncated: true },
+          },
+        ],
+      },
+    ],
+    [
+      'truncated Volume details',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: { ...flyApp.volumes, truncated: true },
+          },
+        ],
+      },
+    ],
+  ] as const)('rejects available status with %s', (_description, observation) => {
+    expect(operations.flyInventoryObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it('rejects partial status without an incompleteness signal', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        status: 'partial',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects partial status when every configured app is unavailable', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        status: 'partial',
+        configuredAppCount: 1,
+        unavailableConfiguredAppCount: 1,
+        apps: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    {
+      configuredAppCount: 2,
+      unavailableConfiguredAppCount: 1,
+    },
+    {
+      apps: [{ ...flyApp, machines: { status: 'unknown', reason: 'rate_limited' } }],
+    },
+    {
+      apps: [{ ...flyApp, volumes: { status: 'unknown', reason: 'forbidden' } }],
+    },
+    {
+      apps: [
+        {
+          ...flyApp,
+          machines: { ...flyApp.machines, truncated: true },
+        },
+      ],
+    },
+    {
+      apps: [
+        {
+          ...flyApp,
+          volumes: { ...flyApp.volumes, truncated: true },
+        },
+      ],
+    },
+  ] as const)('accepts partial status with a bounded incompleteness signal', (override) => {
+    const observation = {
+      ...flyAvailableObservation,
+      status: 'partial',
+      ...override,
+    };
+
+    expect(operations.flyInventoryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    [0, 0],
+    [1, 1],
+    [2, 0],
+  ] as const)(
+    'rejects app-count correlation configuredAppCount=%s unavailableConfiguredAppCount=%s',
+    (configuredAppCount, unavailableConfiguredAppCount) => {
+      expect(
+        operations.flyInventoryObservation.safeParse({
+          ...flyAvailableObservation,
+          status: 'partial',
+          configuredAppCount,
+          unavailableConfiguredAppCount,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('enforces the ten-app observation bound', () => {
+    const appsAtLimit = Array.from({ length: 10 }, (_, index) => ({
+      ...flyApp,
+      id: `harpa-pro-api-${index}`,
+      name: `harpa-pro-api-${index}`,
+    }));
+    const observationAtLimit = {
+      ...flyAvailableObservation,
+      configuredAppCount: 10,
+      apps: appsAtLimit,
+    };
+
+    expect(operations.flyInventoryObservation.parse(observationAtLimit)).toStrictEqual(
+      observationAtLimit,
+    );
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...observationAtLimit,
+        configuredAppCount: 11,
+        apps: [...appsAtLimit, flyApp],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects zero or more than ten configured apps even when app-count correlation holds', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        configuredAppCount: 0,
+        apps: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        status: 'partial',
+        configuredAppCount: 11,
+        unavailableConfiguredAppCount: 11,
+        apps: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(['machines', 'volumes'] as const)(
+    'enforces the 50-row bound for available %s',
+    (field) => {
+      const itemsAtLimit = Array.from({ length: 50 }, (_, index) =>
+        field === 'machines'
+          ? { ...flyMachine, id: `machine-${index}`, name: `machine-${index}` }
+          : { ...flyVolume, id: `volume-${index}`, name: `volume-${index}`, sizeGb: 1 },
+      );
+      const detail =
+        field === 'machines'
+          ? { ...flyApp.machines, items: itemsAtLimit }
+          : { ...flyApp.volumes, returnedAllocatedGb: 50, items: itemsAtLimit };
+      const observationAtLimit = {
+        ...flyAvailableObservation,
+        apps: [{ ...flyApp, [field]: detail }],
+      };
+
+      expect(operations.flyInventoryObservation.parse(observationAtLimit)).toStrictEqual(
+        observationAtLimit,
+      );
+      expect(
+        operations.flyInventoryObservation.safeParse({
+          ...flyAvailableObservation,
+          status: 'partial',
+          apps: [
+            {
+              ...flyApp,
+              [field]: {
+                ...detail,
+                truncated: true,
+                items: [
+                  ...itemsAtLimit,
+                  field === 'machines'
+                    ? { ...flyMachine, id: 'machine-over-limit' }
+                    : { ...flyVolume, id: 'volume-over-limit', sizeGb: 1 },
+                ],
+                ...(field === 'volumes' ? { returnedAllocatedGb: 51 } : {}),
+              },
+            },
+          ],
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('accepts the exact safe sum of returned allocated Volume sizes', () => {
+    const volumes = [
+      { ...flyVolume, id: 'volume-4', sizeGb: 4 },
+      { ...flyVolume, id: 'volume-6', sizeGb: 6 },
+    ];
+    const observation = {
+      ...flyAvailableObservation,
+      apps: [
+        {
+          ...flyApp,
+          volumes: { ...flyApp.volumes, returnedAllocatedGb: 10, items: volumes },
+        },
+      ],
+    };
+
+    expect(operations.flyInventoryObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('rejects a returned allocated sum that does not equal the returned Volume rows', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: { ...flyApp.volumes, returnedAllocatedGb: 9 },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a Volume-size sum that overflows the safe-integer range', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              ...flyApp.volumes,
+              returnedAllocatedGb: Number.MAX_SAFE_INTEGER,
+              items: [
+                { ...flyVolume, id: 'volume-max', sizeGb: Number.MAX_SAFE_INTEGER },
+                { ...flyVolume, id: 'volume-overflow', sizeGb: 1 },
+              ],
+            },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  const invalidSafeIntegers = [-1, 1.5, Number.MAX_SAFE_INTEGER + 1] as const;
+
+  it.each(invalidSafeIntegers)('rejects unsafe top-level and app counts (%s)', (value) => {
+    const candidates = [
+      { ...flyAvailableObservation, configuredAppCount: value },
+      { ...flyAvailableObservation, unavailableConfiguredAppCount: value },
+      {
+        ...flyAvailableObservation,
+        apps: [{ ...flyApp, reportedMachineCount: value }],
+      },
+      {
+        ...flyAvailableObservation,
+        apps: [{ ...flyApp, reportedVolumeCount: value }],
+      },
+    ];
+
+    for (const candidate of candidates) {
+      expect(operations.flyInventoryObservation.safeParse(candidate).success).toBe(false);
+    }
+  });
+
+  it.each(invalidSafeIntegers)(
+    'rejects unsafe Machine and Volume sizes or counts (%s)',
+    (value) => {
+      const candidates = [
+        {
+          ...flyAvailableObservation,
+          apps: [
+            {
+              ...flyApp,
+              machines: { ...flyApp.machines, items: [{ ...flyMachine, cpus: value }] },
+            },
+          ],
+        },
+        {
+          ...flyAvailableObservation,
+          apps: [
+            {
+              ...flyApp,
+              machines: { ...flyApp.machines, items: [{ ...flyMachine, memoryMb: value }] },
+            },
+          ],
+        },
+        {
+          ...flyAvailableObservation,
+          apps: [
+            {
+              ...flyApp,
+              volumes: {
+                ...flyApp.volumes,
+                returnedAllocatedGb: value,
+                items: [{ ...flyVolume, sizeGb: value }],
+              },
+            },
+          ],
+        },
+        {
+          ...flyAvailableObservation,
+          apps: [
+            {
+              ...flyApp,
+              volumes: {
+                ...flyApp.volumes,
+                items: [{ ...flyVolume, snapshotRetentionDays: value }],
+              },
+            },
+          ],
+        },
+      ];
+
+      for (const candidate of candidates) {
+        expect(operations.flyInventoryObservation.safeParse(candidate).success).toBe(false);
+      }
+    },
+  );
+
+  it.each(['', 'Web', 'worker_group', '-worker', 'worker-', 'worker group', 'a'.repeat(64)])(
+    'rejects malformed Machine process group %s',
+    (processGroup) => {
+      expect(
+        operations.flyInventoryObservation.safeParse({
+          ...flyAvailableObservation,
+          apps: [
+            {
+              ...flyApp,
+              machines: {
+                ...flyApp.machines,
+                items: [{ ...flyMachine, processGroup }],
+              },
+            },
+          ],
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['top-level token', { ...flyAvailableObservation, apiToken: 'fly-secret' }],
+    ['raw provider response', { ...flyAvailableObservation, rawProviderResponse: {} }],
+    [
+      'provider response headers',
+      { ...flyAvailableObservation, providerHeaders: { authorization: 'Bearer fly-secret' } },
+    ],
+    [
+      'unknown provider error text',
+      { ...flyUnknownObservation, providerMessage: 'token rejected for private organization' },
+    ],
+    [
+      'Machine private IP',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: {
+              ...flyApp.machines,
+              items: [{ ...flyMachine, privateIp: 'fdaa:0:1::2' }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'Machine instance ID',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: { ...flyApp.machines, items: [{ ...flyMachine, instanceId: 'secret' }] },
+          },
+        ],
+      },
+    ],
+    [
+      'unreviewed Machine metadata',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: {
+              ...flyApp.machines,
+              items: [{ ...flyMachine, metadata: { secret: 'private' } }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'raw Machine config',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: {
+              ...flyApp.machines,
+              items: [{ ...flyMachine, config: { env: { TOKEN: 'secret' } } }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'Machine image reference',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: {
+              ...flyApp.machines,
+              items: [{ ...flyMachine, imageRef: { digest: 'sha256:secret' } }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'Machine events',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            machines: { ...flyApp.machines, items: [{ ...flyMachine, events: [] }] },
+          },
+        ],
+      },
+    ],
+    [
+      'Volume zone',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: { ...flyApp.volumes, items: [{ ...flyVolume, zone: 'sin-1' }] },
+          },
+        ],
+      },
+    ],
+    [
+      'Volume allocation ID',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              ...flyApp.volumes,
+              items: [{ ...flyVolume, allocationId: 'allocation-secret' }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'Volume host-dedication key',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              ...flyApp.volumes,
+              items: [{ ...flyVolume, hostDedicationKey: 'host-secret' }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'Volume block counters',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              ...flyApp.volumes,
+              items: [{ ...flyVolume, blocksFree: 100, blocksAvailable: 90 }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'Volume filesystem type',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: { ...flyApp.volumes, items: [{ ...flyVolume, fstype: 'ext4' }] },
+          },
+        ],
+      },
+    ],
+    [
+      'Volume snapshot contents',
+      {
+        ...flyAvailableObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              ...flyApp.volumes,
+              items: [{ ...flyVolume, snapshots: [{ id: 'snapshot-secret' }] }],
+            },
+          },
+        ],
+      },
+    ],
+    [
+      'nested provider error text',
+      {
+        ...flyPartialObservation,
+        apps: [
+          {
+            ...flyApp,
+            volumes: {
+              status: 'unknown',
+              reason: 'provider_unavailable',
+              providerMessage: 'private Fly response body',
+            },
+          },
+        ],
+      },
+    ],
+  ] as const)('rejects leaked %s', (_description, observation) => {
+    expect(operations.flyInventoryObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it('rejects unknown observations that retain provider inventory', () => {
+    expect(
+      operations.flyInventoryObservation.safeParse({
+        ...flyUnknownObservation,
+        organizationSlug: 'harpa-pro',
+        configuredAppCount: 1,
+        unavailableConfiguredAppCount: 0,
+        apps: [flyApp],
+      }).success,
+    ).toBe(false);
+  });
+});

@@ -7041,6 +7041,190 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/fly-inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Fly application infrastructure inventory. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            organizationSlug: string;
+                            configuredAppCount: number;
+                            /** @enum {number} */
+                            unavailableConfiguredAppCount: 0;
+                            apps: {
+                                id: string;
+                                name: string;
+                                status: string;
+                                network: string | null;
+                                reportedMachineCount: number;
+                                reportedVolumeCount: number;
+                                machines: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        processGroup: string | null;
+                                        region: string;
+                                        cpuKind: string;
+                                        cpus: number;
+                                        memoryMb: number;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                };
+                                volumes: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    returnedAllocatedGb: number;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        sizeGb: number;
+                                        region: string;
+                                        encrypted: boolean;
+                                        attachedMachineId: string | null;
+                                        createdAt: string;
+                                        snapshotRetentionDays: number | null;
+                                        autoBackupEnabled: boolean | null;
+                                    }[];
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            organizationSlug: string;
+                            configuredAppCount: number;
+                            unavailableConfiguredAppCount: number;
+                            apps: {
+                                id: string;
+                                name: string;
+                                status: string;
+                                network: string | null;
+                                reportedMachineCount: number;
+                                reportedVolumeCount: number;
+                                machines: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        processGroup: string | null;
+                                        region: string;
+                                        cpuKind: string;
+                                        cpus: number;
+                                        memoryMb: number;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                                volumes: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    returnedAllocatedGb: number;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        sizeGb: number;
+                                        region: string;
+                                        encrypted: boolean;
+                                        attachedMachineId: string | null;
+                                        createdAt: string;
+                                        snapshotRetentionDays: number | null;
+                                        autoBackupEnabled: boolean | null;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

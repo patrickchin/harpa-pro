@@ -5,6 +5,8 @@
 >
 > Companion: [`arch-api-design.md`](arch-api-design.md).
 
+The Fly inventory entries below describe an unmerged draft stack.
+
 ## Model
 
 Harpa Pro uses fixed-window counters. A counter key includes the logical
@@ -98,6 +100,7 @@ active.
 | `GET /admin/operations/neon`              | Admin identity and session |    12 |   1 minute |
 | `GET /admin/operations/neon-usage`        | Admin identity and session |    12 |   1 minute |
 | `GET /admin/operations/r2-capacity`       | Admin identity and session |    12 |   1 minute |
+| `GET /admin/operations/fly-inventory`     | Admin identity and session |    12 |   1 minute |
 | `GET /admin/operations/storage-lifecycle` | Admin identity and session |    12 |   1 minute |
 | `POST /admin/operations/report-generate`  | Admin identity and session |     3 | 15 minutes |
 
@@ -124,6 +127,13 @@ The R2 capacity route must pass the same two gates and its own identity/session
 budget. One allowed request makes at most three fixed provider calls under one
 shared 10-second timeout. It does not retry or follow bucket pagination.
 
+The draft Fly inventory route must pass the same two gates and its own
+identity/session budget. One allowed request makes at most 31 fixed provider
+calls under one shared 10-second timeout. It does not retry, follow redirects,
+follow pagination, write to Fly, or expose a polling path. Its output contains
+at most ten apps, 50 Machines per app, and 50 Volumes per app. A nullable
+process-group value is inventory, not readiness or worker-liveness proof.
+
 The storage lifecycle route must pass the trusted-IP and identity/session
 gates before any application-database read. Its separate budget allows 12
 requests per minute. One allowed request runs one fixed statement under a
@@ -134,8 +144,8 @@ Origin, dedicated admin session, and session-bound CSRF checks run before its
 three-per-15-minute identity/session budget. A permitted live run then consumes
 the shared AI rate limit and monthly usage limits of the real application
 report route. A disabled canary stops before all application and provider work.
-Neon inventory, Neon usage, R2 capacity, and live-canary runs use separate
-named admin buckets.
+Neon inventory, Neon usage, R2 capacity, Fly inventory, storage lifecycle, and
+live-canary runs use separate named admin buckets.
 
 ## Authentication-route boundary
 
@@ -245,6 +255,8 @@ Current tests cover these properties:
 - `__tests__/admin-r2-capacity.integration.test.ts` covers the R2 observer
   identity/session budget, its 12-request limit, and rejection before provider
   access.
+- `__tests__/admin-fly-inventory.integration.test.ts` covers the Fly observer
+  identity/session budget, its 12-request limit, and no-store rejection paths.
 - `__tests__/admin-storage-lifecycle.integration.test.ts` covers the storage
   lifecycle observer budget, its 12-request limit, and rejection before the
   application-database statement.

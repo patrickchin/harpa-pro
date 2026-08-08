@@ -47,6 +47,56 @@ function schemaStringLiterals(schema: unknown): Set<string> {
   return literals;
 }
 
+type SchemaObject = Record<string, unknown>;
+
+function asSchemaObject(value: unknown): SchemaObject | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as SchemaObject)
+    : undefined;
+}
+
+function schemaObjectNodes(schema: unknown): SchemaObject[] {
+  const nodes: SchemaObject[] = [];
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    const record = asSchemaObject(value);
+    if (!record) return;
+    if (asSchemaObject(record.properties)) nodes.push(record);
+    Object.values(record).forEach(visit);
+  };
+  visit(schema);
+  return nodes;
+}
+
+function schemaBranchWithStatus(schema: unknown, status: string): SchemaObject {
+  const matches = schemaObjectNodes(schema).filter((node) => {
+    const properties = asSchemaObject(node.properties);
+    return schemaStringLiterals(properties?.status).has(status);
+  });
+  expect(matches).toHaveLength(1);
+  const branch = matches[0];
+  if (!branch) throw new Error(`missing ${status} schema branch`);
+  return branch;
+}
+
+function schemaProperty(schema: SchemaObject, name: string): unknown {
+  return asSchemaObject(schema.properties)?.[name];
+}
+
+function expectClosedObjectSchema(schema: unknown, expectedKeys: readonly string[]): void {
+  const object = asSchemaObject(schema);
+  expect(object).toBeDefined();
+  const properties = asSchemaObject(object?.properties);
+  expect(Object.keys(properties ?? {}).sort()).toEqual([...expectedKeys].sort());
+  expect(Array.isArray(object?.required) ? [...object.required].sort() : object?.required).toEqual(
+    [...expectedKeys].sort(),
+  );
+  expect(object?.additionalProperties).toBe(false);
+}
+
 describe('admin operations OpenAPI contract', () => {
   it('publishes Neon Free usage as an admin-session protected read-only GET', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
@@ -102,6 +152,135 @@ describe('admin operations OpenAPI contract', () => {
       'integrations',
     ]) {
       expect(serializedSchema).not.toContain(redacted);
+    }
+  });
+
+  it('publishes the exact storage-lifecycle observer as an admin-session read-only GET', () => {
+    const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
+    const path = doc.paths?.['/admin/operations/storage-lifecycle'];
+    const operation = path?.get;
+
+    expect(operation).toBeDefined();
+    expect(Object.keys(path ?? {}).sort()).toEqual(['get']);
+    expect(operation?.security).toEqual([{ adminSession: [] }]);
+    expect(operation?.parameters).toBeUndefined();
+    expect(operation?.requestBody).toBeUndefined();
+    expect(Object.keys(operation?.responses ?? {}).sort()).toEqual(['200', '401', '429']);
+    expect(operation?.responses).toMatchObject({
+      200: {
+        description: expect.stringMatching(/read-only.*storage lifecycle/i),
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      401: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      429: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+    });
+
+    const successResponse = operation?.responses?.[200];
+    const successSchema =
+      successResponse && 'content' in successResponse
+        ? successResponse.content?.['application/json']?.schema
+        : undefined;
+    expect(schemaPropertyNames(successSchema)).toEqual(
+      [
+        'observedAt',
+        'status',
+        'reason',
+        'rollout',
+        'armedAt',
+        'enforceAfter',
+        'accountDeleteEnabled',
+        'leaseEnforcementActive',
+        'accountDeletionAvailable',
+        'updatedAt',
+        'jobs',
+        'total',
+        'initial',
+        'final',
+        'dueNow',
+        'scheduled',
+        'activeClaims',
+        'staleClaims',
+        'retrying',
+        'maxAttemptCount',
+        'oldestDueAt',
+        'nextRunAfter',
+        'caveats',
+      ].sort(),
+    );
+
+    const availableBranch = schemaBranchWithStatus(successSchema, 'available');
+    const unknownBranch = schemaBranchWithStatus(successSchema, 'unknown');
+    expectClosedObjectSchema(availableBranch, [
+      'observedAt',
+      'status',
+      'rollout',
+      'jobs',
+      'caveats',
+    ]);
+    expectClosedObjectSchema(unknownBranch, ['observedAt', 'status', 'reason']);
+    expectClosedObjectSchema(schemaProperty(availableBranch, 'rollout'), [
+      'armedAt',
+      'enforceAfter',
+      'accountDeleteEnabled',
+      'leaseEnforcementActive',
+      'accountDeletionAvailable',
+      'updatedAt',
+    ]);
+    expectClosedObjectSchema(schemaProperty(availableBranch, 'jobs'), [
+      'total',
+      'initial',
+      'final',
+      'dueNow',
+      'scheduled',
+      'activeClaims',
+      'staleClaims',
+      'retrying',
+      'maxAttemptCount',
+      'oldestDueAt',
+      'nextRunAfter',
+    ]);
+
+    const literals = schemaStringLiterals(successSchema);
+    for (const required of [
+      'available',
+      'unknown',
+      'rollout_state_missing',
+      'timeout',
+      'database_unavailable',
+      'invalid_response',
+      'db_state_not_worker_liveness',
+      'queue_counts_not_provider_health',
+      'empty_queue_not_execution_proof',
+    ]) {
+      expect(literals).toContain(required);
+    }
+
+    const serializedSchema = JSON.stringify(successSchema);
+    for (const forbidden of [
+      'user_id',
+      'userId',
+      'payload',
+      'exactKeys',
+      'sweepPrefixes',
+      'last_error',
+      'lastError',
+      'locked_at',
+      'lockedAt',
+      'projectId',
+      'bucket',
+      'machine',
+    ]) {
+      expect(serializedSchema).not.toContain(forbidden);
     }
   });
 

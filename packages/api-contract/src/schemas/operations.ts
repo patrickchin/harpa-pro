@@ -17,6 +17,7 @@ export const neonInventoryReasons = [
 export const neonInventoryReason = z.enum(neonInventoryReasons);
 
 const nonBlank = z.string().trim().min(1);
+const safeCount = z.number().int().nonnegative().safe();
 
 export const neonBranch = z
   .object({
@@ -149,6 +150,298 @@ export const neonInventoryObservation = z
     });
   });
 
+export const neonUsageReasons = [
+  'not_configured',
+  'unsupported_plan',
+  'unsafe_permissions',
+  'timeout',
+  'rate_limited',
+  'forbidden',
+  'not_found',
+  'invalid_response',
+  'provider_unavailable',
+] as const;
+
+export const neonUsageReason = z.enum(neonUsageReasons);
+
+export const neonUsageProjectReasons = [
+  'timeout',
+  'rate_limited',
+  'forbidden',
+  'not_found',
+  'invalid_response',
+  'provider_unavailable',
+] as const;
+
+export const neonUsageProjectReason = z.enum(neonUsageProjectReasons);
+
+export const neonUsageOrganizationTransferReasons = [
+  'incomplete_project_coverage',
+  'period_mismatch',
+  'invalid_response',
+  'no_projects',
+] as const;
+
+export const neonUsageOrganizationTransferReason = z.enum(neonUsageOrganizationTransferReasons);
+
+export const neonUsageCaveats = [
+  'provider_values_may_lag',
+  'free_plan_published_reference',
+  'storage_uses_published_reference',
+  'transfer_requires_complete_project_coverage',
+  'not_invoice_or_credit_balance',
+  'published_allowances_can_change',
+] as const;
+
+export const neonUsageMetric = <
+  const TAllowance extends 360_000 | 500_000_000,
+  const TUnit extends 'cu_seconds' | 'bytes',
+>(
+  allowance: TAllowance,
+  unit: TUnit,
+) =>
+  z
+    .object({
+      used: safeCount,
+      allowance: z.literal(allowance),
+      unit: z.literal(unit),
+    })
+    .strict();
+
+export const availableNeonUsageProject = z
+  .object({
+    status: z.literal('available'),
+    id: nonBlank,
+    name: nonBlank,
+    effectivePermission: z.literal('VIEWER'),
+    periodStart: isoDateTime,
+    periodEnd: isoDateTime,
+    compute: neonUsageMetric(360_000, 'cu_seconds'),
+    storage: neonUsageMetric(500_000_000, 'bytes'),
+    transferBytes: safeCount,
+  })
+  .strict();
+
+export const unknownNeonUsageProject = z
+  .object({
+    status: z.literal('unknown'),
+    id: nonBlank,
+    name: nonBlank,
+    effectivePermission: z.literal('VIEWER'),
+    reason: neonUsageProjectReason,
+  })
+  .strict();
+
+export const neonUsageProject = z.discriminatedUnion('status', [
+  availableNeonUsageProject,
+  unknownNeonUsageProject,
+]);
+
+export const availableNeonUsageOrganizationTransfer = z
+  .object({
+    status: z.literal('available'),
+    periodStart: isoDateTime,
+    periodEnd: isoDateTime,
+    used: safeCount,
+    allowance: z.literal(5_000_000_000),
+    unit: z.literal('bytes'),
+  })
+  .strict();
+
+export const unknownNeonUsageOrganizationTransfer = z
+  .object({
+    status: z.literal('unknown'),
+    reason: neonUsageOrganizationTransferReason,
+  })
+  .strict();
+
+export const neonUsageOrganizationTransfer = z.discriminatedUnion('status', [
+  availableNeonUsageOrganizationTransfer,
+  unknownNeonUsageOrganizationTransfer,
+]);
+
+const exactNeonUsageCaveats = z.tuple([
+  z.literal('provider_values_may_lag'),
+  z.literal('free_plan_published_reference'),
+  z.literal('storage_uses_published_reference'),
+  z.literal('transfer_requires_complete_project_coverage'),
+  z.literal('not_invoice_or_credit_balance'),
+  z.literal('published_allowances_can_change'),
+]);
+
+export const availableNeonUsageObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('available'),
+    organizationId: nonBlank,
+    plan: z.literal('free'),
+    projectsTruncated: z.literal(false),
+    unavailableProjectCount: z.literal(0),
+    projects: z.array(availableNeonUsageProject).max(20),
+    organizationTransfer: z.union([
+      availableNeonUsageOrganizationTransfer,
+      z.object({ status: z.literal('unknown'), reason: z.literal('no_projects') }).strict(),
+    ]),
+    caveats: exactNeonUsageCaveats,
+  })
+  .strict();
+
+export const partialNeonUsageObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('partial'),
+    organizationId: nonBlank,
+    plan: z.literal('free'),
+    projectsTruncated: z.boolean(),
+    unavailableProjectCount: safeCount,
+    projects: z.array(neonUsageProject).max(20),
+    organizationTransfer: z.object({
+      status: z.literal('unknown'),
+      reason: z.enum(['incomplete_project_coverage', 'period_mismatch', 'invalid_response']),
+    }),
+    caveats: exactNeonUsageCaveats,
+  })
+  .strict();
+
+export const unknownNeonUsageObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('unknown'),
+    reason: neonUsageReason,
+  })
+  .strict();
+
+export const neonUsageObservation = z
+  .discriminatedUnion('status', [
+    availableNeonUsageObservation,
+    partialNeonUsageObservation,
+    unknownNeonUsageObservation,
+  ])
+  .superRefine((observation, ctx) => {
+    if (observation.status === 'unknown') return;
+
+    const projects: z.infer<typeof neonUsageProject>[] = [...observation.projects];
+    const availableProjects = projects.filter(
+      (project): project is z.infer<typeof availableNeonUsageProject> =>
+        project.status === 'available',
+    );
+    const unknownProjects = projects.filter(
+      (project): project is z.infer<typeof unknownNeonUsageProject> => project.status === 'unknown',
+    );
+    const projectIds = projects.map((project) => project.id);
+    if (new Set(projectIds).size !== projectIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['projects'],
+        message: 'project IDs must be unique',
+      });
+    }
+    for (const project of availableProjects) {
+      if (Date.parse(project.periodStart) <= Date.parse(project.periodEnd)) continue;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['projects', projects.indexOf(project), 'periodEnd'],
+        message: 'periodEnd must be on or after periodStart',
+      });
+    }
+
+    const hasTruncation = observation.projectsTruncated;
+    const hasUnavailableProject = observation.unavailableProjectCount > 0;
+    const hasUnknownProject = unknownProjects.length > 0;
+    const hasIncompleteCoverage = hasTruncation || hasUnavailableProject || hasUnknownProject;
+    const periods = availableProjects.map(
+      (project) => `${project.periodStart}::${project.periodEnd}`,
+    );
+    const distinctPeriods = new Set(periods);
+    const hasPeriodMismatch = availableProjects.length >= 2 && distinctPeriods.size > 1;
+    const transferSum = availableProjects.reduce((sum, project) => sum + project.transferBytes, 0);
+    const hasTransferOverflow = !Number.isSafeInteger(transferSum);
+
+    if (observation.status === 'available') {
+      if (unknownProjects.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['projects'],
+          message: 'available observations cannot include unknown projects',
+        });
+      }
+      if (observation.organizationTransfer.status === 'unknown') {
+        if (
+          observation.organizationTransfer.reason === 'no_projects' &&
+          observation.projects.length === 0
+        ) {
+          return;
+        }
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['organizationTransfer'],
+          message: 'available observations require a complete organization transfer total',
+        });
+        return;
+      }
+      if (
+        Date.parse(observation.organizationTransfer.periodStart) >
+        Date.parse(observation.organizationTransfer.periodEnd)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['organizationTransfer', 'periodEnd'],
+          message: 'periodEnd must be on or after periodStart',
+        });
+      }
+      if (hasPeriodMismatch) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['organizationTransfer'],
+          message: 'available observations require aligned project periods',
+        });
+      }
+      if (hasTransferOverflow) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['organizationTransfer'],
+          message: 'available observations require a safe transfer sum',
+        });
+      }
+      if (
+        observation.organizationTransfer.periodStart !== availableProjects[0]?.periodStart ||
+        observation.organizationTransfer.periodEnd !== availableProjects[0]?.periodEnd
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['organizationTransfer'],
+          message: 'organization transfer period must match project periods',
+        });
+      }
+      if (observation.organizationTransfer.used !== transferSum) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['organizationTransfer', 'used'],
+          message: 'organization transfer used must equal the summed project transfer',
+        });
+      }
+      return;
+    }
+
+    switch (observation.organizationTransfer.reason) {
+      case 'incomplete_project_coverage':
+        if (hasIncompleteCoverage) return;
+        break;
+      case 'period_mismatch':
+        if (!hasIncompleteCoverage && hasPeriodMismatch) return;
+        break;
+      case 'invalid_response':
+        if (!hasIncompleteCoverage && !hasPeriodMismatch && hasTransferOverflow) return;
+        break;
+    }
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['organizationTransfer', 'reason'],
+      message: 'organization transfer reason must match the returned evidence',
+    });
+  });
+
 export const r2CapacityReasons = [
   'not_configured',
   'timeout',
@@ -168,8 +461,6 @@ export const r2CapacityCaveats = [
   'bucket_inventory_truncated',
 ] as const;
 export const r2CapacityCaveat = z.enum(r2CapacityCaveats);
-
-const safeCount = z.number().int().nonnegative().safe();
 const uniqueR2CapacityCaveats = z
   .array(r2CapacityCaveat)
   .min(3)
@@ -578,6 +869,15 @@ export type NeonBranchCount = z.infer<typeof neonBranchCount>;
 export type NeonBranchDetails = z.infer<typeof neonBranchDetails>;
 export type NeonProject = z.infer<typeof neonProject>;
 export type NeonInventoryObservation = z.infer<typeof neonInventoryObservation>;
+export type NeonUsageReason = z.infer<typeof neonUsageReason>;
+export type NeonUsageProjectReason = z.infer<typeof neonUsageProjectReason>;
+export type NeonUsageOrganizationTransferReason = z.infer<
+  typeof neonUsageOrganizationTransferReason
+>;
+export type NeonUsageMetric = z.infer<typeof availableNeonUsageProject>['compute' | 'storage'];
+export type NeonUsageProject = z.infer<typeof neonUsageProject>;
+export type NeonUsageOrganizationTransfer = z.infer<typeof neonUsageOrganizationTransfer>;
+export type NeonUsageObservation = z.infer<typeof neonUsageObservation>;
 export type R2CapacityReason = z.infer<typeof r2CapacityReason>;
 export type R2CapacityCaveat = z.infer<typeof r2CapacityCaveat>;
 export type R2Bucket = z.infer<typeof r2Bucket>;

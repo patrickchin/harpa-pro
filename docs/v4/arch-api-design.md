@@ -150,6 +150,7 @@ The browser admin surface uses a dedicated admin identity and cookie.
 | `POST` | `/admin/auth/logout`                | Revoke an admin session               |
 | `GET`  | `/admin/activity`                   | Read the business-activity feed       |
 | `GET`  | `/admin/operations/neon`            | Read bounded Neon inventory data      |
+| `GET`  | `/admin/operations/neon-usage`      | Read bounded Neon Free usage data     |
 | `GET`  | `/admin/operations/r2-capacity`     | Read bounded R2 capacity data         |
 | `POST` | `/admin/operations/report-generate` | Run the fixed synthetic report canary |
 
@@ -170,6 +171,26 @@ active-detail list as the total count. The route returns no connection data,
 provider error body, or billing-credit claim. Neon has no documented
 remaining-credit API, so that value stays `Unknown`.
 
+`GET /admin/operations/neon-usage` uses the same dedicated admin boundary and
+the existing `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair. It has
+its own 12-request-per-minute identity and session budget. The route accepts no
+request body, query, provider selector, or write method. Every response sets
+`Cache-Control: private, no-store`.
+
+One observation makes at most 22 fixed Neon `GET` requests under one shared
+10-second deadline. It does not retry or follow project pagination. The
+organization must report the exact `free` plan, and every discovered project
+must prove effective `VIEWER` permission before project details are read.
+
+The response returns raw safe integers for per-project compute and storage and
+for complete organization public transfer. The browser derives percentages
+against the published 360,000-CU-second, 500,000,000-byte, and
+5,000,000,000-byte references. Incomplete coverage or different consumption
+periods make organization transfer `Unknown`. The response never returns
+credentials, connection data, raw provider errors, or a billing-credit claim.
+See
+[`design-admin-provider-quota-percentages.md`](design-admin-provider-quota-percentages.md).
+
 `GET /admin/operations/r2-capacity` uses the same dedicated admin boundary.
 It has a separate 12-request-per-minute identity and session budget. Every
 response sets `Cache-Control: private, no-store`.
@@ -184,6 +205,18 @@ The response separates the current storage snapshot from the month-to-date
 operation estimate. It never claims exact remaining GB-month capacity or
 returns credentials, raw provider errors, or object metadata. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
+
+The browser presents estimated R2 Class A and Class B percentages against the
+published operation references. It does not derive an R2 storage percentage.
+The existing public GitHub requests present the primary REST request-budget
+percentage for that browser and IP from response headers. Missing or
+contradictory headers render that value `Unknown` without adding a GitHub
+request. Unsupported provider credit and billing balances stay `Unknown`.
+
+The browser calls all read-only operations routes once after session
+confirmation and again only on manual **Refresh**. The page makes 10
+authenticated reads on load and 20 total after one Refresh. It does not poll.
+The report diagnostic remains a separate manual POST.
 
 `POST /admin/operations/report-generate` is deliberately separate from the
 read-only refresh path. It requires the dedicated admin cookie, an exact

@@ -250,6 +250,17 @@ const emptyNeonUsage = {
   },
 };
 
+const partialEmptyNeonUsage = {
+  ...emptyNeonUsage,
+  status: 'partial' as const,
+  projectsTruncated: true,
+  unavailableProjectCount: 1,
+  organizationTransfer: {
+    status: 'unknown' as const,
+    reason: 'incomplete_project_coverage' as const,
+  },
+};
+
 const partialNeonUsage = {
   ...availableNeonUsage,
   status: 'partial' as const,
@@ -919,7 +930,9 @@ describe('AdminOperations', () => {
       'Primary public REST request budget for this browser/IP: 100.0% used, 0.0% remaining',
       100,
     );
-    expect(fetchMock).toHaveBeenCalledTimes(10);
+    // The sequential GitHub loader stops after the first rate-limited request,
+    // so the two remaining public GitHub reads are intentionally skipped.
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -1779,6 +1792,26 @@ describe('AdminOperations', () => {
       'href',
       'https://console.neon.tech/app/projects',
     );
+  });
+
+  it('does not call a partial empty Neon discovery an organization with no projects', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity, partialEmptyNeonUsage);
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expect(await within(section).findByText('Partial')).toBeTruthy();
+    expect(within(section).getByText('0 visible projects')).toBeTruthy();
+    expect(
+      within(section).getByText(
+        'Project discovery is incomplete; no project usage rows were safely available.',
+      ),
+    ).toBeTruthy();
+    expect(within(section).getByText('1 provider-reported project is unavailable.')).toBeTruthy();
+    expect(within(section).getByText('Project discovery is truncated.')).toBeTruthy();
+    expect(within(section).queryByText('No Neon projects were returned.')).toBeNull();
+    expect(within(section).getByText('Organization transfer percentage: Unknown')).toBeTruthy();
+    expect(within(section).queryByRole('progressbar')).toBeNull();
   });
 
   it('preserves available project percentages while explaining partial Neon usage evidence', async () => {

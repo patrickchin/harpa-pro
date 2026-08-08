@@ -15,10 +15,11 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 ```
 
 The root route renders the business activity console. `/operations` provides
-read-only Harpa readiness checks, links to external service consoles, and
-bounded Neon inventory. Unknown browser paths return a static 404 instead of
-falling back to the console. `/admin/activity` and
-`/admin/operations/neon` remain API resource paths, not page URLs.
+read-only Harpa readiness checks, a no-token public GitHub branch/PR snapshot,
+bounded Neon inventory, and links to external service consoles. Unknown browser
+paths return a static 404 instead of falling back to the console.
+`/admin/activity` and `/admin/operations/neon` remain API resource paths, not
+page URLs.
 
 ## Neon inventory
 

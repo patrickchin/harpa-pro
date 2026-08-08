@@ -5547,6 +5547,7 @@ export interface paths {
                             /** @enum {boolean} */
                             authenticated: true;
                             email: string;
+                            csrfToken: string;
                         };
                     };
                 };
@@ -5659,6 +5660,7 @@ export interface paths {
                             /** @enum {boolean} */
                             authenticated: true;
                             email: string;
+                            csrfToken: string;
                         };
                     };
                 };
@@ -6208,6 +6210,215 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/report-generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Admin-CSRF": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded report-generation diagnostic observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured";
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "pass";
+                            durationMs: number;
+                            target: {
+                                /** Format: email */
+                                accountEmail: string;
+                                projectId: string;
+                                reportId: string;
+                                reportNumber: number;
+                            };
+                            generation: {
+                                /** @enum {number} */
+                                httpStatus: 200;
+                                requestId: string | null;
+                                durationMs: number;
+                                requestedAt: string;
+                                finishedAt: string;
+                                reportUpdatedAt: string;
+                                generatedAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live";
+                                /** @enum {boolean} */
+                                idempotentReplay: false;
+                            };
+                            limits: {
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                reportGenerate: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiInputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiOutputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                            };
+                            /** @enum {string} */
+                            cleanup: "succeeded";
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "warning";
+                            durationMs: number;
+                            target: {
+                                /** Format: email */
+                                accountEmail: string;
+                                projectId: string;
+                                reportId: string;
+                                reportNumber: number;
+                            };
+                            generation: {
+                                /** @enum {number} */
+                                httpStatus: 200;
+                                requestId: string | null;
+                                durationMs: number;
+                                requestedAt: string;
+                                finishedAt: string;
+                                reportUpdatedAt: string;
+                                generatedAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live" | "replay";
+                                idempotentReplay: boolean;
+                            };
+                            limits: {
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                reportGenerate: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiInputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiOutputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                            } | null;
+                            /** @enum {string} */
+                            cleanup: "succeeded" | "failed";
+                            warnings: ("replay_only" | "limits_unavailable" | "sign_out_failed")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "fail";
+                            durationMs: number;
+                            /** @enum {string} */
+                            phase: "sign_in" | "target_read" | "generate" | "proof_read" | "limits" | "sign_out";
+                            /** @enum {string} */
+                            reason: "sign_in_failed" | "target_not_found" | "target_not_draft" | "conflict" | "usage_limit_exceeded" | "rate_limited" | "provider_error" | "timeout" | "invalid_response" | "upstream_unavailable";
+                            /** @enum {string} */
+                            cleanup: "not_started" | "succeeded" | "failed";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Untrusted origin or invalid CSRF token. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

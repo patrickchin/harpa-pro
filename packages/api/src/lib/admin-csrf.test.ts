@@ -5,7 +5,7 @@ import type { AppEnv } from '../app.js';
 type TimingSafeEqual = typeof import('node:crypto').timingSafeEqual;
 
 const cryptoSpies = vi.hoisted(() => ({
-  timingSafeEqual: vi.fn<typeof TimingSafeEqual>(),
+  timingSafeEqual: vi.fn<TimingSafeEqual>(),
 }));
 
 vi.mock('node:crypto', async (importOriginal) => {

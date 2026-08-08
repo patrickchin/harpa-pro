@@ -14507,11 +14507,16 @@
                     },
                     "email": {
                       "type": "string"
+                    },
+                    "csrfToken": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{43}$"
                     }
                   },
                   "required": [
                     "authenticated",
-                    "email"
+                    "email",
+                    "csrfToken"
                   ]
                 }
               }
@@ -14711,11 +14716,16 @@
                     },
                     "email": {
                       "type": "string"
+                    },
+                    "csrfToken": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{43}$"
                     }
                   },
                   "required": [
                     "authenticated",
-                    "email"
+                    "email",
+                    "csrfToken"
                   ]
                 }
               }
@@ -16471,6 +16481,753 @@
           },
           "401": {
             "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/operations/report-generate": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "required": true,
+            "name": "X-Admin-CSRF",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded report-generation diagnostic observation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pass"
+                          ]
+                        },
+                        "durationMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 75000
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "accountEmail": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 254,
+                              "format": "email"
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "reportId": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "reportNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "accountEmail",
+                            "projectId",
+                            "reportId",
+                            "reportNumber"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "generation": {
+                          "type": "object",
+                          "properties": {
+                            "httpStatus": {
+                              "type": "number",
+                              "enum": [
+                                200
+                              ]
+                            },
+                            "requestId": {
+                              "type": "string",
+                              "nullable": true,
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "durationMs": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 75000
+                            },
+                            "requestedAt": {
+                              "type": "string"
+                            },
+                            "finishedAt": {
+                              "type": "string"
+                            },
+                            "reportUpdatedAt": {
+                              "type": "string"
+                            },
+                            "generatedAt": {
+                              "type": "string"
+                            },
+                            "vendor": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "model": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "fixtureMode": {
+                              "type": "string",
+                              "enum": [
+                                "live"
+                              ]
+                            },
+                            "idempotentReplay": {
+                              "type": "boolean",
+                              "enum": [
+                                false
+                              ]
+                            }
+                          },
+                          "required": [
+                            "httpStatus",
+                            "requestId",
+                            "durationMs",
+                            "requestedAt",
+                            "finishedAt",
+                            "reportUpdatedAt",
+                            "generatedAt",
+                            "vendor",
+                            "model",
+                            "fixtureMode",
+                            "idempotentReplay"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "plan": {
+                              "type": "string",
+                              "enum": [
+                                "free",
+                                "pro",
+                                "enterprise"
+                              ]
+                            },
+                            "reportGenerate": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "remaining": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "resetAt": {
+                                  "type": "string"
+                                },
+                                "overridden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "used",
+                                "remaining",
+                                "resetAt",
+                                "overridden"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "aiInputTokens": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "remaining": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "resetAt": {
+                                  "type": "string"
+                                },
+                                "overridden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "used",
+                                "remaining",
+                                "resetAt",
+                                "overridden"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "aiOutputTokens": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "remaining": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "resetAt": {
+                                  "type": "string"
+                                },
+                                "overridden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "used",
+                                "remaining",
+                                "resetAt",
+                                "overridden"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "plan",
+                            "reportGenerate",
+                            "aiInputTokens",
+                            "aiOutputTokens"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "cleanup": {
+                          "type": "string",
+                          "enum": [
+                            "succeeded"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "durationMs",
+                        "target",
+                        "generation",
+                        "limits",
+                        "cleanup"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "warning"
+                          ]
+                        },
+                        "durationMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 75000
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "accountEmail": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 254,
+                              "format": "email"
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "reportId": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "reportNumber": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            }
+                          },
+                          "required": [
+                            "accountEmail",
+                            "projectId",
+                            "reportId",
+                            "reportNumber"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "generation": {
+                          "type": "object",
+                          "properties": {
+                            "httpStatus": {
+                              "type": "number",
+                              "enum": [
+                                200
+                              ]
+                            },
+                            "requestId": {
+                              "type": "string",
+                              "nullable": true,
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "durationMs": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 75000
+                            },
+                            "requestedAt": {
+                              "type": "string"
+                            },
+                            "finishedAt": {
+                              "type": "string"
+                            },
+                            "reportUpdatedAt": {
+                              "type": "string"
+                            },
+                            "generatedAt": {
+                              "type": "string"
+                            },
+                            "vendor": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "model": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            "fixtureMode": {
+                              "type": "string",
+                              "enum": [
+                                "live",
+                                "replay"
+                              ]
+                            },
+                            "idempotentReplay": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "httpStatus",
+                            "requestId",
+                            "durationMs",
+                            "requestedAt",
+                            "finishedAt",
+                            "reportUpdatedAt",
+                            "generatedAt",
+                            "vendor",
+                            "model",
+                            "fixtureMode",
+                            "idempotentReplay"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "plan": {
+                              "type": "string",
+                              "enum": [
+                                "free",
+                                "pro",
+                                "enterprise"
+                              ]
+                            },
+                            "reportGenerate": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "remaining": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "resetAt": {
+                                  "type": "string"
+                                },
+                                "overridden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "used",
+                                "remaining",
+                                "resetAt",
+                                "overridden"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "aiInputTokens": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "remaining": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "resetAt": {
+                                  "type": "string"
+                                },
+                                "overridden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "used",
+                                "remaining",
+                                "resetAt",
+                                "overridden"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "aiOutputTokens": {
+                              "type": "object",
+                              "properties": {
+                                "limit": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "remaining": {
+                                  "type": "integer",
+                                  "nullable": true,
+                                  "minimum": 0
+                                },
+                                "resetAt": {
+                                  "type": "string"
+                                },
+                                "overridden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "limit",
+                                "used",
+                                "remaining",
+                                "resetAt",
+                                "overridden"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "plan",
+                            "reportGenerate",
+                            "aiInputTokens",
+                            "aiOutputTokens"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "cleanup": {
+                          "type": "string",
+                          "enum": [
+                            "succeeded",
+                            "failed"
+                          ]
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "replay_only",
+                              "limits_unavailable",
+                              "sign_out_failed"
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 3
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "durationMs",
+                        "target",
+                        "generation",
+                        "limits",
+                        "cleanup",
+                        "warnings"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "fail"
+                          ]
+                        },
+                        "durationMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 75000
+                        },
+                        "phase": {
+                          "type": "string",
+                          "enum": [
+                            "sign_in",
+                            "target_read",
+                            "generate",
+                            "proof_read",
+                            "limits",
+                            "sign_out"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "sign_in_failed",
+                            "target_not_found",
+                            "target_not_draft",
+                            "conflict",
+                            "usage_limit_exceeded",
+                            "rate_limited",
+                            "provider_error",
+                            "timeout",
+                            "invalid_response",
+                            "upstream_unavailable"
+                          ]
+                        },
+                        "cleanup": {
+                          "type": "string",
+                          "enum": [
+                            "not_started",
+                            "succeeded",
+                            "failed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "durationMs",
+                        "phase",
+                        "reason",
+                        "cleanup"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted origin or invalid CSRF token.",
             "content": {
               "application/json": {
                 "schema": {

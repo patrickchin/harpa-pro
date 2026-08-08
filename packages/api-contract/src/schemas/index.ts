@@ -19,4 +19,12 @@ export type {
   NeonInventoryObservation,
   NeonInventoryReason,
   NeonProject,
+  ReportGenerateDiagnosticFailureReason,
+  ReportGenerateDiagnosticGeneration,
+  ReportGenerateDiagnosticLimits,
+  ReportGenerateDiagnosticLimitSummary,
+  ReportGenerateDiagnosticObservation,
+  ReportGenerateDiagnosticPhase,
+  ReportGenerateDiagnosticTarget,
+  ReportGenerateDiagnosticWarning,
 } from './operations.js';

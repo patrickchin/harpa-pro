@@ -184,9 +184,11 @@ describe('dedicated admin browser authentication', () => {
   it('sets only the dedicated HttpOnly cookie and reads the session', async () => {
     const loginResponse = await login();
     expect(loginResponse.status).toBe(200);
-    await expect(loginResponse.json()).resolves.toEqual({
+    const loginBody = (await loginResponse.json()) as { csrfToken: string };
+    expect(loginBody).toEqual({
       authenticated: true,
       email: ADMIN_EMAIL,
+      csrfToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
     });
     expect(loginResponse.headers.get('cache-control')).toContain('no-store');
     expect(loginResponse.headers.get('set-cookie')).toMatch(
@@ -204,6 +206,7 @@ describe('dedicated admin browser authentication', () => {
     await expect(session.json()).resolves.toEqual({
       authenticated: true,
       email: ADMIN_EMAIL,
+      csrfToken: loginBody.csrfToken,
     });
   });
 
@@ -301,7 +304,7 @@ describe('dedicated admin browser authentication', () => {
   });
 
   it('does not add admin CORS headers to unrelated routes', async () => {
-    const response = await createApp().request('/healthz', {
+    const response = await createApp().request('/openapi.json', {
       headers: { origin: ADMIN_ORIGIN },
     });
     expect(response.headers.get('access-control-allow-origin')).toBeNull();

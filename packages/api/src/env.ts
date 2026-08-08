@@ -108,6 +108,11 @@ const Env = z
     ADMIN_REPORT_DIAGNOSTIC_EMAIL: emailSchema.optional(),
     ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: projectIdSchema.optional(),
     ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: z.coerce.number().int().positive().optional(),
+    /**
+     * Explicit opt-in for the cost-bearing development report canary. The
+     * refinements below bind enablement to the exact live dev deployment.
+     */
+    ADMIN_REPORT_LIVE_CANARY_ENABLED: z.enum(['0', '1']).default('0'),
     BETTER_AUTH_SECRET: z.string().min(16).default(DEV_BETTER_AUTH_SECRET),
     BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
     /**
@@ -416,6 +421,23 @@ const Env = z
     const isProduction = e.NODE_ENV === 'production';
     const isPrPreview = e.HARPAPRO_PR_BUILD === '1';
     const isLiveDeployment = isProduction && !isPrPreview;
+
+    if (
+      e.ADMIN_REPORT_LIVE_CANARY_ENABLED === '1' &&
+      (e.NODE_ENV !== 'production' ||
+        e.BETTER_AUTH_URL !== DEVELOPMENT_API_URL ||
+        e.ADMIN_CORS_ORIGINS !== DEVELOPMENT_ADMIN_ORIGIN ||
+        e.HARPAPRO_PR_BUILD !== '0' ||
+        e.AI_LIVE !== '1' ||
+        e.AI_FIXTURE_MODE !== 'live' ||
+        configuredReportDiagnosticFields.length !== reportDiagnosticTarget.length)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_REPORT_LIVE_CANARY_ENABLED'],
+        message: 'may be enabled only for the exact live development canary configuration',
+      });
+    }
 
     if (
       isProduction &&

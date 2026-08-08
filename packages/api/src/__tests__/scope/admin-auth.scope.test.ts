@@ -120,6 +120,7 @@ describe('scope: admin auth routes', () => {
     await expect(response.json()).resolves.toEqual({
       authenticated: true,
       email: ADMIN_EMAIL,
+      csrfToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
     });
   });
 
@@ -140,9 +141,7 @@ describe('scope: admin auth routes', () => {
       await db.execute(sql`SELECT * FROM admin.identities`);
     }).catch((caught: unknown) => caught);
 
-    expect(getPgError(error)?.message).toMatch(
-      /permission denied|relation .* does not exist/i,
-    );
+    expect(getPgError(error)?.message).toMatch(/permission denied|relation .* does not exist/i);
   });
 
   it('keeps the admin schema unreadable to app-user DB scope', async () => {
@@ -153,9 +152,7 @@ describe('scope: admin auth routes', () => {
       },
     ).catch((caught: unknown) => caught);
 
-    expect(getPgError(error)?.message).toMatch(
-      /permission denied|relation .* does not exist/i,
-    );
+    expect(getPgError(error)?.message).toMatch(/permission denied|relation .* does not exist/i);
   });
 
   it('negative control: the application database has no admin schema tables', async () => {

@@ -497,9 +497,10 @@ Unsupported money, token, invoice, and provider credit balances stay
 `Unknown`.
 
 The browser calls each read route once after session confirmation and again
-only on manual **Refresh**. The page makes 13 fixed GET reads on load and 26
-total after one Refresh. It does not poll. The report generation live canary
-remains a separate manual POST and does not run in either read cycle.
+only on manual **Refresh**. A successful full-stack load makes 15 fixed GET
+reads. One successful Refresh makes another 15, for 30 total. The page does not
+poll. The report generation live canary remains a separate manual POST and does
+not run in either read cycle.
 
 Enablement uses the existing Neon inventory provisioning and exact-SHA proof.
 After deployment, call both Neon routes with the dedicated admin session.
@@ -632,8 +633,9 @@ remaining plan capacity. Fly does not document a stable remaining-credit REST
 field, so the dashboard remains the billing source.
 
 The browser requests the route once after session confirmation and once on
-manual **Refresh**. The full page makes 13 fixed GET reads on load and 26 after
-one Refresh. It does not poll or trigger the report generation live canary.
+manual **Refresh**. A successful full-stack load makes 15 fixed GET reads. One
+successful Refresh makes another 15, for 30 total. The page does not poll or
+trigger the report generation live canary.
 
 Do not add the triplet until the operator reviews this draft. After approval,
 enable and prove the observer in this order:
@@ -696,10 +698,10 @@ balance, rate-limit headroom, free-tier capacity, and remaining credit all
 stay `Unknown`; use the linked provider dashboards for those facts.
 
 The browser reads this route once after session confirmation and once per
-manual **Refresh**. It does not poll. On this stacked branch, authenticated
-load performs 13 reads and one Refresh brings the total to 26. The manual
-report generation live canary remains a separate POST and never runs in those
-cycles.
+manual **Refresh**. It does not poll. A successful full-stack load makes 15
+fixed GET reads. One successful Refresh makes another 15, for 30 total. The
+manual report generation live canary remains a separate POST and never runs in
+those cycles.
 
 If this draft is approved, prove it in this order:
 
@@ -998,14 +1000,30 @@ verify `/admin/readyz` separately after deploy; it checks the admin
 connection and `admin._migrations` head and fails the deployment workflow
 without coupling Fly routing to admin availability.
 
-The administrator operations page may display `/healthz` build identity, both
-readiness heads, and its same-origin Pages marker as read-only corroborating
-evidence. This does not replace the workflow checks below. In particular, Fly
+The administrator operations page displays `/healthz` build identity, both
+readiness heads, and three independent Pages markers as read-only evidence.
+The marker cards identify the public site, administrator site, and office
+dashboard. They do not infer one Pages identity from another.
+
+The admin build sets `PUBLIC_SITE_BASE_URL` and `PUBLIC_DASHBOARD_URL` to fixed
+public origins for the current `main`, `dev`, or `pr-<n>` branch. The browser
+accepts no marker origin from input or a response. The two cross-origin marker
+GETs omit credentials. The administrator marker GET uses same-origin
+credentials. All requests disable caching, and the page does not poll.
+
+The UI does not compare API and Pages SHAs or label a difference as drift. Fly
 pull-request previews can report the synthetic merge ref while Pages reports
-the pull-request head, so a cross-surface SHA difference is not by itself
-deployment drift. `/healthz` browser CORS is noncredentialed and limited to the
-exact configured administrator origins; `/readyz` and `/admin/readyz` retain
-their credentialed administrator-origin policy. See
+the pull-request head. A successful full-stack load makes 15 fixed GET reads.
+One successful manual **Refresh** makes another 15, for 30 total.
+
+The `/healthz` browser CORS policy accepts only the exact configured
+administrator origins and does not allow credentials. `/readyz` and
+`/admin/readyz` retain their credentialed administrator-origin policy. Public
+marker files allow public cross-origin reads and contain only the reviewed
+commit and branch fields.
+
+These observations do not replace the workflow checks below. Protected CI and
+release workflows remain responsible for exact deployment proof. See
 [Admin deployment identity](design-admin-deployment-identity.md).
 
 ```

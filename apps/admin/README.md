@@ -32,18 +32,26 @@ provider administrator credential.
 
 ## Deployment identity
 
-The operations page reads `/healthz`, `/readyz`, `/admin/readyz`, and its
-same-origin `/_cf-pages-deployment.json` marker on authenticated load and
-manual Refresh. All four GETs disable caching; there is no polling. The health
-request omits credentials, the readiness requests include the dedicated admin
-cookie, and the marker uses same-origin credentials.
+The operations page reads `/healthz`, `/readyz`, `/admin/readyz`, and three
+independent `/_cf-pages-deployment.json` markers on authenticated load and
+manual **Refresh**. The marker cards show the public site, administrator site,
+and office dashboard as separate Pages builds.
 
-The cards keep API build identity, product and administrator migration heads,
-and the administrator Pages build separate. A different Fly and Pages SHA is
-not automatically drift because pull-request Fly previews can use a synthetic
-merge commit while Pages reports the pull-request head. The panel is
-corroborating evidence only; use the protected deployment workflows for exact
-promotion proof. See
+The admin build sets `PUBLIC_SITE_BASE_URL` and `PUBLIC_DASHBOARD_URL` to fixed
+public origins for its `main`, `dev`, or `pr-<n>` branch. The browser accepts no
+marker origin from a query, response, or operator input. The two cross-origin
+marker GETs omit credentials. The administrator marker GET uses same-origin
+credentials. Every GET disables caching, and the page does not poll.
+
+The cards also keep API build identity and both migration heads separate. The
+UI does not compare these SHAs or label a difference as drift. Pull-request Fly
+previews can use a synthetic merge commit while Pages reports the pull-request
+head. A successful full-stack load makes 15 fixed GETs. One successful manual
+Refresh makes 15 more, for 30 total. The report live canary remains a separate
+manual POST.
+
+The panel supplies corroborating evidence only. Use the protected deployment
+workflows for exact release and promotion proof. See
 [Admin deployment identity](../../docs/v4/design-admin-deployment-identity.md).
 
 ## Neon inventory
@@ -97,11 +105,10 @@ response headers. Invalid or contradictory headers make only that budget
 
 Percentage text uses one decimal place. Values can exceed 100.0%, while the
 painted meter stops at 100%. Unsupported provider money, token, invoice, and
-credit balances stay `Unknown`. The browser makes 12 fixed GET reads after
-session confirmation on the base stack. The AI usage draft raises the total to
-13 reads. One manual **Refresh** raises the stacked total to 26. The page does
-not poll. The report
-generation live canary remains a separate manual POST.
+credit balances stay `Unknown`. The full stacked browser makes 15 fixed GET
+reads after session confirmation. One manual **Refresh** makes another 15, for
+30 total. The page does not poll. The report generation live canary remains a
+separate manual POST.
 
 See
 [Admin provider quota percentages](../../docs/v4/design-admin-provider-quota-percentages.md)
@@ -154,9 +161,10 @@ liveness. Volume size shows allocated capacity, and remaining Fly credit stays
 `Unknown` with a Fly dashboard link.
 
 The browser requests the inventory once after session confirmation and once
-per manual **Refresh**. The full stacked page makes 13 fixed GET reads on load
-and 26 after one Refresh. It does not poll or make a provider write. The report
-generation live canary remains a separate manual POST.
+per manual **Refresh**. A successful full-stack load makes 15 fixed GET reads.
+One successful Refresh makes another 15, for 30 total. The page does not poll
+or make a provider write. The report generation live canary remains a separate
+manual POST.
 
 See [Admin Fly inventory](../../docs/v4/design-admin-fly-inventory.md) for the
 draft route and credential contract.
@@ -181,8 +189,8 @@ best-effort and excludes deleted history, so it is not provider billing.
 Remaining provider credit stays `Unknown` with dashboard links.
 
 The browser requests the aggregate once after session confirmation and once
-per manual **Refresh**. It does not poll. On this stacked branch, authenticated
-load performs 13 reads. One Refresh brings the total to 26. The report live
+per manual **Refresh**. It does not poll. A successful full-stack load makes 15
+reads. One successful Refresh adds 15 more, for 30 total. The report live
 canary remains a separate manual POST and never runs during either cycle.
 
 See [Admin AI usage ledger](../../docs/v4/design-admin-ai-usage.md) for the

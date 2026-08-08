@@ -7,7 +7,7 @@ application="${1:-}"
 branch="${CF_PAGES_BRANCH:-}"
 commit="${CF_PAGES_COMMIT_SHA:-}"
 
-if [[ ! "$branch" =~ ^(main|dev|pr-[0-9]+)$ ]]; then
+if [[ ! "$branch" =~ ^(main|dev|pr-[1-9][0-9]*)$ ]]; then
   echo "ERROR: unsupported Cloudflare Pages branch: ${branch:-<unset>}" >&2
   exit 1
 fi
@@ -19,17 +19,20 @@ fi
 case "$branch" in
   main)
     api_origin=https://api.harpapro.com
+    site_origin=https://harpa-pro.pages.dev
     dashboard_origin=https://harpa-pro-dashboard.pages.dev
     dashboard_sentry_environment=production
     ;;
   dev)
     api_origin=https://harpa-pro-api-dev.fly.dev
+    site_origin=https://dev.harpa-pro.pages.dev
     dashboard_origin=https://dev.harpa-pro-dashboard.pages.dev
     dashboard_sentry_environment=development
     ;;
   pr-*)
     pr_number="${branch#pr-}"
     api_origin="https://harpa-pro-api-pr-${pr_number}.fly.dev"
+    site_origin="https://${branch}.harpa-pro.pages.dev"
     dashboard_origin="https://${branch}.harpa-pro-dashboard.pages.dev"
     dashboard_sentry_environment=preview
     ;;
@@ -51,8 +54,13 @@ case "$application" in
     ;;
   admin)
     output_dir=apps/admin/dist
-    PUBLIC_API_BASE_URL="$api_origin" pnpm --filter @harpa/admin build
+    PUBLIC_API_BASE_URL="$api_origin" \
+      PUBLIC_SITE_BASE_URL="$site_origin" \
+      PUBLIC_DASHBOARD_URL="$dashboard_origin" \
+      pnpm --filter @harpa/admin build
     grep -R -Fq --include='*.js' "$api_origin" "$output_dir"
+    grep -R -Fq --include='*.js' "$site_origin" "$output_dir"
+    grep -R -Fq --include='*.js' "$dashboard_origin" "$output_dir"
     if grep -R -Fq --include='*.js' 'http://localhost:8787' "$output_dir"; then
       echo "ERROR: admin artifact still points at the local E2E API" >&2
       exit 1

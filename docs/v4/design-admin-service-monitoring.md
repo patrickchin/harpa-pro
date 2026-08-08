@@ -102,11 +102,10 @@ invalid, or contradictory headers make only that budget `Unknown`. No R2 or
 GitHub request, token, or credential is added.
 
 Provider money, token, invoice, and credit balances remain `Unknown`. These
-usage and request-budget percentages are not provider billing balances. With
-all read observers in the stack, the browser makes 13 fixed GET reads after
-session confirmation. It makes another 13 only on manual **Refresh**, for 26
-total after one Refresh. It does not poll. The report generation live canary
-remains a separate manual POST.
+usage and request-budget percentages are not provider billing balances. A
+successful full-stack load makes 15 fixed GET reads after session confirmation.
+One successful manual **Refresh** makes another 15, for 30 total. The page does
+not poll. The report generation live canary remains a separate manual POST.
 
 ## R2 capacity extension
 
@@ -166,9 +165,9 @@ does not document a stable remaining-credit REST field, so that value stays
 `Unknown` with a dashboard link.
 
 The browser calls the route once after session confirmation and again only on
-manual **Refresh**. It never polls. The full stacked page makes 13 fixed GET
-reads on load and 26 after one Refresh. The report generation live canary
-remains a separate manual POST.
+manual **Refresh**. It never polls. A successful full-stack load makes 15 fixed
+GET reads. One successful Refresh makes another 15, for 30 total. The report
+generation live canary remains a separate manual POST.
 
 ## Harpa-recorded AI usage extension
 
@@ -200,31 +199,40 @@ Provider balance, free tier, rate-limit headroom, and remaining credit stay
 `Unknown` with provider-dashboard links.
 
 The browser calls the route once after session confirmation and again only on
-manual **Refresh**. It never polls. On this stacked branch, the AI usage route
-raises authenticated reads from 12 to 13 on load and from 24 to 26 after one
-Refresh. The manual report generation live canary remains a separate POST. It
-does not run during either cycle.
+manual **Refresh**. It never polls. A successful full-stack load makes 15 fixed
+GET reads. One successful Refresh makes another 15, for 30 total. The
+manual report generation live canary remains a separate POST. It does not run
+during either cycle.
 
 ## Deployment identity extension
 
 The deployment-identity panel is a first-party, read-only extension. See
 [Admin deployment identity](design-admin-deployment-identity.md) for its full
-contract. On authenticated load and manual Refresh, the browser reads the API
-`/healthz`, product `/readyz`, administrator `/admin/readyz`, and its own
-`/_cf-pages-deployment.json` marker exactly once each with caching disabled.
-There is no polling.
+contract. On authenticated load and manual **Refresh**, the browser reads six
+fixed URLs with caching disabled. These URLs are `/healthz`, `/readyz`,
+`/admin/readyz`, and one Pages marker for each browser application.
 
-The four cards preserve the evidence boundaries between API build identity,
-the two independent migration heads, and the administrator Pages build. They
-do not call a SHA difference drift: Fly pull-request previews may run a
-synthetic merge commit while Pages reports the pull-request head. Exact release
-and promotion proof remains the responsibility of the protected workflows.
+The admin build maps `PUBLIC_SITE_BASE_URL` and `PUBLIC_DASHBOARD_URL` to the
+exact `main`, `dev`, or `pr-<n>` public origins. The administrator marker stays
+on the current origin. The browser does not accept marker origins from input or
+responses. The public-site and dashboard marker requests omit credentials.
+The administrator marker uses same-origin credentials. The page does not poll.
 
-`/healthz` remains public and read-only. Its browser CORS allowlist is limited
-to the exact configured administrator origins and does not allow credentials.
-The two readiness requests retain their credentialed administrator-origin
-policy. Strict browser parsers reject extra or unsafe fields, and raw readiness
-messages never enter UI state.
+Six cards keep API build identity, both migration heads, and the three Pages
+builds independent. The UI does not compare the SHAs or label a difference as
+drift. Fly pull-request previews can run a synthetic merge commit while Pages
+reports the pull-request head. A successful full-stack load makes 15 fixed GET
+reads. One successful manual Refresh makes another 15, for 30 total.
+
+`/healthz` remains public and read-only. Its browser CORS allowlist contains
+only the exact configured administrator origins and does not allow credentials.
+The readiness requests retain their credentialed administrator-origin policy.
+The public Pages markers keep wildcard CORS because they contain only commit
+and branch identity. Strict browser parsers reject extra or unsafe fields.
+Raw readiness messages never enter UI state.
+
+The panel supplies corroborating evidence. Protected CI and release workflows
+still prove the exact API and Pages deployments before promotion.
 
 ## Storage lifecycle extension
 
@@ -397,16 +405,15 @@ the full contract.
   provider calls, bounded output, caveats, rate limits, and manual refresh.
 - Fly inventory tests prove triplet validation, fixed read-only requests,
   allowlist filtering, strict redaction, nullable process-group inventory,
-  bounds, rate limits, 13/26 browser reads, and no polling.
+  bounds, rate limits, 15/30 browser reads, and no polling.
 - AI usage tests prove the one-query aggregate, fixed UTC windows, normalized
   providers, replay separation, warning correlations, strict redaction,
-  12-request budget, 13/26 read counts, and absence of polling or provider
+  12-request budget, 15/30 read counts, and absence of polling or provider
   calls.
-- Deployment-identity tests prove the four fixed reads, independent partial
-  states, strict redaction, full identifiers, exact CORS policy, and absence of
-  polling.
+- Deployment-identity tests prove the six fixed reads, three independent Pages
+  cards, strict redaction, full identifiers, exact CORS policy, and no polling.
 - Storage lifecycle tests prove one fixed statement, the five-second deadline,
-  separate 12-request budget, strict redaction, 13/26 reads, and the explicit
+  separate 12-request budget, strict redaction, 15/30 reads, and the explicit
   worker-liveness caveat.
 - Report live-canary tests prove its development-only gate, dedicated cookie,
   exact Origin, session-derived CSRF, fixed target, live usage proof, bounded

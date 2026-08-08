@@ -125,13 +125,16 @@ JSON, or invalid shapes use reviewed static copy.
 ```ts
 type PagesMarker = {
   commit: string; // full 40-character lowercase hex SHA
-  branch: string; // bounded printable branch label
+  branch: string; // bounded allowlisted branch label
 };
 ```
 
-The browser rejects extra fields and unsafe or oversized values. A missing
-marker is expected in local development and older deployments, so it produces
-an explicit Unknown marker state without changing readiness.
+The branch label accepts letters, digits, `/`, `.`, `_`, `-`, `+`, `!`, and
+`@`, including scoped automation branches such as Dependabot's. The browser
+rejects extra fields, whitespace, HTML delimiters, control characters, and
+oversized values. A missing marker is expected in local development and older
+deployments, so it produces an explicit Unknown marker state without changing
+readiness.
 
 No raw response body, header, URL, exception, database message, environment
 value, cookie, or provider content is stored or rendered.
@@ -182,8 +185,12 @@ Add RED component journeys before implementation that prove:
   Refresh, with the required cache and credential modes;
 - valid API identity, both migration heads, and the administrator marker are
   rendered with full identifiers and clear evidence labels;
+- scoped automation branch labels are accepted, while HTML-shaped labels fail
+  closed;
 - API, product readiness, administrator readiness, and marker failures are
   independent;
+- a late response from an older overlapping refresh cannot replace newer
+  evidence;
 - `503 head-mismatch` shows only bounded expected/actual migration identifiers;
 - raw `message`, extra fields, secrets, HTML, and malformed values fail closed
   and never enter rendered text or browser storage;

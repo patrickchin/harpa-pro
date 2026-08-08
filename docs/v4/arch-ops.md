@@ -759,6 +759,16 @@ verify `/admin/readyz` separately after deploy; it checks the admin
 connection and `admin._migrations` head and fails the deployment workflow
 without coupling Fly routing to admin availability.
 
+The administrator operations page may display `/healthz` build identity, both
+readiness heads, and its same-origin Pages marker as read-only corroborating
+evidence. This does not replace the workflow checks below. In particular, Fly
+pull-request previews can report the synthetic merge ref while Pages reports
+the pull-request head, so a cross-surface SHA difference is not by itself
+deployment drift. `/healthz` browser CORS is noncredentialed and limited to the
+exact configured administrator origins; `/readyz` and `/admin/readyz` retain
+their credentialed administrator-origin policy. See
+[Admin deployment identity](design-admin-deployment-identity.md).
+
 ```
 PR open / push
   ↳ Credential-free tests, builds, path checks, and migration guards

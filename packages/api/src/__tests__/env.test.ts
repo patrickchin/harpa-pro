@@ -23,6 +23,7 @@ const KEYS = [
   'ADMIN_REPORT_DIAGNOSTIC_EMAIL',
   'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID',
   'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER',
+  'ADMIN_REPORT_LIVE_CANARY_ENABLED',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'ADMIN_CORS_ORIGINS',
@@ -519,6 +520,136 @@ describe('env: admin report-generation diagnostic target', () => {
       /ADMIN_REPORT_DIAGNOSTIC_EMAIL|TEST_ACCOUNT_EMAILS|TEST_ACCOUNT_PASSWORD/,
     );
   });
+});
+
+describe('env: admin report-generation live canary enablement', () => {
+  const completeTarget = {
+    ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'report-canary@e2e.harpapro.com',
+    ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: 'prj_01234567',
+    ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: '7',
+    TEST_ACCOUNT_EMAILS: 'test@harpapro.com, report-canary@e2e.harpapro.com, test2@harpapro.com',
+    TEST_ACCOUNT_PASSWORD: 'test-password-12345',
+  } as const;
+
+  function setValidDevelopmentCanaryEnv(): void {
+    setValidProductionEnv();
+    Object.assign(process.env, completeTarget, {
+      ADMIN_REPORT_LIVE_CANARY_ENABLED: '1',
+      BETTER_AUTH_URL: 'https://harpa-pro-api-dev.fly.dev',
+      ADMIN_CORS_ORIGINS: 'https://dev.harpa-pro-admin.pages.dev',
+    });
+  }
+
+  it('defaults the live canary to disabled', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_LIVE_CANARY_ENABLED).toBe('0');
+  });
+
+  it('accepts an explicitly disabled canary without a target or live provider wiring', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_REPORT_LIVE_CANARY_ENABLED = '0';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_LIVE_CANARY_ENABLED).toBe('0');
+  });
+
+  it('accepts enablement only for the exact live development deployment correlation', async () => {
+    setValidDevelopmentCanaryEnv();
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_LIVE_CANARY_ENABLED).toBe('1');
+    expect(mod.env.NODE_ENV).toBe('production');
+    expect(mod.env.BETTER_AUTH_URL).toBe('https://harpa-pro-api-dev.fly.dev');
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('https://dev.harpa-pro-admin.pages.dev');
+    expect(mod.env.HARPAPRO_PR_BUILD).toBe('0');
+    expect(mod.env.AI_LIVE).toBe('1');
+    expect(mod.env.AI_FIXTURE_MODE).toBe('live');
+  });
+
+  it.each(['', '   ', 'true', 'yes', '2', '-1'])(
+    'rejects unsupported enablement value %j',
+    async (value) => {
+      process.env.NODE_ENV = 'development';
+      process.env.ADMIN_REPORT_LIVE_CANARY_ENABLED = value;
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_LIVE_CANARY_ENABLED/);
+    },
+  );
+
+  it('rejects a pull-request build flag on the exact development deployment', async () => {
+    setValidDevelopmentCanaryEnv();
+    process.env.HARPAPRO_PR_BUILD = '1';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_LIVE_CANARY_ENABLED/);
+  });
+
+  it.each([
+    [
+      'a non-production Node environment',
+      () => {
+        process.env.NODE_ENV = 'development';
+      },
+    ],
+    [
+      'the production API and administrator origin',
+      () => {
+        process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
+        process.env.ADMIN_CORS_ORIGINS = 'https://admin.harpapro.com';
+      },
+    ],
+    [
+      'a development API URL with a trailing slash',
+      () => {
+        process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-dev.fly.dev/';
+      },
+    ],
+    [
+      'an additional administrator origin',
+      () => {
+        process.env.ADMIN_CORS_ORIGINS =
+          'https://dev.harpa-pro-admin.pages.dev,https://admin.harpapro.com';
+      },
+    ],
+    [
+      'AI replay mode',
+      () => {
+        process.env.AI_LIVE = '0';
+      },
+    ],
+    [
+      'fixture replay mode',
+      () => {
+        process.env.AI_FIXTURE_MODE = 'replay';
+      },
+    ],
+    [
+      'an absent diagnostic target',
+      () => {
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_EMAIL;
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID;
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER;
+      },
+    ],
+    [
+      'a partial diagnostic target',
+      () => {
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER;
+      },
+    ],
+  ] as const)(
+    'rejects live-canary enablement with %s',
+    async (_description, invalidateConfiguration) => {
+      setValidDevelopmentCanaryEnv();
+      invalidateConfiguration();
+
+      await expect(freshImportEnv()).rejects.toThrow();
+    },
+  );
 });
 
 describe('env: Postgres connection URLs', () => {

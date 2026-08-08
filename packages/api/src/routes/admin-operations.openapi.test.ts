@@ -7,6 +7,46 @@ const SPEC_DOC_CONFIG = {
   info: { title: 'Harpa Pro API', version: '0.0.0' },
 };
 
+function schemaPropertyNames(schema: unknown): string[] {
+  const names = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    const record = value as Record<string, unknown>;
+    const properties = record.properties;
+    if (properties !== null && typeof properties === 'object' && !Array.isArray(properties)) {
+      Object.keys(properties).forEach((name) => names.add(name));
+    }
+    Object.values(record).forEach(visit);
+  };
+  visit(schema);
+  return [...names].sort();
+}
+
+function schemaStringLiterals(schema: unknown): Set<string> {
+  const literals = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    const record = value as Record<string, unknown>;
+    if (typeof record.const === 'string') literals.add(record.const);
+    if (Array.isArray(record.enum)) {
+      record.enum.forEach((literal) => {
+        if (typeof literal === 'string') literals.add(literal);
+      });
+    }
+    Object.values(record).forEach(visit);
+  };
+  visit(schema);
+  return literals;
+}
+
 describe('admin operations OpenAPI contract', () => {
   it('publishes Neon Free usage as an admin-session protected read-only GET', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
@@ -33,7 +73,6 @@ describe('admin operations OpenAPI contract', () => {
         },
       },
     });
-
     const successResponse = operation?.responses?.[200];
     const successSchema =
       successResponse && 'content' in successResponse
@@ -66,18 +105,180 @@ describe('admin operations OpenAPI contract', () => {
     }
   });
 
-  it('requires the strict admin CSRF header for report generation', () => {
+  it('keeps the strict live canary on the existing admin-session POST path', () => {
+    const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
+    const path = doc.paths?.['/admin/operations/report-generate'];
+    const operation = path?.post;
+
+    expect(operation).toBeDefined();
+    expect(Object.keys(path ?? {}).sort()).toEqual(['post']);
+    expect(operation?.security).toEqual([{ adminSession: [] }]);
+    expect(operation?.parameters).toEqual([
+      {
+        in: 'header',
+        name: ADMIN_CSRF_HEADER,
+        required: true,
+        schema: {
+          pattern: '^[A-Za-z0-9_-]{43}$',
+          type: 'string',
+        },
+      },
+    ]);
+    expect(operation?.requestBody).toBeUndefined();
+    expect(Object.keys(operation?.responses ?? {}).sort()).toEqual(['200', '401', '403', '429']);
+    expect(operation?.responses).toMatchObject({
+      200: {
+        description: expect.stringMatching(/live canary/i),
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      401: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      403: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      429: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+    });
+  });
+
+  it('publishes the complete reviewed live-canary observation schema', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
     const operation = doc.paths?.['/admin/operations/report-generate']?.post;
 
-    expect(operation?.parameters).toContainEqual({
-      in: 'header',
-      name: ADMIN_CSRF_HEADER,
-      required: true,
-      schema: {
-        pattern: '^[A-Za-z0-9_-]{43}$',
-        type: 'string',
-      },
-    });
+    const successResponse = operation?.responses?.[200];
+    const successSchema =
+      successResponse && 'content' in successResponse
+        ? successResponse.content?.['application/json']?.schema
+        : undefined;
+    expect(schemaPropertyNames(successSchema)).toEqual(
+      [
+        'accountEmail',
+        'action',
+        'aiInputTokens',
+        'aiOutputTokens',
+        'body',
+        'bodySha256',
+        'cachedTokens',
+        'cleanup',
+        'condition',
+        'count',
+        'counts',
+        'description',
+        'documentAttachments',
+        'durationMs',
+        'finishedAt',
+        'fixtureMode',
+        'generatedAt',
+        'generation',
+        'hours',
+        'httpStatus',
+        'idempotentReplay',
+        'imageAttachments',
+        'impact',
+        'inputTokens',
+        'issues',
+        'latencyMs',
+        'limit',
+        'limits',
+        'materials',
+        'matched',
+        'model',
+        'name',
+        'nextSteps',
+        'notes',
+        'observedAt',
+        'outputTokens',
+        'overridden',
+        'phase',
+        'plan',
+        'preview',
+        'projectId',
+        'quantity',
+        'reason',
+        'remaining',
+        'reportGenerate',
+        'reportId',
+        'reportNumber',
+        'reportUpdatedAt',
+        'requestId',
+        'requestedAt',
+        'resetAt',
+        'role',
+        'sample',
+        'schemaValid',
+        'severity',
+        'status',
+        'summary',
+        'summarySections',
+        'target',
+        'temperature',
+        'title',
+        'truncated',
+        'unit',
+        'usage',
+        'used',
+        'vendor',
+        'warnings',
+        'weather',
+        'wind',
+        'workers',
+      ].sort(),
+    );
+
+    const stringLiterals = schemaStringLiterals(successSchema);
+    for (const required of [
+      'unknown',
+      'pass',
+      'warning',
+      'fail',
+      'not_configured',
+      'not_enabled',
+      'limits_unavailable',
+      'sign_out_failed',
+      'not_started',
+      'succeeded',
+      'failed',
+      'sign_in',
+      'target_read',
+      'mode_gate',
+      'generate',
+      'proof_read',
+      'usage_window',
+      'usage_proof',
+      'preview',
+      'limits',
+      'sign_out',
+      'sign_in_failed',
+      'target_not_found',
+      'target_not_draft',
+      'conflict',
+      'live_mode_required',
+      'live_proof_failed',
+      'usage_proof_missing',
+      'usage_proof_ambiguous',
+      'preview_invalid',
+      'usage_limit_exceeded',
+      'rate_limited',
+      'provider_error',
+      'timeout',
+      'invalid_response',
+      'upstream_unavailable',
+      'live',
+    ]) {
+      expect(stringLiterals).toContain(required);
+    }
+    expect(stringLiterals).not.toContain('replay');
+    expect(stringLiterals).not.toContain('record');
+    expect(stringLiterals).not.toContain('replay_only');
   });
 });

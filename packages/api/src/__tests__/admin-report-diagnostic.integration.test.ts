@@ -1,6 +1,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import pg from 'pg';
 import { createApp } from '../app.js';
 import { getAdminPool, resetAdminPool } from '../db/admin-client.js';
+import { getPool, resetPool } from '../db/client.js';
+import { env } from '../env.js';
 import { resetAdminRateLimiter, setAdminRateLimiter } from '../lib/adminRateLimiter.js';
 import {
   MemoryRateLimiter,
@@ -11,6 +14,7 @@ import {
 } from '../lib/rateLimiter.js';
 import { setAdminPassword } from '../services/admin-auth.js';
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
+import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
 
 vi.mock('../env.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../env.js')>();
@@ -18,7 +22,13 @@ vi.mock('../env.js', async (importOriginal) => {
     ...actual,
     env: {
       ...actual.env,
-      BETTER_AUTH_URL: 'https://api.internal.test',
+      NODE_ENV: 'production',
+      BETTER_AUTH_URL: 'https://harpa-pro-api-dev.fly.dev',
+      ADMIN_CORS_ORIGINS: 'https://dev.harpa-pro-admin.pages.dev',
+      HARPAPRO_PR_BUILD: '0',
+      AI_LIVE: '1',
+      AI_FIXTURE_MODE: 'live',
+      ADMIN_REPORT_LIVE_CANARY_ENABLED: '1',
       TEST_ACCOUNT_EMAILS: 'report-canary@e2e.harpapro.com',
       TEST_ACCOUNT_PASSWORD: 'report canary password sentinel',
       ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'report-canary@e2e.harpapro.com',
@@ -30,31 +40,99 @@ vi.mock('../env.js', async (importOriginal) => {
   };
 });
 
-const ADMIN_ORIGIN = 'http://localhost:3102';
+const API_ORIGIN = 'https://harpa-pro-api-dev.fly.dev';
+const ADMIN_ORIGIN = 'https://dev.harpa-pro-admin.pages.dev';
 const ADMIN_EMAIL = 'report-diagnostic-admin@harpapro.com';
 const ADMIN_PASSWORD = 'report diagnostic admin password deliberately long';
 const CANARY_EMAIL = 'report-canary@e2e.harpapro.com';
 const CANARY_PASSWORD = 'report canary password sentinel';
+const CANARY_USER_ID = 'usr_01234567';
 const PROJECT_ID = 'prj_01234567';
 const REPORT_ID = 'rpt_01234567';
 const REPORT_NUMBER = 7;
 const APP_SESSION_TOKEN = '0123456789abcdef0123456789abcdef';
+const NOTES_CHANGED_AT = '2026-08-08T07:45:00.000Z';
 const BEFORE_UPDATED_AT = '2026-08-08T07:50:00.000Z';
 const REQUESTED_AT = '2026-08-08T08:00:00.000Z';
-const FINISHED_AT = '2026-08-08T08:00:02.000Z';
+const FINISHED_AT = '2026-08-08T08:00:01.000Z';
 const AFTER_UPDATED_AT = '2026-08-08T08:00:02.000Z';
 const RESET_AT = '2026-09-01T00:00:00.000Z';
 const CSRF_HEADER = 'X-Admin-CSRF';
+const ADMIN_CLIENT_IP = '203.0.113.77';
 const APP_BEARER_TOKEN = 'better-auth-bearer-token-sentinel';
 const APP_SESSION_COOKIE =
   'better-auth.session_token=better-auth-browser-cookie-sentinel.signature';
+const ISSUE_IMAGE_ID = 'not_01234567';
+const ISSUE_DOCUMENT_ID = 'not_01234568';
+const SECTION_IMAGE_ID = 'not_01234569';
+const SECTION_DOCUMENT_ID = 'not_01234570';
 
+const GENERATED_BODY = {
+  meta: {
+    title: 'SENTINEL_REPORT_TITLE',
+    summary: 'SENTINEL_REPORT_SUMMARY',
+    visitDate: null,
+  },
+  weather: {
+    condition: 'SENTINEL_WEATHER_CONDITION',
+    temperature: '21 C',
+    wind: '5 kph',
+    impact: null,
+  },
+  workers: [
+    {
+      role: 'SENTINEL_WORKER_ROLE',
+      count: '2',
+      hours: '8',
+      notes: null,
+    },
+  ],
+  materials: [
+    {
+      name: 'SENTINEL_MATERIAL_NAME',
+      quantity: '3',
+      unit: 'loads',
+      status: 'delivered',
+      condition: null,
+      notes: null,
+    },
+  ],
+  issues: [
+    {
+      title: 'SENTINEL_ISSUE_TITLE',
+      severity: 'low',
+      description: 'SENTINEL_ISSUE_DESCRIPTION',
+      action: 'SENTINEL_ISSUE_ACTION',
+      attachments: {
+        images: [ISSUE_IMAGE_ID],
+        documents: [ISSUE_DOCUMENT_ID],
+      },
+    },
+  ],
+  nextSteps: ['SENTINEL_NEXT_STEP'],
+  summarySections: [
+    {
+      title: 'SENTINEL_SECTION_TITLE',
+      body: 'SENTINEL_SECTION_BODY',
+      attachments: {
+        images: [SECTION_IMAGE_ID],
+        documents: [SECTION_DOCUMENT_ID],
+      },
+    },
+  ],
+};
+
+let appFx: PgFixture;
 let adminFx: AdminPgFixture;
+let appDb: pg.Client;
 let adminCookie: string;
 let adminCsrfToken: string;
 let adminLoginBody: { authenticated: true; email: string; csrfToken?: string };
 let fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>;
 let adminLimiter: RecordingMemoryRateLimiter;
+let matchingUsageRows: number;
+let usageRowSequence: number;
+let cleanupSessionBody: unknown;
 
 class FailingAppRateLimiter implements RateLimiter {
   async consume(): Promise<RateLimiterResult> {
@@ -86,6 +164,11 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
   });
 }
 
+function limiterName(key: string): string {
+  const separator = key.indexOf(':fn:');
+  return separator === -1 ? key : key.slice(0, separator);
+}
+
 function report(updatedAt = BEFORE_UPDATED_AT, generatedAt: string | null = null) {
   return {
     id: REPORT_ID,
@@ -93,24 +176,9 @@ function report(updatedAt = BEFORE_UPDATED_AT, generatedAt: string | null = null
     projectId: PROJECT_ID,
     status: 'draft',
     visitDate: null,
-    body:
-      generatedAt === null
-        ? null
-        : {
-            meta: {
-              title: 'SENTINEL_REPORT_TITLE',
-              summary: 'SENTINEL_REPORT_SUMMARY',
-              visitDate: null,
-            },
-            weather: null,
-            workers: [],
-            materials: [],
-            issues: [],
-            nextSteps: [],
-            summarySections: [],
-          },
+    body: generatedAt === null ? null : GENERATED_BODY,
     notesSinceLastGeneration: generatedAt === null ? 1 : 0,
-    notesChangedAt: '2026-08-08T07:45:00.000Z',
+    notesChangedAt: NOTES_CHANGED_AT,
     generatedAt,
     needsRegeneration: generatedAt === null,
     finalizedAt: null,
@@ -120,19 +188,56 @@ function report(updatedAt = BEFORE_UPDATED_AT, generatedAt: string | null = null
   };
 }
 
+function setLiveCanaryEnabled(value: '0' | '1'): void {
+  (env as unknown as Record<string, unknown>).ADMIN_REPORT_LIVE_CANARY_ENABLED = value;
+}
+
+async function seedMatchingUsageEvents(count: number): Promise<void> {
+  for (let index = 0; index < count; index += 1) {
+    usageRowSequence += 1;
+    await appDb.query(
+      `INSERT INTO app.llm_usage_events
+         (id, user_id, project_id, report_id, vendor, model, operation,
+          input_tokens, output_tokens, cached_tokens, latency_ms, fixture_mode, status,
+          created_at)
+       VALUES ($1, $2, $3, $4, 'openai', 'gpt-5-mini', 'generate_report',
+               120, 30, 20, 1500, 'live', 'ok', clock_timestamp())`,
+      [`lue_${String(10_000_000 + usageRowSequence)}`, CANARY_USER_ID, PROJECT_ID, REPORT_ID],
+    );
+  }
+}
+
 function defaultRunnerFetch() {
   return vi.fn<typeof fetch>(async (input, init) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
     const method = request.method.toUpperCase();
 
-    if (url.origin !== 'https://api.internal.test') {
+    if (url.origin !== API_ORIGIN) {
       return jsonResponse({ message: 'unexpected origin' }, 404);
     }
     if (method === 'POST' && url.pathname === '/api/auth/sign-in/email') {
-      return jsonResponse({ user: { id: 'usr_01234567', email: CANARY_EMAIL } }, 200, {
-        'set-auth-token': APP_SESSION_TOKEN,
-      });
+      return jsonResponse(
+        {
+          redirect: false,
+          token: APP_SESSION_TOKEN,
+          user: {
+            id: CANARY_USER_ID,
+            email: CANARY_EMAIL,
+            name: 'Synthetic report canary',
+            emailVerified: true,
+            image: null,
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:00:00.000Z',
+            displayName: 'Synthetic report canary',
+            companyName: null,
+            isAdmin: false,
+            plan: 'free',
+          },
+        },
+        200,
+        { 'set-auth-token': APP_SESSION_TOKEN },
+      );
     }
     if (method === 'GET' && url.pathname === `/projects/${PROJECT_ID}/reports/${REPORT_NUMBER}`) {
       return jsonResponse(report());
@@ -141,9 +246,10 @@ function defaultRunnerFetch() {
       method === 'POST' &&
       url.pathname === `/projects/${PROJECT_ID}/reports/${REPORT_NUMBER}/generate`
     ) {
+      await seedMatchingUsageEvents(matchingUsageRows);
       return jsonResponse(
         {
-          report: report(AFTER_UPDATED_AT, FINISHED_AT),
+          report: report(AFTER_UPDATED_AT, NOTES_CHANGED_AT),
           debug: {
             systemPrompt: 'SENTINEL_GENERATE_SYSTEM_PROMPT',
             userPrompt: 'SENTINEL_GENERATE_USER_PROMPT',
@@ -234,6 +340,9 @@ function defaultRunnerFetch() {
     if (method === 'POST' && url.pathname === '/api/auth/sign-out') {
       return jsonResponse({ success: true });
     }
+    if (method === 'GET' && url.pathname === '/api/auth/get-session') {
+      return jsonResponse(cleanupSessionBody);
+    }
     return jsonResponse({ message: 'unexpected application request' }, 404);
   });
 }
@@ -265,15 +374,18 @@ function diagnosticRequest(
     csrf?: string | null;
     origin?: string | null;
     authorization?: string;
+    flyClientIp?: string | null;
   } = {},
 ): RequestInit {
   const headers = new Headers();
   const cookie = overrides.cookie === undefined ? adminCookie : overrides.cookie;
   const csrf = overrides.csrf === undefined ? adminCsrfToken : overrides.csrf;
   const origin = overrides.origin === undefined ? ADMIN_ORIGIN : overrides.origin;
+  const flyClientIp = overrides.flyClientIp === undefined ? ADMIN_CLIENT_IP : overrides.flyClientIp;
   if (cookie) headers.set('cookie', cookie);
   if (csrf) headers.set(CSRF_HEADER, csrf);
   if (origin) headers.set('origin', origin);
+  if (flyClientIp) headers.set('fly-client-ip', flyClientIp);
   if (overrides.authorization) headers.set('authorization', overrides.authorization);
   return { method: 'POST', headers };
 }
@@ -285,10 +397,34 @@ async function fetchCallRequest(index: number): Promise<Request> {
 }
 
 beforeAll(async () => {
-  adminFx = await startAdminPg();
+  [appFx, adminFx] = await Promise.all([startPg(), startAdminPg()]);
+  process.env.DATABASE_URL = appFx.url;
   process.env.ADMIN_DATABASE_URL = adminFx.url;
+  await resetPool();
   await resetAdminPool();
+  getPool(appFx.url);
   getAdminPool(adminFx.url);
+
+  await seedAuthUsers(appFx.url, [
+    {
+      id: CANARY_USER_ID,
+      email: CANARY_EMAIL,
+      displayName: 'Synthetic report canary',
+      plan: 'free',
+    },
+  ]);
+  appDb = new pg.Client({ connectionString: appFx.url });
+  await appDb.connect();
+  await appDb.query(
+    `INSERT INTO app.projects(id, name, owner_id)
+     VALUES ($1, 'Synthetic report canary project', $2)`,
+    [PROJECT_ID, CANARY_USER_ID],
+  );
+  await appDb.query(
+    `INSERT INTO app.reports(id, project_id, author_id, number, status)
+     VALUES ($1, $2, $3, $4, 'draft')`,
+    [REPORT_ID, PROJECT_ID, CANARY_USER_ID, REPORT_NUMBER],
+  );
 
   await setAdminPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
   const login = await loginAdmin();
@@ -298,9 +434,14 @@ beforeAll(async () => {
   adminCookie = login.cookie;
   adminLoginBody = login.body;
   adminCsrfToken = login.body.csrfToken ?? '';
-}, 120_000);
+}, 180_000);
 
-beforeEach(() => {
+beforeEach(async () => {
+  setLiveCanaryEnabled('1');
+  matchingUsageRows = 1;
+  usageRowSequence = 0;
+  cleanupSessionBody = null;
+  await appDb.query('DELETE FROM app.llm_usage_events WHERE user_id = $1', [CANARY_USER_ID]);
   resetRateLimiter();
   setRateLimiter(new FailingAppRateLimiter());
   resetAdminRateLimiter();
@@ -318,17 +459,46 @@ afterAll(async () => {
   vi.unstubAllGlobals();
   resetRateLimiter();
   resetAdminRateLimiter();
-  await adminFx?.stop();
-}, 60_000);
+  await appDb?.end();
+  await Promise.all([appFx?.stop(), adminFx?.stop()]);
+}, 90_000);
 
 describe('POST /admin/operations/report-generate security boundary', () => {
+  it('returns disabled without an application request or application-database query', async () => {
+    setLiveCanaryEnabled('0');
+    const applicationQuery = vi.spyOn(getPool(), 'query');
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    const response = await createApp().request(
+      '/admin/operations/report-generate',
+      diagnosticRequest(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    const body = await response.json();
+    expect(body).toEqual({
+      observedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      status: 'unknown',
+      reason: 'not_enabled',
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(applicationQuery).not.toHaveBeenCalled();
+
+    const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
+    expect(auditCall).toBeDefined();
+    expect(JSON.parse(String(auditCall?.[1]))).toMatchObject({
+      reason: 'not_enabled',
+    });
+  });
+
   it('issues the session-bound CSRF token at login and session lookup', async () => {
     expect(adminLoginBody).toEqual({
       authenticated: true,
       email: ADMIN_EMAIL,
       csrfToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
     });
-    expect(adminCookie).toMatch(/^harpa_admin_session=[A-Za-z0-9_-]{43}$/);
+    expect(adminCookie).toMatch(/^__Host-harpa_admin_session=[A-Za-z0-9_-]{43}$/);
     expect(adminCookie).not.toContain(adminCsrfToken);
 
     const session = await createApp().request('/admin/auth/session', {
@@ -370,11 +540,18 @@ describe('POST /admin/operations/report-generate security boundary', () => {
   });
 
   it('rejects non-admin auth, untrusted origins, and absent or invalid CSRF before the runner', async () => {
-    const cases: Array<{ name: string; expected: number; init: RequestInit }> = [
+    const applicationQuery = vi.spyOn(getPool(), 'query');
+    const cases: Array<{
+      name: string;
+      expected: number;
+      init: RequestInit;
+      limiterNames: readonly string[];
+    }> = [
       {
         name: 'anonymous',
         expected: 401,
         init: diagnosticRequest({ cookie: '', csrf: 'A'.repeat(43) }),
+        limiterNames: ['admin.auth.ip.1m'],
       },
       {
         name: 'application Bearer',
@@ -384,46 +561,67 @@ describe('POST /admin/operations/report-generate security boundary', () => {
           csrf: 'A'.repeat(43),
           authorization: `Bearer ${APP_BEARER_TOKEN}`,
         }),
+        limiterNames: ['admin.auth.ip.1m'],
       },
       {
         name: 'Better Auth cookie',
         expected: 401,
         init: diagnosticRequest({ cookie: APP_SESSION_COOKIE, csrf: 'A'.repeat(43) }),
+        limiterNames: ['admin.auth.ip.1m'],
       },
       {
         name: 'missing Origin',
         expected: 403,
         init: diagnosticRequest({ origin: null }),
+        limiterNames: [],
       },
       {
         name: 'untrusted Origin',
         expected: 403,
         init: diagnosticRequest({ origin: `${ADMIN_ORIGIN}.evil.example` }),
+        limiterNames: [],
       },
       {
         name: 'missing CSRF',
         expected: 403,
         init: diagnosticRequest({ csrf: null }),
+        limiterNames: ['admin.auth.ip.1m'],
       },
       {
         name: 'invalid CSRF',
         expected: 403,
         init: diagnosticRequest({ csrf: 'A'.repeat(43) }),
+        limiterNames: ['admin.auth.ip.1m'],
       },
     ];
 
     for (const testCase of cases) {
+      const limiterCallStart = adminLimiter.calls.length;
       const response = await createApp().request(
         '/admin/operations/report-generate',
         testCase.init,
       );
       expect(response.status, testCase.name).toBe(testCase.expected);
       expect(response.headers.get('cache-control'), testCase.name).toBe('private, no-store');
+      const routeLimiterCalls = adminLimiter.calls.slice(limiterCallStart);
+      expect(
+        routeLimiterCalls.map(({ key }) => limiterName(key)),
+        `${testCase.name} middleware order`,
+      ).toEqual(testCase.limiterNames);
+      for (const call of routeLimiterCalls) {
+        expect(call).toEqual({
+          key: `admin.auth.ip.1m:fn:${ADMIN_CLIENT_IP}`,
+          limit: 120,
+          windowMs: 60_000,
+        });
+      }
     }
     expect(fetchImpl).not.toHaveBeenCalled();
+    expect(applicationQuery).not.toHaveBeenCalled();
   });
 
   it('runs the unmodified default HTTP runner only after all admin gates pass', async () => {
+    const applicationQuery = vi.spyOn(getPool(), 'query');
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const response = await createApp().request(
       '/admin/operations/report-generate',
@@ -447,15 +645,90 @@ describe('POST /admin/operations/report-generate security boundary', () => {
         vendor: 'openai',
         model: 'gpt-5-mini',
         fixtureMode: 'live',
+        idempotentReplay: false,
+      },
+      preview: {
+        schemaValid: true,
+        sample: {
+          title: 'SENTINEL_REPORT_TITLE',
+          summary: 'SENTINEL_REPORT_SUMMARY',
+          weather: {
+            condition: 'SENTINEL_WEATHER_CONDITION',
+            temperature: '21 C',
+            wind: '5 kph',
+            impact: null,
+          },
+          workers: [
+            {
+              role: 'SENTINEL_WORKER_ROLE',
+              count: '2',
+              hours: '8',
+              notes: null,
+            },
+          ],
+          materials: [
+            {
+              name: 'SENTINEL_MATERIAL_NAME',
+              quantity: '3',
+              unit: 'loads',
+              status: 'delivered',
+              condition: null,
+              notes: null,
+            },
+          ],
+          issues: [
+            {
+              title: 'SENTINEL_ISSUE_TITLE',
+              severity: 'low',
+              description: 'SENTINEL_ISSUE_DESCRIPTION',
+              action: 'SENTINEL_ISSUE_ACTION',
+            },
+          ],
+          nextSteps: ['SENTINEL_NEXT_STEP'],
+          summarySections: [
+            {
+              title: 'SENTINEL_SECTION_TITLE',
+              body: 'SENTINEL_SECTION_BODY',
+            },
+          ],
+        },
+        counts: {
+          workers: 1,
+          materials: 1,
+          issues: 1,
+          nextSteps: 1,
+          summarySections: 1,
+          imageAttachments: 2,
+          documentAttachments: 2,
+        },
+        truncated: true,
+        bodySha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+      usage: {
+        inputTokens: 120,
+        outputTokens: 30,
+        cachedTokens: 20,
+        latencyMs: 1500,
+        matched: true,
       },
       cleanup: 'succeeded',
     });
     const serialized = JSON.stringify(body);
+    for (const reviewedSample of [
+      'SENTINEL_REPORT_TITLE',
+      'SENTINEL_REPORT_SUMMARY',
+      'SENTINEL_WORKER_ROLE',
+      'SENTINEL_MATERIAL_NAME',
+      'SENTINEL_ISSUE_TITLE',
+      'SENTINEL_NEXT_STEP',
+      'SENTINEL_SECTION_TITLE',
+    ]) {
+      expect(serialized).toContain(reviewedSample);
+    }
     for (const secret of [
       CANARY_PASSWORD,
       APP_SESSION_TOKEN,
-      'SENTINEL_REPORT_TITLE',
-      'SENTINEL_REPORT_SUMMARY',
+      CANARY_USER_ID,
       'SENTINEL_GENERATE_SYSTEM_PROMPT',
       'SENTINEL_GENERATE_USER_PROMPT',
       'SENTINEL_RAW_MODEL_RESPONSE',
@@ -465,16 +738,41 @@ describe('POST /admin/operations/report-generate security boundary', () => {
       'SENTINEL_PERSISTED_SYSTEM_PROMPT',
       'SENTINEL_PERSISTED_USER_PROMPT',
       'SENTINEL_PERSISTED_MODEL_RESPONSE',
+      ISSUE_IMAGE_ID,
+      ISSUE_DOCUMENT_ID,
+      SECTION_IMAGE_ID,
+      SECTION_DOCUMENT_ID,
+      'lue_10000001',
     ]) {
       expect(serialized).not.toContain(secret);
     }
 
-    expect(fetchImpl).toHaveBeenCalledTimes(6);
+    expect(applicationQuery).toHaveBeenCalledTimes(2);
+    const applicationQueries = applicationQuery.mock.calls.map(([text]) => String(text));
+    expect(applicationQueries[0]).toMatch(/clock_timestamp\(\)/i);
+    expect(applicationQueries[1]).toMatch(/from\s+app\.llm_usage_events/i);
+    expect(applicationQueries[1]).toMatch(/limit\s+2/i);
+    expect(applicationQuery.mock.calls[1]?.[1]).toEqual(
+      expect.arrayContaining([CANARY_USER_ID, PROJECT_ID, REPORT_ID, 'openai', 'gpt-5-mini']),
+    );
+
+    expect(adminLimiter.calls.map(({ key }) => limiterName(key))).toEqual([
+      'admin.auth.ip.1m',
+      'admin.operations.report-generate.run.15m',
+    ]);
+    expect(adminLimiter.calls[0]).toEqual({
+      key: `admin.auth.ip.1m:fn:${ADMIN_CLIENT_IP}`,
+      limit: 120,
+      windowMs: 60_000,
+    });
+    expect(adminLimiter.calls[1]).toMatchObject({ limit: 3, windowMs: 15 * 60_000 });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(7);
     const requests = await Promise.all(
-      Array.from({ length: 6 }, (_unused, index) => fetchCallRequest(index)),
+      Array.from({ length: 7 }, (_unused, index) => fetchCallRequest(index)),
     );
     expect(requests.map((request) => new URL(request.url).origin)).toEqual(
-      Array.from({ length: 6 }, () => 'https://api.internal.test'),
+      Array.from({ length: 7 }, () => API_ORIGIN),
     );
     expect(requests.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual(
       [
@@ -484,6 +782,7 @@ describe('POST /admin/operations/report-generate security boundary', () => {
         `GET /projects/${PROJECT_ID}/reports/${REPORT_NUMBER}/debug`,
         'GET /me/limits',
         'POST /api/auth/sign-out',
+        'GET /api/auth/get-session',
       ],
     );
     await expect(requests[0]!.json()).resolves.toEqual({
@@ -498,6 +797,7 @@ describe('POST /admin/operations/report-generate security boundary', () => {
     expect(requests[2]!.headers.get('idempotency-key')).not.toContain(CANARY_EMAIL);
     expect(requests[2]!.headers.get('idempotency-key')).not.toContain(CANARY_PASSWORD);
     await expect(requests[5]!.json()).resolves.toEqual({});
+    expect(requests[6]!.body).toBeNull();
 
     const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
     expect(auditCall).toBeDefined();
@@ -528,9 +828,77 @@ describe('POST /admin/operations/report-generate security boundary', () => {
       'SENTINEL_GENERATE_USER_PROMPT',
       'SENTINEL_RAW_MODEL_RESPONSE',
       'SENTINEL_SYNTHETIC_NOTE',
+      'SENTINEL_REPORT_TITLE',
+      'SENTINEL_REPORT_SUMMARY',
+      'SENTINEL_WORKER_ROLE',
+      'SENTINEL_MATERIAL_NAME',
+      'SENTINEL_ISSUE_TITLE',
+      'SENTINEL_NEXT_STEP',
+      'SENTINEL_SECTION_TITLE',
+      ISSUE_IMAGE_ID,
+      ISSUE_DOCUMENT_ID,
+      SECTION_IMAGE_ID,
+      SECTION_DOCUMENT_ID,
+      CANARY_USER_ID,
+      'lue_10000001',
     ]) {
       expect(serializedAudit).not.toContain(secret);
     }
+  });
+
+  it.each([
+    [0, 'usage_proof_missing'],
+    [2, 'usage_proof_ambiguous'],
+  ] as const)('fails closed when %i matching live usage rows exist', async (rowCount, reason) => {
+    matchingUsageRows = rowCount;
+    const applicationQuery = vi.spyOn(getPool(), 'query');
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    const response = await createApp().request(
+      '/admin/operations/report-generate',
+      diagnosticRequest(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'fail',
+      phase: 'usage_proof',
+      reason,
+      cleanup: 'succeeded',
+    });
+
+    expect(applicationQuery).toHaveBeenCalledTimes(2);
+    const applicationQueries = applicationQuery.mock.calls.map(([text]) => String(text));
+    expect(applicationQueries[0]).toMatch(/clock_timestamp\(\)/i);
+    expect(applicationQueries[1]).toMatch(/limit\s+2/i);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
+    const requests = await Promise.all(
+      Array.from({ length: 6 }, (_unused, index) => fetchCallRequest(index)),
+    );
+    expect(requests.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual(
+      [
+        'POST /api/auth/sign-in/email',
+        `GET /projects/${PROJECT_ID}/reports/${REPORT_NUMBER}`,
+        `POST /projects/${PROJECT_ID}/reports/${REPORT_NUMBER}/generate`,
+        `GET /projects/${PROJECT_ID}/reports/${REPORT_NUMBER}/debug`,
+        'POST /api/auth/sign-out',
+        'GET /api/auth/get-session',
+      ],
+    );
+
+    const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
+    expect(auditCall).toBeDefined();
+    const audit = JSON.parse(String(auditCall?.[1])) as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: 'report_generate_fail',
+      phase: 'usage_proof',
+      reason,
+      cleanup: 'succeeded',
+    });
+    expect(JSON.stringify(audit)).not.toContain(CANARY_USER_ID);
+    expect(JSON.stringify(audit)).not.toContain('lue_10000001');
   });
 
   it('audits a degraded limits read as a sanitized warning', async () => {
@@ -569,6 +937,50 @@ describe('POST /admin/operations/report-generate security boundary', () => {
       warnings: ['limits_unavailable'],
     });
     expect(JSON.stringify(audit)).not.toContain('SENTINEL_LIMITS_FAILURE_BODY');
+  });
+
+  it('requires the same bearer token to be absent after sign-out before confirming cleanup', async () => {
+    cleanupSessionBody = {
+      session: { id: 'SENTINEL_STILL_ACTIVE_SESSION' },
+      user: { id: CANARY_USER_ID, email: CANARY_EMAIL },
+    };
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    const response = await createApp().request(
+      '/admin/operations/report-generate',
+      diagnosticRequest(),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      status: 'warning',
+      cleanup: 'failed',
+      warnings: ['sign_out_failed'],
+    });
+    expect(JSON.stringify(body)).not.toContain('SENTINEL_STILL_ACTIVE_SESSION');
+
+    expect(fetchImpl).toHaveBeenCalledTimes(7);
+    const signOutRequest = await fetchCallRequest(5);
+    const revokedSessionCheck = await fetchCallRequest(6);
+    expect(`${signOutRequest.method} ${new URL(signOutRequest.url).pathname}`).toBe(
+      'POST /api/auth/sign-out',
+    );
+    expect(`${revokedSessionCheck.method} ${new URL(revokedSessionCheck.url).pathname}`).toBe(
+      'GET /api/auth/get-session',
+    );
+    expect(signOutRequest.headers.get('authorization')).toBe(`Bearer ${APP_SESSION_TOKEN}`);
+    expect(revokedSessionCheck.headers.get('authorization')).toBe(`Bearer ${APP_SESSION_TOKEN}`);
+
+    const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
+    expect(auditCall).toBeDefined();
+    const audit = JSON.parse(String(auditCall?.[1])) as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: 'report_generate_warning',
+      cleanup: 'failed',
+      warnings: ['sign_out_failed'],
+    });
+    expect(JSON.stringify(audit)).not.toContain('SENTINEL_STILL_ACTIVE_SESSION');
   });
 
   it('audits an upstream failure with only the reviewed phase and reason', async () => {
@@ -628,7 +1040,7 @@ describe('POST /admin/operations/report-generate security boundary', () => {
       diagnosticRequest({ cookie: rotated.cookie, csrf: rotated.body.csrfToken ?? '' }),
     );
     expect(current.status).toBe(200);
-    expect(fetchImpl).toHaveBeenCalledTimes(6);
+    expect(fetchImpl).toHaveBeenCalledTimes(7);
   });
 
   it('uses an isolated three-run/15-minute budget that Neon reads and the app limiter cannot spend', async () => {
@@ -652,7 +1064,7 @@ describe('POST /admin/operations/report-generate security boundary', () => {
       expect(diagnostic.status).toBe(200);
       expect(diagnostic.headers.get('x-ratelimit-limit')).toBe('3');
     }
-    expect(fetchImpl).toHaveBeenCalledTimes(18);
+    expect(fetchImpl).toHaveBeenCalledTimes(21);
 
     const exhausted = await createApp().request(
       '/admin/operations/report-generate',
@@ -660,7 +1072,7 @@ describe('POST /admin/operations/report-generate security boundary', () => {
     );
     expect(exhausted.status).toBe(429);
     expect(exhausted.headers.get('cache-control')).toBe('private, no-store');
-    expect(fetchImpl).toHaveBeenCalledTimes(18);
+    expect(fetchImpl).toHaveBeenCalledTimes(21);
 
     const diagnosticCalls = adminLimiter.calls.filter(
       ({ limit, windowMs }) => limit === 3 && windowMs === 15 * 60_000,
@@ -668,5 +1080,17 @@ describe('POST /admin/operations/report-generate security boundary', () => {
     expect(diagnosticCalls).toHaveLength(4);
     expect(new Set(diagnosticCalls.map(({ key }) => key))).toHaveLength(1);
     expect(diagnosticCalls[0]?.key).not.toContain('admin.operations.neon.read');
+
+    const diagnosticIpCalls = adminLimiter.calls.filter(
+      ({ key }) => key === `admin.auth.ip.1m:fn:${ADMIN_CLIENT_IP}`,
+    );
+    expect(diagnosticIpCalls).toHaveLength(4);
+    expect(diagnosticIpCalls).toEqual(
+      Array.from({ length: 4 }, () => ({
+        key: `admin.auth.ip.1m:fn:${ADMIN_CLIENT_IP}`,
+        limit: 120,
+        windowMs: 60_000,
+      })),
+    );
   });
 });

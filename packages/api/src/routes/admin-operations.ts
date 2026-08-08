@@ -10,6 +10,7 @@ import { observeAdminFlyInventory } from '../lib/fly-operations.js';
 import { observeAdminNeonUsage } from '../lib/neon-usage.js';
 import { observeAdminNeonInventory } from '../lib/neon-operations.js';
 import { observeAdminR2Capacity } from '../lib/r2-operations.js';
+import { observeAdminSentry } from '../lib/sentry-operations.js';
 import { getAdminRateLimiter } from '../lib/adminRateLimiter.js';
 import { withTrustedAdminOrigin } from '../middleware/admin-origin.js';
 import { adminAuthIpWindow } from '../middleware/admin-rate-limit.js';
@@ -118,6 +119,14 @@ const adminNeonOperationsRateLimit = withRateLimit({
 
 const adminR2CapacityRateLimit = withRateLimit({
   name: 'admin.operations.r2-capacity.read.1m',
+  keyBy: adminOperationsRateLimitKey,
+  limit: 12,
+  windowMs: MINUTE_MS,
+  getLimiter: getAdminRateLimiter,
+});
+
+const adminSentryRateLimit = withRateLimit({
+  name: 'admin.operations.sentry.read.1m',
   keyBy: adminOperationsRateLimitKey,
   limit: 12,
   windowMs: MINUTE_MS,
@@ -305,6 +314,38 @@ adminOperationsRoutes.openapi(
     },
   }),
   async (c) => c.json(await observeAdminR2Capacity(), 200),
+);
+
+adminOperationsRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/admin/operations/sentry',
+    tags: ['admin'],
+    security: [{ adminSession: [] }],
+    middleware: [
+      privateNoStore,
+      adminAuthIpWindow,
+      withAdminSession(),
+      adminSentryRateLimit,
+    ] as const,
+    responses: {
+      200: {
+        description: 'Bounded, read-only Sentry aggregate issue and mobile session observation.',
+        content: {
+          'application/json': { schema: operations.sentryObservation },
+        },
+      },
+      401: {
+        description: 'Unauthorized.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+      429: {
+        description: 'Rate limited.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+    },
+  }),
+  async (c) => c.json(await observeAdminSentry(), 200),
 );
 
 adminOperationsRoutes.openapi(

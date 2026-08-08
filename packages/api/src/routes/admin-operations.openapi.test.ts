@@ -653,6 +653,31 @@ describe('admin operations OpenAPI contract', () => {
       'crashedSessions',
     ]);
 
+    const numericSchemas = (propertyName: string): SchemaObject[] =>
+      schemaObjectNodes(successSchema).flatMap((node) => {
+        const property = asSchemaObject(schemaProperty(node, propertyName));
+        return property ? [property] : [];
+      });
+    const issueCounts = numericSchemas('count');
+    expect(issueCounts).toHaveLength(2);
+    for (const issueCount of issueCounts) {
+      expect(issueCount.minimum).toBe(0);
+      expect(issueCount.maximum).toBe(100);
+    }
+    for (const propertyName of [
+      'healthySessions',
+      'erroredSessions',
+      'abnormalSessions',
+      'crashedSessions',
+    ]) {
+      const sessionCounts = numericSchemas(propertyName);
+      expect(sessionCounts).toHaveLength(2);
+      for (const sessionCount of sessionCounts) expect(sessionCount.minimum).toBe(0);
+    }
+    const totalSessions = numericSchemas('totalSessions');
+    expect(totalSessions).toHaveLength(2);
+    for (const totalSessionCount of totalSessions) expect(totalSessionCount.minimum).toBe(1);
+
     expect([...schemaStringLiterals(successSchema)].sort()).toEqual(
       [
         'available',

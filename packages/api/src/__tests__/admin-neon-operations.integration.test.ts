@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { getAdminPool, resetAdminPool } from '../db/admin-client.js';
+import { env } from '../env.js';
 import { resetAdminRateLimiter, setAdminRateLimiter } from '../lib/adminRateLimiter.js';
 import {
   resetRateLimiter,
@@ -11,26 +12,20 @@ import {
 import { setAdminPassword } from '../services/admin-auth.js';
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 
-vi.mock('../env.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../env.js')>();
-  return {
-    ...actual,
-    env: {
-      ...actual.env,
-      ADMIN_NEON_VIEWER_API_KEY: 'route-default-neon-viewer-key',
-      ADMIN_NEON_ORG_ID: 'org-harpa-pro',
-    },
-  };
-});
-
 const ADMIN_ORIGIN = 'http://localhost:3102';
 const ADMIN_EMAIL = 'neon-operations@harpapro.com';
 const ADMIN_PASSWORD = 'neon operations admin password deliberately long';
+const runtimeEnv = env as typeof env & {
+  ADMIN_NEON_VIEWER_API_KEY?: string;
+  ADMIN_NEON_ORG_ID?: string;
+};
 
 let adminFx: AdminPgFixture;
 let adminCookie: string;
 let fetchImpl: ReturnType<typeof vi.fn<typeof fetch>>;
 let adminRateLimiter: RecordingRateLimiter;
+let originalNeonViewerApiKey: string | undefined;
+let originalNeonOrgId: string | undefined;
 
 class RecordingRateLimiter implements RateLimiter {
   readonly calls: Array<{ key: string; limit: number; windowMs: number }> = [];
@@ -126,6 +121,11 @@ function defaultProviderFetch() {
 }
 
 beforeAll(async () => {
+  originalNeonViewerApiKey = runtimeEnv.ADMIN_NEON_VIEWER_API_KEY;
+  originalNeonOrgId = runtimeEnv.ADMIN_NEON_ORG_ID;
+  runtimeEnv.ADMIN_NEON_VIEWER_API_KEY = 'route-default-neon-viewer-key';
+  runtimeEnv.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
   adminFx = await startAdminPg();
   process.env.ADMIN_DATABASE_URL = adminFx.url;
   await resetAdminPool();
@@ -162,6 +162,8 @@ afterAll(async () => {
   vi.unstubAllGlobals();
   resetRateLimiter();
   resetAdminRateLimiter();
+  runtimeEnv.ADMIN_NEON_VIEWER_API_KEY = originalNeonViewerApiKey;
+  runtimeEnv.ADMIN_NEON_ORG_ID = originalNeonOrgId;
   await adminFx?.stop();
 }, 60_000);
 

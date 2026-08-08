@@ -244,10 +244,68 @@ const unknownR2Capacity = {
   reason: 'not_configured' as const,
 };
 
+const githubCommits = {
+  dev: [
+    {
+      sha: '0d0a841fed2fe44a2233ccf2eb58052672f54932',
+      commit: {
+        message: 'Merge pull request #305 from patrickchin/codex/rebuild-wrangler-4',
+        committer: { date: '2026-08-07T20:00:01Z' },
+      },
+    },
+  ],
+  main: [
+    {
+      sha: '1ca389ac8f28c6cf8fbf0c7f5eca072f8670c129',
+      commit: {
+        message: 'chore(release): v0.1.65',
+        committer: { date: '2026-08-02T03:27:22Z' },
+      },
+    },
+  ],
+};
+
+const githubPulls = [
+  {
+    number: 304,
+    title: 'fix(site): fit screenshot dialog in Firefox',
+    draft: true,
+    updated_at: '2026-08-07T13:21:37Z',
+    head: {
+      ref: 'codex/fix-firefox-screenshot-dialog',
+      sha: '430b00c745173929727666e13d1190de76e433f5',
+    },
+    base: { ref: 'dev' },
+  },
+  {
+    number: 299,
+    title: 'chore(deps): bump the npm_and_yarn group',
+    draft: false,
+    updated_at: '2026-08-06T22:31:00Z',
+    head: {
+      ref: 'dependabot/npm_and_yarn/npm_and_yarn-39a367a8a6',
+      sha: 'b97f6885e869549568b3a24fa8bff1bdbfaf5042',
+    },
+    base: { ref: 'main' },
+  },
+];
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
+  });
+}
+
+function githubJson(body: unknown, remaining: number): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-RateLimit-Limit': '60',
+      'X-RateLimit-Remaining': String(remaining),
+      'X-RateLimit-Reset': '1786140366',
+    },
   });
 }
 
@@ -256,6 +314,11 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/readyz') return jsonResponse(productReadiness);
   if (url === 'https://api.example.test/admin/readyz') return jsonResponse(adminReadiness);
   if (url === '/_cf-pages-deployment.json') return jsonResponse(adminPagesMarker);
+  if (url.includes('/commits?sha=dev&per_page=1')) return githubJson(githubCommits.dev, 59);
+  if (url.includes('/commits?sha=main&per_page=1')) return githubJson(githubCommits.main, 58);
+  if (url.includes('/pulls?state=open&sort=updated&direction=desc&per_page=30')) {
+    return githubJson(githubPulls, 57);
+  }
   return null;
 }
 
@@ -347,7 +410,7 @@ async function renderAndRunDiagnostic(body: unknown, status = 200) {
   const user = userEvent.setup();
   render(<AdminOperations />);
   const section = await getDiagnosticSection();
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
   await user.click(within(section).getByRole('button', { name: 'Run diagnostic' }));
   return { fetchMock, section };
 }
@@ -365,7 +428,7 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('AdminOperations', () => {
-  it('checks both Harpa services and links to every active provider console', async () => {
+  it('checks Harpa deployments, GitHub, Neon, and R2 and links every provider console', async () => {
     const fetchMock = mockOperationsFetch();
 
     render(<AdminOperations />);
@@ -373,7 +436,7 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
@@ -382,8 +445,47 @@ describe('AdminOperations', () => {
         '/_cf-pages-deployment.json',
         'https://api.example.test/admin/operations/neon',
         'https://api.example.test/admin/operations/r2-capacity',
+        'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
+        'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
+        'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
       ]),
     );
+
+    const githubCalls = fetchMock.mock.calls.filter(
+      ([url]) =>
+        new URL(String(url), 'https://admin.example.test').origin === 'https://api.github.com',
+    );
+    expect(githubCalls.map(([url]) => String(url))).toEqual([
+      'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
+      'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
+      'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
+    ]);
+    for (const [, init] of githubCalls) {
+      expect(init).toMatchObject({
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      expect(new Headers(init?.headers).has('authorization')).toBe(false);
+    }
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'GitHub public repository' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'dev' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'main' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /0d0a841f/ }).getAttribute('href')).toBe(
+      'https://github.com/patrickchin/harpa-pro/commit/0d0a841fed2fe44a2233ccf2eb58052672f54932',
+    );
+    expect(screen.getByRole('link', { name: /1ca389ac/ }).getAttribute('href')).toBe(
+      'https://github.com/patrickchin/harpa-pro/commit/1ca389ac8f28c6cf8fbf0c7f5eca072f8670c129',
+    );
+    const pullRequests = screen.getByRole('list', { name: 'Open pull requests' });
+    expect(within(pullRequests).getByRole('link', { name: /#304/ }).getAttribute('href')).toBe(
+      'https://github.com/patrickchin/harpa-pro/pull/304',
+    );
+    expect(within(pullRequests).getByRole('link', { name: /#299/ })).toBeTruthy();
+    expect(screen.getByText('57 of 60 requests remain')).toBeTruthy();
+    expect(screen.getByTestId('github-pr-scroller').className).toContain('overflow-y-auto');
 
     for (const service of [
       'Fly.io',
@@ -408,7 +510,7 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses four fixed deployment reads on load and shared Refresh without polling', async () => {
+  it('uses nine fixed reads on load and eighteen after shared Refresh without polling', async () => {
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup();
     const expectedRequests = [
@@ -432,6 +534,7 @@ describe('AdminOperations', () => {
 
     render(<AdminOperations />);
 
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
     await waitFor(() => {
       for (const { url } of expectedRequests) {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
@@ -449,19 +552,96 @@ describe('AdminOperations', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+    expect(fetchMock).toHaveBeenCalledTimes(9);
     for (const { url } of expectedRequests) {
       expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
     }
     expect(intervalSpy).not.toHaveBeenCalled();
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     intervalSpy.mockRestore();
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(18));
     await waitFor(() => {
       for (const { url } of expectedRequests) {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(2);
       }
     });
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+  });
+
+  it('keeps repository links usable when the browser GitHub rate limit is exhausted', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (new URL(url, 'https://admin.example.test').origin === 'https://api.github.com') {
+        return new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
+          status: 403,
+          headers: {
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': '1786140366',
+          },
+        });
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('GitHub rate limit reached for this browser/IP.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open repository ↗' }).getAttribute('href')).toBe(
+      'https://github.com/patrickchin/harpa-pro',
+    );
+    expect(screen.getByRole('link', { name: 'Open pull requests ↗' }).getAttribute('href')).toBe(
+      'https://github.com/patrickchin/harpa-pro/pulls',
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(7);
+  });
+
+  it('identifies GitHub secondary throttling and provides retry guidance', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (new URL(url, 'https://admin.example.test').origin === 'https://api.github.com') {
+        return new Response(
+          JSON.stringify({ message: 'You have exceeded a secondary rate limit.' }),
+          {
+            status: 429,
+            headers: {
+              'Retry-After': '60',
+              'X-RateLimit-Limit': '60',
+              'X-RateLimit-Remaining': '12',
+              'X-RateLimit-Reset': '1786140366',
+            },
+          },
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(
+      await screen.findByText('GitHub temporarily throttled requests for this browser/IP.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Retry after 60 seconds.')).toBeTruthy();
+    expect(screen.getByText('12 of 60 requests remain')).toBeTruthy();
   });
 
   it('renders the full API identity, independent migration heads, and admin Pages marker', async () => {
@@ -804,11 +984,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(18));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -1049,7 +1229,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(12);
+    expect(fetchMock).toHaveBeenCalledTimes(18);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -1150,7 +1330,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(12);
+    expect(fetchMock).toHaveBeenCalledTimes(18);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {
@@ -1395,7 +1575,7 @@ describe('AdminOperations', () => {
       within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }),
     ).toHaveProperty('disabled', false);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
@@ -1406,9 +1586,9 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(18));
 
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(
@@ -1427,7 +1607,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
     const runButton = within(diagnosticSection).getByRole('button', {
       name: 'Run diagnostic',
     });
@@ -1600,7 +1780,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
     await user.click(within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }));
 
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();

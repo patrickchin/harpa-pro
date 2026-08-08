@@ -15,9 +15,12 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 ```
 
 The root route renders the business activity console. `/operations` provides
-read-only Harpa deployment identity and readiness, links to external service
-consoles, and bounded provider observations. Unknown browser paths return a
-static 404 instead of falling back to the console. `/admin/activity` and the
+read-only Harpa deployment identity and readiness, a no-token public GitHub
+branch/PR snapshot, bounded Neon inventory, bounded R2 capacity, and links to
+external service consoles. A separately triggered report-generation diagnostic
+is a synthetic mutation of one fixed test report and may consume AI quota; it
+is not part of the read-only refresh. Unknown browser paths return a static 404
+instead of falling back to the console. `/admin/activity` and the
 `/admin/operations/*` routes remain API resource paths, not page URLs.
 
 ## Deployment identity

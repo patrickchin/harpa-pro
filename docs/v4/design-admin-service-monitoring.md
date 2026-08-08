@@ -6,7 +6,8 @@
 The provider quota percentage, R2 capacity, and deployment-identity extensions
 below are drafts for unmerged stacked pull requests. The Neon usage route
 reuses the existing observer pair. The R2 change does not provision its
-observer credential.
+observer credential. The storage lifecycle observer is a separate read-only
+stack and adds no credential.
 
 ## Goal
 
@@ -101,10 +102,10 @@ GitHub request, token, or credential is added.
 
 Provider money, token, invoice, and credit balances remain `Unknown`. These
 usage and request-budget percentages are not provider billing balances. With
-this route in the stack, the browser makes 10 authenticated reads after
-session confirmation and another 10 only on manual **Refresh**, for 20 total
-after one Refresh. It does not poll. The report generation live canary remains
-a separate manual POST.
+all read observers in the stack, the browser makes 11 fixed GET reads after
+session confirmation. It makes another 11 only on manual **Refresh**, for 22
+total after one Refresh. It does not poll. The report generation live canary
+remains a separate manual POST.
 
 ## R2 capacity extension
 
@@ -152,6 +153,29 @@ The two readiness requests retain their credentialed administrator-origin
 policy. Strict browser parsers reject extra or unsafe fields, and raw readiness
 messages never enter UI state.
 
+## Storage lifecycle extension
+
+The storage lifecycle observer is a first-party database extension. See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md)
+for the full contract. `GET /admin/operations/storage-lifecycle` uses the
+shared trusted-Fly-IP budget, dedicated admin session, and a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. It reads the singleton lifecycle rollout row, calls the
+lease-enforcement function, and aggregates durable cleanup jobs. The route
+accepts no body or query. It does not retry, mutate state, or call a provider.
+
+The card shows lifecycle arming, the exact account-deletion availability gate,
+and bounded queue counts. It excludes payloads, user IDs, object keys, raw
+errors, and Fly identifiers. A recorded rollout row does not prove that a
+worker is live. An empty queue does not prove that delayed cleanup can execute.
+
+The browser calls this route once after session confirmation and once on
+shared **Refresh**. It does not poll. A failure affects only the storage
+lifecycle card.
+
 ## Deliberate limits
 
 - Do not add provider credentials to the browser. Secret-backed provider reads
@@ -176,7 +200,7 @@ that the solo operator must maintain.
 ## Phased extensions
 
 The operations page may grow through independent pull requests, but every
-value must remain attributable to one of four evidence classes:
+value must remain attributable to one of five evidence classes:
 
 1. **Harpa readiness** — customer-facing probes that prove the API and its
    databases are ready.
@@ -187,7 +211,9 @@ value must remain attributable to one of four evidence classes:
    `remaining`, and `credit balance` are different fields; unavailable fields
    render as `Unknown` and are never derived without a documented provider
    contract.
-4. **Canary actions:** explicit, audited, rate-limited checks that may
+4. **Lifecycle database state:** bounded rollout and durable queue facts. This
+   state does not prove worker liveness or provider health.
+5. **Canary actions:** explicit, audited, rate-limited checks that may
    incur provider cost. They must not mutate infrastructure or ordinary user
    data.
 
@@ -278,12 +304,15 @@ the full contract.
   no-store response, and absence of retries.
 - Neon usage tests prove exact Free-plan and Viewer gates, the 22-call read-only
   ceiling, strict redaction, fixed references, transfer completeness, the
-  separate 12-request budget, 10/20 browser reads, and no polling.
+  separate 12-request budget, 11/22 browser reads, and no polling.
 - R2 capacity tests prove strict redaction, paired configuration, fixed
   provider calls, bounded output, caveats, rate limits, and manual refresh.
 - Deployment-identity tests prove the four fixed reads, independent partial
   states, strict redaction, full identifiers, exact CORS policy, and absence of
   polling.
+- Storage lifecycle tests prove one fixed statement, the five-second deadline,
+  separate 12-request budget, strict redaction, 11/22 reads, and the explicit
+  worker-liveness caveat.
 - Report live-canary tests prove its development-only gate, dedicated cookie,
   exact Origin, session-derived CSRF, fixed target, live usage proof, bounded
   preview, exact cleanup, rate limit, redaction, and manual-only mutation.

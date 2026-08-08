@@ -697,6 +697,171 @@ export const r2CapacityObservation = z
     });
   });
 
+export const storageLifecycleReasons = [
+  'rollout_state_missing',
+  'timeout',
+  'database_unavailable',
+  'invalid_response',
+] as const;
+export const storageLifecycleReason = z.enum(storageLifecycleReasons);
+
+export const storageLifecycleCaveats = [
+  'db_state_not_worker_liveness',
+  'queue_counts_not_provider_health',
+  'empty_queue_not_execution_proof',
+] as const;
+export const storageLifecycleCaveat = z.enum(storageLifecycleCaveats);
+
+export const storageLifecycleRollout = z
+  .object({
+    armedAt: isoDateTime.nullable(),
+    enforceAfter: isoDateTime.nullable(),
+    accountDeleteEnabled: z.boolean(),
+    leaseEnforcementActive: z.boolean(),
+    accountDeletionAvailable: z.boolean(),
+    updatedAt: isoDateTime,
+  })
+  .strict();
+
+export const storageLifecycleJobs = z
+  .object({
+    total: safeCount,
+    initial: safeCount,
+    final: safeCount,
+    dueNow: safeCount,
+    scheduled: safeCount,
+    activeClaims: safeCount,
+    staleClaims: safeCount,
+    retrying: safeCount,
+    maxAttemptCount: safeCount,
+    oldestDueAt: isoDateTime.nullable(),
+    nextRunAfter: isoDateTime.nullable(),
+  })
+  .strict();
+
+const exactStorageLifecycleCaveats = z.tuple([
+  z.literal('db_state_not_worker_liveness'),
+  z.literal('queue_counts_not_provider_health'),
+  z.literal('empty_queue_not_execution_proof'),
+]);
+
+export const availableStorageLifecycleObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('available'),
+    rollout: storageLifecycleRollout,
+    jobs: storageLifecycleJobs,
+    caveats: exactStorageLifecycleCaveats,
+  })
+  .strict();
+
+export const unknownStorageLifecycleObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('unknown'),
+    reason: storageLifecycleReason,
+  })
+  .strict();
+
+export const storageLifecycleObservation = z
+  .discriminatedUnion('status', [
+    availableStorageLifecycleObservation,
+    unknownStorageLifecycleObservation,
+  ])
+  .superRefine((observation, ctx) => {
+    if (observation.status === 'unknown') return;
+
+    const observedAt = Date.parse(observation.observedAt);
+    const enforceAfter =
+      observation.rollout.enforceAfter === null
+        ? null
+        : Date.parse(observation.rollout.enforceAfter);
+    const expectedLeaseEnforcement = enforceAfter !== null && enforceAfter <= observedAt;
+    if (observation.rollout.leaseEnforcementActive !== expectedLeaseEnforcement) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rollout', 'leaseEnforcementActive'],
+        message: 'leaseEnforcementActive must match the database-clock enforcement threshold',
+      });
+    }
+
+    const expectedAccountDeletion =
+      observation.rollout.leaseEnforcementActive && observation.rollout.accountDeleteEnabled;
+    if (observation.rollout.accountDeletionAvailable !== expectedAccountDeletion) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rollout', 'accountDeletionAvailable'],
+        message: 'accountDeletionAvailable must match both rollout gates',
+      });
+    }
+
+    const jobs = observation.jobs;
+    if (jobs.initial + jobs.final !== jobs.total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'total'],
+        message: 'initial and final job counts must equal total',
+      });
+    }
+    if (jobs.dueNow + jobs.scheduled !== jobs.total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'total'],
+        message: 'due-now and scheduled job counts must equal total',
+      });
+    }
+    if (jobs.activeClaims + jobs.staleClaims > jobs.dueNow) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'activeClaims'],
+        message: 'active and stale claim counts cannot exceed due-now work',
+      });
+    }
+    if (jobs.retrying > jobs.total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'retrying'],
+        message: 'retrying jobs cannot exceed total jobs',
+      });
+    }
+
+    if ((jobs.oldestDueAt === null) !== (jobs.dueNow === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'oldestDueAt'],
+        message: 'oldestDueAt must exist exactly when due-now work exists',
+      });
+    } else if (jobs.oldestDueAt !== null && Date.parse(jobs.oldestDueAt) > observedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'oldestDueAt'],
+        message: 'oldestDueAt cannot be newer than the observation clock',
+      });
+    }
+
+    if ((jobs.nextRunAfter === null) !== (jobs.scheduled === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'nextRunAfter'],
+        message: 'nextRunAfter must exist exactly when scheduled work exists',
+      });
+    } else if (jobs.nextRunAfter !== null && Date.parse(jobs.nextRunAfter) <= observedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'nextRunAfter'],
+        message: 'nextRunAfter must be newer than the observation clock',
+      });
+    }
+
+    if (jobs.total === 0 && jobs.maxAttemptCount !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['jobs', 'maxAttemptCount'],
+        message: 'an empty queue must have a zero maximum attempt count',
+      });
+    }
+  });
+
 const diagnosticDurationMs = z.number().int().nonnegative().max(75_000).safe();
 const diagnosticObservationDurationMs = z.number().int().nonnegative().max(80_000).safe();
 const diagnosticIdentifier = z
@@ -1062,6 +1227,11 @@ export type R2OperationEstimate = z.infer<ReturnType<typeof r2OperationEstimate>
 export type R2OperationsObservation = z.infer<typeof r2OperationsObservation>;
 export type R2FreeTierReference = z.infer<typeof r2FreeTierReference>;
 export type R2CapacityObservation = z.infer<typeof r2CapacityObservation>;
+export type StorageLifecycleReason = z.infer<typeof storageLifecycleReason>;
+export type StorageLifecycleCaveat = z.infer<typeof storageLifecycleCaveat>;
+export type StorageLifecycleRollout = z.infer<typeof storageLifecycleRollout>;
+export type StorageLifecycleJobs = z.infer<typeof storageLifecycleJobs>;
+export type StorageLifecycleObservation = z.infer<typeof storageLifecycleObservation>;
 export type ReportGenerateDiagnosticWarning = z.infer<typeof reportGenerateDiagnosticWarning>;
 export type ReportGenerateDiagnosticPhase = z.infer<typeof reportGenerateDiagnosticPhase>;
 export type ReportGenerateDiagnosticFailureReason = z.infer<

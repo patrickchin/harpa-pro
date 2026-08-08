@@ -418,6 +418,53 @@ const unknownR2Capacity = {
   reason: 'not_configured' as const,
 };
 
+const availableStorageLifecycle = {
+  observedAt,
+  status: 'available' as const,
+  rollout: {
+    armedAt: '2026-08-08T05:00:00.000Z',
+    enforceAfter: '2026-08-08T05:10:00.000Z',
+    accountDeleteEnabled: false,
+    leaseEnforcementActive: true,
+    accountDeletionAvailable: false,
+    updatedAt: '2026-08-08T05:20:00.000Z',
+  },
+  jobs: {
+    total: 7,
+    initial: 4,
+    final: 3,
+    dueNow: 5,
+    scheduled: 2,
+    activeClaims: 1,
+    staleClaims: 2,
+    retrying: 3,
+    maxAttemptCount: 5,
+    oldestDueAt: '2026-08-08T05:15:00.000Z',
+    nextRunAfter: '2026-08-08T05:45:00.000Z',
+  },
+  caveats: [
+    'db_state_not_worker_liveness',
+    'queue_counts_not_provider_health',
+    'empty_queue_not_execution_proof',
+  ] as const,
+};
+
+const missingArmingMarkerStorageLifecycle = {
+  ...availableStorageLifecycle,
+  rollout: {
+    ...availableStorageLifecycle.rollout,
+    armedAt: null,
+    accountDeleteEnabled: true,
+    accountDeletionAvailable: true,
+  },
+};
+
+const unknownStorageLifecycle = {
+  observedAt,
+  status: 'unknown' as const,
+  reason: 'rollout_state_missing' as const,
+};
+
 const githubCommits = {
   dev: [
     {
@@ -488,6 +535,9 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/readyz') return jsonResponse(productReadiness);
   if (url === 'https://api.example.test/admin/readyz') return jsonResponse(adminReadiness);
   if (url === '/_cf-pages-deployment.json') return jsonResponse(adminPagesMarker);
+  if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+    return jsonResponse(availableStorageLifecycle);
+  }
   if (url === 'https://api.example.test/admin/operations/neon-usage') {
     return jsonResponse(unknownNeonUsage);
   }
@@ -503,6 +553,7 @@ function mockOperationsFetch(
   inventory: unknown = availableInventory,
   r2Capacity: unknown = availableR2Capacity,
   neonUsage: unknown = availableNeonUsage,
+  storageLifecycle: unknown = availableStorageLifecycle,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -515,6 +566,9 @@ function mockOperationsFetch(
     if (url === 'https://api.example.test/admin/operations/neon-usage') {
       return jsonResponse(neonUsage);
     }
+    if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+      return jsonResponse(storageLifecycle);
+    }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
     throw new Error(`Unexpected request: ${url}`);
@@ -526,6 +580,7 @@ function mockDiagnosticFetch(
   inventory: unknown = availableInventory,
   r2Capacity: unknown = availableR2Capacity,
   neonUsage: unknown = availableNeonUsage,
+  storageLifecycle: unknown = availableStorageLifecycle,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -540,6 +595,9 @@ function mockDiagnosticFetch(
     }
     if (url === 'https://api.example.test/admin/operations/neon-usage') {
       return jsonResponse(neonUsage);
+    }
+    if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+      return jsonResponse(storageLifecycle);
     }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
@@ -567,6 +625,22 @@ function neonUsageRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
   return fetchMock.mock.calls.filter(
     ([url]) => String(url) === 'https://api.example.test/admin/operations/neon-usage',
   );
+}
+
+function storageLifecycleRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/storage-lifecycle',
+  );
+}
+
+async function getStorageLifecycleSection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'Storage lifecycle',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
 }
 async function getR2CapacitySection() {
   const heading = await screen.findByRole('heading', {
@@ -745,13 +819,14 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(11));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
         'https://api.example.test/readyz',
         'https://api.example.test/admin/readyz',
         '/_cf-pages-deployment.json',
+        'https://api.example.test/admin/operations/storage-lifecycle',
         'https://api.example.test/admin/operations/neon',
         'https://api.example.test/admin/operations/neon-usage',
         'https://api.example.test/admin/operations/r2-capacity',
@@ -835,7 +910,7 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses ten fixed reads on load and twenty after shared Refresh without polling or live-canary autorun', async () => {
+  it('uses eleven fixed reads on load and twenty-two after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -857,6 +932,10 @@ describe('AdminOperations', () => {
         credentials: 'same-origin',
       },
       {
+        url: 'https://api.example.test/admin/operations/storage-lifecycle',
+        credentials: 'include',
+      },
+      {
         url: 'https://api.example.test/admin/operations/neon-usage',
         credentials: 'include',
       },
@@ -865,7 +944,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     let canarySection = await getCanarySection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(11));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -883,7 +962,7 @@ describe('AdminOperations', () => {
     }
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -894,7 +973,7 @@ describe('AdminOperations', () => {
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(22));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -907,11 +986,308 @@ describe('AdminOperations', () => {
     expect(canarySection.isConnected).toBe(true);
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(fetchMock).toHaveBeenCalledTimes(22);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+  });
+
+  it('shows a distinct loading state until the storage lifecycle observation arrives', async () => {
+    let resolveStorageLifecycle!: (response: Response) => void;
+    const storageLifecycleResponse = new Promise<Response>((resolve) => {
+      resolveStorageLifecycle = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+        return storageLifecycleResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getStorageLifecycleSection();
+    expect(within(section).getByText('Loading storage lifecycle…')).toBeTruthy();
+
+    await act(async () => {
+      resolveStorageLifecycle(jsonResponse(availableStorageLifecycle));
+      await storageLifecycleResponse;
+    });
+    expect(await within(section).findByText('Recorded')).toBeTruthy();
+  });
+
+  it('renders storage lifecycle gate state, queue labels, and the explicit no-worker-liveness caveat', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      availableR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getStorageLifecycleSection();
+    expect(await within(section).findByText('Recorded')).toBeTruthy();
+    expect(within(section).getByText('Active')).toBeTruthy();
+    expect(within(section).getByText('Blocked')).toBeTruthy();
+    expect(within(section).queryByText(/^Available$/)).toBeNull();
+    for (const timestamp of [
+      '2026-08-08T05:00:00.000Z',
+      '2026-08-08T05:10:00.000Z',
+      '2026-08-08T05:20:00.000Z',
+      '2026-08-08T05:15:00.000Z',
+      '2026-08-08T05:45:00.000Z',
+    ]) {
+      expect(section.querySelector(`time[datetime="${timestamp}"]`)).toBeTruthy();
+    }
+    for (const label of [
+      'Due now',
+      'Scheduled',
+      'Active claims',
+      'Stale claims',
+      'Retrying',
+      'Maximum attempts',
+    ]) {
+      expect(within(section).getByText(label)).toBeTruthy();
+    }
+    for (const value of ['7', '4', '3', '2', '1', '5']) {
+      expect(section.textContent).toContain(value);
+    }
+    expect(within(section).getByText('Database state is not worker liveness.')).toBeTruthy();
+    expect(within(section).getByText('Queue counts do not prove provider health.')).toBeTruthy();
+    expect(within(section).getByText('An empty queue does not prove execution.')).toBeTruthy();
+    expect(section.textContent).toContain(
+      'This database state does not prove a storage worker is running now. Use Fly worker verification and deployment evidence for executor proof.',
+    );
+  });
+
+  it('shows a missing arming marker while preserving active enforcement and exact account-deletion availability', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      availableR2Capacity,
+      availableNeonUsage,
+      missingArmingMarkerStorageLifecycle,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getStorageLifecycleSection();
+    expect(await within(section).findByText('Missing')).toBeTruthy();
+    expect(within(section).getByText('Active')).toBeTruthy();
+    expect(within(section).getByText('Available')).toBeTruthy();
+    expect(within(section).queryByText(/^Blocked$/)).toBeNull();
+    expect(
+      section.querySelector(
+        `time[datetime="${missingArmingMarkerStorageLifecycle.rollout.enforceAfter}"]`,
+      ),
+    ).toBeTruthy();
+    expect(
+      section.querySelector(
+        `time[datetime="${missingArmingMarkerStorageLifecycle.rollout.updatedAt}"]`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('renders unknown storage lifecycle state without implying worker or provider health', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      availableR2Capacity,
+      availableNeonUsage,
+      unknownStorageLifecycle,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getStorageLifecycleSection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Storage lifecycle rollout state is missing.')).toBeTruthy();
+    expect(within(section).queryByText(/worker is running/i)).toBeNull();
+    expect(within(section).queryByText(/healthy/i)).toBeNull();
+  });
+
+  it('keeps a storage lifecycle failure independent from the other evidence surfaces', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+        return jsonResponse({ observedAt, status: 'unknown', reason: 'database_unavailable' });
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getStorageLifecycleSection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Storage lifecycle is temporarily unavailable.')).toBeTruthy();
+    for (const preservedValue of [
+      apiGitCommit,
+      productMigrationHead,
+      adminMigrationHead,
+      adminPagesCommit,
+    ]) {
+      expect(await screen.findByText(preservedValue)).toBeTruthy();
+    }
+    expect(await screen.findByRole('heading', { level: 2, name: 'Neon Free usage' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: 'R2 capacity' })).toBeTruthy();
+  });
+
+  it('returns the whole page to sign-in when the storage lifecycle observer rejects an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+        return jsonResponse(
+          { error: { code: 'UNAUTHORIZED', message: 'expired-storage-cookie-detail' } },
+          401,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Storage lifecycle' })).toBeNull();
+    expect(document.body.textContent).not.toContain('expired-storage-cookie-detail');
+    expect(document.documentElement.outerHTML).not.toContain('expired-storage-cookie-detail');
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects and redacts storage lifecycle payloads, raw errors, and malformed gate correlations', async () => {
+    const forbiddenValues = [
+      'usr_sensitive_123',
+      'users/usr_sensitive_123/avatar/',
+      'projects/prj_sensitive_456/',
+      'storage delete failed for private/object-key.jpg',
+      'raw SQL detail must never render',
+    ];
+    const poisonedStorageLifecycle = {
+      ...availableStorageLifecycle,
+      rollout: {
+        ...availableStorageLifecycle.rollout,
+        accountDeleteEnabled: true,
+        accountDeletionAvailable: false,
+      },
+      jobs: {
+        ...availableStorageLifecycle.jobs,
+        staleClaims: -1,
+      },
+      queue: {
+        rows: [
+          {
+            userId: forbiddenValues[0],
+            exactKeys: [forbiddenValues[1]],
+            sweepPrefixes: [forbiddenValues[2]],
+            lastError: forbiddenValues[3],
+          },
+        ],
+      },
+      sqlError: forbiddenValues[4],
+    };
+    mockOperationsFetch(
+      emptyInventory,
+      availableR2Capacity,
+      availableNeonUsage,
+      poisonedStorageLifecycle,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getStorageLifecycleSection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(
+      within(section).getByText('Storage lifecycle returned an invalid response.'),
+    ).toBeTruthy();
+    const renderedText = document.body.textContent ?? '';
+    const serializedDom = document.documentElement.outerHTML;
+    for (const value of forbiddenValues) {
+      expect(renderedText).not.toContain(value);
+      expect(serializedDom).not.toContain(value);
+    }
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('does not let an older overlapping storage lifecycle refresh overwrite newer evidence', async () => {
+    let lifecycleAttempt = 0;
+    let resolveOlderRefresh!: (response: Response) => void;
+    let resolveNewerRefresh!: (response: Response) => void;
+    const olderRefresh = new Promise<Response>((resolve) => {
+      resolveOlderRefresh = resolve;
+    });
+    const newerRefresh = new Promise<Response>((resolve) => {
+      resolveNewerRefresh = resolve;
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
+        lifecycleAttempt += 1;
+        if (lifecycleAttempt === 2) return olderRefresh;
+        if (lifecycleAttempt === 3) return newerRefresh;
+        return jsonResponse(unknownStorageLifecycle);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+    const refreshButton = await screen.findByRole('button', { name: 'Refresh' });
+    expect(await screen.findByText('Storage lifecycle rollout state is missing.')).toBeTruthy();
+
+    act(() => {
+      refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await waitFor(() => expect(storageLifecycleRequests(fetchMock)).toHaveLength(3));
+
+    await act(async () => {
+      resolveNewerRefresh(jsonResponse(availableStorageLifecycle));
+      await newerRefresh;
+    });
+    expect(await screen.findByText('Recorded')).toBeTruthy();
+
+    await act(async () => {
+      resolveOlderRefresh(jsonResponse(unknownStorageLifecycle));
+      await olderRefresh;
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Storage lifecycle rollout state is missing.')).toBeNull(),
+    );
+    expect(screen.getByText('Recorded')).toBeTruthy();
   });
 
   it('keeps repository data but marks a contradictory GitHub request budget Unknown', async () => {
@@ -1099,7 +1475,7 @@ describe('AdminOperations', () => {
     );
     // The sequential GitHub loader stops after the first rate-limited request,
     // so the two remaining public GitHub reads are intentionally skipped.
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -1487,11 +1863,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(22));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -1734,7 +2110,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(fetchMock).toHaveBeenCalledTimes(22);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -1880,7 +2256,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(fetchMock).toHaveBeenCalledTimes(22);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
@@ -2162,7 +2538,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(fetchMock).toHaveBeenCalledTimes(22);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {

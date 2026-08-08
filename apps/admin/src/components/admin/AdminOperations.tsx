@@ -14,6 +14,8 @@ import type {
   R2OperationEstimate,
   R2StorageClassSnapshot,
   ReportGenerateDiagnosticObservation,
+  StorageLifecycleObservation,
+  StorageLifecycleReason,
 } from '@harpa/api-contract';
 import { operations as operationSchemas } from '@harpa/api-contract/schemas';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
@@ -138,6 +140,12 @@ type R2CapacityState =
   | { status: 'ready'; observation: R2CapacityObservation };
 type R2CapacityFetchResult =
   { status: 'ready'; observation: R2CapacityObservation } | { status: 'unauthorized' };
+type StorageLifecycleState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; observation: StorageLifecycleObservation };
+type StorageLifecycleFetchResult =
+  { status: 'ready'; observation: StorageLifecycleObservation } | { status: 'unauthorized' };
 type ReportCanaryState =
   | { status: 'idle' }
   | { status: 'running' }
@@ -163,6 +171,10 @@ type ReportCanaryWarning = Extract<
   ReportGenerateDiagnosticObservation,
   { status: 'warning' }
 >['warnings'][number];
+type AvailableStorageLifecycleObservation = Extract<
+  StorageLifecycleObservation,
+  { status: 'available' }
+>;
 
 type ActiveNeonUsageObservation = Exclude<NeonUsageObservation, { status: 'unknown' }>;
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
@@ -968,6 +980,73 @@ async function loadR2Capacity(): Promise<R2CapacityFetchResult> {
   return {
     status: 'ready',
     observation: parsed.success ? parsed.data : unknownR2CapacityObservation('invalid_response'),
+  };
+}
+
+function unknownStorageLifecycleObservation(
+  reason: StorageLifecycleReason,
+): StorageLifecycleObservation {
+  return {
+    observedAt: new Date().toISOString(),
+    status: 'unknown',
+    reason,
+  };
+}
+
+function storageLifecycleReasonCopy(reason: StorageLifecycleReason): string {
+  switch (reason) {
+    case 'rollout_state_missing':
+      return 'Storage lifecycle rollout state is missing.';
+    case 'timeout':
+      return 'Storage lifecycle request timed out.';
+    case 'database_unavailable':
+      return 'Storage lifecycle is temporarily unavailable.';
+    case 'invalid_response':
+      return 'Storage lifecycle returned an invalid response.';
+  }
+}
+
+async function loadStorageLifecycle(): Promise<StorageLifecycleFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/storage-lifecycle`, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownStorageLifecycleObservation('database_unavailable'),
+    };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (!response.ok) {
+    return {
+      status: 'ready',
+      observation: unknownStorageLifecycleObservation(
+        response.status === 408 || response.status === 504 ? 'timeout' : 'database_unavailable',
+      ),
+    };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownStorageLifecycleObservation('invalid_response'),
+    };
+  }
+
+  const parsed = operationSchemas.storageLifecycleObservation.safeParse(body);
+  return {
+    status: 'ready',
+    observation: parsed.success
+      ? parsed.data
+      : unknownStorageLifecycleObservation('invalid_response'),
   };
 }
 
@@ -1981,6 +2060,181 @@ function R2Capacity({ state }: { state: R2CapacityState }) {
   );
 }
 
+const storageLifecycleNumber = new Intl.NumberFormat('en-US');
+
+function storageLifecycleCaveatCopy(
+  caveat: AvailableStorageLifecycleObservation['caveats'][number],
+): string {
+  switch (caveat) {
+    case 'db_state_not_worker_liveness':
+      return 'Database state is not worker liveness.';
+    case 'queue_counts_not_provider_health':
+      return 'Queue counts do not prove provider health.';
+    case 'empty_queue_not_execution_proof':
+      return 'An empty queue does not prove execution.';
+  }
+}
+
+function LifecycleTimestamp({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="rounded-lg bg-secondary p-4">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{label}</dt>
+      <dd className="mt-2 break-all text-sm font-medium text-ink">
+        {value ? <time dateTime={value}>{value}</time> : 'Not recorded'}
+      </dd>
+    </div>
+  );
+}
+
+function LifecycleCount({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-secondary p-4">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{label}</dt>
+      <dd className="mt-2 text-lg font-semibold text-ink">
+        {storageLifecycleNumber.format(value)}
+      </dd>
+    </div>
+  );
+}
+
+function StorageLifecycleDetails({
+  observation,
+}: {
+  observation: AvailableStorageLifecycleObservation;
+}) {
+  const { rollout, jobs } = observation;
+
+  return (
+    <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-xs text-ink-soft">
+          Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
+        </p>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-ink-soft">
+          Database snapshot
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-lg bg-secondary p-4">
+          <h3 className="text-sm font-semibold text-ink">Rollout marker</h3>
+          <p className="mt-2 text-lg font-semibold text-ink">
+            {rollout.armedAt ? 'Recorded' : 'Missing'}
+          </p>
+          <p className="mt-1 text-xs text-ink-soft">
+            Recorded means the rollout row contains its deployment arming marker.
+          </p>
+        </div>
+        <div className="rounded-lg bg-secondary p-4">
+          <h3 className="text-sm font-semibold text-ink">Lease enforcement</h3>
+          <p className="mt-2 text-lg font-semibold text-ink">
+            {rollout.leaseEnforcementActive ? 'Active' : 'Inactive'}
+          </p>
+          <p className="mt-1 text-xs text-ink-soft">
+            Active means the enforcement threshold has passed according to the database clock.
+          </p>
+        </div>
+        <div className="rounded-lg bg-secondary p-4">
+          <h3 className="text-sm font-semibold text-ink">Account deletion</h3>
+          <p className="mt-2 text-lg font-semibold text-ink">
+            {rollout.accountDeletionAvailable ? 'Available' : 'Blocked'}
+          </p>
+          <p className="mt-1 text-xs text-ink-soft">
+            Available means lease enforcement and the independent account-delete flag are active.
+          </p>
+          <p className="mt-2 text-xs font-medium text-ink">
+            Independent flag: {rollout.accountDeleteEnabled ? 'Enabled' : 'Disabled'}
+          </p>
+        </div>
+      </div>
+
+      <dl className="mt-4 grid gap-3 md:grid-cols-3">
+        <LifecycleTimestamp label="Armed at" value={rollout.armedAt} />
+        <LifecycleTimestamp label="Enforce after" value={rollout.enforceAfter} />
+        <LifecycleTimestamp label="Rollout updated" value={rollout.updatedAt} />
+      </dl>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Durable cleanup queue</h3>
+        <p className="mt-1 text-sm text-ink-soft">
+          Due now means work is currently eligible to be claimed from the queue. Stale claims have
+          outlived the worker&apos;s five-minute claim lease.
+        </p>
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <LifecycleCount label="Total" value={jobs.total} />
+          <LifecycleCount label="Initial" value={jobs.initial} />
+          <LifecycleCount label="Final" value={jobs.final} />
+          <LifecycleCount label="Due now" value={jobs.dueNow} />
+          <LifecycleCount label="Scheduled" value={jobs.scheduled} />
+          <LifecycleCount label="Active claims" value={jobs.activeClaims} />
+          <LifecycleCount label="Stale claims" value={jobs.staleClaims} />
+          <LifecycleCount label="Retrying" value={jobs.retrying} />
+          <LifecycleCount label="Maximum attempts" value={jobs.maxAttemptCount} />
+        </dl>
+        <dl className="mt-3 grid gap-3 md:grid-cols-2">
+          <LifecycleTimestamp label="Oldest due" value={jobs.oldestDueAt} />
+          <LifecycleTimestamp label="Next scheduled" value={jobs.nextRunAfter} />
+        </dl>
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Interpretation notes</h3>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+          {observation.caveats.map((caveat) => (
+            <li key={caveat}>{storageLifecycleCaveatCopy(caveat)}</li>
+          ))}
+        </ul>
+        <p className="mt-3 text-sm font-medium text-ink">
+          This database state does not prove a storage worker is running now. Use Fly worker
+          verification and deployment evidence for executor proof.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StorageLifecycle({ state }: { state: StorageLifecycleState }) {
+  if (state.status === 'idle') return null;
+
+  return (
+    <section className="mt-8" aria-labelledby="storage-lifecycle-title">
+      <div>
+        <h2 className="text-xl font-semibold text-ink" id="storage-lifecycle-title">
+          Storage lifecycle
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-ink-soft">
+          Read-only rollout and durable queue state from the application database.
+        </p>
+      </div>
+
+      <div className="mt-4" aria-live="polite">
+        {state.status === 'loading' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 text-sm text-ink-soft shadow-sm">
+            Loading storage lifecycle…
+          </div>
+        ) : state.observation.status === 'unknown' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-xs text-ink-soft">
+                Observed{' '}
+                <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+              </p>
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-ink-soft">
+                Unknown
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">
+              {storageLifecycleReasonCopy(state.observation.reason)}
+            </p>
+          </div>
+        ) : (
+          <StorageLifecycleDetails observation={state.observation} />
+        )}
+      </div>
+    </section>
+  );
+}
+
 const canaryNumber = new Intl.NumberFormat('en-US');
 
 function CanaryBadge({
@@ -2695,6 +2949,9 @@ function Operations({
 }) {
   const { apiBaseUrl } = getPublicEnv();
   const [deployment, setDeployment] = useState<DeploymentState>(INITIAL_DEPLOYMENT_STATE);
+  const [storageLifecycle, setStorageLifecycle] = useState<StorageLifecycleState>({
+    status: 'idle',
+  });
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
   const [neonUsage, setNeonUsage] = useState<NeonUsageState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
@@ -2711,32 +2968,36 @@ function Operations({
     refreshGeneration.current = generation;
     const isCurrent = () => refreshGeneration.current === generation;
     setRefreshing(true);
+    setStorageLifecycle({ status: 'loading' });
     setNeonInventory({ status: 'loading' });
     setNeonUsage({ status: 'loading' });
     setR2Capacity({ status: 'loading' });
     setGitHub({ status: 'checking' });
     try {
-      const [, , , , inventory, usageObservation, capacity, githubStatus] = await Promise.all([
-        loadApiIdentity().then((api) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, api }));
-        }),
-        loadReadiness('/readyz').then((product) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, product }));
-        }),
-        loadReadiness('/admin/readyz').then((admin) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
-        }),
-        loadPagesMarker().then((pages) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
-        }),
-        loadNeonInventory(),
-        loadNeonUsage(),
-        loadR2Capacity(),
-        loadGitHubStatus(),
-      ]);
+      const [, , , , lifecycle, inventory, usageObservation, capacity, githubStatus] =
+        await Promise.all([
+          loadApiIdentity().then((api) => {
+            if (isCurrent()) setDeployment((current) => ({ ...current, api }));
+          }),
+          loadReadiness('/readyz').then((product) => {
+            if (isCurrent()) setDeployment((current) => ({ ...current, product }));
+          }),
+          loadReadiness('/admin/readyz').then((admin) => {
+            if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
+          }),
+          loadPagesMarker().then((pages) => {
+            if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
+          }),
+          loadStorageLifecycle(),
+          loadNeonInventory(),
+          loadNeonUsage(),
+          loadR2Capacity(),
+          loadGitHubStatus(),
+        ]);
       if (!isCurrent()) return;
       setGitHub(githubStatus);
       if (
+        lifecycle.status === 'unauthorized' ||
         inventory.status === 'unauthorized' ||
         usageObservation.status === 'unauthorized' ||
         capacity.status === 'unauthorized'
@@ -2744,6 +3005,7 @@ function Operations({
         onSessionExpired();
         return;
       }
+      setStorageLifecycle(lifecycle);
       setNeonInventory(inventory);
       setNeonUsage(usageObservation);
       setR2Capacity(capacity);
@@ -2831,6 +3093,8 @@ function Operations({
           deployment drift.
         </p>
       </section>
+
+      <StorageLifecycle state={storageLifecycle} />
 
       <ReportCanary state={reportCanary} onRun={() => void handleRunCanary()} />
 

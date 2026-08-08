@@ -3,6 +3,9 @@
 **Status:** Implemented and deployed. Current administrator provisioning is
 provider-managed and `UNKNOWN` from the repository.
 
+The Fly inventory additions below are an unmerged draft. They do not provision
+or enable a Fly observer credential.
+
 ## Context
 
 The first business-activity console reused the app's Better Auth user and
@@ -47,6 +50,9 @@ boundary. It reuses the existing `ADMIN_NEON_VIEWER_API_KEY` and
 The storage lifecycle stack adds
 `GET /admin/operations/storage-lifecycle` to the same boundary. It reads the
 application database and adds no credential or provider access.
+
+The draft Fly inventory stack adds `GET /admin/operations/fly-inventory` to
+the same `withAdminSession()` boundary.
 
 ## User journey
 
@@ -228,8 +234,8 @@ project must prove effective `VIEWER` permission before detail calls.
 One observation makes at most 22 fixed Neon `GET` requests under one shared
 10-second deadline. It does not retry or follow project pagination. The
 browser calls the route once after session confirmation and again only on
-manual **Refresh**. The full operations page makes 11 fixed GET reads on load
-and 22 total after one Refresh. It does not poll. The report generation live
+manual **Refresh**. The full operations page makes 12 fixed GET reads on load
+and 24 total after one Refresh. It does not poll. The report generation live
 canary remains a separate manual POST.
 
 Neon percentages use published Free-plan references and are not credit
@@ -252,6 +258,34 @@ The route is read-only and accepts no request body, query, or provider selector.
 Every response sets `Cache-Control: private, no-store`. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the credential and provider
 boundaries.
+
+### `GET /admin/operations/fly-inventory` (draft)
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any Fly request. Better Auth bearer tokens, Better Auth cookies, and the
+retired application `is_admin` bit cannot authorize the route. A separate
+12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route supports only reads and accepts no body, query, provider selector, or
+write method. Every response sets `Cache-Control: private, no-store`. The
+optional `ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+`ADMIN_FLY_APP_NAMES` values must be absent or present together.
+
+The route uses fixed public Fly REST paths and returns only configured apps.
+It makes at most 31 provider calls under one deadline. It does not retry,
+follow redirects or pagination, write to Fly, or expose a polling path.
+
+The response uses a strict Machine and Volume field allowlist. The nullable
+process group comes only from reviewed Machine metadata. Credentials, raw
+provider errors, private IPs, raw Machine configuration, and Volume internals
+never cross the boundary.
+
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Remaining Fly credit stays `Unknown`. The full page makes 12 fixed
+GET reads on load and 24 after one manual **Refresh**. See
+[Admin Fly inventory](design-admin-fly-inventory.md) for the complete draft
+contract.
 
 ### `GET /admin/operations/storage-lifecycle`
 
@@ -317,6 +351,8 @@ independent admin database in deployed environments:
 - Neon Free usage reads: 12 per dedicated admin identity and session per
   minute;
 - R2 capacity reads: 12 per dedicated admin identity and session per minute;
+- Fly inventory reads: 12 per dedicated admin identity and session per minute
+  in the draft stack.
 - storage lifecycle reads: 12 per dedicated admin identity and session per
   minute.
 - report generation live-canary runs: 3 per dedicated admin identity and session
@@ -333,11 +369,11 @@ Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity,
-Neon inventory, Neon Free usage, R2 capacity, and storage lifecycle requests
-only read data. The report generation live canary is the first protected admin
-mutation other than logout, so it also requires the exact Origin and a
-session-derived CSRF token carried in `X-Admin-CSRF`. The token stays in browser
-memory. The admin session invalidates it, following the
+Neon inventory, Neon Free usage, R2 capacity, Fly inventory, and storage
+lifecycle requests only read data. The report generation live canary is the
+first protected admin mutation other than logout. It also requires the exact
+Origin and a session-derived CSRF token carried in `X-Admin-CSRF`. The token
+stays in browser memory. The admin session invalidates it, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured
@@ -412,10 +448,15 @@ unchanged.
   provider through `/admin/operations/r2-capacity`.
 - A dedicated admin request to the R2 route consumes both its trusted-IP and
   identity/session budgets.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the draft
+  Fly provider route.
+- A dedicated admin request to the draft Fly route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets. Its fixed plan makes
+  at most 31 provider reads and no provider write.
 - Anonymous, Better Auth, and legacy app-admin sessions cannot read storage
   lifecycle state through `/admin/operations/storage-lifecycle`.
 - A dedicated storage lifecycle request consumes both budgets and runs one
-  fixed statement. Component tests prove 11/22 reads and no polling.
+  fixed statement. Component tests prove 12/24 reads and no polling.
 - Live-canary tests prove the exact Origin, CSRF, dedicated-cookie, and
   three-per-15-minute gates. They also prove strict redaction and no autorun.
 - Anonymous requests sharing an IP consume only the shared IP gate, not the

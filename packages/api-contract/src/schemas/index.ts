@@ -13,6 +13,13 @@ export * as usageLimits from './usage-limits.js';
 export * as activity from './activity.js';
 export * as operations from './operations.js';
 export type {
+  FlyApp,
+  FlyInventoryObservation,
+  FlyInventoryReason,
+  FlyMachine,
+  FlyMachineInventory,
+  FlyVolume,
+  FlyVolumeInventory,
   NeonBranch,
   NeonBranchCount,
   NeonBranchDetails,

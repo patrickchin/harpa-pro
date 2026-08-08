@@ -13,6 +13,7 @@ const PRODUCTION_ADMIN_ORIGIN = 'https://admin.harpapro.com';
 const DEVELOPMENT_ADMIN_ORIGIN = 'https://dev.harpa-pro-admin.pages.dev';
 const PREVIEW_API_URL = /^https:\/\/harpa-pro-api-pr-([1-9][0-9]*)\.fly\.dev$/;
 const PREVIEW_ADMIN_ORIGIN = /^https:\/\/pr-[1-9][0-9]*\.harpa-pro-admin\.pages\.dev$/;
+const FLY_DNS_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional());
 const postgresConnectionUrl = z
@@ -37,6 +38,52 @@ const exactHttpOrigins = z.string().refine((value) => {
     })
   );
 }, 'must be a comma-separated list of exact HTTP(S) origins');
+
+const flyDnsLabel = z
+  .string()
+  .trim()
+  .regex(FLY_DNS_LABEL, 'must be a lowercase DNS-label identifier of at most 63 characters');
+
+const flyAppNames = z
+  .string()
+  .trim()
+  .min(1)
+  .superRefine((value, ctx) => {
+    const names = value.split(',').map((candidate) => candidate.trim());
+    if (names.some((name) => name.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'must not contain an empty Fly app-name segment',
+      });
+    }
+    if (names.length > 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        type: 'array',
+        maximum: 10,
+        inclusive: true,
+        message: 'must contain at most ten Fly app names',
+      });
+    }
+    if (new Set(names).size !== names.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Fly app names must be unique',
+      });
+    }
+    if (names.some((name) => !FLY_DNS_LABEL.test(name))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'each Fly app name must be a lowercase DNS-label identifier',
+      });
+    }
+  })
+  .transform((value) =>
+    value
+      .split(',')
+      .map((candidate) => candidate.trim())
+      .join(','),
+  );
 
 const DEMO_ACCOUNT_EMAILS = new Set([
   'demo@harpapro.com',
@@ -99,6 +146,14 @@ const Env = z
       .regex(/^[a-f0-9]{32}$/, 'must be a lowercase 32-character Cloudflare account ID')
       .optional(),
     ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: z.string().trim().min(1).optional(),
+    /**
+     * Optional Fly inventory observer for the admin operations page. All three
+     * values must be configured together. The token must be a dedicated,
+     * organization-scoped read-only token; app names are a bounded allowlist.
+     */
+    ADMIN_FLY_ORG_SLUG: flyDnsLabel.optional(),
+    ADMIN_FLY_READ_ONLY_API_TOKEN: z.string().trim().min(1).optional(),
+    ADMIN_FLY_APP_NAMES: flyAppNames.optional(),
     /**
      * Optional fixed synthetic target for the bounded admin report-generation
      * diagnostic. All three values must be absent or present together. The
@@ -374,6 +429,23 @@ const Env = z
     },
   )
   .superRefine((e, ctx) => {
+    const flyObserver = [
+      ['ADMIN_FLY_ORG_SLUG', e.ADMIN_FLY_ORG_SLUG],
+      ['ADMIN_FLY_READ_ONLY_API_TOKEN', e.ADMIN_FLY_READ_ONLY_API_TOKEN],
+      ['ADMIN_FLY_APP_NAMES', e.ADMIN_FLY_APP_NAMES],
+    ] as const;
+    const configuredFlyFields = flyObserver.filter(([, value]) => value !== undefined);
+    if (configuredFlyFields.length > 0 && configuredFlyFields.length < flyObserver.length) {
+      for (const [path, value] of flyObserver) {
+        if (value !== undefined) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: 'all ADMIN_FLY observer values must be set together',
+        });
+      }
+    }
+
     const reportDiagnosticTarget = [
       ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', e.ADMIN_REPORT_DIAGNOSTIC_EMAIL],
       ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID', e.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID],

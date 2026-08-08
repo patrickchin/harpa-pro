@@ -152,6 +152,7 @@ The browser admin surface uses a dedicated admin identity and cookie.
 | `GET`  | `/admin/operations/neon`              | Read bounded Neon inventory data      |
 | `GET`  | `/admin/operations/neon-usage`        | Read bounded Neon Free usage data     |
 | `GET`  | `/admin/operations/r2-capacity`       | Read bounded R2 capacity data         |
+| `GET`  | `/admin/operations/fly-inventory`     | Read bounded Fly inventory data       |
 | `GET`  | `/admin/operations/storage-lifecycle` | Read storage lifecycle database state |
 | `POST` | `/admin/operations/report-generate`   | Run the fixed synthetic report canary |
 
@@ -207,6 +208,32 @@ operation estimate. It never claims exact remaining GB-month capacity or
 returns credentials, raw provider errors, or object metadata. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
 
+The draft `GET /admin/operations/fly-inventory` route uses the same dedicated
+admin boundary and shared trusted-Fly-IP budget. It has a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+The route accepts `ADMIN_FLY_ORG_SLUG`,
+`ADMIN_FLY_READ_ONLY_API_TOKEN`, and `ADMIN_FLY_APP_NAMES` as one optional
+triplet. An absent triplet returns `Unknown` without a provider request. The
+configured app list contains one to ten exact names. The route returns no app
+outside that allowlist.
+
+One observation uses only fixed `GET` requests to
+`https://api.machines.dev`, one shared 10-second deadline, and no retry. It
+does not follow redirects or pagination. It lists the organization once and
+makes three fixed reads for each verified app. The maximum is 31 provider
+calls, and the route has no provider write path.
+
+The response returns at most ten apps, 50 Machines per app, and 50 Volumes per
+app. The strict allowlist excludes private IPs, raw Machine configuration,
+image and service details, Volume internals, and raw provider errors. The
+nullable `processGroup` field comes only from reviewed Machine metadata.
+
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Volume size is allocation. Remaining Fly credit stays `Unknown`.
+See [`design-admin-fly-inventory.md`](design-admin-fly-inventory.md).
+
 `GET /admin/operations/storage-lifecycle` uses the dedicated admin boundary.
 It has a separate 12-request-per-minute identity and session budget. Every
 response sets `Cache-Control: private, no-store`.
@@ -230,8 +257,8 @@ contradictory headers render that value `Unknown` without adding a GitHub
 request. Unsupported provider credit and billing balances stay `Unknown`.
 
 The browser calls all read-only operations routes once after session
-confirmation and again only on manual **Refresh**. The page makes 11 fixed GET
-reads on load and 22 total after one Refresh. It does not poll. The report
+confirmation and again only on manual **Refresh**. The page makes 12 fixed GET
+reads on load and 24 total after one Refresh. It does not poll. The report
 generation live canary remains a separate manual POST.
 
 `POST /admin/operations/report-generate` is deliberately separate from the

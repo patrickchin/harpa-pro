@@ -33,17 +33,48 @@ pages used by Harpa Pro: Fly.io, Neon, Cloudflare, Sentry, Better Stack, GitHub
 Actions, Doppler, Expo/EAS, Resend, Zoho Mail, App Store Connect, Google Play,
 OpenAI, Groq, Kimi/Moonshot, and Firecrawl.
 
+## Neon inventory extension
+
+The Neon inventory is a narrow server-side extension to this page. See
+[Admin Neon inventory](design-admin-neon-inventory.md) for the full contract.
+`GET /admin/operations/neon` uses the dedicated browser-admin session, the
+shared trusted-Fly-IP admin budget, and a 12-request-per-minute identity and
+session budget. Every response sets `Cache-Control: private, no-store`.
+
+The API accepts `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` only as an
+optional pair. The key belongs to a fixed, dedicated Neon observer. Every
+visible project must belong to the configured organization and report an
+effective `VIEWER` permission. The API never reuses the CI `NEON_API_KEY` or
+sends either observer variable to the browser.
+
+When the pair is absent, the route returns a typed `Unknown` state and makes no
+Neon request. A configured route lists at most 20 projects and at most 100
+active branch details per project. It does not retry provider requests. The
+count endpoint has no deleted-branch selector. The active-detail request
+explicitly excludes deleted branches, so the UI labels these values separately.
+
+Neon does not document an API for remaining billing credit. Remaining credit
+stays `Unknown`, and the Neon console remains the billing source. A code
+deployment does not prove that live credentials are active. Live proof requires
+the dedicated Viewer principal and key, the paired variables in the intended
+environment, the exact deployed API and admin-site SHAs, and an authenticated
+response that confirms `VIEWER` for every returned project.
+
 ## Deliberate limits
 
 - Do not add provider credentials to the browser. Secret-backed provider reads
   require a narrow admin API adapter with a response allowlist; do not add one
-  broad aggregation endpoint that can silently gain new credential access.
+  broad aggregation endpoint that can silently gain new credential access. The
+  Neon inventory route is the only account-specific provider endpoint in this
+  design.
 - Do not claim that linked services are healthy; only the two Harpa readiness
   probes receive live states.
 - Do not poll. Check once on page load and again only when the operator presses
   Refresh.
-- Do not add charts, history, or alert configuration. Existing Sentry,
-  provider, and budget alerts remain responsible for notification.
+- Do not add charts, history, alert configuration, or account-specific quota
+  reads. The bounded Neon inventory is metadata, not quota or billing data.
+  Existing Sentry, provider, and budget alerts remain responsible for
+  notification.
 
 These limits keep the page useful without creating another monitoring system
 that the solo operator must maintain.
@@ -134,5 +165,8 @@ be labelled as an end-to-end report endpoint check.
   routes still use the static 404.
 - API CORS coverage proves the exact admin origin can read `/readyz` and an
   unrelated origin cannot.
+- Neon inventory tests prove the dedicated-cookie boundary, Viewer-only
+  provider access, paired-configuration fallback, fixed bounds, rate limit,
+  no-store response, and absence of retries.
 - Run admin lint, typecheck, unit tests, and build plus the focused API CORS
-  test.
+  and Neon inventory tests.

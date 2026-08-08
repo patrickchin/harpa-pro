@@ -135,13 +135,14 @@ const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
 const MOBILE_SKIP_PATHS = new Set<string>([
   'post /waitlist',
   'post /waitlist/confirm',
-  // Admin authentication and activity are consumed by the dedicated web
-  // console, not mobile.
+  // Admin authentication, activity, and provider observations are consumed by
+  // the dedicated web console, not mobile.
   'get /admin/readyz',
   'post /admin/auth/login',
   'get /admin/auth/session',
   'post /admin/auth/logout',
   'get /admin/activity',
+  'get /admin/operations/neon',
   'get /readyz',
   // Universal-link manifests are fetched by the OS (swcd / Android
   // PackageManager), not by the mobile client. Skip from codegen.

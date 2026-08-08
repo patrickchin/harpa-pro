@@ -143,12 +143,30 @@ contain `reportId` and `reportNumber`. A missing or cross-user target returns
 
 The browser admin surface uses a dedicated admin identity and cookie.
 
-| Method | Path                  | Purpose                         |
-| ------ | --------------------- | ------------------------------- |
-| `POST` | `/admin/auth/login`   | Create an admin session         |
-| `GET`  | `/admin/auth/session` | Validate an admin session       |
-| `POST` | `/admin/auth/logout`  | Revoke an admin session         |
-| `GET`  | `/admin/activity`     | Read the business-activity feed |
+| Method | Path                     | Purpose                          |
+| ------ | ------------------------ | -------------------------------- |
+| `POST` | `/admin/auth/login`      | Create an admin session          |
+| `GET`  | `/admin/auth/session`    | Validate an admin session        |
+| `POST` | `/admin/auth/logout`     | Revoke an admin session          |
+| `GET`  | `/admin/activity`        | Read the business-activity feed  |
+| `GET`  | `/admin/operations/neon` | Read bounded Neon inventory data |
+
+`GET /admin/operations/neon` uses `withAdminSession()`. Better Auth and the
+legacy application-admin bit cannot authorize it. The route uses the shared
+trusted-Fly-IP admin budget and a 12-request-per-minute identity and session
+budget. Every response sets `Cache-Control: private, no-store`.
+
+The route accepts the optional `ADMIN_NEON_VIEWER_API_KEY` and
+`ADMIN_NEON_ORG_ID` pair at the API runtime. If the pair is absent, it returns
+a typed `Unknown` result without a provider call. A configured request lists
+at most 20 projects and, for each project, a provider branch count plus at most
+100 active branch details. It does not retry Neon requests.
+
+The count endpoint has no deleted-branch selector. The active-detail request
+explicitly excludes deleted branches. Clients must not present the bounded
+active-detail list as the total count. The route returns no connection data,
+provider error body, or billing-credit claim. Neon has no documented
+remaining-credit API, so that value stays `Unknown`.
 
 The following programmatic routes still use an application Better Auth
 session plus `public.user.is_admin`. They are not part of the browser admin

@@ -6058,6 +6058,162 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/neon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Neon organization inventory. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            /** @enum {boolean} */
+                            projectsTruncated: false;
+                            /** @enum {number} */
+                            unavailableProjectCount: 0;
+                            projects: {
+                                id: string;
+                                name: string;
+                                regionId: string;
+                                pgVersion: number;
+                                createdAt: string;
+                                updatedAt: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                branchCount: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    count: number;
+                                };
+                                branchDetails: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    branches: {
+                                        id: string;
+                                        name: string;
+                                        parentId: string | null;
+                                        currentState: string;
+                                        default: boolean;
+                                        protected: boolean;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            projectsTruncated: boolean;
+                            unavailableProjectCount: number;
+                            projects: {
+                                id: string;
+                                name: string;
+                                regionId: string;
+                                pgVersion: number;
+                                createdAt: string;
+                                updatedAt: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                branchCount: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    count: number;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                                branchDetails: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    branches: {
+                                        id: string;
+                                        name: string;
+                                        parentId: string | null;
+                                        currentState: string;
+                                        default: boolean;
+                                        protected: boolean;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

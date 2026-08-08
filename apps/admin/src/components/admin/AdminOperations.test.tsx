@@ -69,6 +69,14 @@ const githubPulls = [
   },
 ];
 
+const emptyNeonInventory = {
+  observedAt: '2026-08-08T05:30:00.000Z',
+  status: 'available' as const,
+  projectsTruncated: false,
+  unavailableProjectCount: 0,
+  projects: [],
+};
+
 function githubJson(body: unknown, remaining: number): Response {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -83,6 +91,12 @@ function githubJson(body: unknown, remaining: number): Response {
 
 function successfulResponse(url: string): Response {
   if (url.endsWith('/readyz')) return new Response(null, { status: 200 });
+  if (url === 'https://api.example.test/admin/operations/neon') {
+    return new Response(JSON.stringify(emptyNeonInventory), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   if (url.includes('/commits?sha=dev&per_page=1')) return githubJson(githubCommits.dev, 59);
   if (url.includes('/commits?sha=main&per_page=1')) return githubJson(githubCommits.main, 58);
   if (url.includes('/pulls?state=open&sort=updated&direction=desc&per_page=30')) {
@@ -116,15 +130,30 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
-      'https://api.example.test/readyz',
-      'https://api.example.test/admin/readyz',
-      'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
-      'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
-      'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
-    ]);
-    for (const [, init] of fetchMock.mock.calls.slice(2)) {
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
+      expect.arrayContaining([
+        'https://api.example.test/readyz',
+        'https://api.example.test/admin/readyz',
+        'https://api.example.test/admin/operations/neon',
+        'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
+        'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
+        'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
+      ]),
+    );
+
+    const neonCall = fetchMock.mock.calls.find(
+      ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
+    );
+    expect(neonCall?.[1]).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+
+    for (const [, init] of fetchMock.mock.calls.filter(([url]) =>
+      String(url).startsWith('https://api.github.com/'),
+    )) {
       expect(init).toMatchObject({
         credentials: 'omit',
         cache: 'no-store',
@@ -206,11 +235,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -241,7 +270,7 @@ describe('AdminOperations', () => {
     expect(screen.getByRole('link', { name: 'Open pull requests ↗' }).getAttribute('href')).toBe(
       'https://github.com/patrickchin/harpa-pro/pulls',
     );
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {

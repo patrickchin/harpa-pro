@@ -179,7 +179,7 @@ describe('AdminOperations Neon forward-port', () => {
   });
 
   it('returns to the signed-out guard when the Neon observer rejects an expired session', async () => {
-    const user = userEvent.setup();
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
     let requestCount = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
@@ -194,8 +194,5 @@ describe('AdminOperations Neon forward-port', () => {
 
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
-
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
-    expect(authMock.logout).toHaveBeenCalledOnce();
   });
 });

@@ -304,6 +304,25 @@ describe('env: admin Neon observer pairing', () => {
 
     await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY/);
   });
+
+  it("rejects an organization ID outside Neon's documented ID format", async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+    process.env.ADMIN_NEON_ORG_ID = 'https://console.neon.tech/api/v2';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_ORG_ID/);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('rejects %s observer configuration', async (_description, value) => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = value;
+    process.env.ADMIN_NEON_ORG_ID = value;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY|ADMIN_NEON_ORG_ID/);
+  });
 });
 
 describe('env: Postgres connection URLs', () => {

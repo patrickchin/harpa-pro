@@ -7,6 +7,9 @@
 > locks, readiness checks, and pre-deploy branches are implemented. The limits
 > in this document are part of the operating contract.
 
+The application `.notx.sql` required-head parser and AI usage index additions
+below are an unmerged draft stack.
+
 ## Why this doc exists
 
 Before the current pipeline, production returned `200 OK` on `/healthz` while
@@ -442,6 +445,15 @@ period is still active.
   loader-owned transaction and document its cleanup/retry procedure.
 - Export the computed head (last filename) so a future health check or
   diagnostic can reuse it without re-globbing.
+- Draft migration `0029_llm_usage_events_created_at.notx.sql` uses
+  `CREATE INDEX CONCURRENTLY` without `IF NOT EXISTS`. It adds
+  `llm_usage_events_created_at_idx` on `app.llm_usage_events (created_at DESC)`.
+  The index supports the fixed global AI usage windows. The runner records the
+  filename only after the concurrent build succeeds.
+- An interrupted concurrent build can leave an invalid same-name index. A
+  rerun then fails closed instead of recording the migration. Verify
+  `pg_index.indisvalid = false`, drop that exact index concurrently, and rerun
+  the migration. Verify `pg_index.indisvalid = true` after the rerun.
 
 ### `packages/api/src/routes/readyz.ts`
 
@@ -462,14 +474,12 @@ period is still active.
 
 ### `packages/api/src/env.ts`
 
-- Parse `MIGRATIONS_REQUIRED_HEAD` as `<digits>_<slug>.sql`.
+- Parse `MIGRATIONS_REQUIRED_HEAD` as `<digits>_<slug>.sql` or
+  `<digits>_<slug>.notx.sql`, matching the migration runner and deployment
+  guard. Preserve the exact filename for `/readyz` comparison.
 - When `NODE_ENV === 'production'`, `MIGRATIONS_REQUIRED_HEAD` is required
   (Zod refinement). In dev/test it's optional and `/readyz` skips the head
   check if it's unset (so local dev doesn't have to set it).
-- The parser does not accept a `.notx.sql` head. The deploy guards do accept
-  that suffix. Until the code paths agree, a `.notx.sql` file must not be the
-  lexically last application migration. Add a later normal migration or stop
-  the release and fix the contract first.
 
 ### Tests (binding — Pitfall 13)
 
@@ -484,6 +494,15 @@ Under `packages/api/src/__tests__/`:
      returns **503 `head-mismatch`** with `expected`/`actual` populated.
   4. With DB unreachable (close the container), `GET /readyz` returns
      **503 `db: 'down'`** within the 5s timeout.
+  5. With `MIGRATIONS_REQUIRED_HEAD` set to the exact
+     `0029_llm_usage_events_created_at.notx.sql` filename, environment parsing
+     succeeds and `/readyz` compares that full name without stripping the
+     suffix.
+- `admin-ai-usage-migration.integration.test.ts` — applies the draft
+  non-transactional head through the real loader and verifies its ledger row.
+  It checks `llm_usage_events_created_at_idx` on `created_at DESC` and requires
+  `pg_index.indisvalid = true`. It also proves that a same-name invalid index
+  makes the no-`IF NOT EXISTS` rerun fail without a ledger row.
 - `migrate.advisory-lock.integration.test.ts` — two concurrent
   `migrate(url)` calls against the same Testcontainers DB; assert no
   duplicate `app._migrations` rows, no SQL error, both return clean.
@@ -618,7 +637,8 @@ normal release. Treat any existing ledger drift as a database incident.
 
 - **Pitfall 5 (env handling brittle)** — `MIGRATIONS_REQUIRED_HEAD` flows
   through `packages/api/src/env.ts` Zod parse with a production-only
-  refinement. No `process.env.X!`.
+  refinement and the same optional `.notx` suffix as the migration guard. No
+  `process.env.X!`.
 - **Pitfall 6 (per-request scope late, untested)** — `/readyz` uses the
   default pool (admin/system role), not a scoped role; documented inline.
   The scope wrapper continues to be the only path used by user routes.
@@ -632,7 +652,6 @@ normal release. Treat any existing ledger drift as a database incident.
 ## Known gaps
 
 - CI has no immutable migration manifest or checksum gate.
-- The environment parser rejects a `.notx.sql` file as the required head.
 - Lifecycle arming still needs a rollout-table check before any retry if a
   deployment stops before the confirmation marker is reported.
 - `infra/fly/deploy.sh` does not verify a clean, pushed checkout.

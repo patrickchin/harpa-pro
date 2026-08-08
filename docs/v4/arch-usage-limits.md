@@ -45,6 +45,29 @@ Compute `used` for each bucket by querying the source-of-truth tables that alrea
 
 A separate counter table (Pitfall 8 dual-source-of-truth) and an Upstash token bucket (rolling window misaligns with calendar-month plan caps; not source-of-truth for who already consumed what) were both rejected.
 
+### 2.1 Development live-canary proof
+
+The disabled-by-default admin live canary calls the normal report generation
+route with one fixed synthetic account. It does not bypass the
+`report_generate`, `ai_input_tokens`, or `ai_output_tokens` limits. Each
+successful live call consumes the same monthly buckets as an ordinary call.
+
+Immediately before generation, the runner reads the application database
+clock. After generation proof succeeds, it reads at most two matching
+`app.llm_usage_events` rows. The query matches the synthetic user, project,
+report, `generate_report` operation, database-time window, vendor, and model.
+
+A pass requires exactly one row with `fixture_mode=live` and `status=ok`.
+Input and output tokens must be safe non-negative integers with a positive
+sum. Cached tokens must not exceed input tokens. Zero rows, two rows, another
+mode, or invalid accounting data fail the canary.
+
+The admin response returns only bounded token counts, latency, and
+`matched: true`. It does not return a usage-row ID, user ID, report ID, or row
+timestamp from this query. This proof reads the existing source of truth. It
+does not create a second counter or billing balance. See
+[Admin live report-generation canary](design-admin-report-live-canary.md).
+
 ## 3. Data model
 
 ### 3.1 Plan column on `auth.users`

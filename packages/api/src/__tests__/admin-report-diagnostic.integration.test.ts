@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { getAdminPool, resetAdminPool } from '../db/admin-client.js';
 import { resetAdminRateLimiter, setAdminRateLimiter } from '../lib/adminRateLimiter.js';
@@ -77,7 +77,7 @@ function cookiePair(response: Response): string {
   return setCookie.split(';')[0]!;
 }
 
-function jsonResponse(body: unknown, status = 200, headers: HeadersInit = {}): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   const responseHeaders = new Headers(headers);
   responseHeaders.set('content-type', 'application/json');
   return new Response(JSON.stringify(body), {
@@ -181,9 +181,9 @@ function defaultRunnerFetch() {
           vendor: 'openai',
           model: 'gpt-5-mini',
           fixtureMode: 'live',
-          systemPrompt: 'SENTINEL_PERSISTED_SYSTEM_PROMPT',
-          userPrompt: 'SENTINEL_PERSISTED_USER_PROMPT',
-          response: 'SENTINEL_PERSISTED_MODEL_RESPONSE',
+          systemPrompt: 'SENTINEL_GENERATE_SYSTEM_PROMPT',
+          userPrompt: 'SENTINEL_GENERATE_USER_PROMPT',
+          response: 'SENTINEL_RAW_MODEL_RESPONSE',
           usage: null,
         },
       });
@@ -310,6 +310,10 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchImpl);
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 afterAll(async () => {
   vi.unstubAllGlobals();
   resetRateLimiter();
@@ -420,6 +424,7 @@ describe('POST /admin/operations/report-generate security boundary', () => {
   });
 
   it('runs the unmodified default HTTP runner only after all admin gates pass', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const response = await createApp().request(
       '/admin/operations/report-generate',
       diagnosticRequest(),
@@ -493,6 +498,115 @@ describe('POST /admin/operations/report-generate security boundary', () => {
     expect(requests[2]!.headers.get('idempotency-key')).not.toContain(CANARY_EMAIL);
     expect(requests[2]!.headers.get('idempotency-key')).not.toContain(CANARY_PASSWORD);
     await expect(requests[5]!.json()).resolves.toEqual({});
+
+    const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
+    expect(auditCall).toBeDefined();
+    const audit = JSON.parse(String(auditCall?.[1])) as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: 'report_generate_pass',
+      projectId: PROJECT_ID,
+      reportNumber: REPORT_NUMBER,
+      provider: 'openai',
+      model: 'gpt-5-mini',
+      fixtureMode: 'live',
+      cleanup: 'succeeded',
+    });
+    expect(audit).toEqual(
+      expect.objectContaining({
+        requestId: expect.any(String),
+        adminIdentityId: expect.any(String),
+        adminSessionId: expect.any(String),
+        durationMs: expect.any(Number),
+      }),
+    );
+    const serializedAudit = JSON.stringify(audit);
+    for (const secret of [
+      CANARY_EMAIL,
+      CANARY_PASSWORD,
+      APP_SESSION_TOKEN,
+      'SENTINEL_GENERATE_SYSTEM_PROMPT',
+      'SENTINEL_GENERATE_USER_PROMPT',
+      'SENTINEL_RAW_MODEL_RESPONSE',
+      'SENTINEL_SYNTHETIC_NOTE',
+    ]) {
+      expect(serializedAudit).not.toContain(secret);
+    }
+  });
+
+  it('audits a degraded limits read as a sanitized warning', async () => {
+    const healthyFetch = defaultRunnerFetch();
+    fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+      if (new URL(new Request(input, init).url).pathname === '/me/limits') {
+        return jsonResponse({ message: 'SENTINEL_LIMITS_FAILURE_BODY' }, 503);
+      }
+      return healthyFetch(input, init);
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    const response = await createApp().request(
+      '/admin/operations/report-generate',
+      diagnosticRequest(),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'warning',
+      limits: null,
+      warnings: ['limits_unavailable'],
+      cleanup: 'succeeded',
+    });
+    const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
+    expect(auditCall).toBeDefined();
+    const audit = JSON.parse(String(auditCall?.[1])) as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: 'report_generate_warning',
+      projectId: PROJECT_ID,
+      reportNumber: REPORT_NUMBER,
+      provider: 'openai',
+      model: 'gpt-5-mini',
+      cleanup: 'succeeded',
+      warnings: ['limits_unavailable'],
+    });
+    expect(JSON.stringify(audit)).not.toContain('SENTINEL_LIMITS_FAILURE_BODY');
+  });
+
+  it('audits an upstream failure with only the reviewed phase and reason', async () => {
+    fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+      const request = new Request(input, init);
+      if (new URL(request.url).pathname === '/api/auth/sign-in/email') {
+        return jsonResponse({ message: 'SENTINEL_SIGN_IN_FAILURE_BODY' }, 401);
+      }
+      throw new Error('the runner must stop after failed sign-in');
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    const response = await createApp().request(
+      '/admin/operations/report-generate',
+      diagnosticRequest(),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'fail',
+      phase: 'sign_in',
+      reason: 'sign_in_failed',
+      cleanup: 'not_started',
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const auditCall = info.mock.calls.find(([scope]) => scope === '[admin-operations]');
+    expect(auditCall).toBeDefined();
+    const audit = JSON.parse(String(auditCall?.[1])) as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: 'report_generate_fail',
+      phase: 'sign_in',
+      reason: 'sign_in_failed',
+      cleanup: 'not_started',
+    });
+    expect(audit).not.toHaveProperty('projectId');
+    expect(audit).not.toHaveProperty('provider');
+    expect(JSON.stringify(audit)).not.toContain('SENTINEL_SIGN_IN_FAILURE_BODY');
   });
 
   it('invalidates a CSRF token when the browser presents a different admin session', async () => {

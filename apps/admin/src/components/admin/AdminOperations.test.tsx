@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 const authMock = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -181,7 +181,7 @@ function mockDiagnosticFetch(
   });
 }
 
-function diagnosticRequests(fetchMock: ReturnType<typeof vi.spyOn>) {
+function diagnosticRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
   return fetchMock.mock.calls.filter(
     ([url]) => String(url) === 'https://api.example.test/admin/operations/report-generate',
   );
@@ -744,7 +744,7 @@ describe('AdminOperations', () => {
     expect(within(section).getByText('openai')).toBeTruthy();
     expect(within(section).getByText('gpt-5.1')).toBeTruthy();
     for (const message of [
-      'Replay mode exercised the endpoint and persistence, but not a live AI provider.',
+      'This run exercised the endpoint and persistence, but did not confirm a fresh live AI provider call.',
       'Generation passed, but effective usage limits were unavailable.',
       'Generation passed, but sign-out could not be confirmed.',
     ]) {

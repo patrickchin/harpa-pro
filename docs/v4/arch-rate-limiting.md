@@ -45,7 +45,7 @@ These paths skip the global application limiter:
 - `/readyz`
 - `/admin/auth/*`
 - `/admin/activity`
-- `/admin/operations/neon`
+- `/admin/operations/*`
 - `/admin/readyz`
 - `/openapi.json`
 - `/.well-known/*`
@@ -96,6 +96,7 @@ active.
 | Failed admin login                       | SHA-256 of canonical email |     5 | 15 minutes |
 | `GET /admin/activity`                    | Admin identity and session |   120 |   1 minute |
 | `GET /admin/operations/neon`             | Admin identity and session |    12 |   1 minute |
+| `POST /admin/operations/report-generate` | Admin identity and session |     3 | 15 minutes |
 
 The login route checks the IP budgets before password verification. It
 consumes the email budget before verification but rejects on that budget only
@@ -110,6 +111,13 @@ requests can use the general IP helper.
 The Neon inventory route must pass both its trusted-IP and identity/session
 budgets. One allowed request lists at most 20 projects and at most 100 active
 branch details per project. Provider requests have no retry loop.
+
+The report diagnostic must also pass the trusted-IP budget. Exact Origin,
+dedicated admin session, and session-bound CSRF checks run before its
+three-per-15-minute identity/session budget. A permitted run then consumes the
+real application report route's shared AI rate limit and monthly usage limits
+under the fixed synthetic account. Neon reads and report diagnostics use
+separate named admin buckets.
 
 ## Authentication-route boundary
 
@@ -213,6 +221,8 @@ Current tests cover these properties:
 - `__tests__/admin-activity.integration.test.ts` covers the activity budget.
 - `__tests__/admin-neon-operations.integration.test.ts` covers the Neon
   inventory identity/session budget and its 12-request limit.
+- `__tests__/admin-report-diagnostic.integration.test.ts` covers the report
+  canary's isolated three-request budget and proves Neon reads do not spend it.
 - `__tests__/server-rate-limit-gc.test.ts` checks cleanup scheduler startup.
 - `scripts/check-no-process-env-rate-limit.sh` blocks raw
   `process.env.RATE_LIMIT_*` access outside `env.ts`.

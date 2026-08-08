@@ -109,7 +109,7 @@ const LIMIT_BUCKETS = [
   },
 ];
 
-function json(body: unknown, status = 200, headers?: HeadersInit): Response {
+function json(body: unknown, status = 200, headers?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json', ...Object.fromEntries(new Headers(headers)) },
@@ -630,6 +630,79 @@ describe('runAdminReportGenerateDiagnostic', () => {
           }),
       },
     ],
+    [
+      'mismatched persisted system prompt',
+      'proof_read',
+      {
+        proofRead: () =>
+          json({
+            ...reportDebug(),
+            lastGeneration: {
+              ...reportDebug().lastGeneration,
+              systemPrompt: 'different persisted system prompt',
+            },
+          }),
+      },
+    ],
+    [
+      'mismatched persisted user prompt',
+      'proof_read',
+      {
+        proofRead: () =>
+          json({
+            ...reportDebug(),
+            lastGeneration: {
+              ...reportDebug().lastGeneration,
+              userPrompt: 'different persisted user prompt',
+            },
+          }),
+      },
+    ],
+    [
+      'mismatched persisted response',
+      'proof_read',
+      {
+        proofRead: () =>
+          json({
+            ...reportDebug(),
+            lastGeneration: {
+              ...reportDebug().lastGeneration,
+              response: 'different persisted provider response',
+            },
+          }),
+      },
+    ],
+    [
+      'persisted finish after the report update',
+      'proof_read',
+      {
+        proofRead: () =>
+          json({
+            ...reportDebug(),
+            lastGeneration: {
+              ...reportDebug().lastGeneration,
+              finishedAt: '2026-08-08T07:59:07.000Z',
+            },
+          }),
+      },
+    ],
+    [
+      'generated timestamp after the report update',
+      'proof_read',
+      {
+        generate: () =>
+          json({
+            report: { ...GENERATED_REPORT, generatedAt: '2026-08-08T07:59:07.000Z' },
+            debug: {
+              systemPrompt: RAW_PROMPT,
+              userPrompt: RAW_PROMPT,
+              rawText: RAW_RESPONSE,
+              model: 'gpt-5.4',
+              vendor: 'openai',
+            },
+          }),
+      },
+    ],
   ] as const)('fails closed on %s', async (_label, phase, overrides) => {
     const fetchImpl = fetchSequence({ overrides });
 
@@ -691,24 +764,21 @@ describe('runAdminReportGenerateDiagnostic', () => {
     expect(stringifiedConsole([errors, warnings, logs])).not.toContain(networkSecret);
   });
 
-  it('uses one overall deadline, aborts once, attempts cleanup, and never retries', async () => {
+  it('fails limits/timeout when the overall deadline aborts limit readback', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
-    let abortEvents = 0;
-    const signals: AbortSignal[] = [];
+    let limitsSignal: AbortSignal | undefined;
+    let cleanupSignal: AbortSignal | undefined;
     const fetchImpl = fetchSequence({
       overrides: {
-        generate: (_url, init) => {
+        limits: (_url, init) => {
           const signal = init?.signal;
           if (!(signal instanceof AbortSignal)) throw new Error('missing signal');
-          signals.push(signal);
+          limitsSignal = signal;
           return new Promise<Response>((_resolve, reject) => {
             signal.addEventListener(
               'abort',
-              () => {
-                abortEvents += 1;
-                reject(new DOMException('aborted', 'AbortError'));
-              },
+              () => reject(new DOMException('aborted', 'AbortError')),
               { once: true },
             );
           });
@@ -716,8 +786,10 @@ describe('runAdminReportGenerateDiagnostic', () => {
         signOut: (_url, init) => {
           const signal = init?.signal;
           if (!(signal instanceof AbortSignal)) throw new Error('missing signal');
-          signals.push(signal);
-          return Promise.reject(new DOMException('aborted', 'AbortError'));
+          cleanupSignal = signal;
+          return signal.aborted
+            ? Promise.reject(new DOMException('aborted', 'AbortError'))
+            : Promise.resolve(json({ success: true }));
         },
       },
     });
@@ -734,12 +806,89 @@ describe('runAdminReportGenerateDiagnostic', () => {
       observedAt: NOW.toISOString(),
       status: 'fail',
       durationMs: 25,
+      phase: 'limits',
+      reason: 'timeout',
+      cleanup: 'succeeded',
+    });
+    expect(limitsSignal?.aborted).toBe(true);
+    expect(cleanupSignal?.aborted).toBe(false);
+    expect(cleanupSignal).not.toBe(limitsSignal);
+    expect(fetchImpl.mock.calls.map(([request]) => stepOf(urlOf(request)))).toEqual([
+      'signIn',
+      'targetRead',
+      'generate',
+      'proofRead',
+      'limits',
+      'signOut',
+    ]);
+  });
+
+  it('uses fresh bounded cleanup grace after the main deadline and never retries', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    let mainAbortEvents = 0;
+    let cleanupAbortEvents = 0;
+    const signals: AbortSignal[] = [];
+    const fetchImpl = fetchSequence({
+      overrides: {
+        generate: (_url, init) => {
+          const signal = init?.signal;
+          if (!(signal instanceof AbortSignal)) throw new Error('missing signal');
+          signals.push(signal);
+          return new Promise<Response>((_resolve, reject) => {
+            signal.addEventListener(
+              'abort',
+              () => {
+                mainAbortEvents += 1;
+                reject(new DOMException('aborted', 'AbortError'));
+              },
+              { once: true },
+            );
+          });
+        },
+        signOut: (_url, init) => {
+          const signal = init?.signal;
+          if (!(signal instanceof AbortSignal)) throw new Error('missing signal');
+          signals.push(signal);
+          if (signal.aborted) return Promise.reject(new DOMException('aborted', 'AbortError'));
+          return new Promise<Response>((_resolve, reject) => {
+            signal.addEventListener(
+              'abort',
+              () => {
+                cleanupAbortEvents += 1;
+                reject(new DOMException('aborted', 'AbortError'));
+              },
+              { once: true },
+            );
+          });
+        },
+      },
+    });
+
+    const pending = runAdminReportGenerateDiagnostic({
+      ...runnerOptions(fetchImpl),
+      now: () => new Date(Date.now()),
+      timeoutMs: 25,
+    });
+    await vi.advanceTimersByTimeAsync(25);
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(cleanupAbortEvents).toBe(0);
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pending;
+
+    expect(result).toMatchObject({
+      observedAt: NOW.toISOString(),
+      status: 'fail',
+      durationMs: 5_025,
       phase: 'generate',
       reason: 'timeout',
       cleanup: 'failed',
     });
-    expect(abortEvents).toBe(1);
-    expect(new Set(signals).size).toBe(1);
+    expect(mainAbortEvents).toBe(1);
+    expect(cleanupAbortEvents).toBe(1);
+    expect(signals[0]?.aborted).toBe(true);
+    expect(signals[1]?.aborted).toBe(true);
+    expect(new Set(signals).size).toBe(2);
     expect(fetchImpl.mock.calls.map(([request]) => stepOf(urlOf(request)))).toEqual([
       'signIn',
       'targetRead',

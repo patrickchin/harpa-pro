@@ -3,6 +3,7 @@ import { getPublicEnv } from './env';
 export interface AdminSession {
   authenticated: true;
   email: string;
+  csrfToken: string;
 }
 
 interface AdminLogin {
@@ -22,6 +23,8 @@ export class AdminAuthError extends Error {
   }
 }
 
+const ADMIN_CSRF_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
 function parseSession(value: unknown): AdminSession {
   if (
     typeof value !== 'object' ||
@@ -29,7 +32,10 @@ function parseSession(value: unknown): AdminSession {
     !('authenticated' in value) ||
     value.authenticated !== true ||
     !('email' in value) ||
-    typeof value.email !== 'string'
+    typeof value.email !== 'string' ||
+    !('csrfToken' in value) ||
+    typeof value.csrfToken !== 'string' ||
+    !ADMIN_CSRF_TOKEN.test(value.csrfToken)
   ) {
     throw new Error('Invalid admin session response');
   }
@@ -37,6 +43,7 @@ function parseSession(value: unknown): AdminSession {
   return {
     authenticated: true,
     email: value.email,
+    csrfToken: value.csrfToken,
   };
 }
 

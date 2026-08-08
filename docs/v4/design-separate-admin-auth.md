@@ -217,12 +217,16 @@ second to avoid a readiness thundering herd.
 The admin browser surface uses its own Postgres-backed limiter in the
 independent admin database in deployed environments:
 
-- all `/admin/auth/*` and `/admin/activity` requests: 120 per trusted Fly
+- all protected browser-admin requests: 120 per trusted Fly
   client IP per minute;
 - login: 20 attempts per trusted Fly client IP per 15 minutes;
 - login: 3 attempts per trusted Fly client IP per minute;
 - login: 5 attempts per canonical email per 15 minutes; and
-- activity reads: 120 per dedicated admin identity and session per minute.
+- activity reads: 120 per dedicated admin identity and session per minute;
+- Neon inventory reads: 12 per dedicated admin identity and session per
+  minute; and
+- report-generation diagnostics: 3 per dedicated admin identity and session
+  per 15 minutes.
 
 The shared IP gate protects admin-session database lookups, including invalid
 cookie probes to the activity route. The login IP limits also reject before
@@ -235,9 +239,11 @@ Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity
-request is read-only. If this browser session later protects an admin
-`POST`, `PUT`, `PATCH`, or `DELETE` other than logout, add a per-session CSRF
-token carried in a custom header as described by the
+and Neon inventory requests are read-only. The report-generation diagnostic
+is the first protected admin mutation other than logout, so it also requires
+the exact Origin and a session-derived CSRF token carried in
+`X-Admin-CSRF`. The token stays in browser memory and is invalidated with the
+admin session, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured

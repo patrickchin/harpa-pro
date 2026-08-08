@@ -15,9 +15,10 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 ```
 
 The root route renders the business activity console. `/operations` provides
-read-only Harpa readiness checks and links to the external service consoles.
-Unknown browser paths return a static 404 instead of falling back to the
-console. `/admin/activity` remains the API resource path, not a page URL.
+read-only Harpa readiness checks, a no-token public GitHub branch/PR snapshot,
+and links to the external service consoles. Unknown browser paths return a
+static 404 instead of falling back to the console. `/admin/activity` remains
+the API resource path, not a page URL.
 
 Cloudflare Git deploys this workspace through the independent
 `harpa-pro-admin` Pages project. `main`, `dev`, and mirrored `pr-N` branches

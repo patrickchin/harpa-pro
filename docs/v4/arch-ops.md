@@ -66,9 +66,10 @@ does not define this repository's runtime; `nvm use` does.
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
   - `/` renders the activity console and `/operations` renders read-only service
-    monitoring; unknown browser paths return a static 404. `/admin/activity`
-    remains an API resource path. Data requests require the dedicated API admin
-    session. See [Separate admin site](design-separate-admin-site.md).
+    monitoring plus a no-token public GitHub branch/PR snapshot; unknown browser
+    paths return a static 404. `/admin/activity` remains an API resource path.
+    Data requests require the dedicated API admin session. See
+    [Separate admin site](design-separate-admin-site.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
   Repository builds use the shared Node 24.19.0 runtime.

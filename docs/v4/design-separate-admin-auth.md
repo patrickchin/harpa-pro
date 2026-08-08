@@ -44,6 +44,10 @@ The Neon Free usage stack adds `GET /admin/operations/neon-usage` to the same
 boundary. It reuses the existing `ADMIN_NEON_VIEWER_API_KEY` and
 `ADMIN_NEON_ORG_ID` pair and adds no provider credential.
 
+The storage lifecycle stack adds
+`GET /admin/operations/storage-lifecycle` to the same boundary. It reads the
+application database and adds no credential or provider access.
+
 ## User journey
 
 1. An operator provisions an exact `@harpapro.com` address with the admin CLI
@@ -224,9 +228,9 @@ project must prove effective `VIEWER` permission before detail calls.
 One observation makes at most 22 fixed Neon `GET` requests under one shared
 10-second deadline. It does not retry or follow project pagination. The
 browser calls the route once after session confirmation and again only on
-manual **Refresh**. The full operations page makes 10 authenticated reads on
-load and 20 total after one Refresh. It does not poll. The report generation
-live canary remains a separate manual POST.
+manual **Refresh**. The full operations page makes 11 fixed GET reads on load
+and 22 total after one Refresh. It does not poll. The report generation live
+canary remains a separate manual POST.
 
 Neon percentages use published Free-plan references and are not credit
 balances. R2 Class A and Class B percentages remain estimates. The GitHub
@@ -248,6 +252,23 @@ The route is read-only and accepts no request body, query, or provider selector.
 Every response sets `Cache-Control: private, no-store`. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the credential and provider
 boundaries.
+
+### `GET /admin/operations/storage-lifecycle`
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any application-database read. Better Auth bearer tokens, Better Auth cookies,
+and the retired application `is_admin` bit cannot authorize the route. A
+separate 12-request-per-minute bucket uses the admin identity and session.
+
+The route supports reads only and accepts no body or query. One observation
+runs exactly one fixed application-database statement under a five-second
+deadline. It makes no mutation or provider call. Every response sets
+`Cache-Control: private, no-store`.
+
+The response returns bounded rollout and durable queue aggregates. It excludes
+payloads, user IDs, object keys, raw errors, and Fly identifiers. The database
+state does not prove current worker liveness. See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
 
 ### `POST /admin/operations/report-generate`
 
@@ -296,6 +317,8 @@ independent admin database in deployed environments:
 - Neon Free usage reads: 12 per dedicated admin identity and session per
   minute;
 - R2 capacity reads: 12 per dedicated admin identity and session per minute;
+- storage lifecycle reads: 12 per dedicated admin identity and session per
+  minute.
 - report generation live-canary runs: 3 per dedicated admin identity and session
   per 15 minutes.
 
@@ -310,11 +333,11 @@ Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity,
-Neon inventory, Neon Free usage, and R2 capacity requests are read-only. The
-report generation live canary is the first protected admin mutation other than
-logout, so it also requires the exact Origin and a session-derived CSRF token
-carried in `X-Admin-CSRF`. The token stays in browser memory and is invalidated
-with the admin session, following the
+Neon inventory, Neon Free usage, R2 capacity, and storage lifecycle requests
+only read data. The report generation live canary is the first protected admin
+mutation other than logout, so it also requires the exact Origin and a
+session-derived CSRF token carried in `X-Admin-CSRF`. The token stays in browser
+memory. The admin session invalidates it, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured
@@ -389,6 +412,10 @@ unchanged.
   provider through `/admin/operations/r2-capacity`.
 - A dedicated admin request to the R2 route consumes both its trusted-IP and
   identity/session budgets.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot read storage
+  lifecycle state through `/admin/operations/storage-lifecycle`.
+- A dedicated storage lifecycle request consumes both budgets and runs one
+  fixed statement. Component tests prove 11/22 reads and no polling.
 - Live-canary tests prove the exact Origin, CSRF, dedicated-cookie, and
   three-per-15-minute gates. They also prove strict redaction and no autorun.
 - Anonymous requests sharing an IP consume only the shared IP gate, not the

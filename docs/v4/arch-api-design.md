@@ -143,16 +143,17 @@ contain `reportId` and `reportNumber`. A missing or cross-user target returns
 
 The browser admin surface uses a dedicated admin identity and cookie.
 
-| Method | Path                                | Purpose                               |
-| ------ | ----------------------------------- | ------------------------------------- |
-| `POST` | `/admin/auth/login`                 | Create an admin session               |
-| `GET`  | `/admin/auth/session`               | Validate an admin session             |
-| `POST` | `/admin/auth/logout`                | Revoke an admin session               |
-| `GET`  | `/admin/activity`                   | Read the business-activity feed       |
-| `GET`  | `/admin/operations/neon`            | Read bounded Neon inventory data      |
-| `GET`  | `/admin/operations/neon-usage`      | Read bounded Neon Free usage data     |
-| `GET`  | `/admin/operations/r2-capacity`     | Read bounded R2 capacity data         |
-| `POST` | `/admin/operations/report-generate` | Run the fixed synthetic report canary |
+| Method | Path                                  | Purpose                               |
+| ------ | ------------------------------------- | ------------------------------------- |
+| `POST` | `/admin/auth/login`                   | Create an admin session               |
+| `GET`  | `/admin/auth/session`                 | Validate an admin session             |
+| `POST` | `/admin/auth/logout`                  | Revoke an admin session               |
+| `GET`  | `/admin/activity`                     | Read the business-activity feed       |
+| `GET`  | `/admin/operations/neon`              | Read bounded Neon inventory data      |
+| `GET`  | `/admin/operations/neon-usage`        | Read bounded Neon Free usage data     |
+| `GET`  | `/admin/operations/r2-capacity`       | Read bounded R2 capacity data         |
+| `GET`  | `/admin/operations/storage-lifecycle` | Read storage lifecycle database state |
+| `POST` | `/admin/operations/report-generate`   | Run the fixed synthetic report canary |
 
 `GET /admin/operations/neon` uses `withAdminSession()`. Better Auth and the
 legacy application-admin bit cannot authorize it. The route uses the shared
@@ -206,6 +207,21 @@ operation estimate. It never claims exact remaining GB-month capacity or
 returns credentials, raw provider errors, or object metadata. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
 
+`GET /admin/operations/storage-lifecycle` uses the dedicated admin boundary.
+It has a separate 12-request-per-minute identity and session budget. Every
+response sets `Cache-Control: private, no-store`.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. The statement reads the singleton rollout row, calls the
+lease-enforcement function, and aggregates the durable deletion queue. The
+route accepts no body or query and makes no mutation or provider call.
+
+The response contains only rollout fields, reviewed queue counts, bounded
+timestamps, and fixed caveats. It never returns queue payloads, user IDs,
+object keys, raw errors, or Fly identifiers. This database snapshot does not
+prove current storage worker liveness or future queue execution. See
+[`design-admin-storage-lifecycle-observer.md`](design-admin-storage-lifecycle-observer.md).
+
 The browser presents estimated R2 Class A and Class B percentages against the
 published operation references. It does not derive an R2 storage percentage.
 The existing public GitHub requests present the primary REST request-budget
@@ -214,9 +230,9 @@ contradictory headers render that value `Unknown` without adding a GitHub
 request. Unsupported provider credit and billing balances stay `Unknown`.
 
 The browser calls all read-only operations routes once after session
-confirmation and again only on manual **Refresh**. The page makes 10
-authenticated reads on load and 20 total after one Refresh. It does not poll.
-The report generation live canary remains a separate manual POST.
+confirmation and again only on manual **Refresh**. The page makes 11 fixed GET
+reads on load and 22 total after one Refresh. It does not poll. The report
+generation live canary remains a separate manual POST.
 
 `POST /admin/operations/report-generate` is deliberately separate from the
 read-only refresh path. It requires the dedicated admin cookie, an exact

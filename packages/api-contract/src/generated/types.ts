@@ -6944,6 +6944,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/storage-lifecycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only application storage lifecycle observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            rollout: {
+                                armedAt: string | null;
+                                enforceAfter: string | null;
+                                accountDeleteEnabled: boolean;
+                                leaseEnforcementActive: boolean;
+                                accountDeletionAvailable: boolean;
+                                updatedAt: string;
+                            };
+                            jobs: {
+                                total: number;
+                                initial: number;
+                                final: number;
+                                dueNow: number;
+                                scheduled: number;
+                                activeClaims: number;
+                                staleClaims: number;
+                                retrying: number;
+                                maxAttemptCount: number;
+                                oldestDueAt: string | null;
+                                nextRunAfter: string | null;
+                            };
+                            caveats: ("db_state_not_worker_liveness" | "queue_counts_not_provider_health" | "empty_queue_not_execution_proof")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "rollout_state_missing" | "timeout" | "database_unavailable" | "invalid_response";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

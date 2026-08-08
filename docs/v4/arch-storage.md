@@ -439,8 +439,26 @@ exact-key pass scheduled after all signed PUTs expire. It shares the API's
 Postgres/MinIO configuration, waits for migrations and bucket creation,
 restarts unless explicitly stopped, and must start before the API exposes
 account deletion.
-The current rollout row in each deployed database is **UNKNOWN** until an
-operational query verifies it.
+The current rollout row in each deployed database is **UNKNOWN** until the
+admin observer or an operational query reads it.
+
+#### Admin storage lifecycle observer
+
+`GET /admin/operations/storage-lifecycle` exposes a bounded, read-only view of
+the rollout row and durable cleanup queue. The route uses the trusted-Fly-IP
+gate, dedicated admin session, and a separate 12-request-per-minute limit.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. It returns only reviewed rollout fields, the exact
+account-deletion gate, aggregate queue counts, bounded timestamps, and fixed
+caveats. It excludes payloads, object keys, user IDs, raw errors, and per-job
+claim data.
+
+This snapshot is database evidence. It does not prove worker liveness,
+provider health, or future cleanup execution. The route makes no mutation or
+provider call. The browser reads it only on page load and shared **Refresh**.
+See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
 
 ## Live mode (production)
 

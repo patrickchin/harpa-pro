@@ -6944,6 +6944,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/sentry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Sentry aggregate issue and mobile session observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            unresolvedErrors: {
+                                /** @enum {string} */
+                                status: "available";
+                                count: number;
+                                /** @enum {string} */
+                                countKind: "exact" | "lower_bound";
+                                /** @enum {number} */
+                                cap: 100;
+                            };
+                            mobileSessions: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {string} */
+                                window: "last_24_hours";
+                                windowStart: string;
+                                windowEnd: string;
+                                totalSessions: number;
+                                healthySessions: number;
+                                erroredSessions: number;
+                                abnormalSessions: number;
+                                crashedSessions: number;
+                            };
+                            caveats: ("issue_groups_not_events" | "mobile_sessions_only" | "telemetry_coverage_applies" | "issue_count_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            unresolvedErrors: {
+                                /** @enum {string} */
+                                status: "available";
+                                count: number;
+                                /** @enum {string} */
+                                countKind: "exact" | "lower_bound";
+                                /** @enum {number} */
+                                cap: 100;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "forbidden" | "not_found" | "rate_limited" | "timeout" | "invalid_response" | "provider_unavailable" | "no_session_data";
+                            };
+                            mobileSessions: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {string} */
+                                window: "last_24_hours";
+                                windowStart: string;
+                                windowEnd: string;
+                                totalSessions: number;
+                                healthySessions: number;
+                                erroredSessions: number;
+                                abnormalSessions: number;
+                                crashedSessions: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "forbidden" | "not_found" | "rate_limited" | "timeout" | "invalid_response" | "provider_unavailable" | "no_session_data";
+                            };
+                            caveats: ("issue_groups_not_events" | "mobile_sessions_only" | "telemetry_coverage_applies" | "issue_count_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "forbidden" | "not_found" | "rate_limited" | "timeout" | "invalid_response" | "provider_unavailable" | "no_session_data";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/operations/storage-lifecycle": {
         parameters: {
             query?: never;

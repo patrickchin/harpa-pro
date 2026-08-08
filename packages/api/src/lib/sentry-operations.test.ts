@@ -332,7 +332,7 @@ describe('observeAdminSentry', () => {
       limit: '100',
       shortIdLookup: '0',
     });
-    expect([...issueUrl.searchParams.keys()].sort()).toEqual(
+    expect([...new Set(issueUrl.searchParams.keys())].sort()).toEqual(
       ['collapse', 'environment', 'limit', 'project', 'query', 'shortIdLookup', 'sort'].sort(),
     );
 

@@ -1083,6 +1083,217 @@ export const flyInventoryObservation = z
     });
   });
 
+export const sentryObservationReasons = [
+  'not_configured',
+  'forbidden',
+  'not_found',
+  'rate_limited',
+  'timeout',
+  'invalid_response',
+  'provider_unavailable',
+  'no_session_data',
+] as const;
+
+export const sentryObservationReason = z.enum(sentryObservationReasons);
+
+export const sentryObservationCaveats = [
+  'issue_groups_not_events',
+  'mobile_sessions_only',
+  'telemetry_coverage_applies',
+  'issue_count_truncated',
+] as const;
+
+export const sentryObservationCaveat = z.enum(sentryObservationCaveats);
+
+const sentryRequiredCaveats = sentryObservationCaveats.slice(0, 3);
+const sentryCaveats = z
+  .array(sentryObservationCaveat)
+  .min(3)
+  .max(4)
+  .superRefine((caveats, ctx) => {
+    if (new Set(caveats).size !== caveats.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message: 'Sentry observation caveats must be unique',
+      });
+    }
+
+    for (const requiredCaveat of sentryRequiredCaveats) {
+      if (caveats.includes(requiredCaveat)) continue;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message: `Sentry observation requires the ${requiredCaveat} caveat`,
+      });
+    }
+  });
+
+export const sentryIssueCountKinds = ['exact', 'lower_bound'] as const;
+export const sentryIssueCountKind = z.enum(sentryIssueCountKinds);
+const sentrySafeCount = z.number().int().safe().nonnegative();
+
+export const availableSentryIssueObservation = z
+  .object({
+    status: z.literal('available'),
+    count: sentrySafeCount.max(100),
+    countKind: sentryIssueCountKind,
+    cap: z.literal(100),
+  })
+  .strict();
+
+export const unknownSentryIssueObservation = z
+  .object({
+    status: z.literal('unknown'),
+    reason: sentryObservationReason,
+  })
+  .strict();
+
+export const sentryIssueObservation = z.discriminatedUnion('status', [
+  availableSentryIssueObservation,
+  unknownSentryIssueObservation,
+]);
+
+export const availableSentrySessionObservation = z
+  .object({
+    status: z.literal('available'),
+    window: z.literal('last_24_hours'),
+    windowStart: isoDateTime,
+    windowEnd: isoDateTime,
+    totalSessions: z.number().int().safe().min(1),
+    healthySessions: sentrySafeCount,
+    erroredSessions: sentrySafeCount,
+    abnormalSessions: sentrySafeCount,
+    crashedSessions: sentrySafeCount,
+  })
+  .strict()
+  .superRefine((observation, ctx) => {
+    const sessionCounts = [
+      observation.healthySessions,
+      observation.erroredSessions,
+      observation.abnormalSessions,
+      observation.crashedSessions,
+    ];
+    const summedSessions = sessionCounts.reduce((total, count) => total + count, 0);
+    if (!Number.isSafeInteger(summedSessions)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['totalSessions'],
+        message: 'mobile session count sum must remain a safe integer',
+      });
+    } else if (observation.totalSessions !== summedSessions) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['totalSessions'],
+        message: 'totalSessions must equal the four fixed mobile session counts',
+      });
+    }
+
+    const windowDurationMs =
+      Date.parse(observation.windowEnd) - Date.parse(observation.windowStart);
+    const minimumWindowMs = 23 * 60 * 60 * 1_000;
+    const maximumWindowMs = 25 * 60 * 60 * 1_000;
+    if (windowDurationMs < minimumWindowMs || windowDurationMs > maximumWindowMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['windowEnd'],
+        message: 'mobile session window must be between 23 and 25 hours',
+      });
+    }
+  });
+
+export const unknownSentrySessionObservation = z
+  .object({
+    status: z.literal('unknown'),
+    reason: sentryObservationReason,
+  })
+  .strict();
+
+export const sentrySessionObservation = z.union([
+  availableSentrySessionObservation,
+  unknownSentrySessionObservation,
+]);
+
+export const availableSentryObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('available'),
+    unresolvedErrors: availableSentryIssueObservation,
+    mobileSessions: availableSentrySessionObservation,
+    caveats: sentryCaveats,
+  })
+  .strict();
+
+export const partialSentryObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('partial'),
+    unresolvedErrors: sentryIssueObservation,
+    mobileSessions: sentrySessionObservation,
+    caveats: sentryCaveats,
+  })
+  .strict();
+
+export const unknownSentryObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('unknown'),
+    reason: sentryObservationReason,
+  })
+  .strict();
+
+export const sentryObservation = z
+  .discriminatedUnion('status', [
+    availableSentryObservation,
+    partialSentryObservation,
+    unknownSentryObservation,
+  ])
+  .superRefine((observation, ctx) => {
+    if (observation.status === 'unknown') return;
+
+    const issueCountIsLowerBound =
+      observation.unresolvedErrors.status === 'available' &&
+      observation.unresolvedErrors.countKind === 'lower_bound';
+    const hasTruncationCaveat = observation.caveats.includes('issue_count_truncated');
+    if (issueCountIsLowerBound !== hasTruncationCaveat) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['caveats'],
+        message: 'issue_count_truncated must correspond to an available lower-bound issue count',
+      });
+    }
+
+    if (observation.status === 'available') {
+      if (observation.unresolvedErrors.countKind !== 'exact') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['status'],
+          message: 'available observations require an exact issue count',
+        });
+      }
+      return;
+    }
+
+    const hasIssueGap = observation.unresolvedErrors.status === 'unknown';
+    const hasSessionGap = observation.mobileSessions.status === 'unknown';
+    if (hasIssueGap && hasSessionGap) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['status'],
+        message: 'two unavailable Sentry slices require an unknown observation',
+      });
+      return;
+    }
+
+    if (hasIssueGap || hasSessionGap || issueCountIsLowerBound) return;
+
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'partial observations require an unavailable slice or a lower-bound issue count',
+    });
+  });
+
 const diagnosticDurationMs = z.number().int().nonnegative().max(75_000).safe();
 const diagnosticObservationDurationMs = z.number().int().nonnegative().max(80_000).safe();
 const diagnosticIdentifier = z
@@ -1967,6 +2178,12 @@ export type FlyVolume = z.infer<typeof flyVolume>;
 export type FlyVolumeInventory = z.infer<typeof flyVolumeInventory>;
 export type FlyApp = z.infer<typeof flyApp>;
 export type FlyInventoryObservation = z.infer<typeof flyInventoryObservation>;
+export type SentryObservationReason = z.infer<typeof sentryObservationReason>;
+export type SentryObservationCaveat = z.infer<typeof sentryObservationCaveat>;
+export type SentryIssueCountKind = z.infer<typeof sentryIssueCountKind>;
+export type SentryIssueObservation = z.infer<typeof sentryIssueObservation>;
+export type SentrySessionObservation = z.infer<typeof sentrySessionObservation>;
+export type SentryObservation = z.infer<typeof sentryObservation>;
 export type AiUsageReason = z.infer<typeof aiUsageReason>;
 export type AiUsageWarning = z.infer<typeof aiUsageWarning>;
 export type AiUsageProviderCategory = z.infer<typeof aiUsageProviderCategory>;

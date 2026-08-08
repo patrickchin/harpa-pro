@@ -44,6 +44,47 @@ const flyDnsLabel = z
   .trim()
   .regex(FLY_DNS_LABEL, 'must be a lowercase DNS-label identifier of at most 63 characters');
 
+const sentryProjectSlugs = z
+  .string()
+  .trim()
+  .min(1)
+  .superRefine((value, ctx) => {
+    const slugs = value.split(',').map((candidate) => candidate.trim());
+    if (slugs.some((slug) => slug.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'must not contain an empty Sentry project slug',
+      });
+    }
+    if (slugs.length > 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        type: 'array',
+        maximum: 3,
+        inclusive: true,
+        message: 'must contain at most three Sentry project slugs',
+      });
+    }
+    if (new Set(slugs).size !== slugs.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Sentry project slugs must be unique',
+      });
+    }
+    if (slugs.some((slug) => !FLY_DNS_LABEL.test(slug))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'each Sentry project slug must be a lowercase DNS-label identifier',
+      });
+    }
+  })
+  .transform((value) =>
+    value
+      .split(',')
+      .map((candidate) => candidate.trim())
+      .join(','),
+  );
+
 const flyAppNames = z
   .string()
   .trim()
@@ -146,6 +187,17 @@ const Env = z
       .regex(/^[a-f0-9]{32}$/, 'must be a lowercase 32-character Cloudflare account ID')
       .optional(),
     ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: z.string().trim().min(1).optional(),
+    /**
+     * Optional Sentry observer for the admin operations page. The dedicated
+     * token must be read-only. The first five values below are an all-or-none
+     * observer configuration. Region is fixed to global, US, or DE.
+     */
+    ADMIN_SENTRY_ORG_SLUG: flyDnsLabel.optional(),
+    ADMIN_SENTRY_READ_TOKEN: z.string().trim().min(1).optional(),
+    ADMIN_SENTRY_PROJECT_SLUGS: sentryProjectSlugs.optional(),
+    ADMIN_SENTRY_MOBILE_PROJECT_SLUG: flyDnsLabel.optional(),
+    ADMIN_SENTRY_ENVIRONMENT: z.enum(['production', 'preview', 'development']).optional(),
+    ADMIN_SENTRY_REGION: z.enum(['global', 'us', 'de']).optional(),
     /**
      * Optional Fly inventory observer for the admin operations page. All three
      * values must be configured together. The token must be a dedicated,
@@ -422,6 +474,49 @@ const Env = z
     message:
       'ADMIN_CLOUDFLARE_ACCOUNT_ID and ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN must be set together',
   })
+  .superRefine((e, ctx) => {
+    const sentryObserver = [
+      ['ADMIN_SENTRY_ORG_SLUG', e.ADMIN_SENTRY_ORG_SLUG],
+      ['ADMIN_SENTRY_READ_TOKEN', e.ADMIN_SENTRY_READ_TOKEN],
+      ['ADMIN_SENTRY_PROJECT_SLUGS', e.ADMIN_SENTRY_PROJECT_SLUGS],
+      ['ADMIN_SENTRY_MOBILE_PROJECT_SLUG', e.ADMIN_SENTRY_MOBILE_PROJECT_SLUG],
+      ['ADMIN_SENTRY_ENVIRONMENT', e.ADMIN_SENTRY_ENVIRONMENT],
+    ] as const;
+    const configuredSentryFields = sentryObserver.filter(([, value]) => value !== undefined);
+    if (
+      configuredSentryFields.length > 0 &&
+      configuredSentryFields.length < sentryObserver.length
+    ) {
+      for (const [path, value] of sentryObserver) {
+        if (value !== undefined) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: 'all required ADMIN_SENTRY observer values must be set together',
+        });
+      }
+    }
+
+    if (e.ADMIN_SENTRY_REGION && configuredSentryFields.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_SENTRY_ORG_SLUG'],
+        message: 'ADMIN_SENTRY_REGION requires the complete Sentry observer configuration',
+      });
+    }
+
+    if (
+      e.ADMIN_SENTRY_MOBILE_PROJECT_SLUG &&
+      e.ADMIN_SENTRY_PROJECT_SLUGS &&
+      !splitCsv(e.ADMIN_SENTRY_PROJECT_SLUGS).includes(e.ADMIN_SENTRY_MOBILE_PROJECT_SLUG)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_SENTRY_MOBILE_PROJECT_SLUG'],
+        message: 'must be an exact member of ADMIN_SENTRY_PROJECT_SLUGS',
+      });
+    }
+  })
   .refine(
     (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',
     {
@@ -605,7 +700,12 @@ const Env = z
         message: 'required when RESEND_LIVE=1',
       });
     }
-  });
+  })
+  .transform((e) =>
+    e.ADMIN_SENTRY_ORG_SLUG && !e.ADMIN_SENTRY_REGION
+      ? { ...e, ADMIN_SENTRY_REGION: 'global' as const }
+      : e,
+  );
 
 export const env = Env.parse(process.env);
 export type Env = z.infer<typeof Env>;

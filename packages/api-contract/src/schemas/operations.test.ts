@@ -3034,3 +3034,512 @@ describe('admin operations R2 capacity schema', () => {
     expect(operations.r2CapacityObservation.safeParse(observation).success).toBe(false);
   });
 });
+
+const storageLifecycleCaveats = [
+  'db_state_not_worker_liveness',
+  'queue_counts_not_provider_health',
+  'empty_queue_not_execution_proof',
+] as const;
+
+const storageLifecycleAvailableObservation = {
+  observedAt,
+  status: 'available',
+  rollout: {
+    armedAt: '2026-08-08T07:55:00.000Z',
+    enforceAfter: '2026-08-08T07:59:00.000Z',
+    accountDeleteEnabled: true,
+    leaseEnforcementActive: true,
+    accountDeletionAvailable: true,
+    updatedAt: '2026-08-08T07:55:01.000Z',
+  },
+  jobs: {
+    total: 10,
+    initial: 6,
+    final: 4,
+    dueNow: 7,
+    scheduled: 3,
+    activeClaims: 2,
+    staleClaims: 1,
+    retrying: 2,
+    maxAttemptCount: 3,
+    oldestDueAt: '2026-08-08T07:00:00.000Z',
+    nextRunAfter: '2026-08-08T09:00:00.000Z',
+  },
+  caveats: storageLifecycleCaveats,
+} as const;
+
+const storageLifecycleUnknownObservation = {
+  observedAt,
+  status: 'unknown',
+  reason: 'database_unavailable',
+} as const;
+
+const emptyStorageLifecycleJobs = {
+  total: 0,
+  initial: 0,
+  final: 0,
+  dueNow: 0,
+  scheduled: 0,
+  activeClaims: 0,
+  staleClaims: 0,
+  retrying: 0,
+  maxAttemptCount: 0,
+  oldestDueAt: null,
+  nextRunAfter: null,
+} as const;
+
+const storageLifecycleObservation = operations.storageLifecycleObservation;
+
+describe('admin operations storage lifecycle observation schema', () => {
+  it('accepts the exact reviewed available observation', () => {
+    expect(storageLifecycleObservation.parse(storageLifecycleAvailableObservation)).toStrictEqual(
+      storageLifecycleAvailableObservation,
+    );
+  });
+
+  it.each([
+    'rollout_state_missing',
+    'timeout',
+    'database_unavailable',
+    'invalid_response',
+  ] as const)('accepts the redacted unknown reason %s', (reason) => {
+    const observation = { ...storageLifecycleUnknownObservation, reason };
+
+    expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['available reason', { ...storageLifecycleAvailableObservation, reason: 'invalid_response' }],
+    [
+      'unknown rollout data',
+      {
+        ...storageLifecycleUnknownObservation,
+        rollout: storageLifecycleAvailableObservation.rollout,
+      },
+    ],
+    [
+      'unknown job data',
+      { ...storageLifecycleUnknownObservation, jobs: storageLifecycleAvailableObservation.jobs },
+    ],
+    [
+      'unknown caveats',
+      { ...storageLifecycleUnknownObservation, caveats: storageLifecycleCaveats },
+    ],
+    ['an unsupported status', { ...storageLifecycleUnknownObservation, status: 'partial' }],
+    ['a missing unknown reason', { observedAt, status: 'unknown' }],
+  ] as const)('rejects the invalid discriminated-union shape %s', (_description, observation) => {
+    expect(storageLifecycleObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each([
+    [null, false],
+    ['2026-08-08T07:59:59.999Z', true],
+    [observedAt, true],
+    ['2026-08-08T08:00:00.001Z', false],
+  ] as const)(
+    'accepts enforceAfter=%s only with leaseEnforcementActive=%s',
+    (enforceAfter, leaseEnforcementActive) => {
+      const observation = {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          enforceAfter,
+          accountDeleteEnabled: false,
+          leaseEnforcementActive,
+          accountDeletionAvailable: false,
+        },
+      };
+
+      expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+      expect(
+        storageLifecycleObservation.safeParse({
+          ...observation,
+          rollout: {
+            ...observation.rollout,
+            leaseEnforcementActive: !leaseEnforcementActive,
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    [false, false, false],
+    [false, true, false],
+    [true, false, false],
+    [true, true, true],
+  ] as const)(
+    'accepts lease=%s and flag=%s only with accountDeletionAvailable=%s',
+    (leaseEnforcementActive, accountDeleteEnabled, accountDeletionAvailable) => {
+      const observation = {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          enforceAfter: leaseEnforcementActive
+            ? '2026-08-08T07:59:00.000Z'
+            : '2026-08-08T08:01:00.000Z',
+          leaseEnforcementActive,
+          accountDeleteEnabled,
+          accountDeletionAvailable,
+        },
+      };
+
+      expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+      expect(
+        storageLifecycleObservation.safeParse({
+          ...observation,
+          rollout: {
+            ...observation.rollout,
+            accountDeletionAvailable: !accountDeletionAvailable,
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('accepts active enforcement with a null arming marker so inconsistency stays visible', () => {
+    const observation = {
+      ...storageLifecycleAvailableObservation,
+      rollout: { ...storageLifecycleAvailableObservation.rollout, armedAt: null },
+    };
+
+    expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('accepts the exact empty-queue correlations', () => {
+    const observation = {
+      ...storageLifecycleAvailableObservation,
+      jobs: emptyStorageLifecycleJobs,
+    };
+
+    expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['initial plus final below total', { initial: 5 }],
+    ['initial plus final above total', { final: 5 }],
+    ['initial greater than total', { initial: 11, final: 0 }],
+  ] as const)('rejects %s', (_description, jobsOverride) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, ...jobsOverride },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['due and scheduled below total', { dueNow: 6 }],
+    ['due and scheduled above total', { scheduled: 4 }],
+    ['scheduled greater than total', { dueNow: 0, scheduled: 11 }],
+  ] as const)('rejects %s', (_description, jobsOverride) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, ...jobsOverride },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['overlapping active and stale claims', { activeClaims: 4, staleClaims: 4 }],
+    ['more retrying jobs than total', { retrying: 11 }],
+  ] as const)('rejects %s', (_description, jobsOverride) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, ...jobsOverride },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['due work without oldestDueAt', { oldestDueAt: null }],
+    ['oldestDueAt without due work', { dueNow: 0, scheduled: 10, activeClaims: 0, staleClaims: 0 }],
+    ['scheduled work without nextRunAfter', { nextRunAfter: null }],
+    ['nextRunAfter without scheduled work', { dueNow: 10, scheduled: 0 }],
+  ] as const)('rejects %s', (_description, jobsOverride) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, ...jobsOverride },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['oldest due after observation', { oldestDueAt: '2026-08-08T08:00:00.001Z' }],
+    ['next run equal to observation', { nextRunAfter: observedAt }],
+    ['next run before observation', { nextRunAfter: '2026-08-08T07:59:59.999Z' }],
+  ] as const)('rejects %s', (_description, jobsOverride) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, ...jobsOverride },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts oldest due equal to the observation database clock', () => {
+    const observation = {
+      ...storageLifecycleAvailableObservation,
+      jobs: { ...storageLifecycleAvailableObservation.jobs, oldestDueAt: observedAt },
+    };
+
+    expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('requires maxAttemptCount to be zero for an empty queue', () => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...emptyStorageLifecycleJobs, maxAttemptCount: 1 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts zero maxAttemptCount for a non-empty queue', () => {
+    const observation = {
+      ...storageLifecycleAvailableObservation,
+      jobs: { ...storageLifecycleAvailableObservation.jobs, maxAttemptCount: 0 },
+    };
+
+    expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  const storageLifecycleCountFields = [
+    'total',
+    'initial',
+    'final',
+    'dueNow',
+    'scheduled',
+    'activeClaims',
+    'staleClaims',
+    'retrying',
+    'maxAttemptCount',
+  ] as const;
+  const invalidStorageLifecycleCounts = [-1, 1.5, Number.MAX_SAFE_INTEGER + 1] as const;
+
+  it.each(
+    storageLifecycleCountFields.flatMap((field) =>
+      invalidStorageLifecycleCounts.map((value) => [field, value] as const),
+    ),
+  )('rejects unsafe count %s=%s', (field, value) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, [field]: value },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts Number.MAX_SAFE_INTEGER in a fully correlated queue snapshot', () => {
+    const maximum = Number.MAX_SAFE_INTEGER;
+    const observation = {
+      ...storageLifecycleAvailableObservation,
+      jobs: {
+        total: maximum,
+        initial: maximum,
+        final: 0,
+        dueNow: maximum,
+        scheduled: 0,
+        activeClaims: maximum,
+        staleClaims: 0,
+        retrying: maximum,
+        maxAttemptCount: maximum,
+        oldestDueAt: observedAt,
+        nextRunAfter: null,
+      },
+    };
+
+    expect(storageLifecycleObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['observedAt', { ...storageLifecycleAvailableObservation, observedAt: 'not-a-timestamp' }],
+    [
+      'unknown.observedAt',
+      { ...storageLifecycleUnknownObservation, observedAt: 'not-a-timestamp' },
+    ],
+    [
+      'rollout.armedAt',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: { ...storageLifecycleAvailableObservation.rollout, armedAt: 'not-a-timestamp' },
+      },
+    ],
+    [
+      'rollout.enforceAfter',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          enforceAfter: 'not-a-timestamp',
+        },
+      },
+    ],
+    [
+      'rollout.updatedAt',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: { ...storageLifecycleAvailableObservation.rollout, updatedAt: 'not-a-timestamp' },
+      },
+    ],
+    [
+      'jobs.oldestDueAt',
+      {
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, oldestDueAt: 'not-a-timestamp' },
+      },
+    ],
+    [
+      'jobs.nextRunAfter',
+      {
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, nextRunAfter: 'not-a-timestamp' },
+      },
+    ],
+  ] as const)('rejects a non-finite ISO timestamp at %s', (_field, observation) => {
+    expect(storageLifecycleObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each([
+    ['a null required observedAt', { ...storageLifecycleAvailableObservation, observedAt: null }],
+    [
+      'a null rollout updatedAt',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: { ...storageLifecycleAvailableObservation.rollout, updatedAt: null },
+      },
+    ],
+    [
+      'a string account-delete flag',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          accountDeleteEnabled: 'true',
+        },
+      },
+    ],
+    [
+      'a string lease-enforcement flag',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          leaseEnforcementActive: 'true',
+        },
+      },
+    ],
+    [
+      'a string availability gate',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          accountDeletionAvailable: 'true',
+        },
+      },
+    ],
+    [
+      'a string queue count',
+      {
+        ...storageLifecycleAvailableObservation,
+        jobs: { ...storageLifecycleAvailableObservation.jobs, total: '10' },
+      },
+    ],
+  ] as const)('rejects %s', (_description, observation) => {
+    expect(storageLifecycleObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each([
+    ['a missing caveat', storageLifecycleCaveats.slice(0, 2)],
+    [
+      'reordered caveats',
+      [storageLifecycleCaveats[1], storageLifecycleCaveats[0], storageLifecycleCaveats[2]],
+    ],
+    ['a duplicate caveat', [...storageLifecycleCaveats, storageLifecycleCaveats[0]]],
+    ['an unreviewed caveat', [...storageLifecycleCaveats, 'worker_is_healthy']],
+  ] as const)('rejects %s', (_description, caveats) => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleAvailableObservation,
+        caveats,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'a raw SQL error',
+      { ...storageLifecycleAvailableObservation, databaseError: 'password authentication failed' },
+    ],
+    ['a stack trace', { ...storageLifecycleUnknownObservation, stack: 'Error at private-db.ts:7' }],
+    [
+      'a raw provider message',
+      { ...storageLifecycleUnknownObservation, message: 'Neon connection string rejected' },
+    ],
+    ['a user identifier', { ...storageLifecycleAvailableObservation, userId: 'usr_23456789' }],
+    [
+      'a project identifier',
+      { ...storageLifecycleAvailableObservation, projectId: 'prj_23456789' },
+    ],
+    ['an R2 bucket', { ...storageLifecycleAvailableObservation, bucket: 'harpa-pro-secret' }],
+    [
+      'a Fly machine identifier',
+      { ...storageLifecycleAvailableObservation, machineId: '5683abcd' },
+    ],
+    [
+      'queue payloads',
+      {
+        ...storageLifecycleAvailableObservation,
+        jobs: {
+          ...storageLifecycleAvailableObservation.jobs,
+          payload: { userId: 'usr_23456789', exactKeys: ['private/report.pdf'] },
+        },
+      },
+    ],
+    [
+      'raw retry text',
+      {
+        ...storageLifecycleAvailableObservation,
+        jobs: {
+          ...storageLifecycleAvailableObservation.jobs,
+          lastError: 'S3 token rejected for private/report.pdf',
+        },
+      },
+    ],
+    [
+      'per-row lock data',
+      {
+        ...storageLifecycleAvailableObservation,
+        jobs: {
+          ...storageLifecycleAvailableObservation.jobs,
+          lockedAt: '2026-08-08T07:58:00.000Z',
+        },
+      },
+    ],
+    [
+      'rollout SQL details',
+      {
+        ...storageLifecycleAvailableObservation,
+        rollout: {
+          ...storageLifecycleAvailableObservation.rollout,
+          rawRow: { account_delete_enabled: true },
+        },
+      },
+    ],
+  ] as const)('rejects leaked %s', (_description, observation) => {
+    expect(storageLifecycleObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it('rejects an arbitrary secret-bearing unknown reason', () => {
+    expect(
+      storageLifecycleObservation.safeParse({
+        ...storageLifecycleUnknownObservation,
+        reason: 'password authentication failed for postgresql://secret@private',
+      }).success,
+    ).toBe(false);
+  });
+});

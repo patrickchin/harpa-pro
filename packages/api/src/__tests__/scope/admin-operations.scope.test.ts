@@ -5,7 +5,7 @@
  * session succeeds. Better Auth and the legacy app is_admin bit are not admin
  * console credentials and must never trigger an outbound provider request.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { getAdminPool, resetAdminPool } from '../../db/admin-client.js';
 import { getPool, resetPool } from '../../db/client.js';
@@ -99,6 +99,10 @@ beforeEach(() => {
     }),
   );
   vi.stubGlobal('fetch', fetchImpl);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -214,6 +218,50 @@ describe('scope: GET /admin/operations/r2-capacity', () => {
     });
 
     await expectRejectedBeforeProviderCall(response);
+  });
+});
+
+describe('scope: GET /admin/operations/storage-lifecycle', () => {
+  it('rejects an anonymous request before reading the application database', async () => {
+    const applicationQuery = vi.spyOn(getPool(), 'query');
+
+    const response = await createApp().request('/admin/operations/storage-lifecycle');
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(applicationQuery).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+    applicationQuery.mockRestore();
+  });
+
+  it('rejects a regular Better Auth bearer session before reading the application database', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+    const applicationQuery = vi.spyOn(getPool(), 'query');
+
+    const response = await createApp().request('/admin/operations/storage-lifecycle', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(applicationQuery).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+    applicationQuery.mockRestore();
+  });
+
+  it('rejects a legacy app-admin bearer session before reading the application database', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+    const applicationQuery = vi.spyOn(getPool(), 'query');
+
+    const response = await createApp().request('/admin/operations/storage-lifecycle', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(applicationQuery).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+    applicationQuery.mockRestore();
   });
 });
 

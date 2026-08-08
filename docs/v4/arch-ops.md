@@ -67,18 +67,21 @@ does not define this repository's runtime; `nvm use` does.
     `harpa-pro-api-pr-<n>` Fly app.
   - `/` renders the activity console. `/operations` renders read-only Harpa
     readiness, service links, a no-token public GitHub branch/PR snapshot,
-    bounded Neon inventory and Free-plan usage, and bounded R2 capacity. A
-    separate manual report generation live canary is explicitly disclosed as a
-    synthetic mutation. Unknown browser paths return a static 404.
+    bounded Neon inventory and Free-plan usage, bounded R2 capacity, and
+    storage lifecycle database evidence. A separate manual report generation
+    live canary is explicitly disclosed as a synthetic mutation. Unknown
+    browser paths return a static 404.
     `/admin/activity`,
     `/admin/operations/neon`, `/admin/operations/neon-usage`,
-    `/admin/operations/r2-capacity`, and
+    `/admin/operations/r2-capacity`,
+    `/admin/operations/storage-lifecycle`, and
     `/admin/operations/report-generate` remain API resource paths. Data and
     live-canary requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),
     [Admin Neon inventory](design-admin-neon-inventory.md),
     [Admin provider quota percentages](design-admin-provider-quota-percentages.md),
-    [Admin R2 capacity](design-admin-r2-capacity.md), and
+    [Admin R2 capacity](design-admin-r2-capacity.md),
+    [Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md), and
     [Admin live report-generation canary](design-admin-report-live-canary.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
@@ -494,8 +497,8 @@ Unsupported money, token, invoice, and provider credit balances stay
 `Unknown`.
 
 The browser calls each read route once after session confirmation and again
-only on manual **Refresh**. The page makes 10 authenticated reads on load and
-20 total after one Refresh. It does not poll. The report generation live canary
+only on manual **Refresh**. The page makes 11 fixed GET reads on load and 22
+total after one Refresh. It does not poll. The report generation live canary
 remains a separate manual POST and does not run in either read cycle.
 
 Enablement uses the existing Neon inventory provisioning and exact-SHA proof.
@@ -503,6 +506,27 @@ After deployment, call both Neon routes with the dedicated admin session.
 Confirm `VIEWER` evidence for all returned projects, no more than 22 provider
 reads for one usage observation, and no credential or raw provider response in
 the API response or logs.
+
+### Storage lifecycle database observer
+
+`GET /admin/operations/storage-lifecycle` uses the shared trusted-Fly-IP gate,
+the dedicated admin session, and a separate 12-request-per-minute identity and
+session budget. Every response sets `Cache-Control: private, no-store`.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. The statement reads the singleton rollout row, calls the
+lease-enforcement function, and aggregates `app.storage_delete_jobs`. The route
+has no body, query, retry, pagination, mutation, or provider call.
+
+The UI shows the rollout marker, the exact account-deletion gate, and bounded
+durable queue counts. It does not return queue payloads, user IDs, object keys,
+raw errors, or Fly machine identifiers. The browser calls this route only on
+page load and shared **Refresh**.
+
+This card is database evidence. It does not prove current worker liveness or
+future queue execution. Continue to use exact Fly worker inventory,
+process, release, memory, and rollout-marker checks for executor proof. See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
 
 ### Cloudflare R2 capacity observer
 
@@ -1156,7 +1180,13 @@ repair and before arming. This proves that a running executor exists. It does
 not by itself prove that lifecycle arming finished; rely on the arming
 command's confirmation marker and the rollout table below. If a deployment
 stalls before that marker is reported, treat the rollout state as unknown and
-inspect it before retrying:
+inspect it before retrying.
+
+The admin storage lifecycle card reads the rollout row and aggregate queue
+state. It does not replace this Fly worker verification. A recorded rollout or
+empty queue is not worker-liveness proof.
+
+Inspect the rollout row with this query:
 
 ```sql
 SELECT armed_at, enforce_after, account_delete_enabled, updated_at

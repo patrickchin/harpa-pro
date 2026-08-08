@@ -218,7 +218,8 @@ describe('GET /admin/operations/storage-lifecycle', () => {
     const [rawSql, values] = applicationQuery.mock.calls[0] ?? [];
     const sql = String(rawSql).replace(/\s+/g, ' ').trim().toLowerCase();
     expect(values).toEqual([]);
-    expect(sql).toContain('clock_timestamp()');
+    expect(sql).toContain('now() as observed_at');
+    expect(sql).not.toContain('clock_timestamp()');
     expect(sql).toContain('from app.storage_lifecycle_rollout');
     expect(sql).toContain('from app.storage_delete_jobs');
     expect(sql).toContain("interval '5 minutes'");

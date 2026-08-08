@@ -560,6 +560,21 @@ does not apply to Infrequent Access storage. Month-to-date Class A and Class B
 used and remaining percentages are conservative estimates against published
 operation references. They are not a provider balance or invoice.
 
+The card shows **Published stored now** as one human-readable IEC value and an
+exact byte count. The browser adds published payload and metadata bytes for
+Standard and Infrequent Access storage. It excludes pending uploads.
+
+Ingress and egress volume stay `Unknown`. The documented R2 metrics do not
+expose transferred bytes. Cloudflare lists direct R2 egress as free, but
+the observer cannot measure bytes served. Harpa uploads and downloads use
+signed R2 URLs, so the application API does not carry the object bytes.
+
+This presentation adds no API route, response schema field, credential, or
+provider request. The three-request R2 ceiling stays unchanged. The browser
+reads the R2 route once after session confirmation and again only on manual
+**Refresh**. The full page still makes 15 fixed GET reads after session
+confirmation. One Refresh adds 15 reads, for 30 total. The page does not poll.
+
 Enable and prove the observer in this order:
 
 1. Merge and deploy the code with both values absent.

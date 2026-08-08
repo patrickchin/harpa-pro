@@ -165,6 +165,110 @@ const emptyInventory = {
   projects: [],
 };
 
+const neonUsageCaveats = [
+  'provider_values_may_lag',
+  'free_plan_published_reference',
+  'storage_uses_published_reference',
+  'transfer_requires_complete_project_coverage',
+  'not_invoice_or_credit_balance',
+  'published_allowances_can_change',
+] as const;
+
+const availableNeonUsageProject = {
+  id: 'tiny-tree-06262558',
+  name: 'Application database',
+  status: 'available' as const,
+  effectivePermission: 'VIEWER' as const,
+  periodStart: '2026-08-01T00:00:00.000Z',
+  periodEnd: resetAt,
+  compute: {
+    used: 90_000,
+    allowance: 360_000 as const,
+    unit: 'cu_seconds' as const,
+  },
+  storage: {
+    used: 125_000_000,
+    allowance: 500_000_000 as const,
+    unit: 'bytes' as const,
+  },
+  transferBytes: 1_250_000_000,
+};
+
+const availableNeonUsage = {
+  observedAt,
+  status: 'available' as const,
+  organizationId: 'org-harpa-pro-12345678',
+  plan: 'free' as const,
+  projectsTruncated: false,
+  unavailableProjectCount: 0,
+  projects: [availableNeonUsageProject],
+  organizationTransfer: {
+    status: 'available' as const,
+    periodStart: '2026-08-01T00:00:00.000Z',
+    periodEnd: resetAt,
+    used: availableNeonUsageProject.transferBytes,
+    allowance: 5_000_000_000 as const,
+    unit: 'bytes' as const,
+  },
+  caveats: neonUsageCaveats,
+};
+
+const overAllowanceNeonUsage = {
+  ...availableNeonUsage,
+  projects: [
+    {
+      ...availableNeonUsageProject,
+      compute: {
+        ...availableNeonUsageProject.compute,
+        used: 400_000,
+      },
+      storage: {
+        ...availableNeonUsageProject.storage,
+        used: 600_000_000,
+      },
+      transferBytes: 6_000_000_000,
+    },
+  ],
+  organizationTransfer: {
+    ...availableNeonUsage.organizationTransfer,
+    used: 6_000_000_000,
+  },
+};
+
+const unknownNeonUsage = {
+  observedAt,
+  status: 'unknown' as const,
+  reason: 'not_configured' as const,
+};
+
+const emptyNeonUsage = {
+  ...availableNeonUsage,
+  projects: [],
+  organizationTransfer: {
+    status: 'unknown' as const,
+    reason: 'no_projects' as const,
+  },
+};
+
+const partialNeonUsage = {
+  ...availableNeonUsage,
+  status: 'partial' as const,
+  projects: [
+    availableNeonUsageProject,
+    {
+      id: 'floral-brook-39718990',
+      name: 'Admin database',
+      status: 'unknown' as const,
+      effectivePermission: 'VIEWER' as const,
+      reason: 'timeout' as const,
+    },
+  ],
+  organizationTransfer: {
+    status: 'unknown' as const,
+    reason: 'incomplete_project_coverage' as const,
+  },
+};
+
 const availableR2Capacity = {
   observedAt,
   status: 'available' as const,
@@ -314,6 +418,9 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/readyz') return jsonResponse(productReadiness);
   if (url === 'https://api.example.test/admin/readyz') return jsonResponse(adminReadiness);
   if (url === '/_cf-pages-deployment.json') return jsonResponse(adminPagesMarker);
+  if (url === 'https://api.example.test/admin/operations/neon-usage') {
+    return jsonResponse(unknownNeonUsage);
+  }
   if (url.includes('/commits?sha=dev&per_page=1')) return githubJson(githubCommits.dev, 59);
   if (url.includes('/commits?sha=main&per_page=1')) return githubJson(githubCommits.main, 58);
   if (url.includes('/pulls?state=open&sort=updated&direction=desc&per_page=30')) {
@@ -325,6 +432,7 @@ function defaultDeploymentResponse(url: string): Response | null {
 function mockOperationsFetch(
   inventory: unknown = availableInventory,
   r2Capacity: unknown = availableR2Capacity,
+  neonUsage: unknown = availableNeonUsage,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -333,6 +441,9 @@ function mockOperationsFetch(
     }
     if (url === 'https://api.example.test/admin/operations/r2-capacity') {
       return jsonResponse(r2Capacity);
+    }
+    if (url === 'https://api.example.test/admin/operations/neon-usage') {
+      return jsonResponse(neonUsage);
     }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
@@ -344,6 +455,7 @@ function mockDiagnosticFetch(
   diagnostic: () => Response | Promise<Response>,
   inventory: unknown = availableInventory,
   r2Capacity: unknown = availableR2Capacity,
+  neonUsage: unknown = availableNeonUsage,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -355,6 +467,9 @@ function mockDiagnosticFetch(
     }
     if (url === 'https://api.example.test/admin/operations/r2-capacity') {
       return jsonResponse(r2Capacity);
+    }
+    if (url === 'https://api.example.test/admin/operations/neon-usage') {
+      return jsonResponse(neonUsage);
     }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
@@ -378,6 +493,11 @@ function r2CapacityRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
   );
 }
 
+function neonUsageRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/neon-usage',
+  );
+}
 async function getR2CapacitySection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
@@ -388,6 +508,31 @@ async function getR2CapacitySection() {
   return section!;
 }
 
+async function getNeonUsageSection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'Neon Free usage',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
+}
+
+function expectPaintedProgressbar(
+  container: HTMLElement,
+  accessibleName: string,
+  clampedPercent: number,
+) {
+  const progressbar = within(container).getByRole('progressbar', { name: accessibleName });
+  expect(progressbar.getAttribute('aria-valuemin')).toBe('0');
+  expect(progressbar.getAttribute('aria-valuemax')).toBe('100');
+  expect(progressbar.getAttribute('aria-valuenow')).toBe(String(clampedPercent));
+  expect(progressbar.getAttribute('aria-valuetext')).toBe(
+    accessibleName.slice(accessibleName.indexOf(': ') + 2),
+  );
+  expect(progressbar.style.width).toBe(`${clampedPercent}%`);
+  return progressbar;
+}
 async function getDiagnosticSection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
@@ -410,7 +555,7 @@ async function renderAndRunDiagnostic(body: unknown, status = 200) {
   const user = userEvent.setup();
   render(<AdminOperations />);
   const section = await getDiagnosticSection();
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
   await user.click(within(section).getByRole('button', { name: 'Run diagnostic' }));
   return { fetchMock, section };
 }
@@ -425,10 +570,13 @@ beforeEach(() => {
   window.sessionStorage.clear();
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+});
 
 describe('AdminOperations', () => {
-  it('checks Harpa deployments, GitHub, Neon, and R2 and links every provider console', async () => {
+  it('checks Harpa deployments, GitHub, Neon inventory and usage, and R2 and links every provider console', async () => {
     const fetchMock = mockOperationsFetch();
 
     render(<AdminOperations />);
@@ -436,7 +584,7 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
@@ -444,6 +592,7 @@ describe('AdminOperations', () => {
         'https://api.example.test/admin/readyz',
         '/_cf-pages-deployment.json',
         'https://api.example.test/admin/operations/neon',
+        'https://api.example.test/admin/operations/neon-usage',
         'https://api.example.test/admin/operations/r2-capacity',
         'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
         'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
@@ -485,6 +634,21 @@ describe('AdminOperations', () => {
     );
     expect(within(pullRequests).getByRole('link', { name: /#299/ })).toBeTruthy();
     expect(screen.getByText('57 of 60 requests remain')).toBeTruthy();
+    const githubSection = screen
+      .getByRole('heading', { level: 2, name: 'GitHub public repository' })
+      .closest('section')!;
+    expectPaintedProgressbar(
+      githubSection,
+      'Primary public REST request budget for this browser/IP: 5.0% used, 95.0% remaining',
+      5,
+    );
+    expect(githubSection.textContent).toContain('95.0% remaining');
+    expect(githubSection.textContent).toContain('5.0% used');
+    expect(githubSection.querySelector('time[datetime="2026-08-07T22:06:06.000Z"]')).toBeTruthy();
+    expect(
+      within(githubSection).queryByText(/plan usage|billing credit|account-wide quota/i),
+    ).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/rate_limit'))).toBe(false);
     expect(screen.getByTestId('github-pr-scroller').className).toContain('overflow-y-auto');
 
     for (const service of [
@@ -510,9 +674,10 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses nine fixed reads on load and eighteen after shared Refresh without polling', async () => {
+  it('uses ten fixed reads on load and twenty after shared Refresh without polling', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const expectedRequests = [
       {
         url: 'https://api.example.test/healthz',
@@ -530,11 +695,15 @@ describe('AdminOperations', () => {
         url: '/_cf-pages-deployment.json',
         credentials: 'same-origin',
       },
+      {
+        url: 'https://api.example.test/admin/operations/neon-usage',
+        credentials: 'include',
+      },
     ] as const;
 
     render(<AdminOperations />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
     await waitFor(() => {
       for (const { url } of expectedRequests) {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
@@ -547,29 +716,166 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+    expect(fetchMock).toHaveBeenCalledTimes(10);
     for (const { url } of expectedRequests) {
       expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
     }
-    expect(intervalSpy).not.toHaveBeenCalled();
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
-    intervalSpy.mockRestore();
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(18));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
     await waitFor(() => {
       for (const { url } of expectedRequests) {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(2);
       }
     });
+    await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+    expect(fetchMock).toHaveBeenCalledTimes(20);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
+
+  it('keeps repository data but marks a contradictory GitHub request budget Unknown', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/commits?sha=dev&per_page=1')) {
+        return new Response(JSON.stringify(githubCommits.dev), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '61',
+            'X-RateLimit-Reset': '1786140366',
+          },
+        });
+      }
+      if (url.includes('/commits?sha=main&per_page=1')) {
+        return new Response(JSON.stringify(githubCommits.main), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '61',
+            'X-RateLimit-Reset': '1786140366',
+          },
+        });
+      }
+      if (url.includes('/pulls?state=open&sort=updated&direction=desc&per_page=30')) {
+        return new Response(JSON.stringify(githubPulls), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '61',
+            'X-RateLimit-Reset': '1786140366',
+          },
+        });
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const githubSection = (
+      await screen.findByRole('heading', { level: 2, name: 'GitHub public repository' })
+    ).closest('section')!;
+    expect(
+      await within(githubSection).findByRole('heading', { level: 3, name: 'dev' }),
+    ).toBeTruthy();
+    expect(within(githubSection).getByRole('heading', { level: 3, name: 'main' })).toBeTruthy();
+    expect(within(githubSection).getByRole('list', { name: 'Open pull requests' })).toBeTruthy();
+    expect(await within(githubSection).findByText('Request budget: Unknown')).toBeTruthy();
+    expect(within(githubSection).queryByRole('progressbar')).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/rate_limit'))).toBe(false);
+  });
+
+  it.each([
+    ['missing headers', {}],
+    [
+      'malformed integer headers',
+      {
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '57.5',
+        'X-RateLimit-Reset': '1786140366',
+      },
+    ],
+    [
+      'a missing reset header',
+      {
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '57',
+      },
+    ],
+    [
+      'a non-positive reset timestamp',
+      {
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '57',
+        'X-RateLimit-Reset': '0',
+      },
+    ],
+    [
+      'a malformed reset timestamp',
+      {
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '57',
+        'X-RateLimit-Reset': 'not-a-timestamp',
+      },
+    ],
+  ] as const)(
+    'keeps valid repository data but marks the GitHub request budget Unknown for %s',
+    async (_caseName, rateLimitHeaders) => {
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = String(input);
+        if (new URL(url, 'https://admin.example.test').origin === 'https://api.github.com') {
+          const body = url.includes('/commits?sha=dev&per_page=1')
+            ? githubCommits.dev
+            : url.includes('/commits?sha=main&per_page=1')
+              ? githubCommits.main
+              : githubPulls;
+          return new Response(JSON.stringify(body), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              ...rateLimitHeaders,
+            },
+          });
+        }
+        if (url === 'https://api.example.test/admin/operations/neon') {
+          return jsonResponse(emptyInventory);
+        }
+        if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+          return jsonResponse(availableR2Capacity);
+        }
+        const deploymentResponse = defaultDeploymentResponse(url);
+        if (deploymentResponse) return deploymentResponse;
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+      render(<AdminOperations />);
+
+      const githubSection = (
+        await screen.findByRole('heading', { level: 2, name: 'GitHub public repository' })
+      ).closest('section')!;
+      expect(
+        await within(githubSection).findByRole('heading', { level: 3, name: 'dev' }),
+      ).toBeTruthy();
+      expect(within(githubSection).getByRole('heading', { level: 3, name: 'main' })).toBeTruthy();
+      expect(within(githubSection).getByRole('list', { name: 'Open pull requests' })).toBeTruthy();
+      expect(await within(githubSection).findByText('Request budget: Unknown')).toBeTruthy();
+      expect(within(githubSection).queryByRole('progressbar')).toBeNull();
+      expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/rate_limit'))).toBe(false);
+    },
+  );
 
   it('keeps repository links usable when the browser GitHub rate limit is exhausted', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -604,7 +910,16 @@ describe('AdminOperations', () => {
     expect(screen.getByRole('link', { name: 'Open pull requests ↗' }).getAttribute('href')).toBe(
       'https://github.com/patrickchin/harpa-pro/pulls',
     );
-    expect(fetchMock).toHaveBeenCalledTimes(7);
+    const githubSection = screen
+      .getByRole('heading', { level: 2, name: 'GitHub public repository' })
+      .closest('section')!;
+    expect(within(githubSection).getByText('0 of 60 requests remain')).toBeTruthy();
+    expectPaintedProgressbar(
+      githubSection,
+      'Primary public REST request budget for this browser/IP: 100.0% used, 0.0% remaining',
+      100,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -642,6 +957,14 @@ describe('AdminOperations', () => {
     ).toBeTruthy();
     expect(screen.getByText('Retry after 60 seconds.')).toBeTruthy();
     expect(screen.getByText('12 of 60 requests remain')).toBeTruthy();
+    const githubSection = screen
+      .getByRole('heading', { level: 2, name: 'GitHub public repository' })
+      .closest('section')!;
+    expectPaintedProgressbar(
+      githubSection,
+      'Primary public REST request budget for this browser/IP: 80.0% used, 20.0% remaining',
+      80,
+    );
   });
 
   it('renders the full API identity, independent migration heads, and admin Pages marker', async () => {
@@ -984,11 +1307,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(18));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -1002,6 +1325,7 @@ describe('AdminOperations', () => {
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Open dashboard ↗' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Neon Free usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
@@ -1014,6 +1338,7 @@ describe('AdminOperations', () => {
     expect(authMock.logout).toHaveBeenCalledOnce();
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Neon Free usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
@@ -1229,7 +1554,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(18);
+    expect(fetchMock).toHaveBeenCalledTimes(20);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -1292,6 +1617,313 @@ describe('AdminOperations', () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
+  it('shows a distinct loading state until the Neon Free usage observation arrives', async () => {
+    let resolveNeonUsage!: (response: Response) => void;
+    const neonUsageResponse = new Promise<Response>((resolve) => {
+      resolveNeonUsage = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/neon-usage') {
+        return neonUsageResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expect(within(section).getByText('Loading Neon Free usage…')).toBeTruthy();
+
+    await act(async () => {
+      resolveNeonUsage(jsonResponse(availableNeonUsage));
+      await neonUsageResponse;
+    });
+    expect(
+      await within(section).findByRole('progressbar', {
+        name: 'Application database compute: 25.0% used, 75.0% remaining',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('loads Neon Free usage with the admin cookie and refreshes it only with the shared control', async () => {
+    const observations = [unknownNeonUsage, availableNeonUsage];
+    let observationIndex = 0;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/neon-usage') {
+        const observation = observations[observationIndex] ?? availableNeonUsage;
+        observationIndex += 1;
+        return jsonResponse(observation);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const user = userEvent.setup();
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expect(await within(section).findByText('Neon Free usage is not configured.')).toBeTruthy();
+    expect(neonUsageRequests(fetchMock)).toHaveLength(1);
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    expect(
+      await within(section).findByRole('progressbar', {
+        name: 'Application database compute: 25.0% used, 75.0% remaining',
+      }),
+    ).toBeTruthy();
+    await waitFor(() => expect(neonUsageRequests(fetchMock)).toHaveLength(2));
+    for (const [, requestInit] of neonUsageRequests(fetchMock)) {
+      expect(requestInit).toMatchObject({
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      expect(requestInit).not.toHaveProperty('body');
+      expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
+  it('renders Neon Free project and organization percentages from raw published references', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity, availableNeonUsage);
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    const project = within(section)
+      .getByRole('heading', { level: 3, name: 'Application database' })
+      .closest('article')!;
+    expectPaintedProgressbar(
+      project,
+      'Application database compute: 25.0% used, 75.0% remaining',
+      25,
+    );
+    expectPaintedProgressbar(
+      project,
+      'Application database storage: 25.0% used, 75.0% remaining',
+      25,
+    );
+    expectPaintedProgressbar(
+      section,
+      'Organization public network transfer: 25.0% used, 75.0% remaining',
+      25,
+    );
+
+    const renderedText = section.textContent ?? '';
+    for (const rawEvidence of [
+      '90,000 CU-seconds used',
+      '360,000 CU-seconds published reference',
+      '125,000,000 bytes used',
+      '500,000,000 bytes published reference',
+      '1,250,000,000 bytes used',
+      '5,000,000,000 bytes published reference',
+    ]) {
+      expect(renderedText).toContain(rawEvidence);
+    }
+    expect(renderedText).toContain('25.0% used');
+    expect(renderedText).toContain('75.0% remaining');
+    expect(section.querySelector('time[datetime="2026-08-01T00:00:00.000Z"]')).toBeTruthy();
+    expect(section.querySelector(`time[datetime="${resetAt}"]`)).toBeTruthy();
+    expect(within(section).getByText('Not an invoice or credit balance.')).toBeTruthy();
+    expect(within(section).queryByText(/credit remaining|cash credit/i)).toBeNull();
+    expect(within(section).getByRole('link', { name: 'Open Neon pricing ↗' })).toHaveProperty(
+      'href',
+      'https://neon.com/pricing',
+    );
+    expect(within(section).getByRole('link', { name: 'Open Neon console ↗' })).toHaveProperty(
+      'href',
+      'https://console.neon.tech/app/projects',
+    );
+  });
+
+  it('keeps complete empty Neon discovery available without fabricating a transfer period or percentage', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity, emptyNeonUsage);
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expect(await within(section).findByText('Available')).toBeTruthy();
+    expect(within(section).getByText('0 visible projects')).toBeTruthy();
+    expect(within(section).getByText('No Neon projects were returned.')).toBeTruthy();
+    expect(within(section).getByText('Organization transfer percentage: Unknown')).toBeTruthy();
+    expect(within(section).queryByRole('progressbar')).toBeNull();
+    expect(within(section).queryByText(/% (?:used|remaining)/i)).toBeNull();
+    expect(section.querySelector('time[datetime="2026-08-01T00:00:00.000Z"]')).toBeNull();
+    expect(section.querySelector(`time[datetime="${resetAt}"]`)).toBeNull();
+    expect(within(section).getByRole('link', { name: 'Open Neon pricing ↗' })).toHaveProperty(
+      'href',
+      'https://neon.com/pricing',
+    );
+    expect(within(section).getByRole('link', { name: 'Open Neon console ↗' })).toHaveProperty(
+      'href',
+      'https://console.neon.tech/app/projects',
+    );
+  });
+
+  it('preserves available project percentages while explaining partial Neon usage evidence', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity, partialNeonUsage);
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expect(await within(section).findByText('Partial')).toBeTruthy();
+    expectPaintedProgressbar(
+      section,
+      'Application database compute: 25.0% used, 75.0% remaining',
+      25,
+    );
+    expectPaintedProgressbar(
+      section,
+      'Application database storage: 25.0% used, 75.0% remaining',
+      25,
+    );
+    const unknownProject = within(section)
+      .getByRole('heading', { level: 3, name: 'Admin database' })
+      .closest('article')!;
+    expect(within(unknownProject).getByText('Project usage unavailable.')).toBeTruthy();
+    expect(within(unknownProject).getByText('Provider request timed out.')).toBeTruthy();
+    expect(within(section).getByText('Organization transfer percentage: Unknown')).toBeTruthy();
+    expect(within(section).getByText('Complete project coverage is unavailable.')).toBeTruthy();
+    expect(
+      within(section).queryByRole('progressbar', {
+        name: /Organization public network transfer/i,
+      }),
+    ).toBeNull();
+  });
+
+  it.each([
+    [unknownNeonUsage, 'Neon Free usage is not configured.'],
+    [
+      { ...unknownNeonUsage, reason: 'unsupported_plan' as const },
+      'Neon plan is not the supported Free plan.',
+    ],
+  ] as const)(
+    'renders an Unknown Neon Free usage reason without a fabricated percentage',
+    async (observation, expectedCopy) => {
+      mockOperationsFetch(emptyInventory, availableR2Capacity, observation);
+
+      render(<AdminOperations />);
+
+      const section = await getNeonUsageSection();
+      expect(await within(section).findByText('Unknown')).toBeTruthy();
+      expect(within(section).getByText(expectedCopy)).toBeTruthy();
+      expect(within(section).queryByRole('progressbar')).toBeNull();
+      expect(within(section).queryByText(/% (?:used|remaining)/i)).toBeNull();
+    },
+  );
+
+  it('returns the whole page to sign-in when the Neon Free usage observer rejects the session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/neon-usage') {
+        return jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized.' } }, 401);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Neon Free usage' })).toBeNull();
+    expect(screen.queryByText('Neon Free usage is temporarily unavailable.')).toBeNull();
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects and redacts Neon credentials, provider bodies, and project connection data', async () => {
+    const forbiddenValues = [
+      'neon-viewer-key-must-never-leak',
+      'postgresql://owner:password@ep-secret.example/db',
+      'raw Neon usage provider error for owner@example.com',
+      'ep-secret-pooler.example',
+    ];
+    const poisonedNeonUsage = {
+      ...availableNeonUsage,
+      apiKey: forbiddenValues[0],
+      rawProviderResponse: { error: forbiddenValues[2] },
+      projects: [
+        {
+          ...availableNeonUsageProject,
+          connectionUri: forbiddenValues[1],
+          proxyHost: forbiddenValues[3],
+          ownerId: 'provider-owner-id',
+        },
+      ],
+    };
+    mockOperationsFetch(emptyInventory, availableR2Capacity, poisonedNeonUsage);
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Neon Free usage returned an invalid response.')).toBeTruthy();
+    expect(within(section).queryByRole('progressbar')).toBeNull();
+    const renderedText = document.body.textContent ?? '';
+    const serializedDom = document.documentElement.outerHTML;
+    for (const value of [...forbiddenValues, 'provider-owner-id']) {
+      expect(renderedText).not.toContain(value);
+      expect(serializedDom).not.toContain(value);
+    }
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('retains over-reference percentages while clamping every painted Neon meter at 100%', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity, overAllowanceNeonUsage);
+
+    render(<AdminOperations />);
+
+    const section = await getNeonUsageSection();
+    expectPaintedProgressbar(
+      section,
+      'Application database compute: 111.1% used, 0.0% remaining',
+      100,
+    );
+    expectPaintedProgressbar(
+      section,
+      'Application database storage: 120.0% used, 0.0% remaining',
+      100,
+    );
+    expectPaintedProgressbar(
+      section,
+      'Organization public network transfer: 120.0% used, 0.0% remaining',
+      100,
+    );
+    expect(section.textContent).toContain('111.1% used');
+    expect(section.textContent).toContain('120.0% used');
+    expect(section.textContent).toContain('0.0% remaining');
+  });
+
   it('loads R2 capacity with the admin cookie and refreshes it only with the shared control', async () => {
     const observations = [unknownR2Capacity, availableR2Capacity];
     let observationIndex = 0;
@@ -1330,7 +1962,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(18);
+    expect(fetchMock).toHaveBeenCalledTimes(20);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {
@@ -1394,6 +2026,23 @@ describe('AdminOperations', () => {
     ]) {
       expect(renderedText).toContain(value);
     }
+    expectPaintedProgressbar(
+      section,
+      'Estimated R2 Class A operations: 12.5% used, 87.5% remaining',
+      12.5,
+    );
+    expectPaintedProgressbar(
+      section,
+      'Estimated R2 Class B operations: 42.0% used, 58.0% remaining',
+      42,
+    );
+    expect(renderedText).toContain('12.5% used');
+    expect(renderedText).toContain('87.5% remaining');
+    expect(renderedText).toContain('42.0% used');
+    expect(renderedText).toContain('58.0% remaining');
+    expect(within(section).getAllByRole('progressbar')).toHaveLength(2);
+    expect(within(section).queryByRole('progressbar', { name: /storage/i })).toBeNull();
+    expect(renderedText).not.toMatch(/(?:standard|infrequent access|storage)[^.\n]*%/i);
     for (const caveat of [
       'Current storage is a snapshot, not remaining GB-month capacity.',
       'Storage metrics may lag.',
@@ -1414,6 +2063,56 @@ describe('AdminOperations', () => {
       'https://dash.cloudflare.com/',
     );
   });
+
+  it.each([
+    ['zero', 0, 1_000_000, 0, 10_000_000, 0, 100, 0],
+    ['full', 1_000_000, 0, 10_000_000, 0, 100, 0, 100],
+    ['over-reference', 1_250_000, 0, 12_500_000, 0, 125, 0, 100],
+  ] as const)(
+    'renders %s R2 Class A and Class B operation percentages',
+    async (
+      _caseName,
+      classAUsed,
+      classARemaining,
+      classBUsed,
+      classBRemaining,
+      usedPercent,
+      remainingPercent,
+      paintedPercent,
+    ) => {
+      const observation = {
+        ...availableR2Capacity,
+        operations: {
+          ...availableR2Capacity.operations,
+          classA: {
+            ...availableR2Capacity.operations.classA,
+            estimatedUsed: classAUsed,
+            estimatedRemaining: classARemaining,
+          },
+          classB: {
+            ...availableR2Capacity.operations.classB,
+            estimatedUsed: classBUsed,
+            estimatedRemaining: classBRemaining,
+          },
+        },
+      };
+      mockOperationsFetch(emptyInventory, observation);
+
+      render(<AdminOperations />);
+
+      const section = await getR2CapacitySection();
+      expectPaintedProgressbar(
+        section,
+        `Estimated R2 Class A operations: ${usedPercent.toFixed(1)}% used, ${remainingPercent.toFixed(1)}% remaining`,
+        paintedPercent,
+      );
+      expectPaintedProgressbar(
+        section,
+        `Estimated R2 Class B operations: ${usedPercent.toFixed(1)}% used, ${remainingPercent.toFixed(1)}% remaining`,
+        paintedPercent,
+      );
+    },
+  );
 
   it('preserves partial R2 facts and explains unknown storage, truncation, and exclusions', async () => {
     const partialR2Capacity = {
@@ -1450,6 +2149,17 @@ describe('AdminOperations', () => {
         '57 successful requests were unclassified and excluded from the operation estimates.',
       ),
     ).toBeTruthy();
+    expectPaintedProgressbar(
+      section,
+      'Estimated R2 Class A operations: 12.5% used, 87.5% remaining',
+      12.5,
+    );
+    expectPaintedProgressbar(
+      section,
+      'Estimated R2 Class B operations: 42.0% used, 58.0% remaining',
+      42,
+    );
+    expect(within(section).getAllByRole('progressbar')).toHaveLength(2);
     expect(section.textContent).toContain('875,000 estimated remaining');
   });
 
@@ -1553,7 +2263,11 @@ describe('AdminOperations', () => {
     expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
 
     const renderedText = document.body.textContent ?? '';
-    for (const value of forbiddenValues) expect(renderedText).not.toContain(value);
+    const serializedDom = document.documentElement.outerHTML;
+    for (const value of forbiddenValues) {
+      expect(renderedText).not.toContain(value);
+      expect(serializedDom).not.toContain(value);
+    }
     expect(window.localStorage.length).toBe(0);
     expect(window.sessionStorage.length).toBe(0);
   });
@@ -1575,7 +2289,7 @@ describe('AdminOperations', () => {
       within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }),
     ).toHaveProperty('disabled', false);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
@@ -1586,9 +2300,9 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(18));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
 
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(
@@ -1607,7 +2321,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
     const runButton = within(diagnosticSection).getByRole('button', {
       name: 'Run diagnostic',
     });
@@ -1780,7 +2494,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
     await user.click(within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }));
 
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();

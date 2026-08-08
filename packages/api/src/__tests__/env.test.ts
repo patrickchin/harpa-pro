@@ -16,6 +16,13 @@ const KEYS = [
   'ADMIN_MIGRATIONS_REQUIRED_HEAD',
   'DATABASE_URL',
   'ADMIN_DATABASE_URL',
+  'ADMIN_NEON_VIEWER_API_KEY',
+  'ADMIN_NEON_ORG_ID',
+  'ADMIN_CLOUDFLARE_ACCOUNT_ID',
+  'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN',
+  'ADMIN_REPORT_DIAGNOSTIC_EMAIL',
+  'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID',
+  'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'ADMIN_CORS_ORIGINS',
@@ -265,6 +272,252 @@ describe('env: admin database isolation', () => {
 
     expect(mod.env.DATABASE_URL).toBe(process.env.DATABASE_URL);
     expect(mod.env.ADMIN_DATABASE_URL).toBe(process.env.ADMIN_DATABASE_URL);
+  });
+});
+
+describe('env: admin Neon observer', () => {
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_NEON_VIEWER_API_KEY).toBeUndefined();
+    expect(mod.env.ADMIN_NEON_ORG_ID).toBeUndefined();
+  });
+
+  it('accepts a viewer key and organization ID together', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+    process.env.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_NEON_VIEWER_API_KEY).toBe('test-neon-viewer-key');
+    expect(mod.env.ADMIN_NEON_ORG_ID).toBe('org-harpa-pro');
+  });
+
+  it('rejects a viewer key without an organization ID', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_ORG_ID/);
+  });
+
+  it('rejects an organization ID without a viewer key', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY/);
+  });
+
+  it("rejects an organization ID outside Neon's documented ID format", async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+    process.env.ADMIN_NEON_ORG_ID = 'https://console.neon.tech/api/v2';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_ORG_ID/);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('rejects %s observer configuration', async (_description, value) => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = value;
+    process.env.ADMIN_NEON_ORG_ID = value;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY|ADMIN_NEON_ORG_ID/);
+  });
+});
+
+describe('env: admin Cloudflare R2 observer', () => {
+  const completeObserver = {
+    ADMIN_CLOUDFLARE_ACCOUNT_ID: '023e105f4ecef8ad9ca31a8372d0c353',
+    ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: 'test-cloudflare-r2-observer-token',
+  } as const;
+
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
+    expect(mod.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN).toBeUndefined();
+  });
+
+  it('accepts a lowercase 32-character account ID and observer token together', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CLOUDFLARE_ACCOUNT_ID).toBe(completeObserver.ADMIN_CLOUDFLARE_ACCOUNT_ID);
+    expect(mod.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN).toBe(
+      completeObserver.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN,
+    );
+  });
+
+  it('rejects an observer token without an account ID', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN =
+      completeObserver.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+
+  it('rejects an account ID without an observer token', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_CLOUDFLARE_ACCOUNT_ID = completeObserver.ADMIN_CLOUDFLARE_ACCOUNT_ID;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN/);
+  });
+
+  it.each([
+    ['empty account ID', 'ADMIN_CLOUDFLARE_ACCOUNT_ID', ''],
+    ['whitespace-only account ID', 'ADMIN_CLOUDFLARE_ACCOUNT_ID', '   '],
+    ['empty observer token', 'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN', ''],
+    ['whitespace-only observer token', 'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN', '   '],
+  ] as const)('rejects %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each([
+    '023e105f4ecef8ad9ca31a8372d0c35',
+    '023E105F4ECEF8AD9CA31A8372D0C353',
+    '023e105f4ecef8ad9ca31a8372d0c35g',
+    'https://dash.cloudflare.com/023e105f4ecef8ad9ca31a8372d0c353',
+  ])('rejects malformed Cloudflare account ID %s', async (accountId) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_CLOUDFLARE_ACCOUNT_ID: accountId,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+});
+
+describe('env: admin report-generation diagnostic target', () => {
+  const completeTarget = {
+    ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'report-canary@e2e.harpapro.com',
+    ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: 'prj_01234567',
+    ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: '7',
+  } as const;
+
+  function setTestAccountAccess(): void {
+    process.env.NODE_ENV = 'development';
+    process.env.TEST_ACCOUNT_EMAILS =
+      'test@harpapro.com, report-canary@e2e.harpapro.com, test2@harpapro.com';
+    process.env.TEST_ACCOUNT_PASSWORD = 'test-password-12345';
+  }
+
+  it('accepts the diagnostic being unconfigured', async () => {
+    setTestAccountAccess();
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_EMAIL).toBeUndefined();
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID).toBeUndefined();
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER).toBeUndefined();
+  });
+
+  it('accepts a complete target whose email is an exact test-account member', async () => {
+    setTestAccountAccess();
+    Object.assign(process.env, completeTarget);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_EMAIL).toBe('report-canary@e2e.harpapro.com');
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID).toBe('prj_01234567');
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER).toBe(7);
+  });
+
+  it.each([
+    ['email only', ['ADMIN_REPORT_DIAGNOSTIC_EMAIL']],
+    ['project only', ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID']],
+    ['report number only', ['ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER']],
+    ['email and project', ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', 'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID']],
+    [
+      'email and report number',
+      ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', 'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER'],
+    ],
+    [
+      'project and report number',
+      ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID', 'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER'],
+    ],
+  ] as const)('rejects partial target configuration: %s', async (_description, configuredKeys) => {
+    setTestAccountAccess();
+    for (const key of configuredKeys) process.env[key] = completeTarget[key];
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC/);
+  });
+
+  it.each([
+    ['email', 'ADMIN_REPORT_DIAGNOSTIC_EMAIL'],
+    ['project ID', 'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID'],
+    ['report number', 'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER'],
+  ] as const)('rejects a blank %s', async (_description, key) => {
+    setTestAccountAccess();
+    Object.assign(process.env, completeTarget, { [key]: '   ' });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each(['not-an-email', 'https://example.com/canary'])(
+    'rejects malformed diagnostic email %s',
+    async (email) => {
+      setTestAccountAccess();
+      process.env.TEST_ACCOUNT_EMAILS = `${process.env.TEST_ACCOUNT_EMAILS},${email}`;
+      Object.assign(process.env, completeTarget, { ADMIN_REPORT_DIAGNOSTIC_EMAIL: email });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC_EMAIL/);
+    },
+  );
+
+  it.each(['project-01234567', 'tiny-tree-06262558', 'prj_short', 'prj_0123456i'])(
+    'rejects malformed diagnostic project ID %s',
+    async (projectId) => {
+      setTestAccountAccess();
+      Object.assign(process.env, completeTarget, {
+        ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: projectId,
+      });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID/);
+    },
+  );
+
+  it.each(['0', '-1', '1.5', 'seven'])(
+    'rejects malformed diagnostic report number %s',
+    async (reportNumber) => {
+      setTestAccountAccess();
+      Object.assign(process.env, completeTarget, {
+        ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: reportNumber,
+      });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER/);
+    },
+  );
+
+  it('rejects a valid email that is not in TEST_ACCOUNT_EMAILS', async () => {
+    setTestAccountAccess();
+    Object.assign(process.env, completeTarget, {
+      ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'customer@example.com',
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(
+      /ADMIN_REPORT_DIAGNOSTIC_EMAIL|TEST_ACCOUNT_EMAILS/,
+    );
+  });
+
+  it('rejects a complete target when test-account password access is unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeTarget);
+
+    await expect(freshImportEnv()).rejects.toThrow(
+      /ADMIN_REPORT_DIAGNOSTIC_EMAIL|TEST_ACCOUNT_EMAILS|TEST_ACCOUNT_PASSWORD/,
+    );
   });
 });
 

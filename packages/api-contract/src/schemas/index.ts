@@ -11,3 +11,30 @@ export * as waitlist from './waitlist.js';
 export * as resolvers from './resolvers.js';
 export * as usageLimits from './usage-limits.js';
 export * as activity from './activity.js';
+export * as operations from './operations.js';
+export type {
+  NeonBranch,
+  NeonBranchCount,
+  NeonBranchDetails,
+  NeonInventoryObservation,
+  NeonInventoryReason,
+  NeonProject,
+  R2Bucket,
+  R2BucketInventory,
+  R2CapacityCaveat,
+  R2CapacityObservation,
+  R2CapacityReason,
+  R2FreeTierReference,
+  R2OperationEstimate,
+  R2OperationsObservation,
+  R2StorageClassSnapshot,
+  R2StorageObservation,
+  ReportGenerateDiagnosticFailureReason,
+  ReportGenerateDiagnosticGeneration,
+  ReportGenerateDiagnosticLimits,
+  ReportGenerateDiagnosticLimitSummary,
+  ReportGenerateDiagnosticObservation,
+  ReportGenerateDiagnosticPhase,
+  ReportGenerateDiagnosticTarget,
+  ReportGenerateDiagnosticWarning,
+} from './operations.js';

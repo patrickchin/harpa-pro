@@ -80,10 +80,11 @@ export function createApp(): OpenAPIHono<AppEnv> {
     maxAge: 86400,
   });
   app.use('*', async (c, next) => {
-    // Public waitlist and admin routes keep their own narrower allowlists below.
+    // Public waitlist, health, and admin routes keep narrower allowlists below.
     const hasDedicatedCors =
       c.req.path === '/waitlist' ||
       c.req.path.startsWith('/waitlist/') ||
+      c.req.path === '/healthz' ||
       c.req.path === '/admin' ||
       c.req.path.startsWith('/admin/');
     if (hasDedicatedCors) {
@@ -126,12 +127,12 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const adminOrigins = env.ADMIN_CORS_ORIGINS.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const credentialedOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
+  const adminOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
 
   app.use(
     '/admin/*',
     cors({
-      origin: credentialedOrigin,
+      origin: adminOrigin,
       allowMethods: ['GET', 'POST', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'X-Request-ID', ADMIN_CSRF_HEADER],
       credentials: true,
@@ -141,9 +142,18 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.use(
     '/readyz',
     cors({
-      origin: credentialedOrigin,
+      origin: adminOrigin,
       allowMethods: ['GET', 'OPTIONS'],
       credentials: true,
+      maxAge: 86400,
+    }),
+  );
+  app.use(
+    '/healthz',
+    cors({
+      origin: adminOrigin,
+      allowMethods: ['GET', 'OPTIONS'],
+      credentials: false,
       maxAge: 86400,
     }),
   );

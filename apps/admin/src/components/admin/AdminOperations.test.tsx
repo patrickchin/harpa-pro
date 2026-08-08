@@ -26,6 +26,35 @@ const adminSession = {
 
 const observedAt = '2026-08-08T05:30:00.000Z';
 const resetAt = '2026-09-01T00:00:00.000Z';
+const apiGitCommit = '1111111111111111111111111111111111111111';
+const adminPagesCommit = '2222222222222222222222222222222222222222';
+const productMigrationHead = '0028_report_version_monotonic.sql';
+const adminMigrationHead = '0002_admin_rate_limit_buckets.sql';
+
+const apiIdentity = {
+  ok: true as const,
+  service: 'api' as const,
+  version: '0.1.65',
+  gitCommit: apiGitCommit,
+  buildTime: '2026-08-08T04:45:00.000Z',
+};
+
+const productReadiness = {
+  ok: true as const,
+  db: 'up' as const,
+  head: productMigrationHead,
+};
+
+const adminReadiness = {
+  ok: true as const,
+  db: 'up' as const,
+  head: adminMigrationHead,
+};
+
+const adminPagesMarker = {
+  commit: adminPagesCommit,
+  branch: 'codex/admin-deployment-identity',
+};
 
 const passDiagnostic = {
   observedAt,
@@ -222,6 +251,14 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function defaultDeploymentResponse(url: string): Response | null {
+  if (url === 'https://api.example.test/healthz') return jsonResponse(apiIdentity);
+  if (url === 'https://api.example.test/readyz') return jsonResponse(productReadiness);
+  if (url === 'https://api.example.test/admin/readyz') return jsonResponse(adminReadiness);
+  if (url === '/_cf-pages-deployment.json') return jsonResponse(adminPagesMarker);
+  return null;
+}
+
 function mockOperationsFetch(
   inventory: unknown = availableInventory,
   r2Capacity: unknown = availableR2Capacity,
@@ -234,12 +271,8 @@ function mockOperationsFetch(
     if (url === 'https://api.example.test/admin/operations/r2-capacity') {
       return jsonResponse(r2Capacity);
     }
-    if (
-      url === 'https://api.example.test/readyz' ||
-      url === 'https://api.example.test/admin/readyz'
-    ) {
-      return new Response(null, { status: 200 });
-    }
+    const deploymentResponse = defaultDeploymentResponse(url);
+    if (deploymentResponse) return deploymentResponse;
     throw new Error(`Unexpected request: ${url}`);
   });
 }
@@ -260,14 +293,14 @@ function mockDiagnosticFetch(
     if (url === 'https://api.example.test/admin/operations/r2-capacity') {
       return jsonResponse(r2Capacity);
     }
-    if (
-      url === 'https://api.example.test/readyz' ||
-      url === 'https://api.example.test/admin/readyz'
-    ) {
-      return new Response(null, { status: 200 });
-    }
+    const deploymentResponse = defaultDeploymentResponse(url);
+    if (deploymentResponse) return deploymentResponse;
     throw new Error(`Unexpected request: ${url}`);
   });
+}
+
+function deploymentRequests(fetchMock: MockInstance<typeof globalThis.fetch>, url: string) {
+  return fetchMock.mock.calls.filter(([input]) => String(input) === url);
 }
 
 function diagnosticRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
@@ -302,12 +335,19 @@ async function getDiagnosticSection() {
   return section!;
 }
 
+async function getDeploymentCard(name: string) {
+  const heading = await screen.findByRole('heading', { level: 3, name });
+  const card = heading.closest('article');
+  expect(card).toBeTruthy();
+  return card!;
+}
+
 async function renderAndRunDiagnostic(body: unknown, status = 200) {
   const fetchMock = mockDiagnosticFetch(() => jsonResponse(body, status));
   const user = userEvent.setup();
   render(<AdminOperations />);
   const section = await getDiagnosticSection();
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
   await user.click(within(section).getByRole('button', { name: 'Run diagnostic' }));
   return { fetchMock, section };
 }
@@ -333,11 +373,13 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
+        'https://api.example.test/healthz',
         'https://api.example.test/readyz',
         'https://api.example.test/admin/readyz',
+        '/_cf-pages-deployment.json',
         'https://api.example.test/admin/operations/neon',
         'https://api.example.test/admin/operations/r2-capacity',
       ]),
@@ -366,19 +408,236 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('reports individual readiness failures and refreshes only when asked', async () => {
-    let productAttempt = 0;
-    let adminAttempt = 0;
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+  it('uses four fixed deployment reads on load and shared Refresh without polling', async () => {
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const fetchMock = mockOperationsFetch();
+    const user = userEvent.setup();
+    const expectedRequests = [
+      {
+        url: 'https://api.example.test/healthz',
+        credentials: 'omit',
+      },
+      {
+        url: 'https://api.example.test/readyz',
+        credentials: 'include',
+      },
+      {
+        url: 'https://api.example.test/admin/readyz',
+        credentials: 'include',
+      },
+      {
+        url: '/_cf-pages-deployment.json',
+        credentials: 'same-origin',
+      },
+    ] as const;
+
+    render(<AdminOperations />);
+
+    await waitFor(() => {
+      for (const { url } of expectedRequests) {
+        expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
+      }
+    });
+    for (const { url, credentials } of expectedRequests) {
+      const [, requestInit] = deploymentRequests(fetchMock, url)[0]!;
+      expect(requestInit).toMatchObject({ credentials, cache: 'no-store' });
+      expect(requestInit?.method ?? 'GET').toBe('GET');
+      expect(requestInit).not.toHaveProperty('body');
+      expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    }
+    expect(intervalSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    for (const { url } of expectedRequests) {
+      expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    await waitFor(() => {
+      for (const { url } of expectedRequests) {
+        expect(deploymentRequests(fetchMock, url)).toHaveLength(2);
+      }
+    });
+    expect(intervalSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders the full API identity, independent migration heads, and admin Pages marker', async () => {
+    mockOperationsFetch();
+
+    render(<AdminOperations />);
+
+    const apiCard = await getDeploymentCard('API build identity');
+    expect(within(apiCard).getByText('Version')).toBeTruthy();
+    expect(apiCard.textContent).toContain(apiIdentity.version);
+    expect(within(apiCard).getByText('Git commit')).toBeTruthy();
+    expect(apiCard.textContent).toContain(apiGitCommit);
+    expect(apiCard.querySelector(`time[datetime="${apiIdentity.buildTime}"]`)).toBeTruthy();
+
+    const productCard = await getDeploymentCard('Product database readiness');
+    expect(within(productCard).getByText('Healthy')).toBeTruthy();
+    expect(within(productCard).getByText('Migration head')).toBeTruthy();
+    expect(productCard.textContent).toContain(productMigrationHead);
+
+    const adminCard = await getDeploymentCard('Administrator database readiness');
+    expect(within(adminCard).getByText('Healthy')).toBeTruthy();
+    expect(within(adminCard).getByText('Migration head')).toBeTruthy();
+    expect(adminCard.textContent).toContain(adminMigrationHead);
+
+    const pagesCard = await getDeploymentCard('Administrator Pages identity');
+    expect(within(pagesCard).getByText('Commit')).toBeTruthy();
+    expect(pagesCard.textContent).toContain(adminPagesCommit);
+    expect(within(pagesCard).getByText('Branch')).toBeTruthy();
+    expect(pagesCard.textContent).toContain(adminPagesMarker.branch);
+    expect(
+      screen.getByText(
+        'Build identity, readiness, provider metadata, and exact promotion proof are different evidence classes.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    {
+      surface: 'API identity',
+      failedUrl: 'https://api.example.test/healthz',
+      failedResponse: () => new Response(null, { status: 502 }),
+      cardName: 'API build identity',
+      status: 'Unknown',
+      missing: apiGitCommit,
+      preserved: [productMigrationHead, adminMigrationHead, adminPagesCommit],
+    },
+    {
+      surface: 'product readiness',
+      failedUrl: 'https://api.example.test/readyz',
+      failedResponse: () => jsonResponse({ ok: false, db: 'down' }, 503),
+      cardName: 'Product database readiness',
+      status: 'Unavailable',
+      missing: productMigrationHead,
+      preserved: [apiGitCommit, adminMigrationHead, adminPagesCommit],
+    },
+    {
+      surface: 'administrator readiness',
+      failedUrl: 'https://api.example.test/admin/readyz',
+      failedResponse: () => {
+        throw new Error('administrator database offline');
+      },
+      cardName: 'Administrator database readiness',
+      status: 'Unavailable',
+      missing: adminMigrationHead,
+      preserved: [apiGitCommit, productMigrationHead, adminPagesCommit],
+    },
+    {
+      surface: 'administrator Pages marker',
+      failedUrl: '/_cf-pages-deployment.json',
+      failedResponse: () => new Response(null, { status: 404 }),
+      cardName: 'Administrator Pages identity',
+      status: 'Unknown',
+      missing: adminPagesCommit,
+      preserved: [apiGitCommit, productMigrationHead, adminMigrationHead],
+    },
+  ])('keeps a $surface failure independent from the other evidence', async (testCase) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === testCase.failedUrl) return testCase.failedResponse();
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const failedCard = await getDeploymentCard(testCase.cardName);
+    expect(await within(failedCard).findByText(testCase.status)).toBeTruthy();
+    expect(failedCard.textContent).not.toContain(testCase.missing);
+    for (const preservedValue of testCase.preserved) {
+      expect(await screen.findByText(preservedValue)).toBeTruthy();
+    }
+  });
+
+  it('shows only bounded expected and actual identifiers for a readiness head mismatch', async () => {
+    const expectedHead = '0029_next_schema.sql';
+    const actualHead = '0028_current_schema.sql';
+    const rawMessage = 'postgres://owner:password@example.test <script>secret()</script>';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url === 'https://api.example.test/readyz') {
-        productAttempt += 1;
-        return new Response(null, { status: productAttempt === 1 ? 503 : 200 });
+        return jsonResponse(
+          {
+            ok: false,
+            db: 'head-mismatch',
+            expected: expectedHead,
+            actual: actualHead,
+            message: rawMessage,
+          },
+          503,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const productCard = await getDeploymentCard('Product database readiness');
+    expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
+    expect(within(productCard).getByText('Expected')).toBeTruthy();
+    expect(productCard.textContent).toContain(expectedHead);
+    expect(within(productCard).getByText('Actual')).toBeTruthy();
+    expect(productCard.textContent).toContain(actualHead);
+    expect(document.body.textContent).not.toContain(rawMessage);
+    expect(document.body.textContent).not.toContain('owner:password');
+    expect(document.querySelector('script')).toBeNull();
+    expect(await screen.findByText(apiGitCommit)).toBeTruthy();
+    expect(await screen.findByText(adminMigrationHead)).toBeTruthy();
+    expect(await screen.findByText(adminPagesCommit)).toBeTruthy();
+  });
+
+  it('strictly rejects extra fields, secrets, shortened SHAs, and HTML-shaped values', async () => {
+    const forbiddenValues = [
+      'api-observer-token-must-never-render',
+      'database-password-must-never-render',
+      '<img src=x onerror=secret-must-never-run>',
+      '<script>pages-secret-must-never-run</script>',
+      'pages-cookie-must-never-render',
+    ];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/healthz') {
+        return jsonResponse({
+          ...apiIdentity,
+          gitCommit: 'deadbeef',
+          buildTime: 'not-an-iso-timestamp',
+          token: forbiddenValues[0],
+        });
+      }
+      if (url === 'https://api.example.test/readyz') {
+        return jsonResponse({ ...productReadiness, password: forbiddenValues[1] });
       }
       if (url === 'https://api.example.test/admin/readyz') {
-        adminAttempt += 1;
-        if (adminAttempt === 1) throw new Error('offline');
-        return new Response(null, { status: 200 });
+        return jsonResponse({ ...adminReadiness, head: forbiddenValues[2] });
+      }
+      if (url === '/_cf-pages-deployment.json') {
+        return jsonResponse({
+          ...adminPagesMarker,
+          branch: forbiddenValues[3],
+          cookie: forbiddenValues[4],
+        });
       }
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
@@ -388,6 +647,66 @@ describe('AdminOperations', () => {
       }
       throw new Error(`Unexpected request: ${url}`);
     });
+
+    render(<AdminOperations />);
+
+    expect(
+      await within(await getDeploymentCard('API build identity')).findByText('Unknown'),
+    ).toBeTruthy();
+    expect(
+      await within(await getDeploymentCard('Product database readiness')).findByText('Unavailable'),
+    ).toBeTruthy();
+    expect(
+      await within(await getDeploymentCard('Administrator database readiness')).findByText(
+        'Unavailable',
+      ),
+    ).toBeTruthy();
+    expect(
+      await within(await getDeploymentCard('Administrator Pages identity')).findByText('Unknown'),
+    ).toBeTruthy();
+
+    const renderedText = document.body.textContent ?? '';
+    for (const value of [
+      ...forbiddenValues,
+      'deadbeef',
+      productMigrationHead,
+      adminMigrationHead,
+      adminPagesCommit,
+    ]) {
+      expect(renderedText).not.toContain(value);
+    }
+    expect(document.querySelector('img')).toBeNull();
+    expect(document.querySelector('script')).toBeNull();
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('reports individual readiness failures and refreshes only when asked', async () => {
+    let productAttempt = 0;
+    let adminAttempt = 0;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/readyz') {
+        productAttempt += 1;
+        return productAttempt === 1
+          ? jsonResponse({ ok: false, db: 'down' }, 503)
+          : jsonResponse(productReadiness);
+      }
+      if (url === 'https://api.example.test/admin/readyz') {
+        adminAttempt += 1;
+        if (adminAttempt === 1) throw new Error('offline');
+        return jsonResponse(adminReadiness);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
     const user = userEvent.setup();
 
     render(<AdminOperations />);
@@ -395,24 +714,24 @@ describe('AdminOperations', () => {
     const productCard = (
       await screen.findByRole('heading', {
         level: 3,
-        name: 'Product API and database',
+        name: 'Product database readiness',
       })
     ).closest('article')!;
     const adminCard = screen
-      .getByRole('heading', { level: 3, name: 'Admin API and database' })
+      .getByRole('heading', { level: 3, name: 'Administrator database readiness' })
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
 
-  it('does not request or expose provider observations while the dedicated admin is signed out', async () => {
+  it('does not request deployment identities or provider observations while signed out', async () => {
     authMock.getSession.mockResolvedValueOnce(null).mockResolvedValueOnce(adminSession);
     const fetchMock = mockOperationsFetch(emptyInventory);
     const user = userEvent.setup();
@@ -422,6 +741,8 @@ describe('AdminOperations', () => {
     expect(screen.queryByRole('link', { name: 'Open dashboard ↗' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
 
     view.unmount();
@@ -432,6 +753,8 @@ describe('AdminOperations', () => {
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
   });
 
   it('shows a distinct loading state until the Neon observation arrives', async () => {
@@ -445,12 +768,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/r2-capacity') {
         return jsonResponse(availableR2Capacity);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
 
@@ -507,12 +826,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/r2-capacity') {
         return jsonResponse(availableR2Capacity);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
 
@@ -636,12 +951,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/r2-capacity') {
         return jsonResponse(availableR2Capacity);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
     const user = userEvent.setup();
@@ -656,7 +967,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -732,12 +1043,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
     const user = userEvent.setup();
@@ -761,7 +1068,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {
@@ -777,12 +1084,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
 
@@ -910,12 +1213,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
 
@@ -941,12 +1240,8 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
       }
-      if (
-        url === 'https://api.example.test/readyz' ||
-        url === 'https://api.example.test/admin/readyz'
-      ) {
-        return new Response(null, { status: 200 });
-      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
       throw new Error(`Unexpected request: ${url}`);
     });
 
@@ -1018,7 +1313,7 @@ describe('AdminOperations', () => {
       within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }),
     ).toHaveProperty('disabled', false);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
@@ -1029,9 +1324,9 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
 
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(
@@ -1050,7 +1345,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     const runButton = within(diagnosticSection).getByRole('button', {
       name: 'Run diagnostic',
     });
@@ -1223,7 +1518,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     await user.click(within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }));
 
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();

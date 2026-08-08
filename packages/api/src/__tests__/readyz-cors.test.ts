@@ -27,3 +27,35 @@ describe('GET /readyz admin CORS', () => {
     expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
   });
 });
+
+describe('GET /healthz admin CORS', () => {
+  it('allows only the configured admin origin without credentials', async () => {
+    const app = createApp();
+    const allowedPreflight = await app.request('/healthz', {
+      method: 'OPTIONS',
+      headers: {
+        origin: ADMIN_ORIGIN,
+        'access-control-request-method': 'GET',
+      },
+    });
+    const allowedGet = await app.request('/healthz', {
+      headers: { origin: ADMIN_ORIGIN },
+    });
+    const rejectedPreflight = await app.request('/healthz', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://evil.example.com',
+        'access-control-request-method': 'GET',
+      },
+    });
+
+    expect(allowedPreflight.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
+    expect(allowedPreflight.headers.get('access-control-allow-methods')).toContain('GET');
+    expect(allowedPreflight.headers.get('access-control-allow-methods')).toContain('OPTIONS');
+    expect(allowedPreflight.headers.get('access-control-allow-credentials')).toBeNull();
+    expect(allowedGet.status).toBe(200);
+    expect(allowedGet.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
+    expect(allowedGet.headers.get('access-control-allow-credentials')).toBeNull();
+    expect(rejectedPreflight.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});

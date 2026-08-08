@@ -17,10 +17,11 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 The root route renders the business activity console. `/operations` provides
 read-only Harpa deployment identity and readiness, a no-token public GitHub
 branch/PR snapshot, bounded Neon inventory and Free-plan usage, bounded R2
-capacity, and links to external service consoles. A separately triggered
-report-generation diagnostic is a synthetic mutation of one fixed test report
-and may consume AI quota; it is not part of the read-only refresh. Unknown
-browser paths return a static 404 instead of falling back to the console.
+capacity, and links to external service consoles. A separate **Report
+generation live canary** card updates one fixed synthetic report and spends
+real AI tokens. The canary runs only after an explicit click. It is not part of
+the read-only refresh. Unknown browser paths return a static 404 instead of
+falling back to the console.
 `/admin/activity` and the `/admin/operations/*` routes remain API resource
 paths, not page URLs.
 
@@ -94,11 +95,40 @@ painted meter stops at 100%. Unsupported provider money, token, invoice, and
 credit balances stay `Unknown`. The browser runs 10 authenticated reads after
 session confirmation and another 10 only when the operator presses
 **Refresh**, for 20 total after one Refresh. It does not poll. The report
-diagnostic remains a separate manual POST.
+generation live canary remains a separate manual POST.
 
 See
 [Admin provider quota percentages](../../docs/v4/design-admin-provider-quota-percentages.md)
 for the evidence and calculation contract.
+
+## Report generation live canary
+
+The browser sends an empty, credentialed, no-store request to
+`POST /admin/operations/report-generate`. It includes the current
+`X-Admin-CSRF` token. The request cannot select an account, target, provider,
+model, mode, or body.
+
+`ADMIN_REPORT_LIVE_CANARY_ENABLED` defaults to `0`. The API accepts `1` only
+for the exact development deployment with live AI mode and the complete fixed
+synthetic target. Pull-request previews and production cannot enable it. A
+disabled route returns `unknown/not_enabled` without an application request or
+application-database query.
+
+One click calls the real report endpoint and can spend real provider tokens.
+The button blocks a second submission until the request finishes. Page load,
+**Refresh**, timers, and background work never start or clear the canary.
+
+A pass proves live mode, a fresh report update, one matching live usage row,
+and an exact temporary-session sign-out. The card shows bounded token counts,
+usage limits, structural counts, a report hash, and an escaped synthetic
+preview. It does not show prompts, source notes, raw responses, credentials,
+or provider errors. The result stays only in component memory.
+
+The route permits three runs per administrator identity and session in 15
+minutes. The fixed synthetic account also keeps the normal report and AI usage
+limits. See
+[Admin live report-generation canary](../../docs/v4/design-admin-report-live-canary.md)
+for the complete contract.
 
 Cloudflare Git deploys this workspace through the independent
 `harpa-pro-admin` Pages project. `main`, `dev`, and mirrored `pr-N` branches

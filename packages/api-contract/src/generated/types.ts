@@ -6236,7 +6236,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Bounded report-generation diagnostic observation. */
+                /** @description Bounded live canary report-generation observation. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -6247,7 +6247,7 @@ export interface paths {
                             /** @enum {string} */
                             status: "unknown";
                             /** @enum {string} */
-                            reason: "not_configured";
+                            reason: "not_configured" | "not_enabled";
                         } | {
                             observedAt: string;
                             /** @enum {string} */
@@ -6275,6 +6275,64 @@ export interface paths {
                                 fixtureMode: "live";
                                 /** @enum {boolean} */
                                 idempotentReplay: false;
+                            };
+                            preview: {
+                                /** @enum {boolean} */
+                                schemaValid: true;
+                                sample: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                    }[];
+                                };
+                                counts: {
+                                    workers: number;
+                                    materials: number;
+                                    issues: number;
+                                    nextSteps: number;
+                                    summarySections: number;
+                                    imageAttachments: number;
+                                    documentAttachments: number;
+                                };
+                                truncated: boolean;
+                                bodySha256: string;
+                            };
+                            usage: {
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                latencyMs: number;
+                                /** @enum {boolean} */
+                                matched: true;
                             };
                             limits: {
                                 /** @enum {string} */
@@ -6327,8 +6385,67 @@ export interface paths {
                                 vendor: string;
                                 model: string;
                                 /** @enum {string} */
-                                fixtureMode: "live" | "replay";
-                                idempotentReplay: boolean;
+                                fixtureMode: "live";
+                                /** @enum {boolean} */
+                                idempotentReplay: false;
+                            };
+                            preview: {
+                                /** @enum {boolean} */
+                                schemaValid: true;
+                                sample: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                    }[];
+                                };
+                                counts: {
+                                    workers: number;
+                                    materials: number;
+                                    issues: number;
+                                    nextSteps: number;
+                                    summarySections: number;
+                                    imageAttachments: number;
+                                    documentAttachments: number;
+                                };
+                                truncated: boolean;
+                                bodySha256: string;
+                            };
+                            usage: {
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                latencyMs: number;
+                                /** @enum {boolean} */
+                                matched: true;
                             };
                             limits: {
                                 /** @enum {string} */
@@ -6357,16 +6474,16 @@ export interface paths {
                             } | null;
                             /** @enum {string} */
                             cleanup: "succeeded" | "failed";
-                            warnings: ("replay_only" | "limits_unavailable" | "sign_out_failed")[];
+                            warnings: ("limits_unavailable" | "sign_out_failed")[];
                         } | {
                             observedAt: string;
                             /** @enum {string} */
                             status: "fail";
                             durationMs: number;
                             /** @enum {string} */
-                            phase: "sign_in" | "target_read" | "generate" | "proof_read" | "limits" | "sign_out";
+                            phase: "sign_in" | "target_read" | "mode_gate" | "generate" | "proof_read" | "usage_window" | "usage_proof" | "preview" | "limits" | "sign_out";
                             /** @enum {string} */
-                            reason: "sign_in_failed" | "target_not_found" | "target_not_draft" | "conflict" | "usage_limit_exceeded" | "rate_limited" | "provider_error" | "timeout" | "invalid_response" | "upstream_unavailable";
+                            reason: "sign_in_failed" | "target_not_found" | "target_not_draft" | "conflict" | "live_mode_required" | "live_proof_failed" | "usage_proof_missing" | "usage_proof_ambiguous" | "preview_invalid" | "usage_limit_exceeded" | "rate_limited" | "provider_error" | "timeout" | "invalid_response" | "upstream_unavailable";
                             /** @enum {string} */
                             cleanup: "not_started" | "succeeded" | "failed";
                         };

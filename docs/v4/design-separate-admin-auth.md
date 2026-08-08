@@ -225,8 +225,8 @@ One observation makes at most 22 fixed Neon `GET` requests under one shared
 10-second deadline. It does not retry or follow project pagination. The
 browser calls the route once after session confirmation and again only on
 manual **Refresh**. The full operations page makes 10 authenticated reads on
-load and 20 total after one Refresh. It does not poll. The report diagnostic
-remains a separate manual POST.
+load and 20 total after one Refresh. It does not poll. The report generation
+live canary remains a separate manual POST.
 
 Neon percentages use published Free-plan references and are not credit
 balances. R2 Class A and Class B percentages remain estimates. The GitHub
@@ -248,6 +248,28 @@ The route is read-only and accepts no request body, query, or provider selector.
 Every response sets `Cache-Control: private, no-store`. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the credential and provider
 boundaries.
+
+### `POST /admin/operations/report-generate`
+
+This route is the only protected admin mutation other than logout. It uses the
+same dedicated admin session boundary. It also requires the exact configured
+Origin and the session-derived `X-Admin-CSRF` token. Better Auth sessions,
+application Bearer tokens, and the retired `is_admin` bit cannot authorize it.
+
+The live canary flag defaults to disabled. The parser accepts enablement only
+for the exact non-preview development deployment in live AI mode. A disabled
+route makes no application request or application-database query. Production
+and pull-request previews cannot enable it.
+
+The browser sends an empty, credentialed, no-store POST only after an explicit
+click. Page load, shared **Refresh**, timers, and background work never start
+or clear the run. The browser keeps the result only in component memory.
+
+The fixed synthetic account keeps the normal report and AI limits. The admin
+route also permits only three runs per identity and session in 15 minutes. A
+pass proves one fresh live usage row, a bounded validated preview, and strict
+same-token session cleanup. See
+[Admin live report-generation canary](design-admin-report-live-canary.md).
 
 ### `GET /admin/readyz`
 
@@ -274,7 +296,7 @@ independent admin database in deployed environments:
 - Neon Free usage reads: 12 per dedicated admin identity and session per
   minute;
 - R2 capacity reads: 12 per dedicated admin identity and session per minute;
-- report-generation diagnostics: 3 per dedicated admin identity and session
+- report generation live-canary runs: 3 per dedicated admin identity and session
   per 15 minutes.
 
 The shared IP gate protects admin-session database lookups, including invalid
@@ -289,7 +311,7 @@ identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity,
 Neon inventory, Neon Free usage, and R2 capacity requests are read-only. The
-report-generation diagnostic is the first protected admin mutation other than
+report generation live canary is the first protected admin mutation other than
 logout, so it also requires the exact Origin and a session-derived CSRF token
 carried in `X-Admin-CSRF`. The token stays in browser memory and is invalidated
 with the admin session, following the
@@ -305,7 +327,7 @@ and outcome. Passwords and raw session tokens are never logged.
 - Remove browser CORS from `/api/auth/*`; native app auth does not need it.
 - Keep credentialed exact-origin CORS on `/admin/*`.
 - Allow only `GET`, `POST`, and `OPTIONS` for the current browser console.
-- Allow only `Content-Type` and `X-Request-ID`.
+- Allow only `Content-Type`, `X-Request-ID`, and `X-Admin-CSRF`.
 - Keep `Vary: Origin` and never use `*` with credentials.
 - Store environment-specific admin origins as non-secret Fly configuration,
   not in the Doppler secret stream.
@@ -367,6 +389,8 @@ unchanged.
   provider through `/admin/operations/r2-capacity`.
 - A dedicated admin request to the R2 route consumes both its trusted-IP and
   identity/session budgets.
+- Live-canary tests prove the exact Origin, CSRF, dedicated-cookie, and
+  three-per-15-minute gates. They also prove strict redaction and no autorun.
 - Anonymous requests sharing an IP consume only the shared IP gate, not the
   authenticated activity bucket; authenticated activity requests consume
   both.

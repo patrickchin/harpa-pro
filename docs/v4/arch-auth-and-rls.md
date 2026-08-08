@@ -32,8 +32,8 @@ database. `GET /admin/operations/neon` requests bounded provider metadata. The
 `GET /admin/operations/neon-usage` route requests bounded Neon Free-plan usage.
 The `GET /admin/operations/r2-capacity` route requests bounded R2 measurements.
 The manual `POST /admin/operations/report-generate` can authenticate one fixed
-synthetic application user and exercise the real report routes. The two
-databases have no joins or cross-database foreign keys.
+synthetic application user and exercise the real report routes in live mode.
+The two databases have no joins or cross-database foreign keys.
 
 ## Auth flow
 
@@ -179,7 +179,7 @@ Successful admin login and session lookup also return a session-derived
 `csrfToken`. The API computes it as HMAC-SHA256 over the versioned
 `harpa-pro:admin-csrf:v1` domain, using the opaque admin session token as the
 key. The browser keeps the base64url value in memory and sends it only as
-`X-Admin-CSRF` on the report diagnostic. The API compares equal-length
+`X-Admin-CSRF` on the report generation live canary. The API compares equal-length
 digests in constant time. Rotating, revoking, expiring, or clearing the
 HttpOnly session cookie invalidates the CSRF token without another database
 column or browser-storage secret.
@@ -237,30 +237,36 @@ select a provider method or resource. The account ID, token, raw errors, and
 provider envelopes never enter the response or logs. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
 
-### Report diagnostic boundary
+### Report generation live canary boundary
 
-The report-generation diagnostic is disabled when all three
-`ADMIN_REPORT_DIAGNOSTIC_*` target values are absent. A configured target is
-valid only when its email is an exact member of `TEST_ACCOUNT_EMAILS`; the
-existing `TEST_ACCOUNT_PASSWORD` remains server-only. Partial configuration,
-blank values, malformed IDs, or a non-test email fail API environment parsing
-at boot.
+`ADMIN_REPORT_LIVE_CANARY_ENABLED` defaults to `0`. A disabled configured
+route returns `unknown/not_enabled` without an application request or
+application-database query. An absent target returns `unknown/not_configured`.
 
-After the dedicated admin Origin, cookie, CSRF, and rate-limit gates pass, the
-runner signs in through Better Auth and calls the real report GET, generate,
-debug, limits, and sign-out HTTP routes at the fixed `BETTER_AUTH_URL`. It
-omits `fixtureName`, so live versus replay mode remains server-owned. One
-75-second signal covers functional work and normal cleanup. If that signal has
-already aborted, sign-out receives one fresh five-second cleanup-only grace.
-Cleanup is attempted after every successful sign-in, and no functional
-request is retried.
+The parser accepts an enabled canary only when `BETTER_AUTH_URL` is
+`https://harpa-pro-api-dev.fly.dev` and `ADMIN_CORS_ORIGINS` is
+`https://dev.harpa-pro-admin.pages.dev`. It also requires `NODE_ENV=production`,
+`HARPAPRO_PR_BUILD=0`, `AI_LIVE=1`, `AI_FIXTURE_MODE=live`, and a complete
+fixed target. Pull-request previews and production cannot enable the canary.
+The target email must be an exact member of `TEST_ACCOUNT_EMAILS`. The existing
+`TEST_ACCOUNT_PASSWORD` remains server-only.
 
-The returned observation retains only fixed target IDs, timestamps,
-provider/model metadata, fixture mode, and three effective usage buckets.
-Prompt, note, report, model-response, credential, cookie, token, and raw error
-content is parsed only as needed and discarded before the admin response or
-logs. The action updates one pre-provisioned synthetic draft report and writes
-one usage event; it never targets customer-selected data.
+After the admin Origin, cookie, CSRF, and rate-limit gates pass, the runner
+signs in through Better Auth. It calls the real report GET, generate, debug,
+limits, and sign-out HTTP routes at the fixed `BETTER_AUTH_URL`. It omits
+`fixtureName` and rejects replay, record mode, and idempotent replay.
+
+One 75-second signal covers functional work. Sign-out and exact-session
+verification share one separate five-second cleanup grace period. Cleanup
+succeeds only when `GET /api/auth/get-session` returns HTTP 200 with a complete
+JSON body of `null` for the same Bearer token. No functional request retries.
+
+A pass requires one matching live `app.llm_usage_events` row and a validated
+report body. The response retains bounded token counts, fixed target data,
+provider metadata, structural counts, a report hash, and an escaped synthetic
+preview. It discards prompts, notes, transcripts, raw responses, credentials,
+tokens, and arbitrary errors before the admin response or logs. See
+[`design-admin-report-live-canary.md`](design-admin-report-live-canary.md).
 
 ## Drizzle schema (CLI-generated)
 
@@ -536,9 +542,9 @@ wiring**, not a DI stub):
 - The admin operations scope test rejects anonymous, Better Auth, and legacy
   app-admin sessions before either observer calls its provider. It allows only
   a dedicated browser-admin session.
-- The report diagnostic integration tests additionally require the exact
+- The report live-canary integration tests also require the exact
   Origin and session-bound CSRF token, exercise the default HTTP runner, and
-  prove that only redacted canary metadata crosses the admin boundary.
+  prove live usage, exact cleanup, and strict redaction.
 - Project role scope tests run owner, editor, viewer, and non-member
   writes against Postgres. Viewer denials do not rely only on hidden UI.
 
@@ -578,10 +584,10 @@ the configured allowlist. The deploy seed is credential-level idempotent: if
 an allowlisted user already exists, it creates or refreshes that user's
 `credential` account password instead of assuming the user is ready.
 
-The report diagnostic may use a dedicated allowlisted identity such as
+The report generation live canary may use a dedicated allowlisted identity such as
 `report-canary@e2e.harpapro.com`. Account seeding supplies credentials only;
 an operator must separately provision its synthetic project, draft report,
-and notes before enabling the diagnostic target.
+and notes before a separately authorized development enablement.
 
 ## Demo account access
 
@@ -640,6 +646,7 @@ introduces that data contract.
 | `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` | API       | Optional dedicated token for the read-only R2 capacity observer                      |
 | `ADMIN_NEON_ORG_ID`                      | API       | Optional Neon scope paired with the Viewer key for inventory and Free usage          |
 | `ADMIN_NEON_VIEWER_API_KEY`              | API       | Optional personal key for the fixed inventory and Free-usage Viewer                  |
+| `ADMIN_REPORT_LIVE_CANARY_ENABLED`       | API       | `0` by default. `1` is valid only for the exact live development deployment          |
 | `ADMIN_REPORT_DIAGNOSTIC_EMAIL`          | API       | Optional fixed canary email; must be an exact test-account member                    |
 | `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`     | API       | Optional fixed synthetic project ID, paired with the other canary target values      |
 | `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER`  | API       | Optional fixed draft report number, paired with the other canary target values       |

@@ -41,7 +41,7 @@ function adminOperationsRateLimitKey(c: Context<AppEnv>): string {
   return `${identityId}:${sessionId}`;
 }
 
-function auditReportDiagnostic(
+function auditReportLiveCanary(
   c: Context<AppEnv>,
   observation: ReportGenerateDiagnosticObservation,
 ): void {
@@ -57,12 +57,30 @@ function auditReportDiagnostic(
           outcome: `report_generate_${observation.status}`,
           durationMs: observation.durationMs,
           projectId: observation.target.projectId,
+          reportId: observation.target.reportId,
           reportNumber: observation.target.reportNumber,
           provider: observation.generation.vendor,
           model: observation.generation.model,
           fixtureMode: observation.generation.fixtureMode,
           idempotentReplay: observation.generation.idempotentReplay,
-          downstreamRequestId: observation.generation.requestId ?? undefined,
+          usage: {
+            inputTokens: observation.usage.inputTokens,
+            outputTokens: observation.usage.outputTokens,
+            cachedTokens: observation.usage.cachedTokens,
+            latencyMs: observation.usage.latencyMs,
+            matched: observation.usage.matched,
+          },
+          counts: {
+            workers: observation.preview.counts.workers,
+            materials: observation.preview.counts.materials,
+            issues: observation.preview.counts.issues,
+            nextSteps: observation.preview.counts.nextSteps,
+            summarySections: observation.preview.counts.summarySections,
+            imageAttachments: observation.preview.counts.imageAttachments,
+            documentAttachments: observation.preview.counts.documentAttachments,
+          },
+          truncated: observation.preview.truncated,
+          bodySha256: observation.preview.bodySha256,
           cleanup: observation.cleanup,
           warnings: observation.status === 'warning' ? observation.warnings : undefined,
         }
@@ -75,7 +93,10 @@ function auditReportDiagnostic(
             cleanup: observation.cleanup,
           }
         : {
-            outcome: 'report_generate_not_configured',
+            outcome:
+              observation.reason === 'not_enabled'
+                ? 'report_generate_not_enabled'
+                : 'report_generate_not_configured',
             reason: observation.reason,
           };
 
@@ -169,7 +190,7 @@ adminOperationsRoutes.openapi(
     ] as const,
     responses: {
       200: {
-        description: 'Bounded report-generation diagnostic observation.',
+        description: 'Bounded live canary report-generation observation.',
         content: {
           'application/json': { schema: operations.reportGenerateDiagnosticObservation },
         },
@@ -190,7 +211,7 @@ adminOperationsRoutes.openapi(
   }),
   async (c) => {
     const observation = await runAdminReportGenerateDiagnostic();
-    auditReportDiagnostic(c, observation);
+    auditReportLiveCanary(c, observation);
     return c.json(observation, 200);
   },
 );

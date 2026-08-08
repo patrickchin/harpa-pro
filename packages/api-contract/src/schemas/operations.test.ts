@@ -1181,13 +1181,83 @@ const reportDiagnosticGeneration = {
   requestId: 'req-report-diagnostic-1',
   durationMs: 1_250,
   requestedAt: '2026-08-08T08:00:00.100Z',
-  finishedAt: '2026-08-08T08:00:01.350Z',
+  finishedAt: '2026-08-08T08:00:01.250Z',
   reportUpdatedAt: '2026-08-08T08:00:01.300Z',
-  generatedAt: '2026-08-08T08:00:01.250Z',
+  generatedAt: '2026-08-08T08:00:00.050Z',
   vendor: 'openai',
   model: 'gpt-5-mini',
   fixtureMode: 'live',
   idempotentReplay: false,
+};
+
+const reportDiagnosticUsage = {
+  inputTokens: 800,
+  outputTokens: 200,
+  cachedTokens: 125,
+  latencyMs: 1_100,
+  matched: true,
+};
+
+const reportDiagnosticPreviewWorker = {
+  role: 'Carpenter',
+  count: '3',
+  hours: '8',
+  notes: 'Completed the fixed synthetic framing task.',
+};
+
+const reportDiagnosticPreviewMaterial = {
+  name: 'Timber',
+  quantity: '24',
+  unit: 'lengths',
+  status: 'installed',
+  condition: 'dry',
+  notes: null,
+};
+
+const reportDiagnosticPreviewIssue = {
+  title: 'Synthetic access check',
+  severity: 'low',
+  description: 'The fixed gate needs a follow-up inspection.',
+  action: 'Inspect the fixed synthetic gate tomorrow.',
+};
+
+const reportDiagnosticPreviewSection = {
+  title: 'Synthetic progress',
+  body: 'The fixed framing task completed without delay.',
+};
+
+const reportDiagnosticPreviewSample = {
+  title: 'Synthetic report canary',
+  summary: 'The fixed synthetic site visit completed as expected.',
+  weather: {
+    condition: 'clear',
+    temperature: '21 C',
+    wind: 'light',
+    impact: null,
+  },
+  workers: [reportDiagnosticPreviewWorker],
+  materials: [reportDiagnosticPreviewMaterial],
+  issues: [reportDiagnosticPreviewIssue],
+  nextSteps: ['Inspect the fixed synthetic gate tomorrow.'],
+  summarySections: [reportDiagnosticPreviewSection],
+};
+
+const reportDiagnosticPreviewCounts = {
+  workers: 1,
+  materials: 1,
+  issues: 1,
+  nextSteps: 1,
+  summarySections: 1,
+  imageAttachments: 0,
+  documentAttachments: 0,
+};
+
+const reportDiagnosticPreview = {
+  schemaValid: true,
+  sample: reportDiagnosticPreviewSample,
+  counts: reportDiagnosticPreviewCounts,
+  truncated: false,
+  bodySha256: 'a'.repeat(64),
 };
 
 const reportDiagnosticBucket = {
@@ -1222,6 +1292,8 @@ const reportDiagnosticPass = {
   durationMs: 1_500,
   target: reportDiagnosticTarget,
   generation: reportDiagnosticGeneration,
+  preview: reportDiagnosticPreview,
+  usage: reportDiagnosticUsage,
   limits: reportDiagnosticLimits,
   cleanup: 'succeeded',
 };
@@ -1235,12 +1307,41 @@ const reportDiagnosticFail = {
   cleanup: 'succeeded',
 };
 
-describe('admin report-generation diagnostic observation schema', () => {
-  it('accepts the exact unknown/not-configured observation', () => {
+describe('admin report-generation live-canary observation schema', () => {
+  it.each(['not_configured', 'not_enabled'] as const)(
+    'accepts the exact unknown/%s observation',
+    (reason) => {
+      const observation = {
+        observedAt,
+        status: 'unknown',
+        reason,
+      };
+
+      expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
+        observation,
+      );
+    },
+  );
+
+  it('accepts an exact live pass with usage proof and a bounded response preview', () => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.parse(reportDiagnosticPass),
+    ).toStrictEqual(reportDiagnosticPass);
+  });
+
+  it('accepts nullable report fields without adding leak-prone placeholders', () => {
     const observation = {
-      observedAt,
-      status: 'unknown',
-      reason: 'not_configured',
+      ...reportDiagnosticPass,
+      generation: { ...reportDiagnosticGeneration, requestId: null },
+      preview: {
+        ...reportDiagnosticPreview,
+        sample: {
+          ...reportDiagnosticPreviewSample,
+          title: null,
+          summary: null,
+          weather: null,
+        },
+      },
     };
 
     expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
@@ -1248,16 +1349,80 @@ describe('admin report-generation diagnostic observation schema', () => {
     );
   });
 
-  it('accepts an exact live pass with bounded quota summaries', () => {
-    expect(
-      operations.reportGenerateDiagnosticObservation.parse(reportDiagnosticPass),
-    ).toStrictEqual(reportDiagnosticPass);
-  });
-
-  it('accepts a missing upstream request ID without adding a leak-prone placeholder', () => {
+  it('accepts nullable nested preview fields when their parent objects exist', () => {
     const observation = {
       ...reportDiagnosticPass,
-      generation: { ...reportDiagnosticGeneration, requestId: null },
+      preview: {
+        ...reportDiagnosticPreview,
+        sample: {
+          ...reportDiagnosticPreviewSample,
+          weather: {
+            condition: null,
+            temperature: null,
+            wind: null,
+            impact: null,
+          },
+          workers: [
+            {
+              ...reportDiagnosticPreviewWorker,
+              count: null,
+              hours: null,
+              notes: null,
+            },
+          ],
+          materials: [
+            {
+              ...reportDiagnosticPreviewMaterial,
+              quantity: null,
+              unit: null,
+              status: null,
+              condition: null,
+              notes: null,
+            },
+          ],
+          issues: [
+            {
+              ...reportDiagnosticPreviewIssue,
+              severity: null,
+              description: null,
+              action: null,
+            },
+          ],
+        },
+      },
+    };
+
+    expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
+      observation,
+    );
+  });
+
+  it('accepts an all-empty report preview with zero structural and attachment counts', () => {
+    const observation = {
+      ...reportDiagnosticPass,
+      preview: {
+        ...reportDiagnosticPreview,
+        sample: {
+          title: null,
+          summary: null,
+          weather: null,
+          workers: [],
+          materials: [],
+          issues: [],
+          nextSteps: [],
+          summarySections: [],
+        },
+        counts: {
+          workers: 0,
+          materials: 0,
+          issues: 0,
+          nextSteps: 0,
+          summarySections: 0,
+          imageAttachments: 0,
+          documentAttachments: 0,
+        },
+        truncated: false,
+      },
     };
 
     expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
@@ -1266,37 +1431,6 @@ describe('admin report-generation diagnostic observation schema', () => {
   });
 
   it.each([
-    [
-      'replay-only generation',
-      {
-        warnings: ['replay_only'],
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'replay' },
-        limits: reportDiagnosticLimits,
-        cleanup: 'succeeded',
-      },
-    ],
-    [
-      'idempotency replay of a persisted live generation',
-      {
-        warnings: ['replay_only'],
-        generation: { ...reportDiagnosticGeneration, idempotentReplay: true },
-        limits: reportDiagnosticLimits,
-        cleanup: 'succeeded',
-      },
-    ],
-    [
-      'fixture and idempotency replay with one unique warning',
-      {
-        warnings: ['replay_only'],
-        generation: {
-          ...reportDiagnosticGeneration,
-          fixtureMode: 'replay',
-          idempotentReplay: true,
-        },
-        limits: reportDiagnosticLimits,
-        cleanup: 'succeeded',
-      },
-    ],
     [
       'unavailable limits',
       {
@@ -1316,37 +1450,10 @@ describe('admin report-generation diagnostic observation schema', () => {
       },
     ],
     [
-      'replay-only generation with unavailable limits',
-      {
-        warnings: ['limits_unavailable', 'replay_only'],
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'replay' },
-        limits: null,
-        cleanup: 'succeeded',
-      },
-    ],
-    [
-      'replay-only generation with failed sign-out',
-      {
-        warnings: ['sign_out_failed', 'replay_only'],
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'replay' },
-        limits: reportDiagnosticLimits,
-        cleanup: 'failed',
-      },
-    ],
-    [
       'unavailable limits with failed sign-out',
       {
         warnings: ['sign_out_failed', 'limits_unavailable'],
         generation: reportDiagnosticGeneration,
-        limits: null,
-        cleanup: 'failed',
-      },
-    ],
-    [
-      'all reviewed warning signals in any unique order',
-      {
-        warnings: ['sign_out_failed', 'replay_only', 'limits_unavailable'],
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'replay' },
         limits: null,
         cleanup: 'failed',
       },
@@ -1363,23 +1470,36 @@ describe('admin report-generation diagnostic observation schema', () => {
     );
   });
 
-  it.each(['sign_in', 'target_read', 'generate', 'proof_read', 'limits', 'sign_out'] as const)(
-    'accepts the redacted %s failure phase',
-    (phase) => {
-      expect(() =>
-        operations.reportGenerateDiagnosticObservation.parse({
-          ...reportDiagnosticFail,
-          phase,
-        }),
-      ).not.toThrow();
-    },
-  );
+  it.each([
+    'sign_in',
+    'target_read',
+    'mode_gate',
+    'generate',
+    'proof_read',
+    'usage_window',
+    'usage_proof',
+    'preview',
+    'limits',
+    'sign_out',
+  ] as const)('accepts the reviewed %s failure phase', (phase) => {
+    expect(() =>
+      operations.reportGenerateDiagnosticObservation.parse({
+        ...reportDiagnosticFail,
+        phase,
+      }),
+    ).not.toThrow();
+  });
 
   it.each([
     'sign_in_failed',
     'target_not_found',
     'target_not_draft',
     'conflict',
+    'live_mode_required',
+    'live_proof_failed',
+    'usage_proof_missing',
+    'usage_proof_ambiguous',
+    'preview_invalid',
     'usage_limit_exceeded',
     'rate_limited',
     'provider_error',
@@ -1408,29 +1528,40 @@ describe('admin report-generation diagnostic observation schema', () => {
   );
 
   it.each([
+    ['replay', false],
+    ['record', false],
+    ['live', true],
+  ] as const)(
+    'rejects fixtureMode=%s or idempotentReplay=%s for pass and warning results',
+    (fixtureMode, idempotentReplay) => {
+      const generation = {
+        ...reportDiagnosticGeneration,
+        fixtureMode,
+        idempotentReplay,
+      };
+      const warning = {
+        ...reportDiagnosticPass,
+        status: 'warning',
+        generation,
+        limits: null,
+        warnings: ['limits_unavailable'],
+      };
+
+      expect(
+        operations.reportGenerateDiagnosticObservation.safeParse({
+          ...reportDiagnosticPass,
+          generation,
+        }).success,
+      ).toBe(false);
+      expect(operations.reportGenerateDiagnosticObservation.safeParse(warning).success).toBe(false);
+    },
+  );
+
+  it.each([
     [
-      'replay without replay_only',
+      'no evidence for a warning',
       {
-        warnings: ['sign_out_failed'],
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'replay' },
-        limits: reportDiagnosticLimits,
-        cleanup: 'failed',
-      },
-    ],
-    [
-      'idempotency replay without replay_only',
-      {
-        warnings: ['sign_out_failed'],
-        generation: { ...reportDiagnosticGeneration, idempotentReplay: true },
-        limits: reportDiagnosticLimits,
-        cleanup: 'failed',
-      },
-    ],
-    [
-      'replay_only on a live generation',
-      {
-        warnings: ['replay_only'],
-        generation: reportDiagnosticGeneration,
+        warnings: ['limits_unavailable'],
         limits: reportDiagnosticLimits,
         cleanup: 'succeeded',
       },
@@ -1456,9 +1587,8 @@ describe('admin report-generation diagnostic observation schema', () => {
     [
       'failed cleanup without sign_out_failed',
       {
-        warnings: ['replay_only'],
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'replay' },
-        limits: reportDiagnosticLimits,
+        warnings: ['limits_unavailable'],
+        limits: null,
         cleanup: 'failed',
       },
     ],
@@ -1483,13 +1613,15 @@ describe('admin report-generation diagnostic observation schema', () => {
 
   it.each([
     ['no warnings', []],
-    ['duplicate warnings', ['replay_only', 'replay_only']],
+    ['duplicate warnings', ['limits_unavailable', 'limits_unavailable']],
+    ['the removed replay warning', ['replay_only']],
     ['an unreviewed warning', ['provider_said_try_again']],
   ] as const)('rejects %s', (_description, warnings) => {
     expect(
       operations.reportGenerateDiagnosticObservation.safeParse({
         ...reportDiagnosticPass,
         status: 'warning',
+        limits: null,
         warnings,
       }).success,
     ).toBe(false);
@@ -1503,6 +1635,9 @@ describe('admin report-generation diagnostic observation schema', () => {
     ],
     ['missing limits', { limits: null }],
     ['failed cleanup', { cleanup: 'failed' }],
+    ['missing preview', { preview: undefined }],
+    ['missing usage proof', { usage: undefined }],
+    ['warning metadata', { warnings: ['limits_unavailable'] }],
   ] as const)('rejects a pass with %s', (_description, override) => {
     expect(
       operations.reportGenerateDiagnosticObservation.safeParse({
@@ -1510,6 +1645,639 @@ describe('admin report-generation diagnostic observation schema', () => {
         ...override,
       }).success,
     ).toBe(false);
+  });
+
+  it.each([
+    { inputTokens: 0, outputTokens: 1, cachedTokens: 0 },
+    { inputTokens: 1, outputTokens: 0, cachedTokens: 1 },
+  ] as const)('accepts non-negative usage when the total is positive: %o', (tokens) => {
+    const observation = {
+      ...reportDiagnosticPass,
+      usage: {
+        ...reportDiagnosticUsage,
+        ...tokens,
+      },
+    };
+
+    expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
+      observation,
+    );
+  });
+
+  it.each([
+    ['zero total tokens', { inputTokens: 0, outputTokens: 0, cachedTokens: 0 }],
+    ['negative input tokens', { inputTokens: -1 }],
+    ['negative output tokens', { outputTokens: -1 }],
+    ['negative cached tokens', { cachedTokens: -1 }],
+    ['unsafe input tokens', { inputTokens: Number.MAX_SAFE_INTEGER + 1 }],
+    ['unsafe output tokens', { outputTokens: Number.MAX_SAFE_INTEGER + 1 }],
+    ['unsafe cached tokens', { cachedTokens: Number.MAX_SAFE_INTEGER + 1 }],
+    ['cached tokens greater than input tokens', { inputTokens: 10, cachedTokens: 11 }],
+    ['negative latency', { latencyMs: -1 }],
+    ['latency beyond the functional deadline', { latencyMs: 75_001 }],
+    ['an unmatched ledger row', { matched: false }],
+    ['a string token count', { inputTokens: '800' }],
+  ] as const)('rejects usage proof with %s', (_description, usageOverride) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        usage: {
+          ...reportDiagnosticUsage,
+          ...usageOverride,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a five-item sample whose total counts and attachments require truncation', () => {
+    const observation = {
+      ...reportDiagnosticPass,
+      preview: {
+        ...reportDiagnosticPreview,
+        sample: {
+          ...reportDiagnosticPreviewSample,
+          workers: Array.from({ length: 5 }, (_, index) => ({
+            ...reportDiagnosticPreviewWorker,
+            role: 'Synthetic crew ' + String(index + 1),
+          })),
+          materials: Array.from({ length: 5 }, (_, index) => ({
+            ...reportDiagnosticPreviewMaterial,
+            name: 'Synthetic material ' + String(index + 1),
+          })),
+          issues: Array.from({ length: 5 }, (_, index) => ({
+            ...reportDiagnosticPreviewIssue,
+            title: 'Synthetic issue ' + String(index + 1),
+          })),
+          nextSteps: Array.from(
+            { length: 5 },
+            (_, index) => 'Synthetic next step ' + String(index + 1),
+          ),
+          summarySections: Array.from({ length: 5 }, (_, index) => ({
+            ...reportDiagnosticPreviewSection,
+            title: 'Synthetic section ' + String(index + 1),
+          })),
+        },
+        counts: {
+          workers: 6,
+          materials: 6,
+          issues: 6,
+          nextSteps: 6,
+          summarySections: 6,
+          imageAttachments: 2,
+          documentAttachments: 1,
+        },
+        truncated: true,
+      },
+    };
+
+    expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
+      observation,
+    );
+  });
+
+  it('counts preview string bounds in Unicode code points', () => {
+    const fourHundredCodePoints = '🦺'.repeat(400);
+    const valid = {
+      ...reportDiagnosticPass,
+      preview: {
+        ...reportDiagnosticPreview,
+        sample: {
+          ...reportDiagnosticPreviewSample,
+          title: fourHundredCodePoints,
+        },
+      },
+    };
+    const invalid = {
+      ...valid,
+      preview: {
+        ...valid.preview,
+        sample: {
+          ...valid.preview.sample,
+          title: fourHundredCodePoints + 'x',
+        },
+      },
+    };
+
+    expect(operations.reportGenerateDiagnosticObservation.safeParse(valid).success).toBe(true);
+    expect(operations.reportGenerateDiagnosticObservation.safeParse(invalid).success).toBe(false);
+  });
+
+  it.each([
+    ['summary text', { ...reportDiagnosticPreviewSample, summary: 'x'.repeat(401) }],
+    [
+      'weather condition text',
+      {
+        ...reportDiagnosticPreviewSample,
+        weather: {
+          ...reportDiagnosticPreviewSample.weather,
+          condition: 'x'.repeat(401),
+        },
+      },
+    ],
+    [
+      'weather temperature text',
+      {
+        ...reportDiagnosticPreviewSample,
+        weather: {
+          ...reportDiagnosticPreviewSample.weather,
+          temperature: 'x'.repeat(401),
+        },
+      },
+    ],
+    [
+      'weather wind text',
+      {
+        ...reportDiagnosticPreviewSample,
+        weather: {
+          ...reportDiagnosticPreviewSample.weather,
+          wind: 'x'.repeat(401),
+        },
+      },
+    ],
+    [
+      'weather impact text',
+      {
+        ...reportDiagnosticPreviewSample,
+        weather: {
+          ...reportDiagnosticPreviewSample.weather,
+          impact: 'x'.repeat(401),
+        },
+      },
+    ],
+    [
+      'worker role text',
+      {
+        ...reportDiagnosticPreviewSample,
+        workers: [{ ...reportDiagnosticPreviewWorker, role: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'worker count text',
+      {
+        ...reportDiagnosticPreviewSample,
+        workers: [{ ...reportDiagnosticPreviewWorker, count: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'worker hours text',
+      {
+        ...reportDiagnosticPreviewSample,
+        workers: [{ ...reportDiagnosticPreviewWorker, hours: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'worker notes text',
+      {
+        ...reportDiagnosticPreviewSample,
+        workers: [{ ...reportDiagnosticPreviewWorker, notes: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'material name text',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: [{ ...reportDiagnosticPreviewMaterial, name: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'material quantity text',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: [{ ...reportDiagnosticPreviewMaterial, quantity: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'material unit text',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: [{ ...reportDiagnosticPreviewMaterial, unit: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'material status text',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: [{ ...reportDiagnosticPreviewMaterial, status: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'material condition text',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: [{ ...reportDiagnosticPreviewMaterial, condition: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'material notes text',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: [{ ...reportDiagnosticPreviewMaterial, notes: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'issue title text',
+      {
+        ...reportDiagnosticPreviewSample,
+        issues: [{ ...reportDiagnosticPreviewIssue, title: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'issue severity text',
+      {
+        ...reportDiagnosticPreviewSample,
+        issues: [{ ...reportDiagnosticPreviewIssue, severity: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'issue description text',
+      {
+        ...reportDiagnosticPreviewSample,
+        issues: [{ ...reportDiagnosticPreviewIssue, description: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'issue action text',
+      {
+        ...reportDiagnosticPreviewSample,
+        issues: [{ ...reportDiagnosticPreviewIssue, action: 'x'.repeat(401) }],
+      },
+    ],
+    ['next-step text', { ...reportDiagnosticPreviewSample, nextSteps: ['x'.repeat(401)] }],
+    [
+      'summary-section title text',
+      {
+        ...reportDiagnosticPreviewSample,
+        summarySections: [{ ...reportDiagnosticPreviewSection, title: 'x'.repeat(401) }],
+      },
+    ],
+    [
+      'summary-section body text',
+      {
+        ...reportDiagnosticPreviewSample,
+        summarySections: [{ ...reportDiagnosticPreviewSection, body: 'x'.repeat(401) }],
+      },
+    ],
+  ] as const)('rejects preview %s beyond 400 code points', (_description, sample) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          sample,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'workers',
+      {
+        ...reportDiagnosticPreviewSample,
+        workers: Array.from({ length: 6 }, () => reportDiagnosticPreviewWorker),
+      },
+      { ...reportDiagnosticPreviewCounts, workers: 6 },
+    ],
+    [
+      'materials',
+      {
+        ...reportDiagnosticPreviewSample,
+        materials: Array.from({ length: 6 }, () => reportDiagnosticPreviewMaterial),
+      },
+      { ...reportDiagnosticPreviewCounts, materials: 6 },
+    ],
+    [
+      'issues',
+      {
+        ...reportDiagnosticPreviewSample,
+        issues: Array.from({ length: 6 }, () => reportDiagnosticPreviewIssue),
+      },
+      { ...reportDiagnosticPreviewCounts, issues: 6 },
+    ],
+    [
+      'next steps',
+      {
+        ...reportDiagnosticPreviewSample,
+        nextSteps: Array.from({ length: 6 }, () => 'Synthetic next step'),
+      },
+      { ...reportDiagnosticPreviewCounts, nextSteps: 6 },
+    ],
+    [
+      'summary sections',
+      {
+        ...reportDiagnosticPreviewSample,
+        summarySections: Array.from({ length: 6 }, () => reportDiagnosticPreviewSection),
+      },
+      { ...reportDiagnosticPreviewCounts, summarySections: 6 },
+    ],
+  ] as const)('rejects more than five sampled %s', (_description, sample, counts) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          sample,
+          counts,
+          truncated: true,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'workers',
+      Array.from({ length: 4 }, (_, index) => ({
+        ...reportDiagnosticPreviewWorker,
+        role: 'Synthetic crew ' + String(index + 1),
+      })),
+    ],
+    [
+      'materials',
+      Array.from({ length: 4 }, (_, index) => ({
+        ...reportDiagnosticPreviewMaterial,
+        name: 'Synthetic material ' + String(index + 1),
+      })),
+    ],
+    [
+      'issues',
+      Array.from({ length: 4 }, (_, index) => ({
+        ...reportDiagnosticPreviewIssue,
+        title: 'Synthetic issue ' + String(index + 1),
+      })),
+    ],
+    [
+      'nextSteps',
+      Array.from({ length: 4 }, (_, index) => 'Synthetic next step ' + String(index + 1)),
+    ],
+    [
+      'summarySections',
+      Array.from({ length: 4 }, (_, index) => ({
+        ...reportDiagnosticPreviewSection,
+        title: 'Synthetic section ' + String(index + 1),
+      })),
+    ],
+  ] as const)('rejects four sampled %s when the structural count is six', (countName, sample) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          sample: {
+            ...reportDiagnosticPreviewSample,
+            [countName]: sample,
+          },
+          counts: {
+            ...reportDiagnosticPreviewCounts,
+            [countName]: 6,
+          },
+          truncated: true,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(['workers', 'materials', 'issues', 'nextSteps', 'summarySections'] as const)(
+    'rejects an empty %s sample when its count is one even if attachments justify truncation',
+    (countName) => {
+      expect(
+        operations.reportGenerateDiagnosticObservation.safeParse({
+          ...reportDiagnosticPass,
+          preview: {
+            ...reportDiagnosticPreview,
+            sample: {
+              ...reportDiagnosticPreviewSample,
+              [countName]: [],
+            },
+            counts: {
+              ...reportDiagnosticPreviewCounts,
+              [countName]: 1,
+              imageAttachments: 1,
+            },
+            truncated: true,
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    'workers',
+    'materials',
+    'issues',
+    'nextSteps',
+    'summarySections',
+    'imageAttachments',
+    'documentAttachments',
+  ] as const)('rejects negative and unsafe %s preview counts', (countName) => {
+    for (const invalidCount of [-1, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(
+        operations.reportGenerateDiagnosticObservation.safeParse({
+          ...reportDiagnosticPass,
+          preview: {
+            ...reportDiagnosticPreview,
+            counts: {
+              ...reportDiagnosticPreviewCounts,
+              [countName]: invalidCount,
+            },
+            truncated: true,
+          },
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it.each([
+    [
+      'a sampled array longer than its count',
+      {
+        counts: { ...reportDiagnosticPreviewCounts, workers: 0 },
+        truncated: true,
+      },
+    ],
+    [
+      'an undisclosed structural truncation',
+      {
+        counts: { ...reportDiagnosticPreviewCounts, workers: 2 },
+        truncated: false,
+      },
+    ],
+    [
+      'undisclosed image attachment references',
+      {
+        counts: { ...reportDiagnosticPreviewCounts, imageAttachments: 1 },
+        truncated: false,
+      },
+    ],
+    [
+      'undisclosed document attachment references',
+      {
+        counts: { ...reportDiagnosticPreviewCounts, documentAttachments: 1 },
+        truncated: false,
+      },
+    ],
+  ] as const)('rejects preview counts with %s', (_description, previewOverride) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          ...previewOverride,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('allows truncation with equal structural counts because a string may have been clipped', () => {
+    const observation = {
+      ...reportDiagnosticPass,
+      preview: {
+        ...reportDiagnosticPreview,
+        truncated: true,
+      },
+    };
+
+    expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
+      observation,
+    );
+  });
+
+  it.each([
+    ['schemaValid=false', { schemaValid: false }],
+    ['a short hash', { bodySha256: 'a'.repeat(63) }],
+    ['a long hash', { bodySha256: 'a'.repeat(65) }],
+    ['an uppercase hash', { bodySha256: 'A'.repeat(64) }],
+    ['a non-hexadecimal hash', { bodySha256: 'g'.repeat(64) }],
+  ] as const)('rejects a preview with %s', (_description, previewOverride) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          ...previewOverride,
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'generation proof after the request lower bound',
+      {
+        ...reportDiagnosticGeneration,
+        generatedAt: '2026-08-08T08:00:00.200Z',
+      },
+    ],
+    [
+      'request completion before its request lower bound',
+      {
+        ...reportDiagnosticGeneration,
+        finishedAt: '2026-08-08T08:00:00.050Z',
+      },
+    ],
+    [
+      'report update before request completion',
+      {
+        ...reportDiagnosticGeneration,
+        reportUpdatedAt: '2026-08-08T08:00:01.200Z',
+      },
+    ],
+  ] as const)('rejects %s', (_description, generation) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        generation,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['request ID', { requestId: '<script>alert(1)</script>' }],
+    ['vendor', { vendor: 'raw provider error: key=secret' }],
+    ['model', { model: '<img src=x onerror=alert(1)>' }],
+  ] as const)('rejects unsafe characters in the generation %s', (_description, override) => {
+    expect(
+      operations.reportGenerateDiagnosticGeneration.safeParse({
+        ...reportDiagnosticGeneration,
+        ...override,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an unsafe target report number', () => {
+    expect(
+      operations.reportGenerateDiagnosticTarget.safeParse({
+        ...reportDiagnosticTarget,
+        reportNumber: Number.MAX_SAFE_INTEGER + 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(['limit', 'used', 'remaining'] as const)(
+    'rejects an unsafe limit-summary %s',
+    (field) => {
+      expect(
+        operations.reportGenerateDiagnosticLimitSummary.safeParse({
+          ...reportDiagnosticBucket,
+          [field]: Number.MAX_SAFE_INTEGER + 1,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['pass', reportDiagnosticPass],
+    [
+      'warning',
+      {
+        ...reportDiagnosticPass,
+        status: 'warning',
+        limits: null,
+        warnings: ['limits_unavailable'],
+      },
+    ],
+    ['fail', reportDiagnosticFail],
+  ] as const)('allows cleanup grace in the %s overall duration', (_status, observation) => {
+    const atDeadline = { ...observation, durationMs: 80_000 };
+
+    expect(operations.reportGenerateDiagnosticObservation.parse(atDeadline)).toStrictEqual(
+      atDeadline,
+    );
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...observation,
+        durationMs: 80_001,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('keeps generation duration at the functional 75-second deadline', () => {
+    expect(
+      operations.reportGenerateDiagnosticGeneration.safeParse({
+        ...reportDiagnosticGeneration,
+        durationMs: 75_000,
+      }).success,
+    ).toBe(true);
+    expect(
+      operations.reportGenerateDiagnosticGeneration.safeParse({
+        ...reportDiagnosticGeneration,
+        durationMs: 75_001,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts usage latency at the functional 75-second deadline', () => {
+    const observation = {
+      ...reportDiagnosticPass,
+      usage: {
+        ...reportDiagnosticUsage,
+        latencyMs: 75_000,
+      },
+    };
+
+    expect(operations.reportGenerateDiagnosticObservation.parse(observation)).toStrictEqual(
+      observation,
+    );
   });
 
   it.each([
@@ -1523,7 +2291,6 @@ describe('admin report-generation diagnostic observation schema', () => {
     ],
     ['an unsupported status', { ...reportDiagnosticPass, status: 'available' }],
     ['a string duration', { ...reportDiagnosticPass, durationMs: '1500' }],
-    ['a duration beyond the overall deadline', { ...reportDiagnosticPass, durationMs: 75_001 }],
     [
       'a malformed target email',
       {
@@ -1554,7 +2321,7 @@ describe('admin report-generation diagnostic observation schema', () => {
       'an unsupported fixture mode',
       {
         ...reportDiagnosticPass,
-        generation: { ...reportDiagnosticGeneration, fixtureMode: 'record' },
+        generation: { ...reportDiagnosticGeneration, fixtureMode: 'fixture' },
       },
     ],
     [
@@ -1573,13 +2340,30 @@ describe('admin report-generation diagnostic observation schema', () => {
       { ...reportDiagnosticPass, limits: { ...reportDiagnosticLimits, plan: 'trial' } },
     ],
     [
-      'negative usage',
+      'negative quota usage',
       {
         ...reportDiagnosticPass,
         limits: {
           ...reportDiagnosticLimits,
           reportGenerate: { ...reportDiagnosticBucket, used: -1 },
         },
+      },
+    ],
+    [
+      'an inconsistent warning variant',
+      {
+        ...reportDiagnosticPass,
+        status: 'warning',
+        warnings: ['limits_unavailable'],
+      },
+    ],
+    [
+      'success evidence on a failure',
+      {
+        ...reportDiagnosticFail,
+        target: reportDiagnosticTarget,
+        preview: reportDiagnosticPreview,
+        usage: reportDiagnosticUsage,
       },
     ],
     ['an unknown failure phase', { ...reportDiagnosticFail, phase: 'request' }],
@@ -1614,6 +2398,67 @@ describe('admin report-generation diagnostic observation schema', () => {
       },
     ],
     [
+      'canonical report JSON',
+      {
+        ...reportDiagnosticPass,
+        preview: { ...reportDiagnosticPreview, canonicalJson: '{"secret":"report"}' },
+      },
+    ],
+    [
+      'a raw report body',
+      {
+        ...reportDiagnosticPass,
+        preview: { ...reportDiagnosticPreview, rawBody: reportDiagnosticPreviewSample },
+      },
+    ],
+    [
+      'an issue attachment identifier',
+      {
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          sample: {
+            ...reportDiagnosticPreviewSample,
+            issues: [
+              {
+                ...reportDiagnosticPreviewIssue,
+                attachments: { images: ['not_secret'] },
+              },
+            ],
+          },
+        },
+      },
+    ],
+    [
+      'a summary-section attachment identifier',
+      {
+        ...reportDiagnosticPass,
+        preview: {
+          ...reportDiagnosticPreview,
+          sample: {
+            ...reportDiagnosticPreviewSample,
+            summarySections: [
+              {
+                ...reportDiagnosticPreviewSection,
+                attachments: { documents: ['not_secret'] },
+              },
+            ],
+          },
+        },
+      },
+    ],
+    [
+      'duplicated usage vendor metadata',
+      {
+        ...reportDiagnosticPass,
+        usage: {
+          ...reportDiagnosticUsage,
+          vendor: reportDiagnosticGeneration.vendor,
+          model: reportDiagnosticGeneration.model,
+        },
+      },
+    ],
+    [
       'a nested provider message',
       {
         ...reportDiagnosticPass,
@@ -1642,6 +2487,24 @@ describe('admin report-generation diagnostic observation schema', () => {
     expect(operations.reportGenerateDiagnosticObservation.safeParse(observation).success).toBe(
       false,
     );
+  });
+
+  it.each([
+    ['ID', { id: 'lue_01234567' }],
+    ['user ID', { userId: 'usr_01234567' }],
+    ['project ID', { projectId: reportDiagnosticTarget.projectId }],
+    ['report ID', { reportId: reportDiagnosticTarget.reportId }],
+    ['timestamp', { createdAt: '2026-08-08T08:00:01.200Z' }],
+  ] as const)('rejects leaked usage-row %s', (_description, leakedField) => {
+    expect(
+      operations.reportGenerateDiagnosticObservation.safeParse({
+        ...reportDiagnosticPass,
+        usage: {
+          ...reportDiagnosticUsage,
+          ...leakedField,
+        },
+      }).success,
+    ).toBe(false);
   });
 });
 

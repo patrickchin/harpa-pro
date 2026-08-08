@@ -21,11 +21,51 @@ type PageState =
   | { status: 'unavailable' }
   | { status: 'signed-out' }
   | { status: 'signed-in'; session: AdminSession };
-type ProbeState = 'checking' | 'healthy' | 'unavailable';
 
-interface ProbeResult {
-  state: ProbeState;
-  detail: string;
+interface ApiIdentity {
+  ok: true;
+  service: 'api';
+  version: string;
+  gitCommit: 'local' | string;
+  buildTime?: string;
+}
+
+interface ReadyResponse {
+  ok: true;
+  db: 'up';
+  head: string | null;
+}
+
+interface NotReadyResponse {
+  ok: false;
+  db: 'down' | 'schema-missing' | 'head-mismatch';
+  expected?: string;
+  actual?: string | null;
+}
+
+interface PagesMarker {
+  commit: string;
+  branch: string;
+}
+
+type ApiIdentityState =
+  | { status: 'loading' }
+  | { status: 'ready'; identity: ApiIdentity; observedAt: string }
+  | { status: 'unknown' };
+type ReadinessState =
+  | { status: 'loading' }
+  | { status: 'healthy'; readiness: ReadyResponse; observedAt: string }
+  | { status: 'unavailable'; readiness?: NotReadyResponse; observedAt?: string };
+type PagesMarkerState =
+  | { status: 'loading' }
+  | { status: 'ready'; marker: PagesMarker; observedAt: string }
+  | { status: 'unknown' };
+
+interface DeploymentState {
+  api: ApiIdentityState;
+  product: ReadinessState;
+  admin: ReadinessState;
+  pages: PagesMarkerState;
 }
 
 interface GitHubBranchHead {
@@ -114,13 +154,12 @@ type ReportDiagnosticWarning = Extract<
 
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
 const CLOUDFLARE_CONSOLE_URL = 'https://dash.cloudflare.com/';
-
-const buttonClass =
-  'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
-
 const GITHUB_REPOSITORY_URL = 'https://github.com/patrickchin/harpa-pro';
 const GITHUB_API_URL = 'https://api.github.com/repos/patrickchin/harpa-pro';
 const GITHUB_ACCEPT = 'application/vnd.github+json';
+
+const buttonClass =
+  'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 
 const SERVICE_GROUPS: ReadonlyArray<{
   title: string;
@@ -237,9 +276,11 @@ const SERVICE_GROUPS: ReadonlyArray<{
   },
 ];
 
-const INITIAL_PROBES: Record<'product' | 'admin', ProbeResult> = {
-  product: { state: 'checking', detail: 'Checking product API and database…' },
-  admin: { state: 'checking', detail: 'Checking admin API and database…' },
+const INITIAL_DEPLOYMENT_STATE: DeploymentState = {
+  api: { status: 'loading' },
+  product: { status: 'loading' },
+  admin: { status: 'loading' },
+  pages: { status: 'loading' },
 };
 
 class GitHubRequestError extends Error {
@@ -421,17 +462,210 @@ function formatTimestamp(value: string): string {
   }).format(new Date(value));
 }
 
-async function runProbe(path: string): Promise<ProbeResult> {
+function hasOnlyKeys(
+  value: Record<string, unknown>,
+  required: readonly string[],
+  optional: readonly string[] = [],
+): boolean {
+  const keys = Object.keys(value);
+  const allowed = new Set([...required, ...optional]);
+  return (
+    required.every((key) => Object.hasOwn(value, key)) && keys.every((key) => allowed.has(key))
+  );
+}
+
+function isSafeIdentifier(value: unknown, maximumLength = 160): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= maximumLength &&
+    /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(value)
+  );
+}
+
+function isSafeBranchLabel(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 160 &&
+    /^[A-Za-z0-9@][A-Za-z0-9@._/+!-]*$/.test(value)
+  );
+}
+
+function isSafeVersion(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 64 &&
+    /^[A-Za-z0-9][A-Za-z0-9.+_-]*$/.test(value)
+  );
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  if (
+    typeof value !== 'string' ||
+    value.length > 40 ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)
+  ) {
+    return false;
+  }
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return false;
+  const normalizedInput = value.replace(/(?:\.(\d{1,3}))?Z$/, (_match, fraction?: string) => {
+    return `.${(fraction ?? '').padEnd(3, '0')}Z`;
+  });
+  return new Date(parsed).toISOString() === normalizedInput;
+}
+
+function isFullSha(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
+}
+
+function parseApiIdentity(value: unknown): ApiIdentity | null {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, ['ok', 'service', 'version', 'gitCommit'], ['buildTime']) ||
+    value.ok !== true ||
+    value.service !== 'api' ||
+    !isSafeVersion(value.version) ||
+    (value.gitCommit !== 'local' && !isFullSha(value.gitCommit)) ||
+    (Object.hasOwn(value, 'buildTime') && !isIsoTimestamp(value.buildTime))
+  ) {
+    return null;
+  }
+
+  return {
+    ok: true,
+    service: 'api',
+    version: value.version,
+    gitCommit: value.gitCommit,
+    ...(typeof value.buildTime === 'string' ? { buildTime: value.buildTime } : {}),
+  };
+}
+
+function parseReadyResponse(value: unknown): ReadyResponse | null {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, ['ok', 'db', 'head']) ||
+    value.ok !== true ||
+    value.db !== 'up' ||
+    (value.head !== null && !isSafeIdentifier(value.head))
+  ) {
+    return null;
+  }
+  return { ok: true, db: 'up', head: value.head };
+}
+
+function parseNotReadyResponse(value: unknown): NotReadyResponse | null {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, ['ok', 'db'], ['expected', 'actual', 'message']) ||
+    value.ok !== false ||
+    (value.db !== 'down' && value.db !== 'schema-missing' && value.db !== 'head-mismatch') ||
+    (Object.hasOwn(value, 'expected') && !isSafeIdentifier(value.expected)) ||
+    (Object.hasOwn(value, 'actual') && value.actual !== null && !isSafeIdentifier(value.actual)) ||
+    (Object.hasOwn(value, 'message') &&
+      (typeof value.message !== 'string' || value.message.length > 2_000))
+  ) {
+    return null;
+  }
+
+  if (value.db === 'head-mismatch') {
+    if (!isSafeIdentifier(value.expected) || !Object.hasOwn(value, 'actual')) return null;
+    if (value.actual !== null && !isSafeIdentifier(value.actual)) return null;
+    return {
+      ok: false,
+      db: 'head-mismatch',
+      expected: value.expected,
+      actual: value.actual,
+    };
+  }
+
+  if (Object.hasOwn(value, 'expected') || Object.hasOwn(value, 'actual')) return null;
+
+  return {
+    ok: false,
+    db: value.db,
+  };
+}
+
+function parsePagesMarker(value: unknown): PagesMarker | null {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, ['commit', 'branch']) ||
+    !isFullSha(value.commit) ||
+    !isSafeBranchLabel(value.branch)
+  ) {
+    return null;
+  }
+  return { commit: value.commit, branch: value.branch };
+}
+
+async function readJson(response: Response): Promise<unknown | null> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function loadApiIdentity(): Promise<ApiIdentityState> {
+  try {
+    const response = await fetch(`${getPublicEnv().apiBaseUrl}/healthz`, {
+      method: 'GET',
+      credentials: 'omit',
+      cache: 'no-store',
+    });
+    if (!response.ok) return { status: 'unknown' };
+    const identity = parseApiIdentity(await readJson(response));
+    return identity
+      ? { status: 'ready', identity, observedAt: new Date().toISOString() }
+      : { status: 'unknown' };
+  } catch {
+    return { status: 'unknown' };
+  }
+}
+
+async function loadReadiness(path: '/readyz' | '/admin/readyz'): Promise<ReadinessState> {
   try {
     const response = await fetch(`${getPublicEnv().apiBaseUrl}${path}`, {
+      method: 'GET',
       credentials: 'include',
       cache: 'no-store',
     });
-    return response.ok
-      ? { state: 'healthy', detail: 'API, database, and schema are ready.' }
-      : { state: 'unavailable', detail: `Readiness returned HTTP ${response.status}.` };
+    const body = await readJson(response);
+    if (response.status === 200) {
+      const readiness = parseReadyResponse(body);
+      return readiness
+        ? { status: 'healthy', readiness, observedAt: new Date().toISOString() }
+        : { status: 'unavailable' };
+    }
+    if (response.status === 503) {
+      const readiness = parseNotReadyResponse(body);
+      return readiness
+        ? { status: 'unavailable', readiness, observedAt: new Date().toISOString() }
+        : { status: 'unavailable' };
+    }
+    return { status: 'unavailable' };
   } catch {
-    return { state: 'unavailable', detail: 'Readiness could not be reached.' };
+    return { status: 'unavailable' };
+  }
+}
+
+async function loadPagesMarker(): Promise<PagesMarkerState> {
+  try {
+    const response = await fetch('/_cf-pages-deployment.json', {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    if (!response.ok) return { status: 'unknown' };
+    const marker = parsePagesMarker(await readJson(response));
+    return marker
+      ? { status: 'ready', marker, observedAt: new Date().toISOString() }
+      : { status: 'unknown' };
+  } catch {
+    return { status: 'unknown' };
   }
 }
 
@@ -605,16 +839,195 @@ async function runReportDiagnostic(csrfToken: string): Promise<ReportDiagnosticF
     : { status: 'invalid-response' };
 }
 
-function ProbeBadge({ state }: { state: ProbeState }) {
-  const label = state === 'checking' ? 'Checking' : state === 'healthy' ? 'Healthy' : 'Unavailable';
+type EvidenceBadgeState = 'checking' | 'observed' | 'healthy' | 'unavailable' | 'unknown';
+
+function EvidenceBadge({ state }: { state: EvidenceBadgeState }) {
+  const label =
+    state === 'checking'
+      ? 'Checking'
+      : state === 'observed'
+        ? 'Observed'
+        : state === 'healthy'
+          ? 'Healthy'
+          : state === 'unavailable'
+            ? 'Unavailable'
+            : 'Unknown';
   const tone =
     state === 'checking'
       ? 'bg-secondary text-ink-soft'
       : state === 'healthy'
         ? 'bg-emerald-100 text-emerald-800'
-        : 'bg-red-100 text-red-800';
+        : state === 'unavailable'
+          ? 'bg-red-100 text-red-800'
+          : 'bg-secondary text-ink-soft';
 
   return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{label}</span>;
+}
+
+function ApiIdentityCard({ state, href }: { state: ApiIdentityState; href: string }) {
+  const badgeState =
+    state.status === 'loading' ? 'checking' : state.status === 'ready' ? 'observed' : 'unknown';
+
+  return (
+    <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="font-semibold text-ink">API build identity</h3>
+        <EvidenceBadge state={badgeState} />
+      </div>
+      {state.status === 'loading' ? (
+        <p className="mt-3 text-sm text-ink-soft">Checking the API build identity…</p>
+      ) : state.status === 'unknown' ? (
+        <p className="mt-3 text-sm text-ink-soft">API build identity could not be confirmed.</p>
+      ) : (
+        <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+          <dt className="text-ink-soft">Version</dt>
+          <dd className="break-all font-mono text-ink">{state.identity.version}</dd>
+          <dt className="text-ink-soft">Git commit</dt>
+          <dd className="break-all font-mono text-ink">{state.identity.gitCommit}</dd>
+          {state.identity.buildTime && (
+            <>
+              <dt className="text-ink-soft">Built</dt>
+              <dd className="break-all font-mono text-ink">
+                <time dateTime={state.identity.buildTime}>{state.identity.buildTime}</time>
+              </dd>
+            </>
+          )}
+          <dt className="text-ink-soft">Observed</dt>
+          <dd className="break-all font-mono text-ink">
+            <time dateTime={state.observedAt}>{state.observedAt}</time>
+          </dd>
+        </dl>
+      )}
+      <a
+        className="mt-4 inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
+        href={href}
+        rel="noreferrer"
+        target="_blank"
+      >
+        Open liveness probe ↗
+      </a>
+    </article>
+  );
+}
+
+function readinessDetail(state: Extract<ReadinessState, { status: 'unavailable' }>): string {
+  if (!state.readiness) return 'Readiness could not be confirmed.';
+  if (state.readiness.db === 'head-mismatch') {
+    return 'The observed migration head does not match the running API requirement.';
+  }
+  if (state.readiness.db === 'schema-missing') {
+    return 'Migration metadata could not be found.';
+  }
+  return 'Database readiness could not be confirmed.';
+}
+
+function ReadinessCard({
+  name,
+  state,
+  href,
+}: {
+  name: string;
+  state: ReadinessState;
+  href: string;
+}) {
+  const badgeState =
+    state.status === 'loading'
+      ? 'checking'
+      : state.status === 'healthy'
+        ? 'healthy'
+        : 'unavailable';
+  const mismatch =
+    state.status === 'unavailable' && state.readiness?.db === 'head-mismatch'
+      ? state.readiness
+      : null;
+
+  return (
+    <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="font-semibold text-ink">{name}</h3>
+        <EvidenceBadge state={badgeState} />
+      </div>
+      {state.status === 'loading' ? (
+        <p className="mt-3 text-sm text-ink-soft">Checking database readiness…</p>
+      ) : state.status === 'healthy' ? (
+        <>
+          <p className="mt-3 text-sm text-ink-soft">Database and schema are ready.</p>
+          <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+            <dt className="text-ink-soft">Migration head</dt>
+            <dd className="break-all font-mono text-ink">
+              {state.readiness.head ?? 'No migration recorded'}
+            </dd>
+            <dt className="text-ink-soft">Observed</dt>
+            <dd className="break-all font-mono text-ink">
+              <time dateTime={state.observedAt}>{state.observedAt}</time>
+            </dd>
+          </dl>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-sm text-ink-soft">{readinessDetail(state)}</p>
+          {mismatch && (
+            <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+              {mismatch.expected && (
+                <>
+                  <dt className="text-ink-soft">Expected</dt>
+                  <dd className="break-all font-mono text-ink">{mismatch.expected}</dd>
+                </>
+              )}
+              {Object.hasOwn(mismatch, 'actual') && (
+                <>
+                  <dt className="text-ink-soft">Actual</dt>
+                  <dd className="break-all font-mono text-ink">
+                    {mismatch.actual ?? 'No migration recorded'}
+                  </dd>
+                </>
+              )}
+            </dl>
+          )}
+        </>
+      )}
+      <a
+        className="mt-4 inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
+        href={href}
+        rel="noreferrer"
+        target="_blank"
+      >
+        Open readiness probe ↗
+      </a>
+    </article>
+  );
+}
+
+function PagesIdentityCard({ state }: { state: PagesMarkerState }) {
+  const badgeState =
+    state.status === 'loading' ? 'checking' : state.status === 'ready' ? 'observed' : 'unknown';
+
+  return (
+    <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="font-semibold text-ink">Administrator Pages identity</h3>
+        <EvidenceBadge state={badgeState} />
+      </div>
+      {state.status === 'loading' ? (
+        <p className="mt-3 text-sm text-ink-soft">Checking the same-origin Pages marker…</p>
+      ) : state.status === 'unknown' ? (
+        <p className="mt-3 text-sm text-ink-soft">
+          The same-origin Pages deployment marker is unavailable.
+        </p>
+      ) : (
+        <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+          <dt className="text-ink-soft">Commit</dt>
+          <dd className="break-all font-mono text-ink">{state.marker.commit}</dd>
+          <dt className="text-ink-soft">Branch</dt>
+          <dd className="break-all font-mono text-ink">{state.marker.branch}</dd>
+          <dt className="text-ink-soft">Observed</dt>
+          <dd className="break-all font-mono text-ink">
+            <time dateTime={state.observedAt}>{state.observedAt}</time>
+          </dd>
+        </dl>
+      )}
+    </article>
+  );
 }
 
 function branchCountLabel(project: NeonProject): string {
@@ -1618,7 +2031,7 @@ function Operations({
   onSignOut: () => void;
 }) {
   const { apiBaseUrl } = getPublicEnv();
-  const [probes, setProbes] = useState(INITIAL_PROBES);
+  const [deployment, setDeployment] = useState<DeploymentState>(INITIAL_DEPLOYMENT_STATE);
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
   const [reportDiagnostic, setReportDiagnostic] = useState<ReportDiagnosticState>({
@@ -1626,23 +2039,36 @@ function Operations({
   });
   const reportDiagnosticRunning = useRef(false);
   const [github, setGitHub] = useState<GitHubState>({ status: 'checking' });
+  const refreshGeneration = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
+    const generation = refreshGeneration.current + 1;
+    refreshGeneration.current = generation;
+    const isCurrent = () => refreshGeneration.current === generation;
     setRefreshing(true);
-    setProbes(INITIAL_PROBES);
     setNeonInventory({ status: 'loading' });
     setR2Capacity({ status: 'loading' });
     setGitHub({ status: 'checking' });
     try {
-      const [product, admin, inventory, capacity, githubStatus] = await Promise.all([
-        runProbe('/readyz'),
-        runProbe('/admin/readyz'),
+      const [, , , , inventory, capacity, githubStatus] = await Promise.all([
+        loadApiIdentity().then((api) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, api }));
+        }),
+        loadReadiness('/readyz').then((product) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, product }));
+        }),
+        loadReadiness('/admin/readyz').then((admin) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
+        }),
+        loadPagesMarker().then((pages) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
+        }),
         loadNeonInventory(),
         loadR2Capacity(),
         loadGitHubStatus(),
       ]);
-      setProbes({ product, admin });
+      if (!isCurrent()) return;
       setGitHub(githubStatus);
       if (inventory.status === 'unauthorized' || capacity.status === 'unauthorized') {
         onSessionExpired();
@@ -1651,7 +2077,7 @@ function Operations({
       setNeonInventory(inventory);
       setR2Capacity(capacity);
     } finally {
-      setRefreshing(false);
+      if (isCurrent()) setRefreshing(false);
     }
   }, [onSessionExpired]);
 
@@ -1700,54 +2126,45 @@ function Operations({
         </div>
       </div>
 
-      <section className="mt-6" aria-labelledby="customer-checks-title">
+      <section className="mt-6" aria-labelledby="deployment-identity-title">
         <div>
-          <h2 className="text-xl font-semibold text-ink" id="customer-checks-title">
-            Customer-facing checks
+          <h2 className="text-xl font-semibold text-ink" id="deployment-identity-title">
+            Deployment identity and readiness
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Checked on page load and when you press Refresh. Vendor account health stays in the
-            linked consoles below.
+            Checked on page load and when you press Refresh. Each card reports its own evidence
+            source.
           </p>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2" aria-live="polite">
-          {[
-            {
-              id: 'product' as const,
-              name: 'Product API and database',
-              href: `${apiBaseUrl}/readyz`,
-            },
-            {
-              id: 'admin' as const,
-              name: 'Admin API and database',
-              href: `${apiBaseUrl}/admin/readyz`,
-            },
-          ].map((probe) => (
-            <article
-              className="rounded-xl border border-hairline bg-card p-5 shadow-sm"
-              key={probe.id}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="font-semibold text-ink">{probe.name}</h3>
-                <ProbeBadge state={probes[probe.id].state} />
-              </div>
-              <p className="mt-3 text-sm text-ink-soft">{probes[probe.id].detail}</p>
-              <a
-                className="mt-4 inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
-                href={probe.href}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open readiness probe ↗
-              </a>
-            </article>
-          ))}
+          <ApiIdentityCard state={deployment.api} href={`${apiBaseUrl}/healthz`} />
+          <ReadinessCard
+            name="Product database readiness"
+            state={deployment.product}
+            href={`${apiBaseUrl}/readyz`}
+          />
+          <ReadinessCard
+            name="Administrator database readiness"
+            state={deployment.admin}
+            href={`${apiBaseUrl}/admin/readyz`}
+          />
+          <PagesIdentityCard state={deployment.pages} />
         </div>
+        <p className="mt-3 text-sm text-ink-soft">
+          Build identity, readiness, provider metadata, and exact promotion proof are different
+          evidence classes.
+        </p>
+        <p className="mt-1 text-sm text-ink-soft">
+          API and Pages commits can differ in pull-request previews: Fly can run a synthetic merge
+          commit while Pages reports the pull-request head. A difference is not, by itself,
+          deployment drift.
+        </p>
       </section>
 
       <ReportDiagnostic state={reportDiagnostic} onRun={() => void handleRunDiagnostic()} />
 
       <NeonInventory state={neonInventory} />
+
       <GitHubRepositoryStatus state={github} />
 
       <R2Capacity state={r2Capacity} />

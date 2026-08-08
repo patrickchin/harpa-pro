@@ -3,8 +3,9 @@
 **Status:** Implemented on `dev`; not yet promoted to production as of
 2026-08-04.
 
-The R2 capacity extension below is a draft for an unmerged stacked pull
-request. This change does not provision its observer credential.
+The R2 capacity and deployment-identity extensions below are drafts for
+unmerged stacked pull requests. The R2 change does not provision its observer
+credential.
 
 ## Goal
 
@@ -87,6 +88,27 @@ The operation headroom is a conservative estimate, not a billing balance.
 Unclassified operations, Infrequent Access data, and truncated inventory keep
 their explicit caveats.
 
+## Deployment identity extension
+
+The deployment-identity panel is a first-party, read-only extension. See
+[Admin deployment identity](design-admin-deployment-identity.md) for its full
+contract. On authenticated load and manual Refresh, the browser reads the API
+`/healthz`, product `/readyz`, administrator `/admin/readyz`, and its own
+`/_cf-pages-deployment.json` marker exactly once each with caching disabled.
+There is no polling.
+
+The four cards preserve the evidence boundaries between API build identity,
+the two independent migration heads, and the administrator Pages build. They
+do not call a SHA difference drift: Fly pull-request previews may run a
+synthetic merge commit while Pages reports the pull-request head. Exact release
+and promotion proof remains the responsibility of the protected workflows.
+
+`/healthz` remains public and read-only. Its browser CORS allowlist is limited
+to the exact configured administrator origins and does not allow credentials.
+The two readiness requests retain their credentialed administrator-origin
+policy. Strict browser parsers reject extra or unsafe fields, and raw readiness
+messages never enter UI state.
+
 ## Deliberate limits
 
 - Do not add provider credentials to the browser. Secret-backed provider reads
@@ -94,8 +116,8 @@ their explicit caveats.
   broad aggregation endpoint that can silently gain new credential access.
   The Neon inventory and R2 capacity routes are the only account-specific
   provider endpoints in this design.
-- Do not claim that linked services are healthy; only the two Harpa readiness
-  probes receive live states.
+- Do not claim that linked providers are healthy. Only first-party build
+  identity and the two Harpa readiness probes receive live states.
 - Do not poll. Check once on page load and again only when the operator presses
   Refresh.
 - Do not add charts, history, alert configuration, arbitrary provider proxies,
@@ -201,6 +223,9 @@ for the full contract.
   no-store response, and absence of retries.
 - R2 capacity tests prove strict redaction, paired configuration, fixed
   provider calls, bounded output, caveats, rate limits, and manual refresh.
+- Deployment-identity tests prove the four fixed reads, independent partial
+  states, strict redaction, full identifiers, exact CORS policy, and absence of
+  polling.
 - Report-generation diagnostic tests prove its dedicated-cookie, exact-origin,
   session-derived-CSRF, fixed-target, rate-limit, redaction, and manual-only
   mutation boundaries.

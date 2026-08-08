@@ -856,3 +856,530 @@ describe('admin report-generation diagnostic observation schema', () => {
     );
   });
 });
+
+const r2StorageSnapshot = {
+  publishedPayloadBytes: 61_000_000,
+  publishedMetadataBytes: 596_713,
+  publishedObjects: 138,
+  uploadingPayloadBytes: 0,
+  uploadingMetadataBytes: 0,
+  uploadingObjects: 0,
+};
+
+const r2EmptyStorageSnapshot = {
+  publishedPayloadBytes: 0,
+  publishedMetadataBytes: 0,
+  publishedObjects: 0,
+  uploadingPayloadBytes: 0,
+  uploadingMetadataBytes: 0,
+  uploadingObjects: 0,
+};
+
+const r2Bucket = {
+  name: 'harpa-pro',
+  jurisdiction: 'default',
+  location: 'apac',
+  defaultStorageClass: 'standard',
+  createdAt: '2026-06-01T08:00:00.000Z',
+};
+
+const r2FreeTierReference = {
+  storageGbMonth: 10,
+  classAOperations: 1_000_000,
+  classBOperations: 10_000_000,
+  appliesTo: 'standard_only',
+};
+
+const r2Operations = {
+  status: 'available',
+  windowStart: '2026-08-01T00:00:00.000Z',
+  windowEnd: observedAt,
+  classA: {
+    estimatedUsed: 1_250,
+    publishedAllowance: 1_000_000,
+    estimatedRemaining: 998_750,
+  },
+  classB: {
+    estimatedUsed: 5_000,
+    publishedAllowance: 10_000_000,
+    estimatedRemaining: 9_995_000,
+  },
+  freeRequests: 125,
+  unclassifiedRequests: 0,
+};
+
+const r2RequiredCaveats = [
+  'storage_snapshot_not_gb_month',
+  'storage_metrics_may_lag',
+  'operations_estimated_from_analytics',
+];
+
+const r2AvailableObservation = {
+  observedAt,
+  status: 'available',
+  freeTierReference: r2FreeTierReference,
+  buckets: {
+    status: 'available',
+    truncated: false,
+    items: [r2Bucket],
+  },
+  storage: {
+    status: 'available',
+    standard: r2StorageSnapshot,
+    infrequentAccess: r2EmptyStorageSnapshot,
+  },
+  operations: r2Operations,
+  caveats: r2RequiredCaveats,
+};
+
+const r2UnknownObservation = {
+  observedAt,
+  status: 'unknown',
+  reason: 'not_configured',
+};
+
+describe('admin operations R2 capacity schema', () => {
+  it.each([
+    'not_configured',
+    'timeout',
+    'rate_limited',
+    'forbidden',
+    'invalid_response',
+    'provider_unavailable',
+  ] as const)('accepts an exact redacted unknown/%s observation', (reason) => {
+    const observation = { ...r2UnknownObservation, reason };
+
+    expect(operations.r2CapacityObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('accepts an exact complete observation', () => {
+    expect(operations.r2CapacityObservation.parse(r2AvailableObservation)).toStrictEqual(
+      r2AvailableObservation,
+    );
+  });
+
+  it.each([
+    [
+      'bucket inventory failure',
+      {
+        ...r2AvailableObservation,
+        status: 'partial',
+        buckets: { status: 'unknown', reason: 'timeout' },
+      },
+    ],
+    [
+      'storage metrics failure',
+      {
+        ...r2AvailableObservation,
+        status: 'partial',
+        storage: { status: 'unknown', reason: 'forbidden' },
+      },
+    ],
+    [
+      'operations analytics failure',
+      {
+        ...r2AvailableObservation,
+        status: 'partial',
+        operations: { status: 'unknown', reason: 'invalid_response' },
+      },
+    ],
+    [
+      'truncated bucket inventory',
+      {
+        ...r2AvailableObservation,
+        status: 'partial',
+        buckets: { ...r2AvailableObservation.buckets, truncated: true },
+        caveats: [...r2RequiredCaveats, 'bucket_inventory_truncated'],
+      },
+    ],
+    [
+      'unclassified successful operations',
+      {
+        ...r2AvailableObservation,
+        status: 'partial',
+        operations: { ...r2Operations, unclassifiedRequests: 7 },
+        caveats: [...r2RequiredCaveats, 'unclassified_operations_excluded'],
+      },
+    ],
+  ] as const)('accepts an exact partial observation with %s', (_description, observation) => {
+    expect(operations.r2CapacityObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['unknown buckets', { buckets: { status: 'unknown', reason: 'timeout' } }],
+    ['unknown storage', { storage: { status: 'unknown', reason: 'timeout' } }],
+    ['unknown operations', { operations: { status: 'unknown', reason: 'timeout' } }],
+    [
+      'truncated buckets',
+      {
+        buckets: { ...r2AvailableObservation.buckets, truncated: true },
+        caveats: [...r2RequiredCaveats, 'bucket_inventory_truncated'],
+      },
+    ],
+    [
+      'unclassified operations',
+      {
+        operations: { ...r2Operations, unclassifiedRequests: 1 },
+        caveats: [...r2RequiredCaveats, 'unclassified_operations_excluded'],
+      },
+    ],
+  ] as const)('rejects available status with %s', (_description, overrides) => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        ...overrides,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects partial status without an incompleteness signal', () => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        status: 'partial',
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['jurisdiction', ['default', 'eu', 'fedramp', 'unknown']],
+    ['location', ['apac', 'eeur', 'enam', 'weur', 'wnam', 'oc', null]],
+    ['defaultStorageClass', ['standard', 'infrequent_access', 'unknown']],
+  ] as const)('accepts every allowlisted bucket %s value', (field, values) => {
+    for (const value of values) {
+      const observation = {
+        ...r2AvailableObservation,
+        buckets: {
+          ...r2AvailableObservation.buckets,
+          items: [{ ...r2Bucket, [field]: value }],
+        },
+      };
+
+      expect(operations.r2CapacityObservation.safeParse(observation).success).toBe(true);
+    }
+  });
+
+  it('accepts nullable bucket timestamps and locations', () => {
+    const observation = {
+      ...r2AvailableObservation,
+      buckets: {
+        ...r2AvailableObservation.buckets,
+        items: [{ ...r2Bucket, createdAt: null, location: null }],
+      },
+    };
+
+    expect(operations.r2CapacityObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it('enforces the 100-bucket response bound', () => {
+    const bucketsAtLimit = Array.from({ length: 100 }, (_, index) => ({
+      ...r2Bucket,
+      name: `bucket-${index}`,
+    }));
+
+    expect(() =>
+      operations.r2CapacityObservation.parse({
+        ...r2AvailableObservation,
+        buckets: { ...r2AvailableObservation.buckets, items: bucketsAtLimit },
+      }),
+    ).not.toThrow();
+
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        status: 'partial',
+        buckets: {
+          ...r2AvailableObservation.buckets,
+          truncated: true,
+          items: [...bucketsAtLimit, r2Bucket],
+        },
+        caveats: [...r2RequiredCaveats, 'bucket_inventory_truncated'],
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['storage GB-month', { storageGbMonth: 11 }],
+    ['Class A operations', { classAOperations: 999_999 }],
+    ['Class B operations', { classBOperations: 9_999_999 }],
+    ['storage applicability', { appliesTo: 'all_storage_classes' }],
+  ] as const)('rejects a changed published free-tier reference for %s', (_description, change) => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        freeTierReference: { ...r2FreeTierReference, ...change },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['Class A allowance', { classA: { ...r2Operations.classA, publishedAllowance: 1_000_001 } }],
+    ['Class B allowance', { classB: { ...r2Operations.classB, publishedAllowance: 10_000_001 } }],
+    [
+      'Class A remaining estimate',
+      { classA: { ...r2Operations.classA, estimatedRemaining: 998_751 } },
+    ],
+    [
+      'Class B remaining estimate',
+      { classB: { ...r2Operations.classB, estimatedRemaining: 9_995_001 } },
+    ],
+  ] as const)('rejects an inconsistent %s', (_description, operationChange) => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        operations: { ...r2Operations, ...operationChange },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('floors operation headroom at zero after the published allowance is exceeded', () => {
+    const observation = {
+      ...r2AvailableObservation,
+      operations: {
+        ...r2Operations,
+        classA: {
+          ...r2Operations.classA,
+          estimatedUsed: 1_000_001,
+          estimatedRemaining: 0,
+        },
+        classB: {
+          ...r2Operations.classB,
+          estimatedUsed: 10_000_001,
+          estimatedRemaining: 0,
+        },
+      },
+    };
+
+    expect(operations.r2CapacityObservation.parse(observation)).toStrictEqual(observation);
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...observation,
+        operations: {
+          ...observation.operations,
+          classA: { ...observation.operations.classA, estimatedRemaining: 1 },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(r2RequiredCaveats)(
+    'rejects an observation missing mandatory caveat %s',
+    (missingCaveat) => {
+      expect(
+        operations.r2CapacityObservation.safeParse({
+          ...r2AvailableObservation,
+          caveats: r2RequiredCaveats.filter((caveat) => caveat !== missingCaveat),
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('requires the Infrequent Access caveat when that class contains data', () => {
+    const storage = {
+      ...r2AvailableObservation.storage,
+      infrequentAccess: { ...r2EmptyStorageSnapshot, publishedObjects: 1 },
+    };
+
+    expect(
+      operations.r2CapacityObservation.safeParse({ ...r2AvailableObservation, storage }).success,
+    ).toBe(false);
+
+    const observation = {
+      ...r2AvailableObservation,
+      storage,
+      caveats: [...r2RequiredCaveats, 'infrequent_access_not_covered_by_free_tier'],
+    };
+    expect(operations.r2CapacityObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    [
+      'bucket truncation',
+      {
+        buckets: { ...r2AvailableObservation.buckets, truncated: true },
+      },
+    ],
+    [
+      'unclassified operations',
+      {
+        operations: { ...r2Operations, unclassifiedRequests: 1 },
+      },
+    ],
+  ] as const)('requires a corresponding caveat for %s', (_description, overrides) => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        status: 'partial',
+        ...overrides,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['duplicate caveats', [...r2RequiredCaveats, r2RequiredCaveats[0]]],
+    ['an unreviewed caveat', [...r2RequiredCaveats, 'provider_dashboard_may_disagree']],
+  ] as const)('rejects %s', (_description, caveats) => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        caveats,
+      }).success,
+    ).toBe(false);
+  });
+
+  const storageMetricFields = [
+    'publishedPayloadBytes',
+    'publishedMetadataBytes',
+    'publishedObjects',
+    'uploadingPayloadBytes',
+    'uploadingMetadataBytes',
+    'uploadingObjects',
+  ] as const;
+  const invalidSafeIntegers = [-1, 1.5, Number.MAX_SAFE_INTEGER + 1] as const;
+
+  it.each(
+    storageMetricFields.flatMap((field) =>
+      invalidSafeIntegers.map((value) => [field, value] as const),
+    ),
+  )('rejects unsafe storage metric %s=%s', (field, value) => {
+    expect(
+      operations.r2CapacityObservation.safeParse({
+        ...r2AvailableObservation,
+        storage: {
+          ...r2AvailableObservation.storage,
+          standard: { ...r2StorageSnapshot, [field]: value },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(invalidSafeIntegers)('rejects unsafe operation counts and estimates (%s)', (value) => {
+    const candidates = [
+      { ...r2Operations, freeRequests: value },
+      { ...r2Operations, unclassifiedRequests: value },
+      { ...r2Operations, classA: { ...r2Operations.classA, estimatedUsed: value } },
+      { ...r2Operations, classA: { ...r2Operations.classA, estimatedRemaining: value } },
+      { ...r2Operations, classB: { ...r2Operations.classB, estimatedUsed: value } },
+      { ...r2Operations, classB: { ...r2Operations.classB, estimatedRemaining: value } },
+    ];
+
+    for (const candidate of candidates) {
+      expect(
+        operations.r2CapacityObservation.safeParse({
+          ...r2AvailableObservation,
+          operations: candidate,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it('accepts Number.MAX_SAFE_INTEGER but rejects larger observations', () => {
+    const maxStorage = Object.fromEntries(
+      storageMetricFields.map((field) => [field, Number.MAX_SAFE_INTEGER]),
+    );
+    const observation = {
+      ...r2AvailableObservation,
+      status: 'partial',
+      storage: {
+        ...r2AvailableObservation.storage,
+        standard: maxStorage,
+        infrequentAccess: maxStorage,
+      },
+      operations: {
+        ...r2Operations,
+        classA: {
+          ...r2Operations.classA,
+          estimatedUsed: Number.MAX_SAFE_INTEGER,
+          estimatedRemaining: 0,
+        },
+        classB: {
+          ...r2Operations.classB,
+          estimatedUsed: Number.MAX_SAFE_INTEGER,
+          estimatedRemaining: 0,
+        },
+        freeRequests: Number.MAX_SAFE_INTEGER,
+        unclassifiedRequests: Number.MAX_SAFE_INTEGER,
+      },
+      caveats: [
+        ...r2RequiredCaveats,
+        'infrequent_access_not_covered_by_free_tier',
+        'unclassified_operations_excluded',
+      ],
+    };
+
+    expect(operations.r2CapacityObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['top-level account ID', { ...r2AvailableObservation, accountId: '023e-secret' }],
+    ['top-level token', { ...r2AvailableObservation, apiToken: 'cloudflare-secret' }],
+    [
+      'raw Cloudflare envelope',
+      { ...r2AvailableObservation, rawCloudflareResponse: { success: true, result: [] } },
+    ],
+    ['GraphQL errors', { ...r2AvailableObservation, graphqlErrors: [{ message: 'secret' }] }],
+    [
+      'request headers',
+      { ...r2AvailableObservation, requestHeaders: { Authorization: 'Bearer secret' } },
+    ],
+    ['object keys', { ...r2AvailableObservation, objectKeys: ['private/report.pdf'] }],
+    [
+      'bucket object metadata',
+      {
+        ...r2AvailableObservation,
+        buckets: {
+          ...r2AvailableObservation.buckets,
+          items: [{ ...r2Bucket, objectKey: 'private/report.pdf' }],
+        },
+      },
+    ],
+    [
+      'nested provider error text',
+      {
+        ...r2AvailableObservation,
+        status: 'partial',
+        operations: {
+          status: 'unknown',
+          reason: 'provider_unavailable',
+          providerMessage: 'token was rejected by account 023e-secret',
+        },
+      },
+    ],
+    [
+      'unknown observation provider text',
+      { ...r2UnknownObservation, providerMessage: 'raw Cloudflare error body' },
+    ],
+  ] as const)('rejects leaked %s', (_description, observation) => {
+    expect(operations.r2CapacityObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it.each([
+    ['top-level remaining storage', { ...r2AvailableObservation, remainingStorage: { bytes: 1 } }],
+    [
+      'storage remaining GB-month',
+      {
+        ...r2AvailableObservation,
+        storage: { ...r2AvailableObservation.storage, remainingGbMonth: 9.5 },
+      },
+    ],
+    [
+      'storage-class remaining bytes',
+      {
+        ...r2AvailableObservation,
+        storage: {
+          ...r2AvailableObservation.storage,
+          standard: { ...r2StorageSnapshot, remainingBytes: 9_000_000_000 },
+        },
+      },
+    ],
+    [
+      'free-tier remaining storage',
+      {
+        ...r2AvailableObservation,
+        freeTierReference: { ...r2FreeTierReference, remainingStorageGbMonth: 9.5 },
+      },
+    ],
+  ] as const)('rejects an exact-storage claim through %s', (_description, observation) => {
+    expect(operations.r2CapacityObservation.safeParse(observation).success).toBe(false);
+  });
+});

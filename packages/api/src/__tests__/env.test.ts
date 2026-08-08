@@ -20,6 +20,9 @@ const KEYS = [
   'ADMIN_NEON_ORG_ID',
   'ADMIN_CLOUDFLARE_ACCOUNT_ID',
   'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN',
+  'ADMIN_FLY_ORG_SLUG',
+  'ADMIN_FLY_READ_ONLY_API_TOKEN',
+  'ADMIN_FLY_APP_NAMES',
   'ADMIN_REPORT_DIAGNOSTIC_EMAIL',
   'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID',
   'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER',
@@ -397,6 +400,157 @@ describe('env: admin Cloudflare R2 observer', () => {
     });
 
     await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+});
+
+describe('env: admin Fly inventory observer', () => {
+  const completeObserver = {
+    ADMIN_FLY_ORG_SLUG: 'harpa-pro',
+    ADMIN_FLY_READ_ONLY_API_TOKEN: 'test-fly-read-only-api-token',
+    ADMIN_FLY_APP_NAMES: 'harpa-pro-api,harpa-pro-api-dev',
+  } as const;
+
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_ORG_SLUG).toBeUndefined();
+    expect(mod.env.ADMIN_FLY_READ_ONLY_API_TOKEN).toBeUndefined();
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBeUndefined();
+  });
+
+  it('accepts the organization, read-only token, and reviewed app names together', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_ORG_SLUG).toBe(completeObserver.ADMIN_FLY_ORG_SLUG);
+    expect(mod.env.ADMIN_FLY_READ_ONLY_API_TOKEN).toBe(
+      completeObserver.ADMIN_FLY_READ_ONLY_API_TOKEN,
+    );
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBe(completeObserver.ADMIN_FLY_APP_NAMES);
+  });
+
+  it('trims every configured value and Fly app-name segment at boot', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, {
+      ADMIN_FLY_ORG_SLUG: '  harpa-pro  ',
+      ADMIN_FLY_READ_ONLY_API_TOKEN: '  test-fly-read-only-api-token  ',
+      ADMIN_FLY_APP_NAMES: '  harpa-pro-api , harpa-pro-api-dev  ',
+    });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_ORG_SLUG).toBe('harpa-pro');
+    expect(mod.env.ADMIN_FLY_READ_ONLY_API_TOKEN).toBe('test-fly-read-only-api-token');
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBe('harpa-pro-api,harpa-pro-api-dev');
+  });
+
+  it.each([
+    ['organization only', ['ADMIN_FLY_ORG_SLUG']],
+    ['token only', ['ADMIN_FLY_READ_ONLY_API_TOKEN']],
+    ['app names only', ['ADMIN_FLY_APP_NAMES']],
+    ['organization and token', ['ADMIN_FLY_ORG_SLUG', 'ADMIN_FLY_READ_ONLY_API_TOKEN']],
+    ['organization and app names', ['ADMIN_FLY_ORG_SLUG', 'ADMIN_FLY_APP_NAMES']],
+    ['token and app names', ['ADMIN_FLY_READ_ONLY_API_TOKEN', 'ADMIN_FLY_APP_NAMES']],
+  ] as const)(
+    'rejects partial observer configuration: %s',
+    async (_description, configuredKeys) => {
+      process.env.NODE_ENV = 'development';
+      for (const key of configuredKeys) process.env[key] = completeObserver[key];
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY/);
+    },
+  );
+
+  it.each(
+    (
+      ['ADMIN_FLY_ORG_SLUG', 'ADMIN_FLY_READ_ONLY_API_TOKEN', 'ADMIN_FLY_APP_NAMES'] as const
+    ).flatMap(
+      (key) =>
+        [
+          ['empty', key, ''],
+          ['whitespace-only', key, '   '],
+        ] as const,
+    ),
+  )('rejects %s %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each([
+    'Harpa-Pro',
+    'harpa_pro',
+    '-harpa-pro',
+    'harpa-pro-',
+    'https://fly.io/harpa-pro',
+    'a'.repeat(64),
+  ])('rejects malformed Fly organization slug %s', async (organizationSlug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_FLY_ORG_SLUG: organizationSlug });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_ORG_SLUG/);
+  });
+
+  it.each([
+    'Harpa-Pro-Api',
+    'harpa_pro_api',
+    '-harpa-pro-api',
+    'harpa-pro-api-',
+    'harpa.pro.api',
+    'harpa pro api',
+    'https://fly.io/apps/harpa-pro-api',
+    'a'.repeat(64),
+  ])('rejects malformed Fly app name %s', async (appName) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appName });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+  });
+
+  it.each([',harpa-pro-api', 'harpa-pro-api,', 'harpa-pro-api,,harpa-pro-api-dev'])(
+    'rejects an empty Fly app-name segment in %s',
+    async (appNames) => {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appNames });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+    },
+  );
+
+  it.each(['harpa-pro-api,harpa-pro-api', 'harpa-pro-api, harpa-pro-api'])(
+    'rejects duplicate Fly app names in %s',
+    async (appNames) => {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appNames });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+    },
+  );
+
+  it('accepts exactly ten unique reviewed Fly app names', async () => {
+    process.env.NODE_ENV = 'development';
+    const appNames = Array.from({ length: 10 }, (_, index) => `harpa-pro-api-${index}`).join(',');
+    Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appNames });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBe(appNames);
+  });
+
+  it('rejects more than ten reviewed Fly app names', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_FLY_APP_NAMES: Array.from({ length: 11 }, (_, index) => `harpa-pro-api-${index}`).join(
+        ',',
+      ),
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
   });
 });
 

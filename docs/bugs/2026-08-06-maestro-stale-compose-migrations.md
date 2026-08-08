@@ -16,9 +16,9 @@ also failed Zod parsing in the local account-seed process.
 
 **Fix.** Local Maestro setup commands now include `docker compose up -d
 --build`, and `mo up` performs that reconciliation even when the existing
-stack is healthy. Both Compose services pin application head 0028 and override
-the image with the current admin head. Rebuilding once before a suite keeps
-subsequent fresh-volume flows on the current image through Docker cache.
+stack is healthy. The Compose API, account seed, and storage worker now pin
+application head 0029 and override the image with the current admin head. One
+rebuild before a suite keeps later fresh-volume flows on the current image.
 
 **Test.** `release-confidence-gates.test.sh` derives the newest checked-in API
 and admin migrations and requires both local Compose service pins to match

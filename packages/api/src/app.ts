@@ -26,6 +26,7 @@ import { adminOperationsRoutes } from './routes/admin-operations.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
+import { ADMIN_CSRF_HEADER } from './lib/admin-csrf.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
 
@@ -132,7 +133,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
     cors({
       origin: credentialedOrigin,
       allowMethods: ['GET', 'POST', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      allowHeaders: ['Content-Type', 'X-Request-ID', ADMIN_CSRF_HEADER],
       credentials: true,
       maxAge: 86400,
     }),

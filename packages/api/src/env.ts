@@ -3,6 +3,7 @@
  * Mirrors apps/mobile/lib/env.ts pattern. Pitfall 5.
  */
 import { z } from 'zod';
+import { email as emailSchema, projectId as projectIdSchema } from '@harpa/api-contract';
 import { isPostgresConnectionUrl, isSamePostgresEndpoint } from './db/admin-isolation.js';
 
 const DEV_BETTER_AUTH_SECRET = 'dev-only-secret-do-not-use-in-prod';
@@ -87,6 +88,15 @@ const Env = z
       .trim()
       .regex(/^[a-z0-9-]{1,60}$/, 'must be a Neon organization ID')
       .optional(),
+    /**
+     * Optional fixed synthetic target for the bounded admin report-generation
+     * diagnostic. All three values must be absent or present together. The
+     * email must also be an exact TEST_ACCOUNT_EMAILS member; the existing
+     * server-only TEST_ACCOUNT_PASSWORD supplies its credential.
+     */
+    ADMIN_REPORT_DIAGNOSTIC_EMAIL: emailSchema.optional(),
+    ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: projectIdSchema.optional(),
+    ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: z.coerce.number().int().positive().optional(),
     BETTER_AUTH_SECRET: z.string().min(16).default(DEV_BETTER_AUTH_SECRET),
     BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
     /**
@@ -338,6 +348,50 @@ const Env = z
     },
   )
   .superRefine((e, ctx) => {
+    const reportDiagnosticTarget = [
+      ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', e.ADMIN_REPORT_DIAGNOSTIC_EMAIL],
+      ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID', e.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID],
+      ['ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER', e.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER],
+    ] as const;
+    const configuredReportDiagnosticFields = reportDiagnosticTarget.filter(
+      ([, value]) => value !== undefined,
+    );
+
+    if (
+      configuredReportDiagnosticFields.length > 0 &&
+      configuredReportDiagnosticFields.length < reportDiagnosticTarget.length
+    ) {
+      for (const [path, value] of reportDiagnosticTarget) {
+        if (value !== undefined) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: 'all ADMIN_REPORT_DIAGNOSTIC target values must be set together',
+        });
+      }
+    } else if (configuredReportDiagnosticFields.length === reportDiagnosticTarget.length) {
+      const testAccountEmails = new Set(
+        splitCsv(e.TEST_ACCOUNT_EMAILS ?? '').map((candidate) => candidate.toLowerCase()),
+      );
+      if (
+        !e.ADMIN_REPORT_DIAGNOSTIC_EMAIL ||
+        !testAccountEmails.has(e.ADMIN_REPORT_DIAGNOSTIC_EMAIL)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ADMIN_REPORT_DIAGNOSTIC_EMAIL'],
+          message: 'must be an exact member of TEST_ACCOUNT_EMAILS',
+        });
+      }
+      if (!e.TEST_ACCOUNT_PASSWORD) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['TEST_ACCOUNT_PASSWORD'],
+          message: 'required when the admin report diagnostic target is configured',
+        });
+      }
+    }
+
     const isProduction = e.NODE_ENV === 'production';
     const isPrPreview = e.HARPAPRO_PR_BUILD === '1';
     const isLiveDeployment = isProduction && !isPrPreview;

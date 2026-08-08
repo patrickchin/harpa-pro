@@ -41,9 +41,8 @@ branches. Neon has no documented remaining-credit API. The page leaves billing
 credit `Unknown` and links to the Neon console.
 
 See [Admin Neon inventory](../../docs/v4/design-admin-neon-inventory.md) for
-the route contract. See
-[Neon inventory observer](../../docs/v4/arch-ops.md#neon-inventory-observer)
-for provisioning and exact-SHA deployment proof.
+the route contract. See [arch-ops](../../docs/v4/arch-ops.md) for
+provisioning and exact-SHA deployment proof.
 
 Cloudflare Git deploys this workspace through the independent
 `harpa-pro-admin` Pages project. `main`, `dev`, and mirrored `pr-N` branches

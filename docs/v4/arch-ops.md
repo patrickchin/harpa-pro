@@ -66,11 +66,15 @@ does not define this repository's runtime; `nvm use` does.
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
   - `/` renders the activity console. `/operations` renders read-only Harpa
-    readiness, service links, and bounded Neon inventory. Unknown browser paths
-    return a static 404. `/admin/activity` and `/admin/operations/neon` remain
-    API resource paths. Data requests require the dedicated API admin session.
-    See [Separate admin site](design-separate-admin-site.md) and
-    [Admin Neon inventory](design-admin-neon-inventory.md).
+    readiness, service links, and bounded Neon inventory, plus a separate
+    manual report-generation canary that is explicitly disclosed as a
+    synthetic mutation. Unknown browser paths return a static 404.
+    `/admin/activity`, `/admin/operations/neon`, and
+    `/admin/operations/report-generate` remain API resource paths. Data and
+    diagnostic requests require the dedicated API admin session. See
+    [Separate admin site](design-separate-admin-site.md),
+    [Admin Neon inventory](design-admin-neon-inventory.md), and
+    [Admin report-generation diagnostic](design-admin-report-generate-diagnostic.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
   Repository builds use the shared Node 24.19.0 runtime.
@@ -453,6 +457,42 @@ project, with no retries. The count endpoint has no deleted-branch selector,
 while the active-detail request explicitly excludes deleted branches. Neon has
 no documented remaining-credit API, so the console remains the billing source.
 
+### Report-generation diagnostic
+
+The report canary uses three optional, non-secret target values:
+
+- `ADMIN_REPORT_DIAGNOSTIC_EMAIL`;
+- `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`; and
+- `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER`.
+
+All three values must be absent or present together. The email must be an
+exact member of `TEST_ACCOUNT_EMAILS`, and the runner reuses the existing
+server-only `TEST_ACCOUNT_PASSWORD`. Do not add a browser password, a second
+canary password variable, or a customer-selectable target.
+
+Merge and deploy the code with the target absent first. The operations card
+then reports `Not configured` and the API makes no application request. To
+enable a development canary, provision one dedicated test identity, one
+synthetic project, one fixed draft report, and short synthetic text notes.
+Credential seeding does not create those application rows.
+
+After provisioning:
+
+1. Add the canary email to `TEST_ACCOUNT_EMAILS` and deploy the credential
+   seed normally.
+2. Add the three target values to the intended Doppler config. Keep
+   `TEST_ACCOUNT_PASSWORD` in its existing secret boundary.
+3. Deploy the API and verify `/healthz.gitCommit` at the expected full SHA.
+4. Verify the admin Pages deployment marker at the same source head.
+5. Sign in through the dedicated admin site and click **Run diagnostic** once.
+6. Prove the sanitized response, the synthetic report timestamp, one matching
+   usage row, temporary-session sign-out, and absence of secret/content logs.
+
+Each click replaces the fixed synthetic report body and may consume real AI
+quota. The action is manual only: it never runs on page load, shared Refresh,
+a timer, or background monitoring. Development enablement does not authorize
+production enablement; provision and approve a production target separately.
+
 An administrator's login password is not a deployment secret. The
 `admin:set-password --password-stdin` command hashes it into the independent
 admin database, and the operator stores the original in a password manager.
@@ -481,6 +521,9 @@ are true:
 - `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are both absent or both
   present. They remain optional because an unconfigured inventory is a typed
   `Unknown` state.
+- The three `ADMIN_REPORT_DIAGNOSTIC_*` target values are all absent or form a
+  complete target whose email belongs to `TEST_ACCOUNT_EMAILS`. They remain
+  optional because an unconfigured canary is a typed `Unknown` state.
 - AI is live (`AI_LIVE=1`, `AI_FIXTURE_MODE=live`) with OpenAI and Groq
   keys.
 - R2 is live with an account ID or explicit endpoint plus both access
@@ -591,7 +634,9 @@ the canonical `BETTER_AUTH_URL` themselves:
 
 The API fails boot when a non-preview deployment uses any other auth base URL.
 The optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair survives
-the normal Doppler import because it is API runtime configuration. The CI
+the normal Doppler import because it is API runtime configuration. The three
+optional `ADMIN_REPORT_DIAGNOSTIC_*` values also survive that import; they are
+fixed runtime target metadata, not browser build variables. The CI
 `NEON_API_KEY` stays excluded and never reaches Fly.
 The filter also excludes Doppler metadata, Neon control-plane values,
 Cloudflare tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only

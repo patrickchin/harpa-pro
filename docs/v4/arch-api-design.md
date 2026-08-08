@@ -143,13 +143,14 @@ contain `reportId` and `reportNumber`. A missing or cross-user target returns
 
 The browser admin surface uses a dedicated admin identity and cookie.
 
-| Method | Path                     | Purpose                          |
-| ------ | ------------------------ | -------------------------------- |
-| `POST` | `/admin/auth/login`      | Create an admin session          |
-| `GET`  | `/admin/auth/session`    | Validate an admin session        |
-| `POST` | `/admin/auth/logout`     | Revoke an admin session          |
-| `GET`  | `/admin/activity`        | Read the business-activity feed  |
-| `GET`  | `/admin/operations/neon` | Read bounded Neon inventory data |
+| Method | Path                                | Purpose                               |
+| ------ | ----------------------------------- | ------------------------------------- |
+| `POST` | `/admin/auth/login`                 | Create an admin session               |
+| `GET`  | `/admin/auth/session`               | Validate an admin session             |
+| `POST` | `/admin/auth/logout`                | Revoke an admin session               |
+| `GET`  | `/admin/activity`                   | Read the business-activity feed       |
+| `GET`  | `/admin/operations/neon`            | Read bounded Neon inventory data      |
+| `POST` | `/admin/operations/report-generate` | Run the fixed synthetic report canary |
 
 `GET /admin/operations/neon` uses `withAdminSession()`. Better Auth and the
 legacy application-admin bit cannot authorize it. The route uses the shared
@@ -167,6 +168,22 @@ explicitly excludes deleted branches. Clients must not present the bounded
 active-detail list as the total count. The route returns no connection data,
 provider error body, or billing-credit claim. Neon has no documented
 remaining-credit API, so that value stays `Unknown`.
+
+`POST /admin/operations/report-generate` is deliberately separate from the
+read-only refresh path. It requires the dedicated admin cookie, an exact
+trusted browser `Origin`, a session-derived `X-Admin-CSRF` token, the shared
+trusted-IP budget, and a three-run-per-15-minute identity/session budget. It
+accepts no target or provider input from the browser and returns
+`Cache-Control: private, no-store` on success and rejection.
+
+The route calls the real application HTTP endpoints using one fixed
+allowlisted test account and pre-provisioned draft report. One run replaces
+that synthetic report body, records one AI usage event, and attempts to revoke
+its temporary application session immediately. Cleanup failure is explicit in
+the observation. It is a bounded synthetic canary mutation, not a read-only
+probe. It never creates an account, project, report, or note, and it never
+exposes credentials, prompt content, report content, or raw provider errors. See
+[`design-admin-report-generate-diagnostic.md`](design-admin-report-generate-diagnostic.md).
 
 The following programmatic routes still use an application Better Auth
 session plus `public.user.is_admin`. They are not part of the browser admin

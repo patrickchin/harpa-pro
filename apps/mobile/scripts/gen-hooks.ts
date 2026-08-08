@@ -143,6 +143,7 @@ const MOBILE_SKIP_PATHS = new Set<string>([
   'post /admin/auth/logout',
   'get /admin/activity',
   'get /admin/operations/neon',
+  'post /admin/operations/report-generate',
   'get /readyz',
   // Universal-link manifests are fetched by the OS (swcd / Android
   // PackageManager), not by the mobile client. Skip from codegen.

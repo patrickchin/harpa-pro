@@ -2,9 +2,10 @@ import type {
   NeonInventoryObservation,
   NeonInventoryReason,
   NeonProject,
+  ReportGenerateDiagnosticObservation,
 } from '@harpa/api-contract';
 import { operations as operationSchemas } from '@harpa/api-contract/schemas';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminAuthClient } from '../../lib/admin-auth';
 import type { AdminSession } from '../../lib/admin-auth';
 import { getPublicEnv } from '../../lib/env';
@@ -34,6 +35,31 @@ type NeonInventoryState =
   | { status: 'ready'; observation: NeonInventoryObservation };
 type NeonInventoryFetchResult =
   { status: 'ready'; observation: NeonInventoryObservation } | { status: 'unauthorized' };
+type ReportDiagnosticState =
+  | { status: 'idle' }
+  | { status: 'running' }
+  | { status: 'ready'; observation: ReportGenerateDiagnosticObservation }
+  | { status: 'invalid-response' }
+  | { status: 'request-rejected' }
+  | { status: 'rate-limited' }
+  | { status: 'unavailable' };
+type ReportDiagnosticFetchResult =
+  | { status: 'ready'; observation: ReportGenerateDiagnosticObservation }
+  | { status: 'invalid-response' }
+  | { status: 'request-rejected' }
+  | { status: 'rate-limited' }
+  | { status: 'unavailable' }
+  | { status: 'unauthorized' };
+
+type ReportDiagnosticSuccess = Extract<
+  ReportGenerateDiagnosticObservation,
+  { status: 'pass' | 'warning' }
+>;
+type ReportDiagnosticFailure = Extract<ReportGenerateDiagnosticObservation, { status: 'fail' }>;
+type ReportDiagnosticWarning = Extract<
+  ReportGenerateDiagnosticObservation,
+  { status: 'warning' }
+>['warnings'][number];
 
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
 
@@ -242,6 +268,37 @@ async function loadNeonInventory(): Promise<NeonInventoryFetchResult> {
     status: 'ready',
     observation: parsed.success ? parsed.data : unknownNeonObservation('invalid_response'),
   };
+}
+
+async function runReportDiagnostic(csrfToken: string): Promise<ReportDiagnosticFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/report-generate`, {
+      method: 'POST',
+      headers: { 'X-Admin-CSRF': csrfToken },
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return { status: 'unavailable' };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (response.status === 403) return { status: 'request-rejected' };
+  if (response.status === 429) return { status: 'rate-limited' };
+  if (!response.ok) return { status: 'unavailable' };
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { status: 'invalid-response' };
+  }
+
+  const parsed = operationSchemas.reportGenerateDiagnosticObservation.safeParse(body);
+  return parsed.success
+    ? { status: 'ready', observation: parsed.data }
+    : { status: 'invalid-response' };
 }
 
 function ProbeBadge({ state }: { state: ProbeState }) {
@@ -453,6 +510,336 @@ function NeonInventory({ state }: { state: NeonInventoryState }) {
   );
 }
 
+const diagnosticNumber = new Intl.NumberFormat('en-US');
+
+function DiagnosticBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'pass' | 'warning' | 'fail' | 'unknown';
+}) {
+  const toneClass =
+    tone === 'pass'
+      ? 'bg-emerald-100 text-emerald-800'
+      : tone === 'warning'
+        ? 'bg-amber-100 text-amber-800'
+        : tone === 'fail'
+          ? 'bg-red-100 text-red-800'
+          : 'bg-secondary text-ink-soft';
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${toneClass}`}>{label}</span>
+  );
+}
+
+function warningCopy(warning: ReportDiagnosticWarning): string {
+  switch (warning) {
+    case 'replay_only':
+      return 'This run exercised the endpoint and persistence, but did not confirm a fresh live AI provider call.';
+    case 'limits_unavailable':
+      return 'Generation passed, but effective usage limits were unavailable.';
+    case 'sign_out_failed':
+      return 'Generation passed, but sign-out could not be confirmed.';
+  }
+}
+
+function failureReasonCopy(reason: ReportDiagnosticFailure['reason']): string {
+  switch (reason) {
+    case 'sign_in_failed':
+      return 'The synthetic account could not sign in.';
+    case 'target_not_found':
+      return 'The configured synthetic report was not found.';
+    case 'target_not_draft':
+      return 'The configured synthetic report is not a draft.';
+    case 'conflict':
+      return 'The synthetic report changed during the diagnostic.';
+    case 'usage_limit_exceeded':
+      return 'The synthetic account has reached its report-generation limit.';
+    case 'rate_limited':
+      return 'Rate limiting prevented report generation.';
+    case 'provider_error':
+      return 'The AI provider could not generate the report.';
+    case 'timeout':
+      return 'The diagnostic timed out.';
+    case 'invalid_response':
+      return 'An upstream API returned an invalid response.';
+    case 'upstream_unavailable':
+      return 'An upstream API was unavailable.';
+  }
+}
+
+function failurePhaseLabel(phase: ReportDiagnosticFailure['phase']): string {
+  switch (phase) {
+    case 'sign_in':
+      return 'Sign in';
+    case 'target_read':
+      return 'Target read';
+    case 'generate':
+      return 'Generate';
+    case 'proof_read':
+      return 'Proof read';
+    case 'limits':
+      return 'Limits';
+    case 'sign_out':
+      return 'Sign out';
+  }
+}
+
+function CleanupResult({ cleanup }: { cleanup: ReportDiagnosticFailure['cleanup'] }) {
+  if (cleanup === 'succeeded') return <p>Sign-out confirmed.</p>;
+  if (cleanup === 'failed') return <p>Sign-out could not be confirmed.</p>;
+  return <p>No synthetic session was created.</p>;
+}
+
+function DiagnosticLimits({ limits }: { limits: NonNullable<ReportDiagnosticSuccess['limits']> }) {
+  const rows = [
+    ['Report generations', limits.reportGenerate],
+    ['AI input tokens', limits.aiInputTokens],
+    ['AI output tokens', limits.aiOutputTokens],
+  ] as const;
+
+  return (
+    <div className="mt-5 border-t border-hairline pt-5">
+      <h4 className="font-semibold text-ink">
+        {limits.plan[0]!.toUpperCase() + limits.plan.slice(1)} plan
+      </h4>
+      <div className="mt-3 grid gap-3 lg:grid-cols-3">
+        {rows.map(([label, bucket]) => (
+          <article className="rounded-lg bg-secondary p-4" key={label}>
+            <h5 className="text-sm font-semibold text-ink">{label}</h5>
+            <p className="mt-1 text-sm text-ink-soft">
+              {diagnosticNumber.format(bucket.used)} used
+              {' · '}
+              {bucket.remaining === null
+                ? 'Unlimited'
+                : `${diagnosticNumber.format(bucket.remaining)} remaining`}
+              {bucket.limit === null ? '' : ` · ${diagnosticNumber.format(bucket.limit)} limit`}
+            </p>
+            {bucket.overridden && (
+              <p className="mt-1 text-xs font-medium text-accent-ink">Custom limit</p>
+            )}
+            <p className="mt-2 text-xs text-ink-soft">
+              Resets <time dateTime={bucket.resetAt}>{bucket.resetAt}</time>
+            </p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SuccessfulDiagnostic({ observation }: { observation: ReportDiagnosticSuccess }) {
+  const isWarning = observation.status === 'warning';
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-ink-soft">
+            Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
+          </p>
+          <p className="mt-1 text-sm text-ink-soft">
+            Completed in {diagnosticNumber.format(observation.durationMs)} ms.
+          </p>
+        </div>
+        <DiagnosticBadge
+          label={isWarning ? 'Warning' : 'Pass'}
+          tone={isWarning ? 'warning' : 'pass'}
+        />
+      </div>
+
+      {isWarning && (
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-amber-800">
+          {observation.warnings.map((warning) => (
+            <li key={warning}>{warningCopy(warning)}</li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-5 grid gap-5 border-t border-hairline pt-5 lg:grid-cols-2">
+        <div>
+          <h4 className="font-semibold text-ink">Synthetic target</h4>
+          <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+            <dt className="text-ink-soft">Account</dt>
+            <dd className="break-all text-ink">{observation.target.accountEmail}</dd>
+            <dt className="text-ink-soft">Project</dt>
+            <dd className="break-all text-ink">{observation.target.projectId}</dd>
+            <dt className="text-ink-soft">Report ID</dt>
+            <dd className="break-all text-ink">{observation.target.reportId}</dd>
+            <dt className="text-ink-soft">Report</dt>
+            <dd className="text-ink">Report {observation.target.reportNumber}</dd>
+          </dl>
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-ink">Generation proof</h4>
+          <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+            <dt className="text-ink-soft">Mode</dt>
+            <dd className="text-ink">
+              {observation.generation.fixtureMode === 'live' ? 'Live' : 'Replay'}
+            </dd>
+            <dt className="text-ink-soft">Provider</dt>
+            <dd className="text-ink">{observation.generation.vendor}</dd>
+            <dt className="text-ink-soft">Model</dt>
+            <dd className="break-all text-ink">{observation.generation.model}</dd>
+            <dt className="text-ink-soft">HTTP</dt>
+            <dd className="text-ink">{observation.generation.httpStatus}</dd>
+            <dt className="text-ink-soft">Request ID</dt>
+            <dd className="break-all text-ink">
+              {observation.generation.requestId ?? 'Not returned'}
+            </dd>
+            <dt className="text-ink-soft">Latency</dt>
+            <dd className="text-ink">
+              {diagnosticNumber.format(observation.generation.durationMs)} ms
+            </dd>
+            <dt className="text-ink-soft">Idempotency</dt>
+            <dd className="text-ink">
+              {observation.generation.idempotentReplay ? 'Replayed' : 'Fresh'}
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 border-t border-hairline pt-5 text-sm md:grid-cols-2">
+        {[
+          ['Requested', observation.generation.requestedAt],
+          ['Finished', observation.generation.finishedAt],
+          ['Report updated', observation.generation.reportUpdatedAt],
+          ['Generated', observation.generation.generatedAt],
+        ].map(([label, timestamp]) => (
+          <p className="text-ink-soft" key={label}>
+            {label} <time dateTime={timestamp}>{timestamp}</time>
+          </p>
+        ))}
+      </div>
+
+      {observation.limits && <DiagnosticLimits limits={observation.limits} />}
+
+      <div className="mt-5 border-t border-hairline pt-5 text-sm text-ink">
+        {observation.cleanup === 'succeeded' ? (
+          <p>Sign-out confirmed.</p>
+        ) : (
+          <p>Sign-out could not be confirmed.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FailedDiagnostic({ observation }: { observation: ReportDiagnosticFailure }) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-ink-soft">
+            Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
+          </p>
+          <p className="mt-1 text-sm text-ink-soft">
+            Stopped after {diagnosticNumber.format(observation.durationMs)} ms.
+          </p>
+        </div>
+        <DiagnosticBadge label="Failed" tone="fail" />
+      </div>
+      <dl className="mt-5 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 border-t border-hairline pt-5 text-sm">
+        <dt className="text-ink-soft">Phase</dt>
+        <dd className="text-ink">{failurePhaseLabel(observation.phase)}</dd>
+        <dt className="text-ink-soft">Result</dt>
+        <dd className="text-ink">{failureReasonCopy(observation.reason)}</dd>
+        <dt className="text-ink-soft">Cleanup</dt>
+        <dd className="text-ink">
+          <CleanupResult cleanup={observation.cleanup} />
+        </dd>
+      </dl>
+    </div>
+  );
+}
+
+function DiagnosticResult({ state }: { state: ReportDiagnosticState }) {
+  if (state.status === 'idle') return <p>Not run yet in this browser session.</p>;
+  if (state.status === 'running') return <p>Running diagnostic…</p>;
+  if (state.status === 'invalid-response') {
+    return (
+      <div>
+        <DiagnosticBadge label="Unknown" tone="unknown" />
+        <p className="mt-3 text-sm text-ink-soft">The diagnostic returned an invalid response.</p>
+      </div>
+    );
+  }
+  if (state.status === 'request-rejected') {
+    return (
+      <div>
+        <DiagnosticBadge label="Request rejected" tone="fail" />
+        <p className="mt-3 text-sm text-ink-soft">
+          The admin origin or CSRF check rejected this diagnostic request.
+        </p>
+      </div>
+    );
+  }
+  if (state.status === 'rate-limited') {
+    return (
+      <div>
+        <DiagnosticBadge label="Rate limited" tone="warning" />
+        <p className="mt-3 text-sm text-ink-soft">Diagnostic run limit reached. Try again later.</p>
+      </div>
+    );
+  }
+  if (state.status === 'unavailable') {
+    return (
+      <div>
+        <DiagnosticBadge label="Unknown" tone="unknown" />
+        <p className="mt-3 text-sm text-ink-soft">The diagnostic could not be reached.</p>
+      </div>
+    );
+  }
+
+  if (state.observation.status === 'unknown') {
+    return (
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="text-sm text-ink-soft">
+            Observed{' '}
+            <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+          </p>
+          <DiagnosticBadge label="Unknown" tone="unknown" />
+        </div>
+        <p className="mt-3 text-sm text-ink-soft">
+          Report-generation diagnostic is not configured.
+        </p>
+      </div>
+    );
+  }
+  if (state.observation.status === 'fail') {
+    return <FailedDiagnostic observation={state.observation} />;
+  }
+  return <SuccessfulDiagnostic observation={state.observation} />;
+}
+
+function ReportDiagnostic({ state, onRun }: { state: ReportDiagnosticState; onRun: () => void }) {
+  const running = state.status === 'running';
+  return (
+    <section className="mt-8" aria-labelledby="report-diagnostic-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-ink" id="report-diagnostic-title">
+            Report generation diagnostic
+          </h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Each run updates one synthetic report and may consume AI quota.
+          </p>
+        </div>
+        <button className={buttonClass} disabled={running} type="button" onClick={onRun}>
+          Run diagnostic
+        </button>
+      </div>
+      <div
+        aria-live="polite"
+        className="mt-4 rounded-xl border border-hairline bg-card p-5 text-ink shadow-sm"
+      >
+        <DiagnosticResult state={state} />
+      </div>
+    </section>
+  );
+}
+
 function Operations({
   session,
   onSessionExpired,
@@ -465,6 +852,10 @@ function Operations({
   const { apiBaseUrl } = getPublicEnv();
   const [probes, setProbes] = useState(INITIAL_PROBES);
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
+  const [reportDiagnostic, setReportDiagnostic] = useState<ReportDiagnosticState>({
+    status: 'idle',
+  });
+  const reportDiagnosticRunning = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -491,6 +882,22 @@ function Operations({
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const handleRunDiagnostic = useCallback(async () => {
+    if (reportDiagnosticRunning.current) return;
+    reportDiagnosticRunning.current = true;
+    setReportDiagnostic({ status: 'running' });
+    try {
+      const result = await runReportDiagnostic(session.csrfToken);
+      if (result.status === 'unauthorized') {
+        onSessionExpired();
+        return;
+      }
+      setReportDiagnostic(result);
+    } finally {
+      reportDiagnosticRunning.current = false;
+    }
+  }, [onSessionExpired, session.csrfToken]);
 
   return (
     <section>
@@ -561,6 +968,8 @@ function Operations({
           ))}
         </div>
       </section>
+
+      <ReportDiagnostic state={reportDiagnostic} onRun={() => void handleRunDiagnostic()} />
 
       <NeonInventory state={neonInventory} />
 

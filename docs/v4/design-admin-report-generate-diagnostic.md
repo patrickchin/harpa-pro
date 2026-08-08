@@ -24,7 +24,8 @@ read-only observation.
 
 Each deliberate run may write only:
 
-- one temporary Better Auth application session, revoked at the end;
+- one temporary Better Auth application session, with immediate sign-out
+  attempted after every post-login result and any cleanup failure surfaced;
 - one replacement body and generation-debug record on one pre-provisioned
   draft canary report; and
 - one `app.llm_usage_events` row.
@@ -135,10 +136,12 @@ deadline. It performs no retry.
    `ai_output_tokens` bucket metadata.
 7. In `finally`, `POST /api/auth/sign-out` with `{}` and the Bearer token.
 
-The overall deadline is 75 seconds. It covers login through cleanup. A single
-`AbortController` owns the deadline. There is no per-step retry, fallback
-target, or direct service call. Calling the real HTTP routes is the point of
-the diagnostic.
+The functional deadline is 75 seconds. One `AbortController` covers sign-in
+through limits and normal cleanup. If that deadline has already fired,
+sign-out gets one fresh five-second cleanup-only grace signal so the request
+can still reach Better Auth. There is no functional retry, fallback target,
+or direct service call. Calling the real HTTP routes is the point of the
+diagnostic.
 
 ## Observation contract
 
@@ -250,7 +253,8 @@ AI quota. It must not describe the action as read-only.
   origin, untrusted origin, missing CSRF, and invalid CSRF are rejected.
 - Dedicated admin cookie plus trusted origin plus valid CSRF is accepted.
 - Each upstream status maps to the reviewed reason; raw bodies never escape.
-- Timeout aborts the whole run once and never retries.
+- Timeout aborts the functional run once and never retries; if the main signal
+  has already aborted, sign-out gets one bounded five-second cleanup grace.
 - Sign-out is attempted after every post-login result.
 - Replay, limit-read failure, and sign-out failure produce reviewed warnings.
 - Console-capture tests use sentinel secrets/content and prove no leak.

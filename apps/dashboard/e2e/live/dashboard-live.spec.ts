@@ -20,6 +20,7 @@ const liveEnvSchema = z.object({
 
 const liveEnv = liveEnvSchema.parse(process.env);
 const apiUrl = liveEnv.DASHBOARD_LIVE_API_URL.replace(/\/$/, '');
+const dashboardOrigin = new URL(liveEnv.DASHBOARD_LIVE_BASE_URL).origin;
 
 type ProjectSummary = {
   id: string;
@@ -247,6 +248,7 @@ test.describe('dashboard live preview journey', () => {
       await expect(editorPage.getByRole('heading', { level: 1, name: 'Project' })).toBeVisible();
       await expect(editorPage.getByText('This project could not be found.')).toBeVisible();
       await signOutThroughUi(editorPage);
+      await revokeSession(request, editorToken);
       editorToken = null;
 
       await ownerPage.goto(`/projects/${encodeURIComponent(projectId)}/settings`);
@@ -263,6 +265,7 @@ test.describe('dashboard live preview journey', () => {
       await setAiSettings(request, ownerToken, originalAiSettings);
       originalAiSettings = null;
       await signOutThroughUi(ownerPage);
+      await revokeSession(request, ownerToken);
       ownerToken = null;
     } finally {
       try {
@@ -579,7 +582,7 @@ async function cleanupProjectsByName(
 
 async function revokeSession(request: APIRequestContext, token: string): Promise<void> {
   const response = await request.post(`${apiUrl}/api/auth/sign-out`, {
-    headers: authHeaders(token),
+    headers: { ...authHeaders(token), origin: dashboardOrigin },
     data: {},
   });
   if (response.ok() || response.status() === 401) return;

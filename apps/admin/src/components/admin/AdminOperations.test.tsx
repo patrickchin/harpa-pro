@@ -3313,6 +3313,20 @@ describe('AdminOperations', () => {
       },
       expected: '8.0 PiB (9,007,199,254,740,991 bytes)',
     },
+    {
+      caseName: 'a rounded value just below the next IEC unit',
+      standard: {
+        ...availableR2Capacity.storage.standard,
+        publishedPayloadBytes: 1_048_525,
+        publishedMetadataBytes: 0,
+      },
+      infrequentAccess: {
+        ...availableR2Capacity.storage.infrequentAccess,
+        publishedPayloadBytes: 0,
+        publishedMetadataBytes: 0,
+      },
+      expected: '1.0 MiB (1,048,525 bytes)',
+    },
   ])(
     'formats $caseName without precision loss',
     async ({ standard, infrequentAccess, expected }) => {

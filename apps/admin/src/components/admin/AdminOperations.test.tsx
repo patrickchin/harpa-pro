@@ -136,6 +136,85 @@ const emptyInventory = {
   projects: [],
 };
 
+const availableR2Capacity = {
+  observedAt,
+  status: 'available' as const,
+  freeTierReference: {
+    storageGbMonth: 10 as const,
+    classAOperations: 1_000_000 as const,
+    classBOperations: 10_000_000 as const,
+    appliesTo: 'standard_only' as const,
+  },
+  buckets: {
+    status: 'available' as const,
+    truncated: false,
+    items: [
+      {
+        name: 'harpa-pro',
+        jurisdiction: 'default' as const,
+        location: 'apac' as const,
+        defaultStorageClass: 'standard' as const,
+        createdAt: '2026-05-01T00:00:00.000Z',
+      },
+      {
+        name: 'harpa-pro-archive',
+        jurisdiction: 'eu' as const,
+        location: 'weur' as const,
+        defaultStorageClass: 'infrequent_access' as const,
+        createdAt: null,
+      },
+    ],
+  },
+  storage: {
+    status: 'available' as const,
+    standard: {
+      publishedPayloadBytes: 61_000_000,
+      publishedMetadataBytes: 596_713,
+      publishedObjects: 138,
+      uploadingPayloadBytes: 1_024,
+      uploadingMetadataBytes: 128,
+      uploadingObjects: 1,
+    },
+    infrequentAccess: {
+      publishedPayloadBytes: 12_000_000,
+      publishedMetadataBytes: 120_000,
+      publishedObjects: 7,
+      uploadingPayloadBytes: 0,
+      uploadingMetadataBytes: 0,
+      uploadingObjects: 0,
+    },
+  },
+  operations: {
+    status: 'available' as const,
+    windowStart: '2026-08-01T00:00:00.000Z',
+    windowEnd: observedAt,
+    classA: {
+      estimatedUsed: 125_000,
+      publishedAllowance: 1_000_000 as const,
+      estimatedRemaining: 875_000,
+    },
+    classB: {
+      estimatedUsed: 4_200_000,
+      publishedAllowance: 10_000_000 as const,
+      estimatedRemaining: 5_800_000,
+    },
+    freeRequests: 32_000,
+    unclassifiedRequests: 0,
+  },
+  caveats: [
+    'storage_snapshot_not_gb_month',
+    'storage_metrics_may_lag',
+    'infrequent_access_not_covered_by_free_tier',
+    'operations_estimated_from_analytics',
+  ] as const,
+};
+
+const unknownR2Capacity = {
+  observedAt,
+  status: 'unknown' as const,
+  reason: 'not_configured' as const,
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -143,11 +222,17 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function mockOperationsFetch(inventory: unknown = availableInventory) {
+function mockOperationsFetch(
+  inventory: unknown = availableInventory,
+  r2Capacity: unknown = availableR2Capacity,
+) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
     if (url === 'https://api.example.test/admin/operations/neon') {
       return jsonResponse(inventory);
+    }
+    if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+      return jsonResponse(r2Capacity);
     }
     if (
       url === 'https://api.example.test/readyz' ||
@@ -162,6 +247,7 @@ function mockOperationsFetch(inventory: unknown = availableInventory) {
 function mockDiagnosticFetch(
   diagnostic: () => Response | Promise<Response>,
   inventory: unknown = availableInventory,
+  r2Capacity: unknown = availableR2Capacity,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -170,6 +256,9 @@ function mockDiagnosticFetch(
     }
     if (url === 'https://api.example.test/admin/operations/neon') {
       return jsonResponse(inventory);
+    }
+    if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+      return jsonResponse(r2Capacity);
     }
     if (
       url === 'https://api.example.test/readyz' ||
@@ -187,6 +276,22 @@ function diagnosticRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
   );
 }
 
+function r2CapacityRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/r2-capacity',
+  );
+}
+
+async function getR2CapacitySection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'R2 capacity',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
+}
+
 async function getDiagnosticSection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
@@ -202,7 +307,7 @@ async function renderAndRunDiagnostic(body: unknown, status = 200) {
   const user = userEvent.setup();
   render(<AdminOperations />);
   const section = await getDiagnosticSection();
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
   await user.click(within(section).getByRole('button', { name: 'Run diagnostic' }));
   return { fetchMock, section };
 }
@@ -228,12 +333,13 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/readyz',
         'https://api.example.test/admin/readyz',
         'https://api.example.test/admin/operations/neon',
+        'https://api.example.test/admin/operations/r2-capacity',
       ]),
     );
 
@@ -277,6 +383,9 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
       }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
       throw new Error(`Unexpected request: ${url}`);
     });
     const user = userEvent.setup();
@@ -294,16 +403,16 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
 
-  it('does not request or expose Neon inventory while the dedicated admin is signed out', async () => {
+  it('does not request or expose provider observations while the dedicated admin is signed out', async () => {
     authMock.getSession.mockResolvedValueOnce(null).mockResolvedValueOnce(adminSession);
     const fetchMock = mockOperationsFetch(emptyInventory);
     const user = userEvent.setup();
@@ -312,6 +421,7 @@ describe('AdminOperations', () => {
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Open dashboard ↗' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
 
     view.unmount();
@@ -321,6 +431,7 @@ describe('AdminOperations', () => {
     expect(authMock.logout).toHaveBeenCalledOnce();
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
   });
 
   it('shows a distinct loading state until the Neon observation arrives', async () => {
@@ -331,6 +442,9 @@ describe('AdminOperations', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url === 'https://api.example.test/admin/operations/neon') return inventoryResponse;
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
       if (
         url === 'https://api.example.test/readyz' ||
         url === 'https://api.example.test/admin/readyz'
@@ -389,6 +503,9 @@ describe('AdminOperations', () => {
       const url = String(input);
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized.' } }, 401);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
       }
       if (
         url === 'https://api.example.test/readyz' ||
@@ -516,6 +633,9 @@ describe('AdminOperations', () => {
         inventoryRequestCount += 1;
         return jsonResponse(response);
       }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
       if (
         url === 'https://api.example.test/readyz' ||
         url === 'https://api.example.test/admin/readyz'
@@ -536,7 +656,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -599,6 +719,261 @@ describe('AdminOperations', () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
+  it('loads R2 capacity with the admin cookie and refreshes it only with the shared control', async () => {
+    const observations = [unknownR2Capacity, availableR2Capacity];
+    let observationIndex = 0;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        const observation = observations[observationIndex] ?? availableR2Capacity;
+        observationIndex += 1;
+        return jsonResponse(observation);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (
+        url === 'https://api.example.test/readyz' ||
+        url === 'https://api.example.test/admin/readyz'
+      ) {
+        return new Response(null, { status: 200 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const user = userEvent.setup();
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(await within(section).findByText('R2 capacity is not configured.')).toBeTruthy();
+    expect(r2CapacityRequests(fetchMock)).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    expect(await within(section).findByText('2 visible buckets')).toBeTruthy();
+    await waitFor(() => expect(r2CapacityRequests(fetchMock)).toHaveLength(2));
+    for (const [, requestInit] of r2CapacityRequests(fetchMock)) {
+      expect(requestInit).toMatchObject({
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      expect(requestInit).not.toHaveProperty('body');
+      expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+  });
+
+  it('shows a distinct loading state until the R2 observation arrives', async () => {
+    let resolveR2Capacity!: (response: Response) => void;
+    const r2CapacityResponse = new Promise<Response>((resolve) => {
+      resolveR2Capacity = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return r2CapacityResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (
+        url === 'https://api.example.test/readyz' ||
+        url === 'https://api.example.test/admin/readyz'
+      ) {
+        return new Response(null, { status: 200 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(within(section).getByText('Loading R2 capacity…')).toBeTruthy();
+
+    await act(async () => {
+      resolveR2Capacity(jsonResponse(availableR2Capacity));
+      await r2CapacityResponse;
+    });
+    expect(await within(section).findByText('2 visible buckets')).toBeTruthy();
+  });
+
+  it('renders available R2 snapshots, free-tier references, caveats, and a bounded bucket list', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity);
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(await within(section).findByText('Available')).toBeTruthy();
+    expect(within(section).getByText('2 visible buckets')).toBeTruthy();
+    expect(section.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
+
+    const renderedText = section.textContent ?? '';
+    for (const value of [
+      '10 GB-month',
+      '1,000,000 Class A operations',
+      '10,000,000 Class B operations',
+      'Standard storage',
+      '61,000,000 payload bytes',
+      '596,713 metadata bytes',
+      '138 published objects',
+      '1 uploading object',
+      'Infrequent Access',
+      '12,000,000 payload bytes',
+      '7 published objects',
+      '125,000 used',
+      '875,000 estimated remaining',
+      '4,200,000 used',
+      '5,800,000 estimated remaining',
+      '32,000 free operations',
+    ]) {
+      expect(renderedText).toContain(value);
+    }
+    for (const caveat of [
+      'Current storage is a snapshot, not remaining GB-month capacity.',
+      'Storage metrics may lag.',
+      'Operation headroom is a conservative account-wide estimate from analytics and published mappings; storage-class eligibility is unavailable, so this is not a provider billing balance.',
+      'Infrequent Access storage is outside the Standard-storage free tier.',
+    ]) {
+      expect(within(section).getByText(caveat)).toBeTruthy();
+    }
+
+    const bucketScroller = within(section).getByRole('region', { name: 'R2 buckets' });
+    expect(bucketScroller.className).toContain('overflow-y-auto');
+    expect(bucketScroller.className).toMatch(/\bmax-h-/);
+    expect(within(bucketScroller).getByText('harpa-pro')).toBeTruthy();
+    expect(within(bucketScroller).getByText('harpa-pro-archive')).toBeTruthy();
+    expect(bucketScroller.querySelector('time[datetime="2026-05-01T00:00:00.000Z"]')).toBeTruthy();
+    expect(within(section).getByRole('link', { name: 'Open Cloudflare console ↗' })).toHaveProperty(
+      'href',
+      'https://dash.cloudflare.com/',
+    );
+  });
+
+  it('preserves partial R2 facts and explains unknown storage, truncation, and exclusions', async () => {
+    const partialR2Capacity = {
+      ...availableR2Capacity,
+      status: 'partial' as const,
+      buckets: { ...availableR2Capacity.buckets, truncated: true },
+      storage: { status: 'unknown' as const, reason: 'timeout' as const },
+      operations: {
+        ...availableR2Capacity.operations,
+        unclassifiedRequests: 57,
+      },
+      caveats: [
+        'storage_snapshot_not_gb_month',
+        'storage_metrics_may_lag',
+        'operations_estimated_from_analytics',
+        'unclassified_operations_excluded',
+        'bucket_inventory_truncated',
+      ] as const,
+    };
+    mockOperationsFetch(emptyInventory, partialR2Capacity);
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(await within(section).findByText('Partial')).toBeTruthy();
+    expect(within(section).getByText('2 visible buckets')).toBeTruthy();
+    expect(within(section).getByText('Storage snapshot unavailable.')).toBeTruthy();
+    expect(within(section).getByText('Cloudflare request timed out.')).toBeTruthy();
+    expect(
+      within(section).getByText('Bucket inventory is truncated; more buckets may exist.'),
+    ).toBeTruthy();
+    expect(
+      within(section).getByText(
+        '57 successful requests were unclassified and excluded from the operation estimates.',
+      ),
+    ).toBeTruthy();
+    expect(section.textContent).toContain('875,000 estimated remaining');
+  });
+
+  it('renders an unknown R2 observation without implying provider health or remaining storage', async () => {
+    mockOperationsFetch(emptyInventory, unknownR2Capacity);
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('R2 capacity is not configured.')).toBeTruthy();
+    expect(within(section).queryByText(/healthy/i)).toBeNull();
+    expect(within(section).queryByText(/remaining GB-month/i)).toBeNull();
+    expect(within(section).queryByText(/GB-month remaining/i)).toBeNull();
+  });
+
+  it('returns the whole page to sign-in when the R2 observer finds an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(
+          { error: { code: 'UNAUTHORIZED', message: 'expired-r2-cookie-detail' } },
+          401,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (
+        url === 'https://api.example.test/readyz' ||
+        url === 'https://api.example.test/admin/readyz'
+      ) {
+        return new Response(null, { status: 200 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
+    expect(document.body.textContent).not.toContain('expired-r2-cookie-detail');
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects and redacts R2 credentials, raw provider data, and exact remaining storage', async () => {
+    const forbiddenValues = [
+      'cloudflare-observer-token-must-never-render',
+      'cloudflare-account-id-must-never-render',
+      'raw Cloudflare GraphQL error body',
+      'private/object-key.jpg',
+      '9.75 exact remaining GB-month',
+    ];
+    const poisonedR2Capacity = {
+      ...availableR2Capacity,
+      apiToken: forbiddenValues[0],
+      accountId: forbiddenValues[1],
+      rawProviderResponse: { errors: [{ message: forbiddenValues[2] }] },
+      objectKeys: [forbiddenValues[3]],
+      remainingStorage: forbiddenValues[4],
+    };
+    const fetchMock = mockOperationsFetch(emptyInventory, poisonedR2Capacity);
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('R2 capacity returned an invalid response.')).toBeTruthy();
+    expect(within(section).queryByText('harpa-pro')).toBeNull();
+
+    const [request] = r2CapacityRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+
+    const renderedText = document.body.textContent ?? '';
+    for (const value of forbiddenValues) expect(renderedText).not.toContain(value);
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
   it('keeps the cost-bearing report diagnostic idle until an administrator runs it', async () => {
     const fetchMock = mockOperationsFetch(emptyInventory);
 
@@ -616,7 +991,7 @@ describe('AdminOperations', () => {
       within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }),
     ).toHaveProperty('disabled', false);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
@@ -627,9 +1002,9 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(8));
 
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(
@@ -648,7 +1023,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     const runButton = within(diagnosticSection).getByRole('button', {
       name: 'Run diagnostic',
     });
@@ -821,7 +1196,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     await user.click(within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }));
 
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();

@@ -48,6 +48,9 @@ describe('GET /healthz admin CORS', () => {
         'access-control-request-method': 'GET',
       },
     });
+    const rejectedGet = await app.request('/healthz', {
+      headers: { origin: 'https://evil.example.com' },
+    });
 
     expect(allowedPreflight.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
     expect(allowedPreflight.headers.get('access-control-allow-methods')).toContain('GET');
@@ -57,5 +60,8 @@ describe('GET /healthz admin CORS', () => {
     expect(allowedGet.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
     expect(allowedGet.headers.get('access-control-allow-credentials')).toBeNull();
     expect(rejectedPreflight.headers.get('access-control-allow-origin')).toBeNull();
+    expect(rejectedGet.status).toBe(200);
+    expect(rejectedGet.headers.get('access-control-allow-origin')).toBeNull();
+    expect(rejectedGet.headers.get('access-control-allow-credentials')).toBeNull();
   });
 });

@@ -15,10 +15,26 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 ```
 
 The root route renders the business activity console. `/operations` provides
-read-only Harpa readiness checks, links to external service consoles, and
-bounded Neon inventory. Unknown browser paths return a static 404 instead of
-falling back to the console. `/admin/activity` and
-`/admin/operations/neon` remain API resource paths, not page URLs.
+read-only Harpa deployment identity and readiness, links to external service
+consoles, and bounded provider observations. Unknown browser paths return a
+static 404 instead of falling back to the console. `/admin/activity` and the
+`/admin/operations/*` routes remain API resource paths, not page URLs.
+
+## Deployment identity
+
+The operations page reads `/healthz`, `/readyz`, `/admin/readyz`, and its
+same-origin `/_cf-pages-deployment.json` marker on authenticated load and
+manual Refresh. All four GETs disable caching; there is no polling. The health
+request omits credentials, the readiness requests include the dedicated admin
+cookie, and the marker uses same-origin credentials.
+
+The cards keep API build identity, product and administrator migration heads,
+and the administrator Pages build separate. A different Fly and Pages SHA is
+not automatically drift because pull-request Fly previews can use a synthetic
+merge commit while Pages reports the pull-request head. The panel is
+corroborating evidence only; use the protected deployment workflows for exact
+promotion proof. See
+[Admin deployment identity](../../docs/v4/design-admin-deployment-identity.md).
 
 ## Neon inventory
 

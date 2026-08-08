@@ -304,7 +304,7 @@ describe('dedicated admin browser authentication', () => {
   });
 
   it('does not add admin CORS headers to unrelated routes', async () => {
-    const response = await createApp().request('/healthz', {
+    const response = await createApp().request('/openapi.json', {
       headers: { origin: ADMIN_ORIGIN },
     });
     expect(response.headers.get('access-control-allow-origin')).toBeNull();

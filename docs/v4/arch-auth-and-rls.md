@@ -29,6 +29,7 @@ Admin authentication is a third, isolated concern. `withAdminSession`
 validates the dedicated browser cookie against the admin database before a
 browser-admin data route runs. `GET /admin/activity` then reads the application
 database. `GET /admin/operations/neon` requests bounded provider metadata. The
+`GET /admin/operations/r2-capacity` route requests bounded R2 measurements. The
 manual `POST /admin/operations/report-generate` can authenticate one fixed
 synthetic application user and exercise the real report routes. The two
 databases have no joins or cross-database foreign keys.
@@ -165,8 +166,8 @@ The stable cross-site development origin uses
 browser storage, URLs, application logs, or the application database.
 
 `withAdminSession()` is the sole authorization middleware for browser-admin
-data routes. It protects `GET /admin/activity` and
-`GET /admin/operations/neon`, and it is one required gate on
+data routes. It protects `GET /admin/activity`, `GET /admin/operations/neon`,
+and `GET /admin/operations/r2-capacity`. It is one required gate on
 `POST /admin/operations/report-generate`. It does not inspect
 `public."user".is_admin` and rejects Better Auth bearer tokens and cookies.
 Existing programmatic admin routes retain their app-admin authorization until
@@ -198,6 +199,26 @@ returns a typed `Unknown` result without contacting Neon.
 The observer key is a personal key for the dedicated user. It is not the CI
 `NEON_API_KEY`, which can manage branches and connection URIs. The observer
 variables never enter browser storage, URLs, response bodies, or logs.
+
+### Cloudflare R2 observer boundary
+
+The R2 capacity route uses one fixed Cloudflare account and observer token.
+`ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+`ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are optional server-only variables.
+They must be both set or both absent. A partial pair fails environment parsing
+at boot. An absent pair returns `Unknown` without a Cloudflare request.
+
+The dedicated token requires `Workers R2 Storage Read` and
+`Account Analytics: Read` for the intended account. The analytics permission
+has a broader read scope than R2. Use an account scope, a bounded lifetime, and
+a reviewed rotation date. Use Client IP filtering when the environment has
+stable egress. Record the exception when stable egress is not available.
+
+Do not reuse R2 S3 credentials, Pages tokens, CI tokens, or write tokens. The
+route uses fixed Cloudflare origins and fixed read queries. Browser input cannot
+select a provider method or resource. The account ID, token, raw errors, and
+provider envelopes never enter the response or logs. See
+[`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
 
 ### Report diagnostic boundary
 
@@ -496,8 +517,8 @@ wiring**, not a DI stub):
   HTTP fallback. The waitlist CORS tests protect its separate public
   policy.
 - The admin operations scope test rejects anonymous, Better Auth, and legacy
-  app-admin sessions before any provider call. It allows only a dedicated
-  browser-admin session.
+  app-admin sessions before either observer calls its provider. It allows only
+  a dedicated browser-admin session.
 - The report diagnostic integration tests additionally require the exact
   Origin and session-bound CSRF token, exercise the default HTTP runner, and
   prove that only redacted canary metadata crosses the admin boundary.
@@ -591,27 +612,29 @@ introduces that data contract.
 
 ## Env vars
 
-| Var                                     | Where     | Purpose                                                                              |
-| --------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
-| `BETTER_AUTH_SECRET`                    | API       | Session signing key; production requires an explicit value of at least 32 characters |
-| `BETTER_AUTH_URL`                       | API       | Base URL for better-auth handler                                                     |
-| `ADMIN_CORS_ORIGINS`                    | API       | Exact browser origins trusted only for credentialed `/admin/*` requests              |
-| `ADMIN_DATABASE_URL`                    | API       | Direct Neon connection to the independent `harpa_admin` database                     |
-| `ADMIN_MIGRATIONS_REQUIRED_HEAD`        | API image | Admin migration filename expected by `/admin/readyz`                                 |
-| `ADMIN_NEON_ORG_ID`                     | API       | Optional Harpa Pro Neon organization scope paired with the Viewer API key            |
-| `ADMIN_NEON_VIEWER_API_KEY`             | API       | Optional personal key for the fixed, read-only Neon observer                         |
-| `ADMIN_REPORT_DIAGNOSTIC_EMAIL`         | API       | Optional fixed canary email; must be an exact test-account member                    |
-| `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`    | API       | Optional fixed synthetic project ID, paired with the other canary target values      |
-| `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER` | API       | Optional fixed draft report number, paired with the other canary target values       |
-| `RESEND_API_KEY`                        | API       | Resend transport for OTP emails                                                      |
-| `EMAIL_OTP_LIVE`                        | API       | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test)          |
-| `TEST_ACCOUNT_EMAILS`                   | API       | Password-bypass allowlist                                                            |
-| `TEST_ACCOUNT_PASSWORD`                 | API       | Shared smoke-test password                                                           |
-| `DEMO_ACCOUNT_EMAILS`                   | API       | Comma-separated exact demo account emails                                            |
-| `DEMO_ACCOUNT_PASSWORD`                 | API       | Server-only demo password                                                            |
-| `DASHBOARD_CORS_ORIGINS`                | API       | Credentialed office-dashboard origins trusted by Better Auth and Hono                |
-| `DATABASE_URL`                          | API       | Pooled application Neon Postgres connection                                          |
-| `EXPO_PUBLIC_API_URL`                   | Mobile    | API base URL (validated by `lib/env.ts`)                                             |
+| Var                                      | Where     | Purpose                                                                              |
+| ---------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET`                     | API       | Session signing key; production requires an explicit value of at least 32 characters |
+| `BETTER_AUTH_URL`                        | API       | Base URL for better-auth handler                                                     |
+| `ADMIN_CORS_ORIGINS`                     | API       | Exact browser origins trusted only for credentialed `/admin/*` requests              |
+| `ADMIN_DATABASE_URL`                     | API       | Direct Neon connection to the independent `harpa_admin` database                     |
+| `ADMIN_MIGRATIONS_REQUIRED_HEAD`         | API image | Admin migration filename expected by `/admin/readyz`                                 |
+| `ADMIN_CLOUDFLARE_ACCOUNT_ID`            | API       | Optional fixed Cloudflare account paired with the R2 observer token                  |
+| `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` | API       | Optional dedicated token for the read-only R2 capacity observer                      |
+| `ADMIN_NEON_ORG_ID`                      | API       | Optional Harpa Pro Neon organization scope paired with the Viewer API key            |
+| `ADMIN_NEON_VIEWER_API_KEY`              | API       | Optional personal key for the fixed, read-only Neon observer                         |
+| `ADMIN_REPORT_DIAGNOSTIC_EMAIL`          | API       | Optional fixed canary email; must be an exact test-account member                    |
+| `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`     | API       | Optional fixed synthetic project ID, paired with the other canary target values      |
+| `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER`  | API       | Optional fixed draft report number, paired with the other canary target values       |
+| `RESEND_API_KEY`                         | API       | Resend transport for OTP emails                                                      |
+| `EMAIL_OTP_LIVE`                         | API       | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test)          |
+| `TEST_ACCOUNT_EMAILS`                    | API       | Password-bypass allowlist                                                            |
+| `TEST_ACCOUNT_PASSWORD`                  | API       | Shared smoke-test password                                                           |
+| `DEMO_ACCOUNT_EMAILS`                    | API       | Comma-separated exact demo account emails                                            |
+| `DEMO_ACCOUNT_PASSWORD`                  | API       | Server-only demo password                                                            |
+| `DASHBOARD_CORS_ORIGINS`                 | API       | Credentialed office-dashboard origins trusted by Better Auth and Hono                |
+| `DATABASE_URL`                           | API       | Pooled application Neon Postgres connection                                          |
+| `EXPO_PUBLIC_API_URL`                    | Mobile    | API base URL (validated by `lib/env.ts`)                                             |
 
 ## App session lifecycle
 

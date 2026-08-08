@@ -29,8 +29,9 @@ Admin authentication is a third, isolated concern. `withAdminSession`
 validates the dedicated browser cookie against the admin database before a
 browser-admin data route runs. `GET /admin/activity` then reads the application
 database. `GET /admin/operations/neon` requests bounded provider metadata. The
-`GET /admin/operations/r2-capacity` route requests bounded R2 measurements. The
-manual `POST /admin/operations/report-generate` can authenticate one fixed
+`GET /admin/operations/neon-usage` route requests bounded Neon Free-plan usage.
+The `GET /admin/operations/r2-capacity` route requests bounded R2 measurements.
+The manual `POST /admin/operations/report-generate` can authenticate one fixed
 synthetic application user and exercise the real report routes. The two
 databases have no joins or cross-database foreign keys.
 
@@ -166,8 +167,9 @@ The stable cross-site development origin uses
 browser storage, URLs, application logs, or the application database.
 
 `withAdminSession()` is the sole authorization middleware for browser-admin
-data routes. It protects `GET /admin/activity`, `GET /admin/operations/neon`,
-and `GET /admin/operations/r2-capacity`. It is one required gate on
+data routes. It protects `GET /admin/activity`,
+`GET /admin/operations/neon`, `GET /admin/operations/neon-usage`, and
+`GET /admin/operations/r2-capacity`. It is one required gate on
 `POST /admin/operations/report-generate`. It does not inspect
 `public."user".is_admin` and rejects Better Auth bearer tokens and cookies.
 Existing programmatic admin routes retain their app-admin authorization until
@@ -184,21 +186,36 @@ column or browser-storage secret.
 
 ### Neon observer boundary
 
-The operations route uses one fixed, dedicated Neon observer. The observer has
-organization role `Viewer`, or role `Collaborator` with explicit project-level
-`Viewer` grants. Every visible project must belong to
-`ADMIN_NEON_ORG_ID` and report `effective_project_permission=VIEWER` before
-the API requests branch data. Missing permission evidence or any higher
-permission fails closed as `Unknown` and prevents branch calls.
+The inventory and Free-plan usage routes use one fixed, dedicated Neon
+observer. The observer has organization role `Viewer`, or role `Collaborator`
+with explicit project-level `Viewer` grants. Every visible project must belong
+to `ADMIN_NEON_ORG_ID` and report
+`effective_project_permission=VIEWER` before the API requests branch or usage
+details. Missing permission evidence or any higher permission fails closed as
+`Unknown` and prevents detail calls.
 
 `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are optional server-only
 variables. They must be both set or both absent. Partial configuration fails
-environment validation at boot. When both variables are absent, the route
-returns a typed `Unknown` result without contacting Neon.
+environment validation at boot. When both variables are absent, both routes
+return a typed `Unknown` result without contacting Neon.
 
 The observer key is a personal key for the dedicated user. It is not the CI
 `NEON_API_KEY`, which can manage branches and connection URIs. The observer
 variables never enter browser storage, URLs, response bodies, or logs.
+
+`GET /admin/operations/neon-usage` has its own 12-request-per-minute identity
+and session budget after the shared trusted-Fly-IP gate and admin-session
+lookup. One observation makes at most 22 fixed Neon `GET` requests. It does not
+retry, follow project pagination, or use a provider write method. The browser
+calls it once after session confirmation and again only on manual **Refresh**.
+It does not poll. Across the full operations page, that is 10 authenticated
+reads on load and 20 total after one Refresh.
+
+The Neon percentages use published Free-plan references and are not credit
+balances. R2 operation percentages remain estimates, and the public GitHub
+percentage describes only the primary REST request budget for the current
+browser and IP. Unsupported provider money, token, invoice, and credit values
+stay `Unknown`.
 
 ### Cloudflare R2 observer boundary
 
@@ -621,8 +638,8 @@ introduces that data contract.
 | `ADMIN_MIGRATIONS_REQUIRED_HEAD`         | API image | Admin migration filename expected by `/admin/readyz`                                 |
 | `ADMIN_CLOUDFLARE_ACCOUNT_ID`            | API       | Optional fixed Cloudflare account paired with the R2 observer token                  |
 | `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` | API       | Optional dedicated token for the read-only R2 capacity observer                      |
-| `ADMIN_NEON_ORG_ID`                      | API       | Optional Harpa Pro Neon organization scope paired with the Viewer API key            |
-| `ADMIN_NEON_VIEWER_API_KEY`              | API       | Optional personal key for the fixed, read-only Neon observer                         |
+| `ADMIN_NEON_ORG_ID`                      | API       | Optional Neon scope paired with the Viewer key for inventory and Free usage          |
+| `ADMIN_NEON_VIEWER_API_KEY`              | API       | Optional personal key for the fixed inventory and Free-usage Viewer                  |
 | `ADMIN_REPORT_DIAGNOSTIC_EMAIL`          | API       | Optional fixed canary email; must be an exact test-account member                    |
 | `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`     | API       | Optional fixed synthetic project ID, paired with the other canary target values      |
 | `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER`  | API       | Optional fixed draft report number, paired with the other canary target values       |

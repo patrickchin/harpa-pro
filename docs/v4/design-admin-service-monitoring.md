@@ -3,9 +3,10 @@
 **Status:** Implemented on `dev`; not yet promoted to production as of
 2026-08-04.
 
-The R2 capacity and deployment-identity extensions below are drafts for
-unmerged stacked pull requests. The R2 change does not provision its observer
-credential.
+The provider quota percentage, R2 capacity, and deployment-identity extensions
+below are drafts for unmerged stacked pull requests. The Neon usage route
+reuses the existing observer pair. The R2 change does not provision its
+observer credential.
 
 ## Goal
 
@@ -64,6 +65,47 @@ the dedicated Viewer principal and key, the paired variables in the intended
 environment, the exact deployed API and admin-site SHAs, and an authenticated
 response that confirms `VIEWER` for every returned project.
 
+## Provider quota percentage extension
+
+See
+[Admin provider quota percentages](design-admin-provider-quota-percentages.md)
+for the full evidence and calculation contract. The Neon stack adds
+`GET /admin/operations/neon-usage`. The route reuses the existing optional
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair. It uses the dedicated
+browser-admin session, shared trusted-Fly-IP budget, and a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+One observation makes at most 22 fixed Neon `GET` requests under one shared
+10-second deadline. It reads the configured organization, at most 20 projects,
+and one detail response per verified project. It does not retry, follow a
+project cursor, or use a provider write method. The organization must report
+the exact `free` plan. Every discovered project must report effective
+permission `VIEWER` before any project-detail request.
+
+The UI derives one-decimal used and remaining percentages from raw safe
+integers. Per-project compute uses the published 360,000-CU-second reference.
+Per-project storage uses the published 500,000,000-byte reference.
+Organization public transfer uses the published 5,000,000,000-byte reference
+only when project coverage is complete and every consumption period matches.
+Incomplete coverage or different periods make organization transfer
+`Unknown`. Text can exceed 100.0%, but the painted meter stops at 100%.
+
+The existing R2 card derives estimated Class A and Class B percentages against
+the published 1,000,000-operation and 10,000,000-operation references. It does
+not show a storage percentage because a current byte snapshot is not a
+GB-month value. The public GitHub card derives the primary REST request-budget
+percentage for this browser and IP from existing response headers. Missing,
+invalid, or contradictory headers make only that budget `Unknown`. No R2 or
+GitHub request, token, or credential is added.
+
+Provider money, token, invoice, and credit balances remain `Unknown`. These
+usage and request-budget percentages are not provider billing balances. With
+this route in the stack, the browser makes 10 authenticated reads after
+session confirmation and another 10 only on manual **Refresh**, for 20 total
+after one Refresh. It does not poll. The report diagnostic POST remains
+separate and manual.
+
 ## R2 capacity extension
 
 The R2 capacity observer is a second narrow server-side extension. See
@@ -86,7 +128,8 @@ snapshots, and month-to-date operation estimates against published references.
 The storage values are current snapshots, not remaining GB-month capacity.
 The operation headroom is a conservative estimate, not a billing balance.
 Unclassified operations, Infrequent Access data, and truncated inventory keep
-their explicit caveats.
+their explicit caveats. The Class A and Class B percentage rows remain
+explicit estimates against published operation references.
 
 ## Deployment identity extension
 
@@ -114,17 +157,18 @@ messages never enter UI state.
 - Do not add provider credentials to the browser. Secret-backed provider reads
   require a narrow admin API adapter with a response allowlist; do not add one
   broad aggregation endpoint that can silently gain new credential access.
-  The Neon inventory and R2 capacity routes are the only account-specific
-  provider endpoints in this design.
+  The Neon inventory, Neon usage, and R2 capacity routes are the only
+  account-specific provider endpoints in this design.
 - Do not claim that linked providers are healthy. Only first-party build
   identity and the two Harpa readiness probes receive live states.
 - Do not poll. Check once on page load and again only when the operator presses
   Refresh.
 - Do not add charts, history, alert configuration, arbitrary provider proxies,
-  or invoice claims. The bounded Neon inventory is metadata, not quota or
-  billing data, and undocumented remaining capacity stays `Unknown`. The R2
-  estimates are not provider billing balances. Existing Sentry, provider, and
-  budget alerts remain responsible for notification.
+  or invoice claims. The Neon usage percentages compare documented Free-plan
+  values with published references. They are not billing credit. Undocumented
+  remaining capacity stays `Unknown`. The R2 estimates are not provider
+  billing balances. Existing Sentry, provider, and budget alerts remain
+  responsible for notification.
 
 These limits keep the page useful without creating another monitoring system
 that the solo operator must maintain.
@@ -159,7 +203,8 @@ session is confirmed:
 
 - latest commit metadata for `dev` and `main`;
 - at most 30 open pull requests in a bounded scrolling list; and
-- the unauthenticated browser/IP API allowance from GitHub's rate-limit
+- the used and remaining percentages for the unauthenticated primary REST
+  request budget for this browser and IP, derived from GitHub's rate-limit
   response headers.
 
 The browser sends no token and performs the three requests serially on page
@@ -187,10 +232,12 @@ no-store`, and redact provider error bodies. A credential that can mutate
 infrastructure is not installed merely because the adapter intends to use
 `GET` requests.
 
-Neon project and branch counts are inventory facts, not remaining credits.
-Consumption metrics may be shown with their provider-defined accounting
-window. Until Neon exposes a trustworthy balance source and an acceptable
-credential boundary, remaining credits stay `Unknown` with a console link.
+Neon project and branch counts are inventory facts, not remaining credits. The
+Free-plan usage route reuses the existing Viewer observer pair. It makes at
+most 22 fixed read requests and no provider write. It shows compute, storage,
+and complete organization transfer against published references. Until Neon
+exposes a trustworthy balance source and an acceptable credential boundary,
+remaining credits stay `Unknown` with a console link.
 
 ### Report-generation diagnostic
 
@@ -221,6 +268,9 @@ for the full contract.
 - Neon inventory tests prove the dedicated-cookie boundary, Viewer-only
   provider access, paired-configuration fallback, fixed bounds, rate limit,
   no-store response, and absence of retries.
+- Neon usage tests prove exact Free-plan and Viewer gates, the 22-call read-only
+  ceiling, strict redaction, fixed references, transfer completeness, the
+  separate 12-request budget, 10/20 browser reads, and no polling.
 - R2 capacity tests prove strict redaction, paired configuration, fixed
   provider calls, bounded output, caveats, rate limits, and manual refresh.
 - Deployment-identity tests prove the four fixed reads, independent partial

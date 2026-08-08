@@ -165,6 +165,32 @@ describe('scope: GET /admin/operations/neon', () => {
   });
 });
 
+describe('scope: GET /admin/operations/neon-usage', () => {
+  it('rejects an anonymous request before observing Neon usage', async () => {
+    const response = await createApp().request('/admin/operations/neon-usage');
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a regular Better Auth bearer session before observing Neon usage', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+    const response = await createApp().request('/admin/operations/neon-usage', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a legacy app-admin bearer session before observing Neon usage', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+    const response = await createApp().request('/admin/operations/neon-usage', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+});
+
 describe('scope: GET /admin/operations/r2-capacity', () => {
   it('rejects an anonymous request before observing Cloudflare', async () => {
     const response = await createApp().request('/admin/operations/r2-capacity');

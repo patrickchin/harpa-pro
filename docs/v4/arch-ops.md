@@ -68,18 +68,18 @@ does not define this repository's runtime; `nvm use` does.
   - `/` renders the activity console. `/operations` renders read-only Harpa
     readiness, service links, a no-token public GitHub branch/PR snapshot,
     bounded Neon inventory and Free-plan usage, and bounded R2 capacity. A
-    separate manual report-generation diagnostic is explicitly disclosed as a
+    separate manual report generation live canary is explicitly disclosed as a
     synthetic mutation. Unknown browser paths return a static 404.
     `/admin/activity`,
     `/admin/operations/neon`, `/admin/operations/neon-usage`,
     `/admin/operations/r2-capacity`, and
     `/admin/operations/report-generate` remain API resource paths. Data and
-    diagnostic requests require the dedicated API admin session. See
+    live-canary requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),
     [Admin Neon inventory](design-admin-neon-inventory.md),
     [Admin provider quota percentages](design-admin-provider-quota-percentages.md),
     [Admin R2 capacity](design-admin-r2-capacity.md), and
-    [Admin report-generation diagnostic](design-admin-report-generate-diagnostic.md).
+    [Admin live report-generation canary](design-admin-report-live-canary.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
   Repository builds use the shared Node 24.19.0 runtime.
@@ -495,8 +495,8 @@ Unsupported money, token, invoice, and provider credit balances stay
 
 The browser calls each read route once after session confirmation and again
 only on manual **Refresh**. The page makes 10 authenticated reads on load and
-20 total after one Refresh. It does not poll. The report diagnostic remains a
-separate manual POST and does not run in either read cycle.
+20 total after one Refresh. It does not poll. The report generation live canary
+remains a separate manual POST and does not run in either read cycle.
 
 Enablement uses the existing Neon inventory provisioning and exact-SHA proof.
 After deployment, call both Neon routes with the dedicated admin session.
@@ -556,41 +556,64 @@ Development approval does not authorize production enablement. Repeat the
 token review and deployment proof before enabling production. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the full contract.
 
-### Report-generation diagnostic
+### Report generation live canary
 
-The report canary uses three optional, non-secret target values:
+The live canary uses these runtime values:
 
-- `ADMIN_REPORT_DIAGNOSTIC_EMAIL`;
-- `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`; and
+- `ADMIN_REPORT_LIVE_CANARY_ENABLED`.
+- `ADMIN_REPORT_DIAGNOSTIC_EMAIL`.
+- `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`.
 - `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER`.
 
-All three values must be absent or present together. The email must be an
-exact member of `TEST_ACCOUNT_EMAILS`, and the runner reuses the existing
-server-only `TEST_ACCOUNT_PASSWORD`. Do not add a browser password, a second
-canary password variable, or a customer-selectable target.
+The enablement flag defaults to `0`. The three target values must be absent or
+present together. The email must be an exact member of `TEST_ACCOUNT_EMAILS`.
+The runner uses the existing server-only `TEST_ACCOUNT_PASSWORD`. Do not add a
+browser password, a second canary password, or a customer-selected target.
 
-Merge and deploy the code with the target absent first. The operations card
-then reports `Not configured` and the API makes no application request. To
-enable a development canary, provision one dedicated test identity, one
-synthetic project, one fixed draft report, and short synthetic text notes.
-Credential seeding does not create those application rows.
+The API accepts `ADMIN_REPORT_LIVE_CANARY_ENABLED=1` only when all of these
+conditions are true:
 
-After provisioning:
+- `NODE_ENV=production`.
+- `BETTER_AUTH_URL=https://harpa-pro-api-dev.fly.dev`.
+- `ADMIN_CORS_ORIGINS=https://dev.harpa-pro-admin.pages.dev`.
+- `HARPAPRO_PR_BUILD=0`.
+- `AI_LIVE=1`.
+- `AI_FIXTURE_MODE=live`.
+- all three target values are valid.
 
-1. Add the canary email to `TEST_ACCOUNT_EMAILS` and deploy the credential
-   seed normally.
-2. Add the three target values to the intended Doppler config. Keep
-   `TEST_ACCOUNT_PASSWORD` in its existing secret boundary.
-3. Deploy the API and verify `/healthz.gitCommit` at the expected full SHA.
-4. Verify the admin Pages deployment marker at the same source head.
-5. Sign in through the dedicated admin site and click **Run diagnostic** once.
-6. Prove the sanitized response, the synthetic report timestamp, one matching
-   usage row, temporary-session sign-out, and absence of secret/content logs.
+The parser fails API boot when an enabled configuration does not match this
+exact development deployment. Pull-request previews and production cannot
+enable the canary. A disabled configured route returns `unknown/not_enabled`
+without an application request or application-database query. An absent target
+returns `unknown/not_configured`.
 
-Each click replaces the fixed synthetic report body and may consume real AI
-quota. The action is manual only: it never runs on page load, shared Refresh,
-a timer, or background monitoring. Development enablement does not authorize
-production enablement; provision and approve a production target separately.
+Provision one dedicated test identity, one synthetic project, one fixed draft
+report, and short synthetic notes. Credential seeding does not create the
+application rows. Deploy and prove the disabled path before any enablement.
+
+A separate authorized development rollout uses this sequence:
+
+1. Add the canary email to `TEST_ACCOUNT_EMAILS` and deploy its credential.
+2. Add the three target values to the development Doppler config.
+3. Keep `ADMIN_REPORT_LIVE_CANARY_ENABLED=0` and deploy the API.
+4. Confirm `unknown/not_enabled` and zero application calls or queries.
+5. Set the flag to `1` in development and deploy the API.
+6. Verify `/healthz.gitCommit` at the expected full SHA.
+7. Verify the admin Pages marker at the expected source head.
+8. Sign in to the development admin site and click **Run live canary** once.
+9. Confirm live mode, one fresh usage row, and the bounded synthetic preview.
+10. Confirm the exact temporary Bearer session now returns a null session.
+11. Confirm that logs contain no secret, prompt, report sample, or raw error.
+
+Each click replaces the fixed synthetic report body and spends real AI tokens.
+The fixed account keeps the normal report and AI usage limits. The admin route
+also permits only three runs per identity and session in 15 minutes.
+
+Page load, shared **Refresh**, timers, and background work never run or clear
+the canary. The browser keeps the result only in component memory. To stop new
+runs, set the flag to `0` and redeploy development. Production enablement needs
+a separate design and explicit approval. See
+[Admin live report-generation canary](design-admin-report-live-canary.md).
 
 An administrator's login password is not a deployment secret. The
 `admin:set-password --password-stdin` command hashes it into the independent
@@ -627,6 +650,10 @@ are true:
 - The three `ADMIN_REPORT_DIAGNOSTIC_*` target values are all absent or form a
   complete target whose email belongs to `TEST_ACCOUNT_EMAILS`. They remain
   optional because an unconfigured canary is a typed `Unknown` state.
+- `ADMIN_REPORT_LIVE_CANARY_ENABLED` is `0` or `1` and defaults to `0`. A value
+  of `1` is valid only for the exact non-preview development deployment with
+  live AI mode and a complete target. Production and pull-request previews
+  fail boot when the value is `1`.
 - AI is live (`AI_LIVE=1`, `AI_FIXTURE_MODE=live`) with OpenAI and Groq
   keys.
 - R2 is live with an account ID or explicit endpoint plus both access
@@ -739,7 +766,8 @@ The API fails boot when a non-preview deployment uses any other auth base URL.
 The optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair survives
 the normal Doppler import because it is API runtime configuration for both
 observer routes. The three optional `ADMIN_REPORT_DIAGNOSTIC_*` values also
-survive that import. They are fixed runtime target metadata, not browser build
+survive that import. `ADMIN_REPORT_LIVE_CANARY_ENABLED` also survives as API
+runtime configuration and defaults to `0`. These values are not browser build
 variables. The CI `NEON_API_KEY` stays excluded and never reaches Fly.
 The optional Cloudflare observer pair also survives the normal import. The
 filter excludes Doppler metadata, Neon control-plane values, CI Cloudflare

@@ -74,7 +74,7 @@ describe('observeAdminStorageLifecycle', () => {
   it('uses the default app pool for one fixed, aggregate-only database-clock statement', async () => {
     defaultPoolQuery.mockResolvedValue({ rows: [availableRow()] });
 
-    const result = await observeAdminStorageLifecycle({ now: () => NOW });
+    const result = await observeAdminStorageLifecycle();
 
     expect(result).toEqual({
       observedAt: OBSERVED_AT,
@@ -104,10 +104,12 @@ describe('observeAdminStorageLifecycle', () => {
     });
 
     expect(defaultPoolQuery).toHaveBeenCalledOnce();
+    expect(defaultPoolQuery.mock.calls[0]).toHaveLength(2);
     const [rawSql, values] = defaultPoolQuery.mock.calls[0] ?? [];
     const sql = normalizeSql(String(rawSql));
     expect(values).toEqual([]);
-    expect(sql).toMatch(/clock_timestamp\(\)\s+as\s+observed_at/);
+    expect(sql).toMatch(/now\(\)\s+as\s+observed_at/);
+    expect(sql).not.toContain('clock_timestamp()');
     expect(sql).toContain('from app.storage_lifecycle_rollout');
     expect(sql).toContain('app.file_upload_leases_enforced()');
     expect(sql).toContain('from app.storage_delete_jobs');
@@ -134,6 +136,7 @@ describe('observeAdminStorageLifecycle', () => {
     async (leaseEnforcementActive, accountDeleteEnabled, accountDeletionAvailable) => {
       const query = queryWithRows([
         availableRow({
+          enforce_after: leaseEnforcementActive ? ENFORCE_AFTER : '2026-08-08T08:05:00.000Z',
           lease_enforcement_active: leaseEnforcementActive,
           account_delete_enabled: accountDeleteEnabled,
         }),
@@ -213,6 +216,21 @@ describe('observeAdminStorageLifecycle', () => {
     expect(query).toHaveBeenCalledOnce();
   });
 
+  it('fails closed when the query result omits its rows array', async () => {
+    const query = vi.fn<QueryApplicationDb>().mockResolvedValue(
+      {} as {
+        rows: readonly DatabaseRow[];
+      },
+    );
+
+    await expect(observeAdminStorageLifecycle({ query, now: () => NOW })).resolves.toEqual({
+      observedAt: NOW.toISOString(),
+      status: 'unknown',
+      reason: 'invalid_response',
+    });
+    expect(query).toHaveBeenCalledOnce();
+  });
+
   it.each([
     ['two rows', [availableRow(), availableRow()]],
     ['an extra payload field', [availableRow({ payload: { exactKeys: ['secret-key'] } })]],
@@ -226,6 +244,7 @@ describe('observeAdminStorageLifecycle', () => {
     ['an invalid timestamp', [availableRow({ updated_at: 'not-a-timestamp' })]],
     ['a non-finite timestamp', [availableRow({ armed_at: new Date(Number.NaN) })]],
     ['a non-boolean rollout flag', [availableRow({ account_delete_enabled: 1 })]],
+    ['an inconsistent aggregate', [availableRow({ initial_jobs: 4 })]],
   ] as const)('maps %s to a strict redacted invalid response', async (_label, rows) => {
     const query = queryWithRows(rows);
 
@@ -275,17 +294,27 @@ describe('observeAdminStorageLifecycle', () => {
     expect(query).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    ['a DOM AbortError', new DOMException('aborted', 'AbortError')],
+    ['an Error named AbortError', Object.assign(new Error('aborted'), { name: 'AbortError' })],
+  ])('maps %s to timeout without retrying', async (_label, error) => {
+    const query = vi.fn<QueryApplicationDb>().mockRejectedValue(error);
+
+    await expect(observeAdminStorageLifecycle({ query, now: () => NOW })).resolves.toEqual({
+      observedAt: NOW.toISOString(),
+      status: 'unknown',
+      reason: 'timeout',
+    });
+    expect(query).toHaveBeenCalledOnce();
+  });
+
   it('bounds a default-pool query that never settles at the five-second deadline', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
-    let querySignal: AbortSignal | undefined;
-    defaultPoolQuery.mockImplementation(
-      async (_text: string, values: readonly unknown[], signal: AbortSignal) => {
-        expect(values).toEqual([]);
-        querySignal = signal;
-        return new Promise<never>(() => undefined);
-      },
-    );
+    defaultPoolQuery.mockImplementation(async (_text: string, values: readonly unknown[]) => {
+      expect(values).toEqual([]);
+      return new Promise<never>(() => undefined);
+    });
 
     const pending = observeAdminStorageLifecycle({ now: () => new Date(Date.now()) });
     let settled = false;
@@ -295,7 +324,6 @@ describe('observeAdminStorageLifecycle', () => {
 
     await vi.advanceTimersByTimeAsync(4_999);
     expect(settled).toBe(false);
-    expect(querySignal?.aborted).toBe(false);
 
     await vi.advanceTimersByTimeAsync(1);
     await expect(pending).resolves.toEqual({
@@ -303,8 +331,8 @@ describe('observeAdminStorageLifecycle', () => {
       status: 'unknown',
       reason: 'timeout',
     });
-    expect(querySignal?.aborted).toBe(true);
     expect(defaultPoolQuery).toHaveBeenCalledOnce();
+    expect(defaultPoolQuery.mock.calls[0]).toHaveLength(2);
   });
 
   it('aborts the single statement at the five-second deadline without retrying', async () => {

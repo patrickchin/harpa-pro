@@ -17,11 +17,11 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 The root route renders the business activity console. `/operations` provides
 read-only Harpa deployment identity and readiness, a no-token public GitHub
 branch/PR snapshot, bounded Neon inventory and Free-plan usage, bounded R2
-capacity, and links to external service consoles. A separate **Report
-generation live canary** card updates one fixed synthetic report and spends
-real AI tokens. The canary runs only after an explicit click. It is not part of
-the read-only refresh. Unknown browser paths return a static 404 instead of
-falling back to the console.
+capacity, storage lifecycle database evidence, and links to external service
+consoles. A separate **Report generation live canary** card updates one fixed
+synthetic report and spends real AI tokens. The canary runs only after an
+explicit click. It is not part of the read-only refresh. Unknown browser paths
+return a static 404 instead of falling back to the console.
 `/admin/activity` and the `/admin/operations/*` routes remain API resource
 paths, not page URLs.
 
@@ -92,14 +92,35 @@ response headers. Invalid or contradictory headers make only that budget
 
 Percentage text uses one decimal place. Values can exceed 100.0%, while the
 painted meter stops at 100%. Unsupported provider money, token, invoice, and
-credit balances stay `Unknown`. The browser runs 10 authenticated reads after
-session confirmation and another 10 only when the operator presses
-**Refresh**, for 20 total after one Refresh. It does not poll. The report
+credit balances stay `Unknown`. The browser makes 11 fixed GET reads after
+session confirmation. It makes another 11 only when the operator presses
+**Refresh**, for 22 total after one Refresh. It does not poll. The report
 generation live canary remains a separate manual POST.
 
 See
 [Admin provider quota percentages](../../docs/v4/design-admin-provider-quota-percentages.md)
 for the evidence and calculation contract.
+
+## Storage lifecycle
+
+The browser calls `GET /admin/operations/storage-lifecycle` with the dedicated
+admin cookie and `cache: 'no-store'`. The route uses the shared trusted-IP
+budget and a separate 12-request-per-minute identity and session budget.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. It reads the singleton rollout state, the lease
+enforcement function, and aggregate durable queue counts. It accepts no body
+or query. It makes no mutation or provider call.
+
+The card shows database evidence for lifecycle arming, account-deletion
+availability, and queued cleanup work. This evidence does not prove current
+storage worker liveness or future queue execution. Use Fly worker and
+deployment verification for executor proof.
+
+The browser reads this route on page load and shared **Refresh** only. It does
+not poll. See
+[Admin storage lifecycle observer](../../docs/v4/design-admin-storage-lifecycle-observer.md)
+for the full boundary.
 
 ## Report generation live canary
 

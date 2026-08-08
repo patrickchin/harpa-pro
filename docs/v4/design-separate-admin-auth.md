@@ -40,6 +40,10 @@ in `packages/api/src/routes/admin.ts` remain on their current app-admin
 authorization until a separate migration accounts for their existing
 app-user audit foreign keys. They are not called by this page.
 
+The Neon Free usage stack adds `GET /admin/operations/neon-usage` to the same
+boundary. It reuses the existing `ADMIN_NEON_VIEWER_API_KEY` and
+`ADMIN_NEON_ORG_ID` pair and adds no provider credential.
+
 ## User journey
 
 1. An operator provisions an exact `@harpapro.com` address with the admin CLI
@@ -203,6 +207,35 @@ keyed by the dedicated admin identity and session. Only then does the route
 read activity from the application database. Anonymous traffic consumes the
 shared IP gate but not the activity bucket.
 
+### `GET /admin/operations/neon-usage`
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any Neon request. Better Auth bearer tokens, Better Auth cookies, and the
+retired application `is_admin` bit cannot authorize the route. A separate
+12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route is read-only and accepts no request body, query, provider selector,
+or write method. Every response sets `Cache-Control: private, no-store`. It
+reuses the optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair.
+The organization must report the exact `free` plan, and every discovered
+project must prove effective `VIEWER` permission before detail calls.
+
+One observation makes at most 22 fixed Neon `GET` requests under one shared
+10-second deadline. It does not retry or follow project pagination. The
+browser calls the route once after session confirmation and again only on
+manual **Refresh**. The full operations page makes 10 authenticated reads on
+load and 20 total after one Refresh. It does not poll. The report diagnostic
+remains a separate manual POST.
+
+Neon percentages use published Free-plan references and are not credit
+balances. R2 Class A and Class B percentages remain estimates. The GitHub
+percentage describes only the primary public REST request budget for the
+current browser and IP. Unsupported provider money, token, invoice, and credit
+values stay `Unknown`. See
+[Admin provider quota percentages](design-admin-provider-quota-percentages.md)
+for the complete contract.
+
 ### `GET /admin/operations/r2-capacity`
 
 Require `withAdminSession()` before any Cloudflare request. Better Auth bearer
@@ -238,6 +271,8 @@ independent admin database in deployed environments:
 - activity reads: 120 per dedicated admin identity and session per minute;
 - Neon inventory reads: 12 per dedicated admin identity and session per
   minute;
+- Neon Free usage reads: 12 per dedicated admin identity and session per
+  minute;
 - R2 capacity reads: 12 per dedicated admin identity and session per minute;
 - report-generation diagnostics: 3 per dedicated admin identity and session
   per 15 minutes.
@@ -253,11 +288,11 @@ Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity,
-Neon inventory, and R2 capacity requests are read-only. The report-generation
-diagnostic is the first protected admin mutation other than logout, so it also
-requires the exact Origin and a session-derived CSRF token carried in
-`X-Admin-CSRF`. The token stays in browser memory and is invalidated with the
-admin session, following the
+Neon inventory, Neon Free usage, and R2 capacity requests are read-only. The
+report-generation diagnostic is the first protected admin mutation other than
+logout, so it also requires the exact Origin and a session-derived CSRF token
+carried in `X-Admin-CSRF`. The token stays in browser memory and is invalidated
+with the admin session, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured
@@ -323,6 +358,11 @@ unchanged.
   revocation work against real Postgres.
 - An app session, including an `is_admin = true` app user, cannot read
   `/admin/activity`.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the Neon
+  provider through `/admin/operations/neon-usage`.
+- A dedicated admin request to the Neon Free usage route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets. One observation uses
+  at most 22 provider reads and no provider write.
 - Anonymous, Better Auth, and legacy app-admin sessions cannot call the R2
   provider through `/admin/operations/r2-capacity`.
 - A dedicated admin request to the R2 route consumes both its trusted-IP and

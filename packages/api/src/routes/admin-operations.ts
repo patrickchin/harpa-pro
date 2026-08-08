@@ -6,6 +6,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
 import { runAdminReportGenerateDiagnostic } from '../lib/admin-report-diagnostic.js';
 import { ADMIN_CSRF_HEADER, withAdminCsrf } from '../lib/admin-csrf.js';
+import { observeAdminNeonUsage } from '../lib/neon-usage.js';
 import { observeAdminNeonInventory } from '../lib/neon-operations.js';
 import { observeAdminR2Capacity } from '../lib/r2-operations.js';
 import { getAdminRateLimiter } from '../lib/adminRateLimiter.js';
@@ -99,6 +100,14 @@ const adminR2CapacityRateLimit = withRateLimit({
   getLimiter: getAdminRateLimiter,
 });
 
+const adminNeonUsageRateLimit = withRateLimit({
+  name: 'admin.operations.neon-usage.read.1m',
+  keyBy: adminOperationsRateLimitKey,
+  limit: 12,
+  windowMs: MINUTE_MS,
+  getLimiter: getAdminRateLimiter,
+});
+
 const adminReportDiagnosticRateLimit = withRateLimit({
   name: 'admin.operations.report-generate.run.15m',
   keyBy: adminOperationsRateLimitKey,
@@ -184,6 +193,38 @@ adminOperationsRoutes.openapi(
     auditReportDiagnostic(c, observation);
     return c.json(observation, 200);
   },
+);
+
+adminOperationsRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/admin/operations/neon-usage',
+    tags: ['admin'],
+    security: [{ adminSession: [] }],
+    middleware: [
+      privateNoStore,
+      adminAuthIpWindow,
+      withAdminSession(),
+      adminNeonUsageRateLimit,
+    ] as const,
+    responses: {
+      200: {
+        description: 'Bounded, read-only Neon Free-plan usage observation.',
+        content: {
+          'application/json': { schema: operations.neonUsageObservation },
+        },
+      },
+      401: {
+        description: 'Unauthorized.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+      429: {
+        description: 'Rate limited.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+    },
+  }),
+  async (c) => c.json(await observeAdminNeonUsage(), 200),
 );
 
 adminOperationsRoutes.openapi(

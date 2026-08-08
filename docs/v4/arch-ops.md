@@ -68,21 +68,21 @@ does not define this repository's runtime; `nvm use` does.
   - `/` renders the activity console. `/operations` renders read-only Harpa
     readiness, service links, a no-token public GitHub branch/PR snapshot,
     bounded Neon inventory and Free-plan usage, bounded R2 capacity, and
-    storage lifecycle database evidence. A separate manual report generation
-    live canary is explicitly disclosed as a synthetic mutation. Unknown
-    browser paths return a static 404.
-    `/admin/activity`,
-    `/admin/operations/neon`, `/admin/operations/neon-usage`,
-    `/admin/operations/r2-capacity`,
-    `/admin/operations/storage-lifecycle`, and
-    `/admin/operations/report-generate` remain API resource paths. Data and
-    live-canary requests require the dedicated API admin session. See
+    storage lifecycle database evidence. The draft stack adds bounded Fly
+    inventory and Harpa-recorded AI usage summaries. A separate manual report
+    generation live canary is explicitly disclosed as a synthetic mutation.
+    Unknown browser paths return a static 404. `/admin/activity` and
+    `/admin/operations/*` remain API resource paths. Data and live-canary
+    requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),
     [Admin Neon inventory](design-admin-neon-inventory.md),
     [Admin provider quota percentages](design-admin-provider-quota-percentages.md),
     [Admin R2 capacity](design-admin-r2-capacity.md),
-    [Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md), and
-    [Admin live report-generation canary](design-admin-report-live-canary.md).
+    [Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md),
+    and [Admin live report-generation canary](design-admin-report-live-canary.md).
+    The unmerged additions are specified in
+    [Admin Fly inventory](design-admin-fly-inventory.md) and
+    [Admin AI usage ledger](design-admin-ai-usage.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
   Repository builds use the shared Node 24.19.0 runtime.
@@ -497,7 +497,7 @@ Unsupported money, token, invoice, and provider credit balances stay
 `Unknown`.
 
 The browser calls each read route once after session confirmation and again
-only on manual **Refresh**. The page makes 12 fixed GET reads on load and 24
+only on manual **Refresh**. The page makes 13 fixed GET reads on load and 26
 total after one Refresh. It does not poll. The report generation live canary
 remains a separate manual POST and does not run in either read cycle.
 
@@ -632,7 +632,7 @@ remaining plan capacity. Fly does not document a stable remaining-credit REST
 field, so the dashboard remains the billing source.
 
 The browser requests the route once after session confirmation and once on
-manual **Refresh**. The full page makes 12 fixed GET reads on load and 24 after
+manual **Refresh**. The full page makes 13 fixed GET reads on load and 26 after
 one Refresh. It does not poll or trigger the report generation live canary.
 
 Do not add the triplet until the operator reviews this draft. After approval,
@@ -654,6 +654,68 @@ enable and prove the observer in this order:
 Development approval does not authorize production enablement. Review and
 approve the production triplet separately. See
 [Admin Fly inventory](design-admin-fly-inventory.md) for the full contract.
+
+### Harpa-recorded AI usage observer
+
+The AI usage stack remains an unmerged draft. It uses no provider observer or
+administrator credential. `GET /admin/operations/ai-usage` authenticates with
+the dedicated admin session, passes the shared trusted-Fly-IP budget and its
+own 12-request-per-minute identity/session budget, and then runs one bounded
+aggregate against `app.llm_usage_events`.
+
+One captured `observedAt` defines the current UTC month-to-date and previous
+24-hour windows. The query groups only normalized provider category,
+operation, fixture mode, and status. It returns at most 72 aggregate rows.
+The response then exposes at most four provider categories per window:
+`openai`, `groq`, `kimi`, and `other`.
+
+`live` and `record` rows represent provider-attributable calls. Replay stays
+separate. Tokens and transcription seconds include only successful
+provider-attributable events. Unknown vendor labels and historical
+transcription rows without duration remain aggregate warnings. The response
+never contains user, project, report, model, prompt, transcript, raw vendor,
+provider response, or database error details.
+
+Migration `0029_llm_usage_events_created_at.notx.sql` adds
+`llm_usage_events_created_at_idx` with `CREATE INDEX CONCURRENTLY` and no
+`IF NOT EXISTS`. This gives the global time-window aggregate a leading
+`created_at DESC` index without a table rewrite. The non-transactional runner
+records the filename only after the index build succeeds. The required-head
+parser accepts the exact optional `.notx.sql` suffix. `/readyz` can compare
+this migration as the application head.
+
+An interrupted build can leave a same-name invalid index. A rerun fails closed
+instead of recording the migration. Verify `pg_index.indisvalid = false`, drop
+that exact index concurrently, and rerun the migration. Verify
+`pg_index.indisvalid = true` after the rerun.
+
+Harpa records usage on a best-effort basis, and account deletion removes the
+associated rows. The summary is therefore neither provider billing nor an
+immutable audit record. It makes no OpenAI, Groq, or Kimi request. Provider
+balance, rate-limit headroom, free-tier capacity, and remaining credit all
+stay `Unknown`; use the linked provider dashboards for those facts.
+
+The browser reads this route once after session confirmation and once per
+manual **Refresh**. It does not poll. On this stacked branch, authenticated
+load performs 13 reads and one Refresh brings the total to 26. The manual
+report generation live canary remains a separate POST and never runs in those
+cycles.
+
+If this draft is approved, prove it in this order:
+
+1. Deploy the stack without adding a provider administrator credential.
+2. Verify that `/readyz.head` is exactly
+   `0029_llm_usage_events_created_at.notx.sql` and that
+   `/healthz.gitCommit` is the expected full SHA.
+3. Verify the administrator Pages marker at the matching source head.
+4. Sign in through the dedicated admin site, record the load observation, and
+   press **Refresh** once.
+5. Confirm one aggregate query per read, the strict redacted response, the
+   stated ledger caveats, and the absence of provider requests or content in
+   logs.
+
+See [Admin AI usage ledger](design-admin-ai-usage.md) for the full accounting,
+privacy, migration, and rollout contract.
 
 ### Report generation live canary
 

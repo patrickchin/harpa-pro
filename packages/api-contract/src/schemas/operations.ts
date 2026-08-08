@@ -1096,6 +1096,513 @@ const diagnosticPreviewText = z.string().refine((value) => [...value].length <= 
 });
 const nullableDiagnosticPreviewText = diagnosticPreviewText.nullable();
 
+export const aiUsageReasons = [
+  'schema_unavailable',
+  'database_unavailable',
+  'timeout',
+  'invalid_response',
+] as const;
+export const aiUsageReason = z.enum(aiUsageReasons);
+
+export const aiUsageWarnings = [
+  'unclassified_vendor_events',
+  'missing_transcription_duration',
+] as const;
+export const aiUsageWarning = z.enum(aiUsageWarnings);
+
+export const aiUsageProviderCategories = ['openai', 'groq', 'kimi', 'other'] as const;
+export const aiUsageProviderCategory = z.enum(aiUsageProviderCategories);
+
+export const aiUsageCaveats = [
+  'best_effort_ledger',
+  'not_provider_billing',
+  'replay_not_provider_usage',
+  'record_mode_calls_provider',
+  'deleted_history_excluded',
+] as const;
+
+const aiUsageCount = z.number().int().nonnegative().safe();
+const positiveAiUsageCount = z.number().int().positive().safe();
+const aiUsageSeconds = z
+  .number()
+  .finite()
+  .nonnegative()
+  .multipleOf(0.001, 'AI usage seconds must have at most three decimal places');
+
+function isExactSafeIntegerSum(values: number[], expected: number): boolean {
+  let total = 0;
+  for (const value of values) {
+    total += value;
+    if (!Number.isSafeInteger(total)) return false;
+  }
+  return total === expected;
+}
+
+function isZeroAiUsage(usage: {
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  inputSeconds: number;
+}): boolean {
+  return (
+    usage.inputTokens === 0 &&
+    usage.outputTokens === 0 &&
+    usage.cachedTokens === 0 &&
+    usage.inputSeconds === 0
+  );
+}
+
+export const aiCallOutcome = z
+  .object({
+    succeeded: aiUsageCount,
+    failed: aiUsageCount,
+    total: aiUsageCount,
+  })
+  .strict()
+  .superRefine((outcome, ctx) => {
+    if (isExactSafeIntegerSum([outcome.succeeded, outcome.failed], outcome.total)) return;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['total'],
+      message: 'AI call total must equal succeeded plus failed',
+    });
+  });
+
+export const aiSuccessfulProviderUsage = z
+  .object({
+    inputTokens: aiUsageCount,
+    outputTokens: aiUsageCount,
+    cachedTokens: aiUsageCount,
+    inputSeconds: aiUsageSeconds,
+  })
+  .strict()
+  .superRefine((usage, ctx) => {
+    if (usage.cachedTokens <= usage.inputTokens) return;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['cachedTokens'],
+      message: 'cached tokens cannot exceed input tokens',
+    });
+  });
+
+export const aiOperationUsage = z
+  .object({
+    liveSucceeded: aiUsageCount,
+    liveFailed: aiUsageCount,
+    recordSucceeded: aiUsageCount,
+    recordFailed: aiUsageCount,
+    replaySucceeded: aiUsageCount,
+    replayFailed: aiUsageCount,
+  })
+  .strict();
+
+const aiUsageCalls = z
+  .object({
+    live: aiCallOutcome,
+    record: aiCallOutcome,
+    replay: aiCallOutcome,
+  })
+  .strict();
+
+export const aiUsageProvider = z
+  .object({
+    provider: aiUsageProviderCategory,
+    recordedEventCount: positiveAiUsageCount,
+    calls: aiUsageCalls,
+    successfulProviderUsage: aiSuccessfulProviderUsage,
+    lastRecordedAt: isoDateTime,
+  })
+  .strict()
+  .superRefine((provider, ctx) => {
+    if (
+      !isExactSafeIntegerSum(
+        [provider.calls.live.total, provider.calls.record.total, provider.calls.replay.total],
+        provider.recordedEventCount,
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recordedEventCount'],
+        message: 'provider event count must equal live, record, and replay call totals',
+      });
+    }
+
+    const successfulProviderCalls = provider.calls.live.succeeded + provider.calls.record.succeeded;
+    if (successfulProviderCalls === 0 && !isZeroAiUsage(provider.successfulProviderUsage)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['successfulProviderUsage'],
+        message: 'replay-only and failed calls cannot contribute provider usage',
+      });
+    }
+  });
+
+const uniqueAiUsageWarnings = z
+  .array(aiUsageWarning)
+  .max(aiUsageWarnings.length)
+  .refine((warnings) => new Set(warnings).size === warnings.length, {
+    message: 'AI usage warnings must be unique',
+  });
+
+const aiUsageOperationFields = [
+  'liveSucceeded',
+  'liveFailed',
+  'recordSucceeded',
+  'recordFailed',
+  'replaySucceeded',
+  'replayFailed',
+] as const;
+
+export const aiUsageWindow = z
+  .object({
+    windowStart: isoDateTime,
+    windowEnd: isoDateTime,
+    recordedEventCount: aiUsageCount,
+    calls: aiUsageCalls,
+    successfulProviderUsage: aiSuccessfulProviderUsage,
+    operations: z
+      .object({
+        chat: aiOperationUsage,
+        generateReport: aiOperationUsage,
+        transcribe: aiOperationUsage,
+      })
+      .strict(),
+    providers: z.array(aiUsageProvider).max(aiUsageProviderCategories.length),
+    unclassifiedVendorEventCount: aiUsageCount,
+    missingInputSecondsEventCount: aiUsageCount,
+    lastRecordedAt: isoDateTime.nullable(),
+    warnings: uniqueAiUsageWarnings,
+  })
+  .strict()
+  .superRefine((window, ctx) => {
+    const startMs = Date.parse(window.windowStart);
+    const endMs = Date.parse(window.windowEnd);
+    if (startMs >= endMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['windowStart'],
+        message: 'AI usage window must be non-empty',
+      });
+    }
+
+    if (
+      !isExactSafeIntegerSum(
+        [window.calls.live.total, window.calls.record.total, window.calls.replay.total],
+        window.recordedEventCount,
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recordedEventCount'],
+        message: 'recorded event count must equal live, record, and replay call totals',
+      });
+    }
+
+    const expectedOperationCounts = {
+      liveSucceeded: window.calls.live.succeeded,
+      liveFailed: window.calls.live.failed,
+      recordSucceeded: window.calls.record.succeeded,
+      recordFailed: window.calls.record.failed,
+      replaySucceeded: window.calls.replay.succeeded,
+      replayFailed: window.calls.replay.failed,
+    };
+    for (const field of aiUsageOperationFields) {
+      if (
+        isExactSafeIntegerSum(
+          [
+            window.operations.chat[field],
+            window.operations.generateReport[field],
+            window.operations.transcribe[field],
+          ],
+          expectedOperationCounts[field],
+        )
+      ) {
+        continue;
+      }
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['operations', field],
+        message: 'operation outcomes must equal the overall call outcomes',
+      });
+    }
+
+    const providerNames = window.providers.map((provider) => provider.provider);
+    if (new Set(providerNames).size !== providerNames.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['providers'],
+        message: 'AI usage providers must be unique',
+      });
+    }
+
+    if (
+      !isExactSafeIntegerSum(
+        window.providers.map((provider) => provider.recordedEventCount),
+        window.recordedEventCount,
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['providers'],
+        message: 'provider event counts must equal the overall recorded event count',
+      });
+    }
+
+    for (const mode of ['live', 'record', 'replay'] as const) {
+      for (const outcome of ['succeeded', 'failed', 'total'] as const) {
+        if (
+          isExactSafeIntegerSum(
+            window.providers.map((provider) => provider.calls[mode][outcome]),
+            window.calls[mode][outcome],
+          )
+        ) {
+          continue;
+        }
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['providers', mode, outcome],
+          message: 'provider call outcomes must equal overall call outcomes',
+        });
+      }
+    }
+
+    for (const field of ['inputTokens', 'outputTokens', 'cachedTokens'] as const) {
+      if (
+        isExactSafeIntegerSum(
+          window.providers.map((provider) => provider.successfulProviderUsage[field]),
+          window.successfulProviderUsage[field],
+        )
+      ) {
+        continue;
+      }
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['successfulProviderUsage', field],
+        message: 'provider token totals must equal the overall token total',
+      });
+    }
+
+    const providerSeconds = window.providers.reduce(
+      (total, provider) => total + provider.successfulProviderUsage.inputSeconds,
+      0,
+    );
+    const roundedProviderSeconds = Math.round(providerSeconds * 1_000) / 1_000;
+    if (
+      !Number.isFinite(providerSeconds) ||
+      roundedProviderSeconds !== window.successfulProviderUsage.inputSeconds
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['successfulProviderUsage', 'inputSeconds'],
+        message: 'provider seconds must equal the overall seconds total',
+      });
+    }
+
+    const otherProviderCount = window.providers
+      .filter((provider) => provider.provider === 'other')
+      .reduce((total, provider) => total + provider.recordedEventCount, 0);
+    if (otherProviderCount !== window.unclassifiedVendorEventCount) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['unclassifiedVendorEventCount'],
+        message: 'unclassified vendor count must equal other-provider events',
+      });
+    }
+
+    const successfulTokenOperations =
+      window.operations.chat.liveSucceeded +
+      window.operations.chat.recordSucceeded +
+      window.operations.generateReport.liveSucceeded +
+      window.operations.generateReport.recordSucceeded;
+    if (
+      successfulTokenOperations === 0 &&
+      (window.successfulProviderUsage.inputTokens !== 0 ||
+        window.successfulProviderUsage.outputTokens !== 0 ||
+        window.successfulProviderUsage.cachedTokens !== 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['successfulProviderUsage'],
+        message: 'only successful chat and report provider calls contribute tokens',
+      });
+    }
+
+    const successfulTranscriptions =
+      window.operations.transcribe.liveSucceeded + window.operations.transcribe.recordSucceeded;
+    if (
+      successfulTranscriptions === 0 &&
+      (window.successfulProviderUsage.inputSeconds !== 0 ||
+        window.missingInputSecondsEventCount !== 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['successfulProviderUsage', 'inputSeconds'],
+        message: 'only successful transcription provider calls contribute duration',
+      });
+    }
+    if (window.missingInputSecondsEventCount > successfulTranscriptions) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['missingInputSecondsEventCount'],
+        message: 'missing duration events cannot exceed successful provider transcriptions',
+      });
+    }
+    if (
+      successfulTranscriptions > 0 &&
+      window.missingInputSecondsEventCount === successfulTranscriptions &&
+      window.successfulProviderUsage.inputSeconds !== 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['successfulProviderUsage', 'inputSeconds'],
+        message: 'all-missing transcription durations cannot contribute input seconds',
+      });
+    }
+
+    const expectedWarnings: Array<z.infer<typeof aiUsageWarning>> = [];
+    if (window.unclassifiedVendorEventCount > 0) {
+      expectedWarnings.push('unclassified_vendor_events');
+    }
+    if (window.missingInputSecondsEventCount > 0) {
+      expectedWarnings.push('missing_transcription_duration');
+    }
+    if (
+      expectedWarnings.length !== window.warnings.length ||
+      !expectedWarnings.every((warning) => window.warnings.includes(warning))
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['warnings'],
+        message: 'AI usage warnings must exactly match their evidence',
+      });
+    }
+
+    const providerTimes = window.providers.map((provider, index) => {
+      const recordedMs = Date.parse(provider.lastRecordedAt);
+      if (recordedMs < startMs || recordedMs >= endMs) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['providers', index, 'lastRecordedAt'],
+          message: 'provider last-recorded time must fall within the observation window',
+        });
+      }
+      return recordedMs;
+    });
+
+    if (window.recordedEventCount === 0) {
+      if (window.lastRecordedAt !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['lastRecordedAt'],
+          message: 'empty AI usage windows cannot have a last-recorded time',
+        });
+      }
+      return;
+    }
+
+    if (window.lastRecordedAt === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['lastRecordedAt'],
+        message: 'non-empty AI usage windows require a last-recorded time',
+      });
+      return;
+    }
+
+    const lastRecordedMs = Date.parse(window.lastRecordedAt);
+    if (lastRecordedMs < startMs || lastRecordedMs >= endMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['lastRecordedAt'],
+        message: 'last-recorded time must fall within the observation window',
+      });
+    }
+    if (providerTimes.length === 0 || lastRecordedMs !== Math.max(...providerTimes)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['lastRecordedAt'],
+        message: 'last-recorded time must equal the latest provider event time',
+      });
+    }
+  });
+
+export const aiProviderCapacity = z
+  .object({
+    openai: z.object({ status: z.literal('unknown'), reason: z.literal('not_observed') }).strict(),
+    groq: z.object({ status: z.literal('unknown'), reason: z.literal('not_observed') }).strict(),
+    kimi: z.object({ status: z.literal('unknown'), reason: z.literal('not_observed') }).strict(),
+  })
+  .strict();
+
+const fixedAiUsageCaveats = z.tuple([
+  z.literal('best_effort_ledger'),
+  z.literal('not_provider_billing'),
+  z.literal('replay_not_provider_usage'),
+  z.literal('record_mode_calls_provider'),
+  z.literal('deleted_history_excluded'),
+]);
+
+export const availableAiUsageObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('available'),
+    source: z.literal('harpa_usage_ledger'),
+    monthToDate: aiUsageWindow,
+    last24Hours: aiUsageWindow,
+    providerCapacity: aiProviderCapacity,
+    caveats: fixedAiUsageCaveats,
+  })
+  .strict();
+
+export const unknownAiUsageObservation = z
+  .object({
+    observedAt: isoDateTime,
+    status: z.literal('unknown'),
+    reason: aiUsageReason,
+  })
+  .strict();
+
+export const aiUsageObservation = z
+  .discriminatedUnion('status', [availableAiUsageObservation, unknownAiUsageObservation])
+  .superRefine((observation, ctx) => {
+    if (observation.status === 'unknown') return;
+
+    for (const [field, window] of [
+      ['monthToDate', observation.monthToDate],
+      ['last24Hours', observation.last24Hours],
+    ] as const) {
+      if (window.windowEnd === observation.observedAt) continue;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field, 'windowEnd'],
+        message: 'AI usage window end must equal observedAt',
+      });
+    }
+
+    const observed = new Date(observation.observedAt);
+    const expectedMonthStart = new Date(
+      Date.UTC(observed.getUTCFullYear(), observed.getUTCMonth(), 1),
+    ).toISOString();
+    if (observation.monthToDate.windowStart !== expectedMonthStart) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['monthToDate', 'windowStart'],
+        message: 'month-to-date window must start at the first UTC instant of the month',
+      });
+    }
+
+    const expectedLast24HoursStart = new Date(
+      observed.getTime() - 24 * 60 * 60 * 1_000,
+    ).toISOString();
+    if (observation.last24Hours.windowStart !== expectedLast24HoursStart) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['last24Hours', 'windowStart'],
+        message: 'last-24-hour window must start exactly 24 hours before observedAt',
+      });
+    }
+  });
+
 export const reportGenerateDiagnosticWarnings = ['limits_unavailable', 'sign_out_failed'] as const;
 export const reportGenerateDiagnosticWarning = z.enum(reportGenerateDiagnosticWarnings);
 
@@ -1460,6 +1967,16 @@ export type FlyVolume = z.infer<typeof flyVolume>;
 export type FlyVolumeInventory = z.infer<typeof flyVolumeInventory>;
 export type FlyApp = z.infer<typeof flyApp>;
 export type FlyInventoryObservation = z.infer<typeof flyInventoryObservation>;
+export type AiUsageReason = z.infer<typeof aiUsageReason>;
+export type AiUsageWarning = z.infer<typeof aiUsageWarning>;
+export type AiUsageProviderCategory = z.infer<typeof aiUsageProviderCategory>;
+export type AiCallOutcome = z.infer<typeof aiCallOutcome>;
+export type AiSuccessfulProviderUsage = z.infer<typeof aiSuccessfulProviderUsage>;
+export type AiOperationUsage = z.infer<typeof aiOperationUsage>;
+export type AiUsageProvider = z.infer<typeof aiUsageProvider>;
+export type AiUsageWindow = z.infer<typeof aiUsageWindow>;
+export type AiProviderCapacity = z.infer<typeof aiProviderCapacity>;
+export type AiUsageObservation = z.infer<typeof aiUsageObservation>;
 export type ReportGenerateDiagnosticWarning = z.infer<typeof reportGenerateDiagnosticWarning>;
 export type ReportGenerateDiagnosticPhase = z.infer<typeof reportGenerateDiagnosticPhase>;
 export type ReportGenerateDiagnosticFailureReason = z.infer<

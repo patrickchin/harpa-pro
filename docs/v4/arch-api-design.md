@@ -154,6 +154,7 @@ The browser admin surface uses a dedicated admin identity and cookie.
 | `GET`  | `/admin/operations/r2-capacity`       | Read bounded R2 capacity data         |
 | `GET`  | `/admin/operations/fly-inventory`     | Read bounded Fly inventory data       |
 | `GET`  | `/admin/operations/storage-lifecycle` | Read storage lifecycle database state |
+| `GET`  | `/admin/operations/ai-usage`          | Read aggregate Harpa AI usage data    |
 | `POST` | `/admin/operations/report-generate`   | Run the fixed synthetic report canary |
 
 `GET /admin/operations/neon` uses `withAdminSession()`. Better Auth and the
@@ -257,9 +258,31 @@ contradictory headers render that value `Unknown` without adding a GitHub
 request. Unsupported provider credit and billing balances stay `Unknown`.
 
 The browser calls all read-only operations routes once after session
-confirmation and again only on manual **Refresh**. The page makes 12 fixed GET
-reads on load and 24 total after one Refresh. It does not poll. The report
+confirmation and again only on manual **Refresh**. The page makes 13 fixed GET
+reads on load and 26 total after one Refresh. It does not poll. The report
 generation live canary remains a separate manual POST.
+
+The draft `GET /admin/operations/ai-usage` route uses the same dedicated admin
+boundary and shared trusted-Fly-IP budget. It has a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`. The route has no body, query parameter,
+provider selector, or write method.
+
+One request runs one bounded application-database aggregate over the current
+UTC month and previous 24 hours. A service layer owns the reviewed cross-user
+query; the route module does not import `rawDb()`. Results group only by
+normalized provider category, operation, fixture mode, and status. `live` and
+`record` are provider-attributable calls, while replay activity remains
+separate. Tokens and transcription seconds count only successful
+provider-attributable events.
+
+The strict response excludes user, project, report, model, prompt, transcript,
+raw vendor, provider response, and database error details. It can report
+unknown vendor labels and missing historical transcription duration only as
+aggregate warnings. The route uses Harpa's retained, best-effort ledger. It
+makes no provider request, adds no OpenAI, Groq, or Kimi administrator
+credential, and leaves all remaining provider credit `Unknown`. See
+[`design-admin-ai-usage.md`](design-admin-ai-usage.md).
 
 `POST /admin/operations/report-generate` is deliberately separate from the
 read-only refresh path. It requires the dedicated admin cookie, an exact

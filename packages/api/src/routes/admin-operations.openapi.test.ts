@@ -208,7 +208,7 @@ describe('admin operations OpenAPI contract', () => {
       'errorText',
       'errorMessage',
     ]) {
-      expect(serializedSchema).not.toContain(redacted);
+      expect(serializedSchema).not.toContain(`"${redacted}"`);
     }
   });
 

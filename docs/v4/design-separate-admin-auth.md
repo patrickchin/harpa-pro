@@ -3,8 +3,8 @@
 **Status:** Implemented and deployed. Current administrator provisioning is
 provider-managed and `UNKNOWN` from the repository.
 
-The Fly inventory additions below are an unmerged draft. They do not provision
-or enable a Fly observer credential.
+The Fly inventory and Harpa-recorded AI usage additions below are unmerged
+drafts. They do not provision or enable a provider administrator credential.
 
 ## Context
 
@@ -53,6 +53,10 @@ application database and adds no credential or provider access.
 
 The draft Fly inventory stack adds `GET /admin/operations/fly-inventory` to
 the same `withAdminSession()` boundary.
+
+The draft AI usage stack adds `GET /admin/operations/ai-usage` to that
+boundary. It authenticates against the admin database before one aggregate
+query reads the application usage ledger. The databases do not join.
 
 ## User journey
 
@@ -234,8 +238,8 @@ project must prove effective `VIEWER` permission before detail calls.
 One observation makes at most 22 fixed Neon `GET` requests under one shared
 10-second deadline. It does not retry or follow project pagination. The
 browser calls the route once after session confirmation and again only on
-manual **Refresh**. The full operations page makes 12 fixed GET reads on load
-and 24 total after one Refresh. It does not poll. The report generation live
+manual **Refresh**. The full operations page makes 13 fixed GET reads on load
+and 26 total after one Refresh. It does not poll. The report generation live
 canary remains a separate manual POST.
 
 Neon percentages use published Free-plan references and are not credit
@@ -282,8 +286,8 @@ provider errors, private IPs, raw Machine configuration, and Volume internals
 never cross the boundary.
 
 Machine state and process group do not prove Harpa readiness or worker
-liveness. Remaining Fly credit stays `Unknown`. The full page makes 12 fixed
-GET reads on load and 24 after one manual **Refresh**. See
+liveness. Remaining Fly credit stays `Unknown`. The full page makes 13 fixed
+GET reads on load and 26 after one manual **Refresh**. See
 [Admin Fly inventory](design-admin-fly-inventory.md) for the complete draft
 contract.
 
@@ -303,6 +307,28 @@ The response returns bounded rollout and durable queue aggregates. It excludes
 payloads, user IDs, object keys, raw errors, and Fly identifiers. The database
 state does not prove current worker liveness. See
 [Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
+
+### `GET /admin/operations/ai-usage` (draft)
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any application-database query. Better Auth bearer tokens, Better Auth cookies,
+and the retired application `is_admin` bit cannot authorize the route. A
+separate 12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route is read-only and accepts no request body, query, provider selector,
+or write method. Every response sets `Cache-Control: private, no-store`. One
+request runs one bounded cross-user aggregate over fixed current-month and
+previous-24-hour UTC windows. The route makes no provider request and adds no
+OpenAI, Groq, or Kimi administrator credential.
+
+The strict response returns only normalized provider, operation, fixture-mode,
+status, token, seconds, and timestamp aggregates. It excludes user, project,
+report, model, prompt, transcript, raw vendor, provider response, and database
+error details. The retained ledger is best-effort and not provider billing.
+Remaining provider credit stays `Unknown`. See
+[Admin AI usage ledger](design-admin-ai-usage.md) for the complete draft
+contract.
 
 ### `POST /admin/operations/report-generate`
 
@@ -352,11 +378,13 @@ independent admin database in deployed environments:
   minute;
 - R2 capacity reads: 12 per dedicated admin identity and session per minute;
 - Fly inventory reads: 12 per dedicated admin identity and session per minute
-  in the draft stack.
+  in the draft stack;
 - storage lifecycle reads: 12 per dedicated admin identity and session per
-  minute.
-- report generation live-canary runs: 3 per dedicated admin identity and session
-  per 15 minutes.
+  minute;
+- AI usage reads: 12 per dedicated admin identity and session per minute in
+  the draft stack;
+- report generation live-canary runs: 3 per dedicated admin identity and
+  session per 15 minutes.
 
 The shared IP gate protects admin-session database lookups, including invalid
 cookie probes to the activity route. The login IP limits also reject before
@@ -370,10 +398,11 @@ identity exists.
 
 Login and logout reject missing or untrusted `Origin` headers. The activity,
 Neon inventory, Neon Free usage, R2 capacity, Fly inventory, and storage
-lifecycle requests only read data. The report generation live canary is the
-first protected admin mutation other than logout. It also requires the exact
-Origin and a session-derived CSRF token carried in `X-Admin-CSRF`. The token
-stays in browser memory. The admin session invalidates it, following the
+lifecycle requests only read data. The draft AI usage request is also
+read-only. The report generation live canary is the first protected admin
+mutation other than logout. It also requires the exact Origin and a
+session-derived CSRF token carried in `X-Admin-CSRF`. The token stays in
+browser memory. The admin session invalidates it, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured
@@ -456,7 +485,12 @@ unchanged.
 - Anonymous, Better Auth, and legacy app-admin sessions cannot read storage
   lifecycle state through `/admin/operations/storage-lifecycle`.
 - A dedicated storage lifecycle request consumes both budgets and runs one
-  fixed statement. Component tests prove 12/24 reads and no polling.
+  fixed statement. Component tests prove 13/26 reads and no polling.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot run the draft
+  AI usage aggregate.
+- A dedicated admin request to the draft AI usage route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets before one
+  application-database query.
 - Live-canary tests prove the exact Origin, CSRF, dedicated-cookie, and
   three-per-15-minute gates. They also prove strict redaction and no autorun.
 - Anonymous requests sharing an IP consume only the shared IP gate, not the

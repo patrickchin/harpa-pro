@@ -5547,6 +5547,7 @@ export interface paths {
                             /** @enum {boolean} */
                             authenticated: true;
                             email: string;
+                            csrfToken: string;
                         };
                     };
                 };
@@ -5659,6 +5660,7 @@ export interface paths {
                             /** @enum {boolean} */
                             authenticated: true;
                             email: string;
+                            csrfToken: string;
                         };
                     };
                 };
@@ -6015,6 +6017,599 @@ export interface paths {
                                 message: string;
                             };
                             requestId?: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/neon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Neon organization inventory. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            /** @enum {boolean} */
+                            projectsTruncated: false;
+                            /** @enum {number} */
+                            unavailableProjectCount: 0;
+                            projects: {
+                                id: string;
+                                name: string;
+                                regionId: string;
+                                pgVersion: number;
+                                createdAt: string;
+                                updatedAt: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                branchCount: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    count: number;
+                                };
+                                branchDetails: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    branches: {
+                                        id: string;
+                                        name: string;
+                                        parentId: string | null;
+                                        currentState: string;
+                                        default: boolean;
+                                        protected: boolean;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            projectsTruncated: boolean;
+                            unavailableProjectCount: number;
+                            projects: {
+                                id: string;
+                                name: string;
+                                regionId: string;
+                                pgVersion: number;
+                                createdAt: string;
+                                updatedAt: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                branchCount: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    count: number;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                                branchDetails: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    branches: {
+                                        id: string;
+                                        name: string;
+                                        parentId: string | null;
+                                        currentState: string;
+                                        default: boolean;
+                                        protected: boolean;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/report-generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Admin-CSRF": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded report-generation diagnostic observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured";
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "pass";
+                            durationMs: number;
+                            target: {
+                                /** Format: email */
+                                accountEmail: string;
+                                projectId: string;
+                                reportId: string;
+                                reportNumber: number;
+                            };
+                            generation: {
+                                /** @enum {number} */
+                                httpStatus: 200;
+                                requestId: string | null;
+                                durationMs: number;
+                                requestedAt: string;
+                                finishedAt: string;
+                                reportUpdatedAt: string;
+                                generatedAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live";
+                                /** @enum {boolean} */
+                                idempotentReplay: false;
+                            };
+                            limits: {
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                reportGenerate: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiInputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiOutputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                            };
+                            /** @enum {string} */
+                            cleanup: "succeeded";
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "warning";
+                            durationMs: number;
+                            target: {
+                                /** Format: email */
+                                accountEmail: string;
+                                projectId: string;
+                                reportId: string;
+                                reportNumber: number;
+                            };
+                            generation: {
+                                /** @enum {number} */
+                                httpStatus: 200;
+                                requestId: string | null;
+                                durationMs: number;
+                                requestedAt: string;
+                                finishedAt: string;
+                                reportUpdatedAt: string;
+                                generatedAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live" | "replay";
+                                idempotentReplay: boolean;
+                            };
+                            limits: {
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                reportGenerate: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiInputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiOutputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                            } | null;
+                            /** @enum {string} */
+                            cleanup: "succeeded" | "failed";
+                            warnings: ("replay_only" | "limits_unavailable" | "sign_out_failed")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "fail";
+                            durationMs: number;
+                            /** @enum {string} */
+                            phase: "sign_in" | "target_read" | "generate" | "proof_read" | "limits" | "sign_out";
+                            /** @enum {string} */
+                            reason: "sign_in_failed" | "target_not_found" | "target_not_draft" | "conflict" | "usage_limit_exceeded" | "rate_limited" | "provider_error" | "timeout" | "invalid_response" | "upstream_unavailable";
+                            /** @enum {string} */
+                            cleanup: "not_started" | "succeeded" | "failed";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Untrusted origin or invalid CSRF token. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/r2-capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Cloudflare R2 capacity observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            freeTierReference: {
+                                /** @enum {number} */
+                                storageGbMonth: 10;
+                                /** @enum {number} */
+                                classAOperations: 1000000;
+                                /** @enum {number} */
+                                classBOperations: 10000000;
+                                /** @enum {string} */
+                                appliesTo: "standard_only";
+                            };
+                            buckets: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {boolean} */
+                                truncated: false;
+                                items: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    jurisdiction: "default" | "eu" | "fedramp" | "unknown";
+                                    /** @enum {string|null} */
+                                    location: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc" | null;
+                                    /** @enum {string} */
+                                    defaultStorageClass: "standard" | "infrequent_access" | "unknown";
+                                    createdAt: string | null;
+                                }[];
+                            };
+                            storage: {
+                                /** @enum {string} */
+                                status: "available";
+                                standard: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                                infrequentAccess: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                            };
+                            operations: {
+                                /** @enum {string} */
+                                status: "available";
+                                windowStart: string;
+                                windowEnd: string;
+                                classA: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 1000000;
+                                    estimatedRemaining: number;
+                                };
+                                classB: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 10000000;
+                                    estimatedRemaining: number;
+                                };
+                                freeRequests: number;
+                                /** @enum {number} */
+                                unclassifiedRequests: 0;
+                            };
+                            caveats: ("storage_snapshot_not_gb_month" | "storage_metrics_may_lag" | "infrequent_access_not_covered_by_free_tier" | "operations_estimated_from_analytics" | "unclassified_operations_excluded" | "bucket_inventory_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            freeTierReference: {
+                                /** @enum {number} */
+                                storageGbMonth: 10;
+                                /** @enum {number} */
+                                classAOperations: 1000000;
+                                /** @enum {number} */
+                                classBOperations: 10000000;
+                                /** @enum {string} */
+                                appliesTo: "standard_only";
+                            };
+                            buckets: {
+                                /** @enum {string} */
+                                status: "available";
+                                truncated: boolean;
+                                items: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    jurisdiction: "default" | "eu" | "fedramp" | "unknown";
+                                    /** @enum {string|null} */
+                                    location: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc" | null;
+                                    /** @enum {string} */
+                                    defaultStorageClass: "standard" | "infrequent_access" | "unknown";
+                                    createdAt: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            storage: {
+                                /** @enum {string} */
+                                status: "available";
+                                standard: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                                infrequentAccess: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            operations: {
+                                /** @enum {string} */
+                                status: "available";
+                                windowStart: string;
+                                windowEnd: string;
+                                classA: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 1000000;
+                                    estimatedRemaining: number;
+                                };
+                                classB: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 10000000;
+                                    estimatedRemaining: number;
+                                };
+                                freeRequests: number;
+                                unclassifiedRequests: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            caveats: ("storage_snapshot_not_gb_month" | "storage_metrics_may_lag" | "infrequent_access_not_covered_by_free_tier" | "operations_estimated_from_analytics" | "unclassified_operations_excluded" | "bucket_inventory_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
                         };
                     };
                 };

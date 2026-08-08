@@ -6425,6 +6425,180 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/neon-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Neon Free-plan usage observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            organizationId: string;
+                            /** @enum {string} */
+                            plan: "free";
+                            /** @enum {boolean} */
+                            projectsTruncated: false;
+                            /** @enum {number} */
+                            unavailableProjectCount: 0;
+                            projects: {
+                                /** @enum {string} */
+                                status: "available";
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                periodStart: string;
+                                periodEnd: string;
+                                compute: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 360000;
+                                    /** @enum {string} */
+                                    unit: "cu_seconds";
+                                };
+                                storage: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 500000000;
+                                    /** @enum {string} */
+                                    unit: "bytes";
+                                };
+                                transferBytes: number;
+                            }[];
+                            organizationTransfer: {
+                                /** @enum {string} */
+                                status: "available";
+                                periodStart: string;
+                                periodEnd: string;
+                                used: number;
+                                /** @enum {number} */
+                                allowance: 5000000000;
+                                /** @enum {string} */
+                                unit: "bytes";
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "no_projects";
+                            };
+                            caveats: ("provider_values_may_lag" | "free_plan_published_reference" | "storage_uses_published_reference" | "transfer_requires_complete_project_coverage" | "not_invoice_or_credit_balance" | "published_allowances_can_change")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            organizationId: string;
+                            /** @enum {string} */
+                            plan: "free";
+                            projectsTruncated: boolean;
+                            unavailableProjectCount: number;
+                            projects: ({
+                                /** @enum {string} */
+                                status: "available";
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                periodStart: string;
+                                periodEnd: string;
+                                compute: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 360000;
+                                    /** @enum {string} */
+                                    unit: "cu_seconds";
+                                };
+                                storage: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 500000000;
+                                    /** @enum {string} */
+                                    unit: "bytes";
+                                };
+                                transferBytes: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                /** @enum {string} */
+                                reason: "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                            })[];
+                            organizationTransfer: {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "incomplete_project_coverage" | "period_mismatch" | "invalid_response";
+                            };
+                            caveats: ("provider_values_may_lag" | "free_plan_published_reference" | "storage_uses_published_reference" | "transfer_requires_complete_project_coverage" | "not_invoice_or_credit_balance" | "published_allowances_can_change")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "unsupported_plan" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/operations/r2-capacity": {
         parameters: {
             query?: never;

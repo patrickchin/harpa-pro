@@ -61,12 +61,13 @@ function options(fetchImpl: typeof fetch) {
   };
 }
 
-function organization(plan: unknown = 'free', id = ORGANIZATION_ID) {
+function organization(plan?: unknown, id = ORGANIZATION_ID) {
+  const effectivePlan = arguments.length >= 1 ? plan : 'free';
   return {
     id,
     name: 'Private organization name',
     handle: 'private-organization-handle',
-    plan,
+    plan: effectivePlan,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-08-08T07:59:00.000Z',
     managed_by: 'console',
@@ -74,16 +75,13 @@ function organization(plan: unknown = 'free', id = ORGANIZATION_ID) {
   };
 }
 
-function projectSummary(
-  index = 0,
-  permission: unknown = 'VIEWER',
-  organizationId = ORGANIZATION_ID,
-) {
+function projectSummary(index = 0, permission?: unknown, organizationId = ORGANIZATION_ID) {
+  const effectiveProjectPermission = arguments.length >= 2 ? permission : 'VIEWER';
   return {
     id: `project-${index}`,
     name: `Project ${index}`,
     org_id: organizationId,
-    effective_project_permission: permission,
+    effective_project_permission: effectiveProjectPermission,
     active_time: 1,
     platform_id: 'aws',
     region_id: 'aws-eu-central-1',
@@ -298,6 +296,33 @@ describe('observeAdminNeonUsage', () => {
   });
 
   it.each([
+    [projectList([], { pagination: { cursor: 'private-empty-cursor' } }), true, 0],
+    [projectList([], { unavailableProjectIds: ['private-unavailable-project'] }), false, 1],
+  ] as const)(
+    'keeps an incomplete empty discovery partial without fabricating transfer usage',
+    async (discovery, projectsTruncated, unavailableProjectCount) => {
+      const fetchImpl = fetchMock((url) => {
+        if (url.pathname.includes('/organizations/')) return json(organization());
+        return json(discovery);
+      });
+
+      const result = await observeAdminNeonUsage(options(fetchImpl));
+
+      expect(result).toMatchObject({
+        status: 'partial',
+        projectsTruncated,
+        unavailableProjectCount,
+        projects: [],
+        organizationTransfer: { status: 'unknown', reason: 'incomplete_project_coverage' },
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+      expect(JSON.stringify(result)).not.toMatch(
+        /private-empty-cursor|private-unavailable-project/,
+      );
+    },
+  );
+
+  it.each([
     ['launch', 'unsupported_plan'],
     ['scale', 'unsupported_plan'],
     ['FREE', 'unsupported_plan'],
@@ -306,7 +331,9 @@ describe('observeAdminNeonUsage', () => {
   ] as const)(
     'fails closed on organization plan %s before project discovery',
     async (plan, reason) => {
-      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(json(organization(plan)));
+      const organizationBody = organization(plan);
+      if (plan === undefined) organizationBody.plan = undefined;
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(json(organizationBody));
 
       await expect(observeAdminNeonUsage(options(fetchImpl))).resolves.toEqual({
         observedAt: NOW.toISOString(),
@@ -338,7 +365,9 @@ describe('observeAdminNeonUsage', () => {
   ] as const)(
     'fails closed on project permission %s and organization %s before any detail call',
     async (permission, organizationId) => {
-      const summaries = [projectSummary(0), projectSummary(1, permission, organizationId)];
+      const secondSummary = projectSummary(1, permission, organizationId);
+      if (permission === undefined) secondSummary.effective_project_permission = undefined;
+      const summaries = [projectSummary(0), secondSummary];
       const fetchImpl = fetchMock((url) => {
         if (url.pathname.includes('/organizations/')) return json(organization());
         return json(projectList(summaries));

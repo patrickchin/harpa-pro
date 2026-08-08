@@ -2,6 +2,11 @@ import type {
   NeonInventoryObservation,
   NeonInventoryReason,
   NeonProject,
+  NeonUsageObservation,
+  NeonUsageOrganizationTransferReason,
+  NeonUsageProject,
+  NeonUsageProjectReason,
+  NeonUsageReason,
   R2Bucket,
   R2CapacityCaveat,
   R2CapacityObservation,
@@ -15,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminAuthClient } from '../../lib/admin-auth';
 import type { AdminSession } from '../../lib/admin-auth';
 import { getPublicEnv } from '../../lib/env';
+import { calculateQuotaPercentages } from '../../lib/quota-percentages';
 
 type PageState =
   | { status: 'loading' }
@@ -120,6 +126,12 @@ type NeonInventoryState =
   | { status: 'ready'; observation: NeonInventoryObservation };
 type NeonInventoryFetchResult =
   { status: 'ready'; observation: NeonInventoryObservation } | { status: 'unauthorized' };
+type NeonUsageState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; observation: NeonUsageObservation };
+type NeonUsageFetchResult =
+  { status: 'ready'; observation: NeonUsageObservation } | { status: 'unauthorized' };
 type R2CapacityState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -152,6 +164,7 @@ type ReportDiagnosticWarning = Extract<
   { status: 'warning' }
 >['warnings'][number];
 
+type ActiveNeonUsageObservation = Exclude<NeonUsageObservation, { status: 'unknown' }>;
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
 const CLOUDFLARE_CONSOLE_URL = 'https://dash.cloudflare.com/';
 const GITHUB_REPOSITORY_URL = 'https://github.com/patrickchin/harpa-pro';
@@ -321,6 +334,7 @@ function parseRateLimit(response: Response): GitHubRateLimit | null {
     limit < 1 ||
     !Number.isInteger(remaining) ||
     remaining < 0 ||
+    remaining > limit ||
     !Number.isInteger(resetSeconds) ||
     resetSeconds < 1 ||
     Number.isNaN(resetAt.getTime())
@@ -460,6 +474,49 @@ function formatTimestamp(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+const quotaPercentFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+function formatQuotaPercent(value: number): string {
+  return quotaPercentFormatter.format(value);
+}
+
+function QuotaProgress({
+  accessibleName,
+  used,
+  allowance,
+}: {
+  accessibleName: string;
+  used: number;
+  allowance: number;
+}) {
+  const percentages = calculateQuotaPercentages(used, allowance);
+  if (!percentages) return null;
+  const valueText = `${formatQuotaPercent(percentages.usedPercent)}% used, ${formatQuotaPercent(
+    percentages.remainingPercent,
+  )}% remaining`;
+
+  return (
+    <div className="mt-3">
+      <div className="h-2 overflow-hidden rounded-full bg-secondary">
+        <div
+          aria-label={accessibleName}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={percentages.paintedPercent}
+          aria-valuetext={valueText}
+          className="h-2 rounded-full bg-accent"
+          role="progressbar"
+          style={{ width: `${percentages.paintedPercent}%` }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-ink-soft">{valueText}</p>
+    </div>
+  );
 }
 
 function hasOnlyKeys(
@@ -736,6 +793,112 @@ async function loadNeonInventory(): Promise<NeonInventoryFetchResult> {
   return {
     status: 'ready',
     observation: parsed.success ? parsed.data : unknownNeonObservation('invalid_response'),
+  };
+}
+
+function unknownNeonUsageObservation(reason: NeonUsageReason): NeonUsageObservation {
+  return {
+    observedAt: new Date().toISOString(),
+    status: 'unknown',
+    reason,
+  };
+}
+
+function neonUsageReasonCopy(reason: NeonUsageReason): string {
+  switch (reason) {
+    case 'not_configured':
+      return 'Neon Free usage is not configured.';
+    case 'unsupported_plan':
+      return 'Neon plan is not the supported Free plan.';
+    case 'unsafe_permissions':
+      return 'Viewer-only Neon usage access could not be verified.';
+    case 'timeout':
+      return 'Neon Free usage request timed out.';
+    case 'rate_limited':
+      return 'Neon Free usage observation was rate limited.';
+    case 'forbidden':
+      return 'Neon denied access to this usage observation.';
+    case 'not_found':
+      return 'The requested Neon usage observation was not found.';
+    case 'invalid_response':
+      return 'Neon Free usage returned an invalid response.';
+    case 'provider_unavailable':
+      return 'Neon Free usage is temporarily unavailable.';
+  }
+}
+
+function neonUsageProjectReasonCopy(reason: NeonUsageProjectReason): string {
+  switch (reason) {
+    case 'timeout':
+      return 'Provider request timed out.';
+    case 'rate_limited':
+      return 'Neon rate limiting prevented this observation.';
+    case 'forbidden':
+      return 'Neon denied access to this usage observation.';
+    case 'not_found':
+      return 'The requested Neon usage observation was not found.';
+    case 'invalid_response':
+      return 'Neon returned an invalid usage response.';
+    case 'provider_unavailable':
+      return 'Neon usage is temporarily unavailable.';
+  }
+}
+
+function neonUsageTransferReasonCopy(reason: NeonUsageOrganizationTransferReason): string {
+  switch (reason) {
+    case 'incomplete_project_coverage':
+      return 'Complete project coverage is unavailable.';
+    case 'period_mismatch':
+      return 'Project usage periods do not align.';
+    case 'invalid_response':
+      return 'Project transfer totals could not be safely reconciled.';
+    case 'no_projects':
+      return 'Organization transfer has no visible project consumption period.';
+  }
+}
+
+function neonUsageResponseFailureReason(status: number): NeonUsageReason {
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'not_found';
+  if (status === 408 || status === 504) return 'timeout';
+  if (status === 429) return 'rate_limited';
+  return 'provider_unavailable';
+}
+
+async function loadNeonUsage(): Promise<NeonUsageFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/neon-usage`, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownNeonUsageObservation('provider_unavailable'),
+    };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (!response.ok) {
+    return {
+      status: 'ready',
+      observation: unknownNeonUsageObservation(neonUsageResponseFailureReason(response.status)),
+    };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { status: 'ready', observation: unknownNeonUsageObservation('invalid_response') };
+  }
+
+  const parsed = operationSchemas.neonUsageObservation.safeParse(body);
+  return {
+    status: 'ready',
+    observation: parsed.success ? parsed.data : unknownNeonUsageObservation('invalid_response'),
   };
 }
 
@@ -1227,6 +1390,290 @@ function NeonInventory({ state }: { state: NeonInventoryState }) {
   );
 }
 
+const neonUsageNumber = new Intl.NumberFormat('en-US');
+
+function NeonUsageStatusBadge({ status }: { status: 'available' | 'partial' | 'unknown' }) {
+  const tone =
+    status === 'available'
+      ? 'bg-emerald-100 text-emerald-800'
+      : status === 'partial'
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-secondary text-ink-soft';
+  const label = status[0]!.toUpperCase() + status.slice(1);
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{label}</span>;
+}
+
+function neonUsageCaveatCopy(caveat: ActiveNeonUsageObservation['caveats'][number]) {
+  switch (caveat) {
+    case 'provider_values_may_lag':
+      return 'Provider values may lag.';
+    case 'free_plan_published_reference':
+      return 'Percentages use Neon Free-plan published references.';
+    case 'storage_uses_published_reference':
+      return 'Storage uses a published reference, not a provider-returned remaining value.';
+    case 'transfer_requires_complete_project_coverage':
+      return 'Organization transfer percentage requires complete project coverage.';
+    case 'not_invoice_or_credit_balance':
+      return 'Not an invoice or credit balance.';
+    case 'published_allowances_can_change':
+      return 'Published provider allowances can change.';
+  }
+}
+
+function NeonUsageMetricCard({
+  label,
+  projectName,
+  used,
+  allowance,
+  unit,
+}: {
+  label: 'compute' | 'storage';
+  projectName: string;
+  used: number;
+  allowance: number;
+  unit: 'cu_seconds' | 'bytes';
+}) {
+  const percentages = calculateQuotaPercentages(used, allowance);
+  const accessibleName =
+    percentages === null
+      ? `${projectName} ${label}`
+      : `${projectName} ${label}: ${formatQuotaPercent(percentages.usedPercent)}% used, ${formatQuotaPercent(percentages.remainingPercent)}% remaining`;
+  const unitLabel = unit === 'cu_seconds' ? 'CU-seconds' : 'bytes';
+
+  return (
+    <div className="rounded-lg bg-secondary p-4">
+      <h4 className="font-semibold text-ink">{label === 'compute' ? 'Compute' : 'Storage'}</h4>
+      <p className="mt-2 text-sm text-ink-soft">
+        {neonUsageNumber.format(used)} {unitLabel} used
+      </p>
+      <p className="mt-1 text-xs text-ink-soft">
+        {neonUsageNumber.format(allowance)} {unitLabel} published reference
+      </p>
+      {percentages && (
+        <QuotaProgress accessibleName={accessibleName} allowance={allowance} used={used} />
+      )}
+    </div>
+  );
+}
+
+function NeonUsageProjectCard({ project }: { project: NeonUsageProject }) {
+  return (
+    <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <h3 className="font-semibold text-ink">{project.name}</h3>
+      <p className="mt-1 break-all text-xs text-ink-soft">{project.id}</p>
+      <p className="mt-1 text-xs text-ink-soft">{project.effectivePermission}</p>
+
+      {project.status === 'unknown' ? (
+        <div className="mt-4 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+          <p className="font-semibold text-ink">Project usage unavailable.</p>
+          <p className="mt-1">{neonUsageProjectReasonCopy(project.reason)}</p>
+        </div>
+      ) : (
+        <>
+          <p className="mt-3 text-xs text-ink-soft">
+            Window <time dateTime={project.periodStart}>{project.periodStart}</time>
+            {' to '}
+            <time dateTime={project.periodEnd}>{project.periodEnd}</time>
+          </p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <NeonUsageMetricCard
+              allowance={project.compute.allowance}
+              label="compute"
+              projectName={project.name}
+              unit={project.compute.unit}
+              used={project.compute.used}
+            />
+            <NeonUsageMetricCard
+              allowance={project.storage.allowance}
+              label="storage"
+              projectName={project.name}
+              unit={project.storage.unit}
+              used={project.storage.used}
+            />
+          </div>
+          <div className="mt-4 rounded-lg bg-secondary p-4">
+            <h4 className="font-semibold text-ink">Public network transfer contribution</h4>
+            <p className="mt-2 text-sm text-ink-soft">
+              {neonUsageNumber.format(project.transferBytes)} bytes used
+            </p>
+          </div>
+        </>
+      )}
+    </article>
+  );
+}
+
+function NeonUsageDetails({ observation }: { observation: ActiveNeonUsageObservation }) {
+  const transfer = observation.organizationTransfer;
+  const transferPercentages =
+    transfer.status === 'available'
+      ? calculateQuotaPercentages(transfer.used, transfer.allowance)
+      : null;
+  const transferAccessibleName =
+    transfer.status === 'available' && transferPercentages
+      ? `Organization public network transfer: ${formatQuotaPercent(
+          transferPercentages.usedPercent,
+        )}% used, ${formatQuotaPercent(transferPercentages.remainingPercent)}% remaining`
+      : null;
+
+  return (
+    <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-ink">
+            {observation.projects.length} visible{' '}
+            {observation.projects.length === 1 ? 'project' : 'projects'}
+          </p>
+          <p className="mt-1 text-xs text-ink-soft">
+            Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
+          </p>
+        </div>
+        <NeonUsageStatusBadge status={observation.status} />
+      </div>
+
+      {observation.projects.length === 0 ? (
+        <div className="mt-4 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+          {observation.status === 'partial' ? (
+            <>
+              <p>Project discovery is incomplete; no project usage rows were safely available.</p>
+              {observation.unavailableProjectCount > 0 ? (
+                <p className="mt-1">
+                  {observation.unavailableProjectCount} provider-reported{' '}
+                  {observation.unavailableProjectCount === 1
+                    ? 'project is unavailable.'
+                    : 'projects are unavailable.'}
+                </p>
+              ) : null}
+              {observation.projectsTruncated ? (
+                <p className="mt-1">Project discovery is truncated.</p>
+              ) : null}
+            </>
+          ) : (
+            'No Neon projects were returned.'
+          )}
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          {observation.projects.map((project) => (
+            <NeonUsageProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      )}
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Organization transfer percentage</h3>
+        {transfer.status === 'available' ? (
+          transferPercentages && transferAccessibleName ? (
+            <>
+              <p className="mt-2 text-sm text-ink-soft">
+                {neonUsageNumber.format(transfer.used)} bytes used
+              </p>
+              <p className="mt-1 text-xs text-ink-soft">
+                {neonUsageNumber.format(transfer.allowance)} bytes published reference
+              </p>
+              <p className="mt-1 text-xs text-ink-soft">
+                Window <time dateTime={transfer.periodStart}>{transfer.periodStart}</time>
+                {' to '}
+                <time dateTime={transfer.periodEnd}>{transfer.periodEnd}</time>
+              </p>
+              <QuotaProgress
+                accessibleName={transferAccessibleName}
+                allowance={transfer.allowance}
+                used={transfer.used}
+              />
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-ink-soft">
+                Organization transfer percentage: Unknown
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Project transfer totals could not be safely reconciled.
+              </p>
+            </>
+          )
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-ink-soft">Organization transfer percentage: Unknown</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              {neonUsageTransferReasonCopy(transfer.reason)}
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Interpretation notes</h3>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+          {observation.caveats.map((caveat) => (
+            <li key={caveat}>{neonUsageCaveatCopy(caveat)}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function NeonUsage({ state }: { state: NeonUsageState }) {
+  if (state.status === 'idle') return null;
+
+  return (
+    <section className="mt-8" aria-labelledby="neon-usage-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-ink" id="neon-usage-title">
+            Neon Free usage
+          </h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Read-only Free-tier percentages derived from Neon usage and published references.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4 text-sm font-semibold">
+          <a
+            className="text-accent-ink underline underline-offset-4 ring-focus"
+            href="https://neon.com/pricing"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open Neon pricing ↗
+          </a>
+          <a
+            className="text-ink-soft underline underline-offset-4 ring-focus"
+            href={NEON_CONSOLE_URL}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open Neon console ↗
+          </a>
+        </div>
+      </div>
+
+      <div className="mt-4" aria-live="polite">
+        {state.status === 'loading' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 text-sm text-ink-soft shadow-sm">
+            Loading Neon Free usage…
+          </div>
+        ) : state.observation.status === 'unknown' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-xs text-ink-soft">
+                Observed{' '}
+                <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+              </p>
+              <NeonUsageStatusBadge status="unknown" />
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">
+              {neonUsageReasonCopy(state.observation.reason)}
+            </p>
+          </div>
+        ) : (
+          <NeonUsageDetails observation={state.observation} />
+        )}
+      </div>
+    </section>
+  );
+}
+
 const r2Number = new Intl.NumberFormat('en-US');
 
 function r2StatusTone(status: 'available' | 'partial' | 'unknown'): string {
@@ -1268,6 +1715,12 @@ function StorageSnapshot({ label, snapshot }: { label: string; snapshot: R2Stora
 }
 
 function OperationEstimate({ label, estimate }: { label: string; estimate: R2OperationEstimate }) {
+  const accessibleName = `Estimated R2 ${label} operations: ${formatQuotaPercent(
+    (estimate.estimatedUsed / estimate.publishedAllowance) * 100,
+  )}% used, ${formatQuotaPercent(
+    Math.max(0, 100 - (estimate.estimatedUsed / estimate.publishedAllowance) * 100),
+  )}% remaining`;
+
   return (
     <article className="rounded-lg bg-secondary p-4">
       <h4 className="font-semibold text-ink">{label}</h4>
@@ -1279,6 +1732,11 @@ function OperationEstimate({ label, estimate }: { label: string; estimate: R2Ope
       <p className="mt-1 text-xs text-ink-soft">
         {r2Number.format(estimate.publishedAllowance)} published free-tier reference
       </p>
+      <QuotaProgress
+        accessibleName={accessibleName}
+        allowance={estimate.publishedAllowance}
+        used={estimate.estimatedUsed}
+      />
     </article>
   );
 }
@@ -1866,6 +2324,27 @@ function GitHubRateLimitLine({ rateLimit }: { rateLimit: GitHubRateLimit }) {
   );
 }
 
+function GitHubRateLimitSummary({ rateLimit }: { rateLimit: GitHubRateLimit | null }) {
+  if (!rateLimit) {
+    return <p className="text-xs text-ink-soft">Request budget: Unknown</p>;
+  }
+
+  const accessibleName = `Primary public REST request budget for this browser/IP: ${formatQuotaPercent(
+    ((rateLimit.limit - rateLimit.remaining) / rateLimit.limit) * 100,
+  )}% used, ${formatQuotaPercent((rateLimit.remaining / rateLimit.limit) * 100)}% remaining`;
+
+  return (
+    <div>
+      <GitHubRateLimitLine rateLimit={rateLimit} />
+      <QuotaProgress
+        accessibleName={accessibleName}
+        allowance={rateLimit.limit}
+        used={rateLimit.limit - rateLimit.remaining}
+      />
+    </div>
+  );
+}
+
 function GitHubRepositoryStatus({ state }: { state: GitHubState }) {
   return (
     <section className="mt-8" aria-labelledby="github-repository-title">
@@ -1919,11 +2398,9 @@ function GitHubRepositoryStatus({ state }: { state: GitHubState }) {
               Retry after {state.retryAfterSeconds} seconds.
             </p>
           )}
-          {state.rateLimit && (
-            <div className="mt-2">
-              <GitHubRateLimitLine rateLimit={state.rateLimit} />
-            </div>
-          )}
+          <div className="mt-2">
+            <GitHubRateLimitSummary rateLimit={state.rateLimit} />
+          </div>
         </div>
       )}
 
@@ -2008,7 +2485,7 @@ function GitHubRepositoryStatus({ state }: { state: GitHubState }) {
             </div>
 
             <div className="mt-4 flex flex-col gap-1">
-              {state.rateLimit && <GitHubRateLimitLine rateLimit={state.rateLimit} />}
+              <GitHubRateLimitSummary rateLimit={state.rateLimit} />
               <p className="text-xs text-ink-soft">
                 Observed{' '}
                 <time dateTime={state.observedAt}>{formatTimestamp(state.observedAt)}</time>.
@@ -2033,6 +2510,7 @@ function Operations({
   const { apiBaseUrl } = getPublicEnv();
   const [deployment, setDeployment] = useState<DeploymentState>(INITIAL_DEPLOYMENT_STATE);
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
+  const [neonUsage, setNeonUsage] = useState<NeonUsageState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
   const [reportDiagnostic, setReportDiagnostic] = useState<ReportDiagnosticState>({
     status: 'idle',
@@ -2048,10 +2526,11 @@ function Operations({
     const isCurrent = () => refreshGeneration.current === generation;
     setRefreshing(true);
     setNeonInventory({ status: 'loading' });
+    setNeonUsage({ status: 'loading' });
     setR2Capacity({ status: 'loading' });
     setGitHub({ status: 'checking' });
     try {
-      const [, , , , inventory, capacity, githubStatus] = await Promise.all([
+      const [, , , , inventory, usageObservation, capacity, githubStatus] = await Promise.all([
         loadApiIdentity().then((api) => {
           if (isCurrent()) setDeployment((current) => ({ ...current, api }));
         }),
@@ -2065,16 +2544,22 @@ function Operations({
           if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
         }),
         loadNeonInventory(),
+        loadNeonUsage(),
         loadR2Capacity(),
         loadGitHubStatus(),
       ]);
       if (!isCurrent()) return;
       setGitHub(githubStatus);
-      if (inventory.status === 'unauthorized' || capacity.status === 'unauthorized') {
+      if (
+        inventory.status === 'unauthorized' ||
+        usageObservation.status === 'unauthorized' ||
+        capacity.status === 'unauthorized'
+      ) {
         onSessionExpired();
         return;
       }
       setNeonInventory(inventory);
+      setNeonUsage(usageObservation);
       setR2Capacity(capacity);
     } finally {
       if (isCurrent()) setRefreshing(false);
@@ -2162,6 +2647,8 @@ function Operations({
       </section>
 
       <ReportDiagnostic state={reportDiagnostic} onRun={() => void handleRunDiagnostic()} />
+
+      <NeonUsage state={neonUsage} />
 
       <NeonInventory state={neonInventory} />
 

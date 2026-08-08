@@ -123,12 +123,13 @@ The R2 capacity route must pass the same two gates and its own identity/session
 budget. One allowed request makes at most three fixed provider calls under one
 shared 10-second timeout. It does not retry or follow bucket pagination.
 
-The report diagnostic must also pass the trusted-IP budget. Exact Origin,
-dedicated admin session, and session-bound CSRF checks run before its
-three-per-15-minute identity/session budget. A permitted run then consumes the
-real application report route's shared AI rate limit and monthly usage limits
-under the fixed synthetic account. Neon inventory, Neon usage, R2 capacity,
-and report diagnostics each use separate named admin buckets.
+The report generation live canary must also pass the trusted-IP budget. Exact
+Origin, dedicated admin session, and session-bound CSRF checks run before its
+three-per-15-minute identity/session budget. A permitted live run then consumes
+the shared AI rate limit and monthly usage limits of the real application
+report route. A disabled canary stops before all application and provider work.
+Neon inventory, Neon usage, R2 capacity, and live-canary runs use separate
+named admin buckets.
 
 ## Authentication-route boundary
 
@@ -238,8 +239,9 @@ Current tests cover these properties:
 - `__tests__/admin-r2-capacity.integration.test.ts` covers the R2 observer
   identity/session budget, its 12-request limit, and rejection before provider
   access.
-- `__tests__/admin-report-diagnostic.integration.test.ts` covers the report
-  canary's isolated three-request budget and proves Neon reads do not spend it.
+- `__tests__/admin-report-diagnostic.integration.test.ts` covers the isolated
+  three-request live-canary budget and proves read routes do not spend it. It
+  also proves every response remains private and no-store.
 - `__tests__/server-rate-limit-gc.test.ts` checks cleanup scheduler startup.
 - `scripts/check-no-process-env-rate-limit.sh` blocks raw
   `process.env.RATE_LIMIT_*` access outside `env.ts`.

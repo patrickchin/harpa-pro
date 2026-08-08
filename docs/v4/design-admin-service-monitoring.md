@@ -103,8 +103,8 @@ Provider money, token, invoice, and credit balances remain `Unknown`. These
 usage and request-budget percentages are not provider billing balances. With
 this route in the stack, the browser makes 10 authenticated reads after
 session confirmation and another 10 only on manual **Refresh**, for 20 total
-after one Refresh. It does not poll. The report diagnostic POST remains
-separate and manual.
+after one Refresh. It does not poll. The report generation live canary remains
+a separate manual POST.
 
 ## R2 capacity extension
 
@@ -187,7 +187,7 @@ value must remain attributable to one of four evidence classes:
    `remaining`, and `credit balance` are different fields; unavailable fields
    render as `Unknown` and are never derived without a documented provider
    contract.
-4. **Diagnostic actions** — explicit, audited, rate-limited checks that may
+4. **Canary actions:** explicit, audited, rate-limited checks that may
    incur provider cost. They must not mutate infrastructure or ordinary user
    data.
 
@@ -239,22 +239,30 @@ and complete organization transfer against published references. Until Neon
 exposes a trustworthy balance source and an acceptable credential boundary,
 remaining credits stay `Unknown` with a console link.
 
-### Report-generation diagnostic
+### Report generation live canary
 
-The existing report generation endpoint authenticates a normal application
-account, reads scoped report data, calls the configured AI provider, records
-usage, and writes the generated body. The admin site must not gain general
-impersonation or write access to exercise it.
+The report generation endpoint authenticates an application account, reads
+scoped data, calls the AI provider, records usage, and replaces the generated
+report body. The admin site does not get general impersonation or write
+access.
 
-The manual diagnostic uses one explicitly provisioned diagnostic account and
-one fixed diagnostic report through the existing endpoint. The trigger is
-admin-session gated, exact-origin and session-derived-CSRF protected,
-separately rate limited, audited, and manually invoked. It is clear that the
-action mutates only that test report and may spend provider credit. A synthetic
-provider-only smoke test is useful as secondary evidence but must not be
-labelled as an end-to-end report endpoint check. See
-[Admin report-generation diagnostic](design-admin-report-generate-diagnostic.md)
-for the full contract.
+The live canary uses one fixed synthetic account and one fixed draft report.
+`ADMIN_REPORT_LIVE_CANARY_ENABLED` defaults to `0`. The parser accepts `1`
+only for the exact non-preview development deployment with live AI mode and a
+complete target. Production and pull-request previews cannot enable it.
+
+One explicit click sends an empty POST with the dedicated admin cookie and
+session-derived CSRF token. The route permits three runs per administrator
+identity and session in 15 minutes. The fixed account also keeps the normal AI
+and report usage limits. Page load, shared **Refresh**, timers, and background
+work never run or clear the canary.
+
+A pass requires live mode, one fresh matching usage row, a valid report body,
+and exact temporary-session cleanup. The card shows bounded usage, limits,
+structural counts, a report hash, and escaped synthetic fields. It never shows
+prompts, source notes, raw responses, credentials, or arbitrary errors. See
+[Admin live report-generation canary](design-admin-report-live-canary.md) for
+the full contract.
 
 ## Verification
 
@@ -276,8 +284,8 @@ for the full contract.
 - Deployment-identity tests prove the four fixed reads, independent partial
   states, strict redaction, full identifiers, exact CORS policy, and absence of
   polling.
-- Report-generation diagnostic tests prove its dedicated-cookie, exact-origin,
-  session-derived-CSRF, fixed-target, rate-limit, redaction, and manual-only
-  mutation boundaries.
+- Report live-canary tests prove its development-only gate, dedicated cookie,
+  exact Origin, session-derived CSRF, fixed target, live usage proof, bounded
+  preview, exact cleanup, rate limit, redaction, and manual-only mutation.
 - Run admin lint, typecheck, unit tests, and build plus the focused API CORS
   and observer tests.

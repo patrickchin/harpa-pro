@@ -1,4 +1,5 @@
-import { operations, reports, usageLimits } from '@harpa/api-contract';
+import { createHash } from 'node:crypto';
+import { email, isoDateTime, operations, reports, usageLimits, userId } from '@harpa/api-contract';
 import type {
   ReportGenerateDiagnosticFailureReason,
   ReportGenerateDiagnosticObservation,
@@ -6,10 +7,14 @@ import type {
   ReportGenerateDiagnosticWarning,
 } from '@harpa/api-contract';
 import { z } from 'zod';
+import { getPool } from '../db/client.js';
 import { env } from '../env.js';
 
 const DEFAULT_TIMEOUT_MS = 75_000;
 const CLEANUP_GRACE_MS = 5_000;
+const MAX_OBSERVATION_DURATION_MS = DEFAULT_TIMEOUT_MS + CLEANUP_GRACE_MS;
+const MAX_PREVIEW_CODE_POINTS = 400;
+const MAX_PREVIEW_ITEMS = 5;
 const IDEMPOTENCY_PREFIX = 'admin-report-diagnostic';
 
 const token = z.string().min(16).max(2_048).regex(new RegExp('^[A-Za-z0-9._~+/-]+={0,2}$'));
@@ -26,9 +31,13 @@ const providerIdentifier = z
   .regex(/^[A-Za-z0-9._:/-]+$/);
 
 const strictReport = reports.report.strict();
+const generatedReport = strictReport
+  .omit({ body: true })
+  .extend({ body: z.unknown().nullable() })
+  .strict();
 const generateResponse = z
   .object({
-    report: strictReport,
+    report: generatedReport,
     debug: z
       .object({
         systemPrompt: z.string(),
@@ -36,6 +45,27 @@ const generateResponse = z
         rawText: z.string(),
         model: providerIdentifier,
         vendor: providerIdentifier,
+      })
+      .strict(),
+  })
+  .strict();
+const signInResponse = z
+  .object({
+    redirect: z.literal(false),
+    token,
+    user: z
+      .object({
+        id: userId,
+        email,
+        name: z.string().min(1),
+        emailVerified: z.boolean(),
+        image: z.string().nullable(),
+        createdAt: isoDateTime,
+        updatedAt: isoDateTime,
+        displayName: z.string().nullable().optional(),
+        companyName: z.string().nullable().optional(),
+        isAdmin: z.boolean().optional(),
+        plan: usageLimits.plan.optional(),
       })
       .strict(),
   })
@@ -66,8 +96,20 @@ const usageLimitError = z
     requestId: z.string().optional(),
   })
   .strict();
+const databaseClockRow = z.object({ lower_bound: z.union([isoDateTime, z.date()]) }).strict();
+const liveUsageRow = z.object({
+  vendor: providerIdentifier,
+  model: providerIdentifier,
+  input_tokens: z.string(),
+  output_tokens: z.string(),
+  cached_tokens: z.string(),
+  latency_ms: z.string(),
+  fixture_mode: z.literal('live'),
+  status: z.literal('ok'),
+});
 
-export interface AdminReportDiagnosticConfiguration {
+export interface EnabledAdminReportDiagnosticConfiguration {
+  enabled: true;
   baseUrl: string;
   email: string;
   password: string;
@@ -75,17 +117,56 @@ export interface AdminReportDiagnosticConfiguration {
   reportNumber: number;
 }
 
+export type AdminReportDiagnosticConfiguration =
+  { enabled: false } | EnabledAdminReportDiagnosticConfiguration;
+
+type ApplicationDatabaseRow = Record<string, unknown>;
+type QueryApplicationDb = (
+  text: string,
+  values: readonly unknown[],
+  signal: AbortSignal,
+) => Promise<{ rows: readonly ApplicationDatabaseRow[] }>;
+
 export interface AdminReportDiagnosticOptions {
   /** Omit to use the boot-validated environment; null forces disabled mode in tests. */
   configuration?: AdminReportDiagnosticConfiguration | null;
   fetchImpl?: typeof fetch;
+  queryApplicationDb?: QueryApplicationDb;
   now?: () => Date;
   timeoutMs?: number;
 }
 
 type SuccessfulRun = Extract<ReportGenerateDiagnosticObservation, { status: 'pass' | 'warning' }>;
-type SuccessfulCore = Pick<SuccessfulRun, 'target' | 'generation' | 'limits'>;
+type SuccessfulCore = Pick<SuccessfulRun, 'target' | 'generation' | 'preview' | 'usage' | 'limits'>;
 type Cleanup = 'not_started' | 'succeeded' | 'failed';
+type GeneratedReportBody = z.infer<typeof reports.reportBody>;
+
+const DATABASE_CLOCK_SQL = 'SELECT clock_timestamp() AS lower_bound';
+const LIVE_USAGE_SQL = `
+  WITH observation_window AS (
+    SELECT clock_timestamp() AS upper_bound
+  )
+  SELECT
+    event.vendor,
+    event.model,
+    event.input_tokens::text AS input_tokens,
+    event.output_tokens::text AS output_tokens,
+    event.cached_tokens::text AS cached_tokens,
+    event.latency_ms::text AS latency_ms,
+    event.fixture_mode,
+    event.status
+  FROM app.llm_usage_events AS event
+  CROSS JOIN observation_window
+  WHERE event.user_id = $1
+    AND event.project_id = $2
+    AND event.report_id = $3
+    AND event.operation = 'generate_report'
+    AND event.created_at > $4
+    AND event.created_at <= observation_window.upper_bound
+    AND event.vendor = $5
+    AND event.model = $6
+  LIMIT 2
+`;
 
 class DiagnosticFailure extends Error {
   constructor(
@@ -113,8 +194,12 @@ export async function runAdminReportGenerateDiagnostic(
   if (configuration === null) {
     return validateObservation({ observedAt, status: 'unknown', reason: 'not_configured' });
   }
+  if (!configuration.enabled) {
+    return validateObservation({ observedAt, status: 'unknown', reason: 'not_enabled' });
+  }
 
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const queryApplicationDb = options.queryApplicationDb ?? defaultQueryApplicationDb;
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), normalizedTimeout(options.timeoutMs));
   let phase: ReportGenerateDiagnosticPhase = 'sign_in';
@@ -124,20 +209,31 @@ export async function runAdminReportGenerateDiagnostic(
   let success: SuccessfulCore | null = null;
 
   try {
-    bearerToken = await signIn(configuration, fetchImpl, controller.signal);
+    const signedIn = await signIn(configuration, fetchImpl, controller.signal, (capturedToken) => {
+      bearerToken = capturedToken;
+    });
+    bearerToken = signedIn.bearerToken;
 
     phase = 'target_read';
     const targetReport = await readTarget(configuration, bearerToken, fetchImpl, controller.signal);
+
+    phase = 'usage_window';
+    const databaseLowerBound = await readDatabaseLowerBound(queryApplicationDb, controller.signal);
 
     phase = 'generate';
     const generated = await generate(
       configuration,
       bearerToken,
+      targetReport.id,
       targetReport.updatedAt,
       fetchImpl,
       controller.signal,
       now,
     );
+
+    if (generated.idempotentReplay) {
+      throw new DiagnosticFailure('mode_gate', 'live_proof_failed');
+    }
 
     phase = 'proof_read';
     const generation = await readProof(
@@ -147,6 +243,21 @@ export async function runAdminReportGenerateDiagnostic(
       fetchImpl,
       controller.signal,
     );
+
+    phase = 'usage_proof';
+    const usage = await readUsageProof(
+      queryApplicationDb,
+      controller.signal,
+      signedIn.userId,
+      configuration,
+      generated.report.id,
+      databaseLowerBound,
+      generation.vendor,
+      generation.model,
+    );
+
+    phase = 'preview';
+    const preview = buildPreview(generated.report.body);
 
     phase = 'limits';
     const limits = await readLimits(bearerToken, configuration, fetchImpl, controller.signal);
@@ -158,6 +269,8 @@ export async function runAdminReportGenerateDiagnostic(
         reportNumber: configuration.reportNumber,
       },
       generation,
+      preview,
+      usage,
       limits,
     };
   } catch (error) {
@@ -169,13 +282,13 @@ export async function runAdminReportGenerateDiagnostic(
             controller.signal.aborted ? 'timeout' : 'upstream_unavailable',
           );
   } finally {
-    if (bearerToken !== null) {
-      cleanup = await cleanupSession(configuration, bearerToken, fetchImpl, controller.signal);
-    }
     clearTimeout(deadline);
+    if (bearerToken !== null) {
+      cleanup = await cleanupSession(configuration, bearerToken, fetchImpl);
+    }
   }
 
-  const durationMs = elapsedMs(startedAt, now());
+  const durationMs = elapsedObservationMs(startedAt, now());
   if (failure !== null) {
     return validateObservation({
       observedAt,
@@ -199,9 +312,6 @@ export async function runAdminReportGenerateDiagnostic(
   }
 
   const warnings: ReportGenerateDiagnosticWarning[] = [];
-  if (success.generation.fixtureMode !== 'live' || success.generation.idempotentReplay) {
-    warnings.push('replay_only');
-  }
   if (success.limits === null) warnings.push('limits_unavailable');
   if (cleanup === 'failed') warnings.push('sign_out_failed');
 
@@ -230,6 +340,8 @@ function resolveConfiguration(
 ): AdminReportDiagnosticConfiguration | null {
   if (explicit !== undefined) return explicit;
 
+  if (env.ADMIN_REPORT_LIVE_CANARY_ENABLED !== '1') return { enabled: false };
+
   const email = env.ADMIN_REPORT_DIAGNOSTIC_EMAIL;
   const projectId = env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID;
   const reportNumber = env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER;
@@ -237,6 +349,7 @@ function resolveConfiguration(
   if (!email || !projectId || reportNumber === undefined || !password) return null;
 
   return {
+    enabled: true,
     baseUrl: env.BETTER_AUTH_URL,
     email,
     password,
@@ -246,10 +359,11 @@ function resolveConfiguration(
 }
 
 async function signIn(
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   fetchImpl: typeof fetch,
   signal: AbortSignal,
-): Promise<string> {
+  captureToken: (bearerToken: string) => void,
+): Promise<{ bearerToken: string; userId: string }> {
   const response = await request(
     fetchImpl,
     endpoint(configuration.baseUrl, '/api/auth/sign-in/email'),
@@ -266,11 +380,17 @@ async function signIn(
 
   const parsedToken = token.safeParse(response.headers.get('set-auth-token'));
   if (!parsedToken.success) throw new DiagnosticFailure('sign_in', 'invalid_response');
-  return parsedToken.data;
+  captureToken(parsedToken.data);
+
+  const body = await parseJson(response, signInResponse, 'sign_in', signal);
+  if (body.token !== parsedToken.data || body.user.email !== configuration.email) {
+    throw new DiagnosticFailure('sign_in', 'invalid_response');
+  }
+  return { bearerToken: parsedToken.data, userId: body.user.id };
 }
 
 async function readTarget(
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   bearerToken: string,
   fetchImpl: typeof fetch,
   signal: AbortSignal,
@@ -298,7 +418,7 @@ async function readTarget(
 }
 
 interface GeneratedResponse {
-  report: z.infer<typeof strictReport>;
+  report: z.infer<typeof generatedReport>;
   debug: z.infer<typeof generateResponse>['debug'];
   httpStatus: 200;
   requestId: string | null;
@@ -307,8 +427,9 @@ interface GeneratedResponse {
 }
 
 async function generate(
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   bearerToken: string,
+  expectedReportId: string,
   expectedUpdatedAt: string,
   fetchImpl: typeof fetch,
   signal: AbortSignal,
@@ -336,7 +457,7 @@ async function generate(
 
   const body = await parseJson(response, generateResponse, 'generate', signal);
   if (
-    body.report.id.length === 0 ||
+    body.report.id !== expectedReportId ||
     body.report.projectId !== configuration.projectId ||
     body.report.number !== configuration.reportNumber ||
     body.report.status !== 'draft' ||
@@ -366,7 +487,7 @@ async function generate(
 }
 
 async function readProof(
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   bearerToken: string,
   generated: GeneratedResponse,
   fetchImpl: typeof fetch,
@@ -384,11 +505,15 @@ async function readProof(
 
   const proof = await parseJson(response, debugResponse, 'proof_read', signal);
   const persisted = proof.lastGeneration;
+  if (persisted === null) {
+    throw new DiagnosticFailure('proof_read', 'live_proof_failed');
+  }
+  if (persisted.fixtureMode !== 'live') {
+    throw new DiagnosticFailure('mode_gate', 'live_mode_required');
+  }
   if (
     generated.report.generatedAt === null ||
-    persisted === null ||
     persisted.finishedAt === null ||
-    (persisted.fixtureMode !== 'live' && persisted.fixtureMode !== 'replay') ||
     persisted.vendor !== generated.debug.vendor ||
     persisted.model !== generated.debug.model ||
     persisted.systemPrompt !== generated.debug.systemPrompt ||
@@ -396,15 +521,15 @@ async function readProof(
     persisted.response !== generated.debug.rawText ||
     Date.parse(persisted.finishedAt) < Date.parse(persisted.requestedAt) ||
     Date.parse(persisted.finishedAt) > Date.parse(generated.report.updatedAt) ||
-    Date.parse(generated.report.generatedAt) > Date.parse(generated.report.updatedAt)
+    Date.parse(generated.report.generatedAt) > Date.parse(persisted.requestedAt)
   ) {
-    throw new DiagnosticFailure('proof_read', 'invalid_response');
+    throw new DiagnosticFailure('proof_read', 'live_proof_failed');
   }
 
   const parsedVendor = providerIdentifier.safeParse(persisted.vendor);
   const parsedModel = providerIdentifier.safeParse(persisted.model);
   if (!parsedVendor.success || !parsedModel.success) {
-    throw new DiagnosticFailure('proof_read', 'invalid_response');
+    throw new DiagnosticFailure('proof_read', 'live_proof_failed');
   }
 
   return {
@@ -418,13 +543,208 @@ async function readProof(
     vendor: parsedVendor.data,
     model: parsedModel.data,
     fixtureMode: persisted.fixtureMode,
-    idempotentReplay: generated.idempotentReplay,
+    idempotentReplay: false,
   };
+}
+
+async function readDatabaseLowerBound(
+  queryApplicationDb: QueryApplicationDb,
+  signal: AbortSignal,
+): Promise<string> {
+  let result: { rows: readonly ApplicationDatabaseRow[] };
+  try {
+    result = await queryDatabase(queryApplicationDb, DATABASE_CLOCK_SQL, [], signal);
+  } catch (error) {
+    throw new DiagnosticFailure(
+      'usage_window',
+      isAbort(error, signal) ? 'timeout' : 'upstream_unavailable',
+    );
+  }
+
+  if (result.rows.length !== 1) {
+    throw new DiagnosticFailure('usage_window', 'invalid_response');
+  }
+  const parsed = databaseClockRow.safeParse(result.rows[0]);
+  if (!parsed.success) throw new DiagnosticFailure('usage_window', 'invalid_response');
+  return parsed.data.lower_bound instanceof Date
+    ? parsed.data.lower_bound.toISOString()
+    : parsed.data.lower_bound;
+}
+
+async function readUsageProof(
+  queryApplicationDb: QueryApplicationDb,
+  signal: AbortSignal,
+  signedInUserId: string,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
+  reportId: string,
+  databaseLowerBound: string,
+  vendor: string,
+  model: string,
+): Promise<SuccessfulRun['usage']> {
+  let result: { rows: readonly ApplicationDatabaseRow[] };
+  try {
+    result = await queryDatabase(
+      queryApplicationDb,
+      LIVE_USAGE_SQL,
+      [signedInUserId, configuration.projectId, reportId, databaseLowerBound, vendor, model],
+      signal,
+    );
+  } catch (error) {
+    throw new DiagnosticFailure(
+      'usage_proof',
+      isAbort(error, signal) ? 'timeout' : 'upstream_unavailable',
+    );
+  }
+
+  if (result.rows.length === 0) {
+    throw new DiagnosticFailure('usage_proof', 'usage_proof_missing');
+  }
+  if (result.rows.length !== 1) {
+    throw new DiagnosticFailure('usage_proof', 'usage_proof_ambiguous');
+  }
+
+  const parsed = liveUsageRow.safeParse(result.rows[0]);
+  if (!parsed.success || parsed.data.vendor !== vendor || parsed.data.model !== model) {
+    throw new DiagnosticFailure('usage_proof', 'live_proof_failed');
+  }
+  const inputTokens = safeIntegerFromDatabase(parsed.data.input_tokens);
+  const outputTokens = safeIntegerFromDatabase(parsed.data.output_tokens);
+  const cachedTokens = safeIntegerFromDatabase(parsed.data.cached_tokens);
+  const latencyMs = safeIntegerFromDatabase(parsed.data.latency_ms);
+  if (
+    inputTokens === null ||
+    outputTokens === null ||
+    cachedTokens === null ||
+    latencyMs === null ||
+    inputTokens + outputTokens > Number.MAX_SAFE_INTEGER ||
+    inputTokens + outputTokens === 0 ||
+    cachedTokens > inputTokens ||
+    latencyMs > DEFAULT_TIMEOUT_MS
+  ) {
+    throw new DiagnosticFailure('usage_proof', 'live_proof_failed');
+  }
+
+  return { inputTokens, outputTokens, cachedTokens, latencyMs, matched: true };
+}
+
+function buildPreview(body: unknown): SuccessfulRun['preview'] {
+  const parsed = reports.reportBody.safeParse(body);
+  if (!parsed.success) throw new DiagnosticFailure('preview', 'preview_invalid');
+
+  const reportBody = parsed.data;
+  const clipping = { occurred: false };
+  const imageAttachments = countAttachments(reportBody, 'images');
+  const documentAttachments = countAttachments(reportBody, 'documents');
+  const hasOmittedArrays =
+    reportBody.workers.length > MAX_PREVIEW_ITEMS ||
+    reportBody.materials.length > MAX_PREVIEW_ITEMS ||
+    reportBody.issues.length > MAX_PREVIEW_ITEMS ||
+    reportBody.nextSteps.length > MAX_PREVIEW_ITEMS ||
+    reportBody.summarySections.length > MAX_PREVIEW_ITEMS;
+
+  const sample = {
+    title: clipNullableText(reportBody.meta.title, clipping),
+    summary: clipNullableText(reportBody.meta.summary, clipping),
+    weather:
+      reportBody.weather === null
+        ? null
+        : {
+            condition: clipNullableText(reportBody.weather.condition, clipping),
+            temperature: clipNullableText(reportBody.weather.temperature, clipping),
+            wind: clipNullableText(reportBody.weather.wind, clipping),
+            impact: clipNullableText(reportBody.weather.impact, clipping),
+          },
+    workers: reportBody.workers.slice(0, MAX_PREVIEW_ITEMS).map((worker) => ({
+      role: clipText(worker.role, clipping),
+      count: clipNullableText(worker.count, clipping),
+      hours: clipNullableText(worker.hours, clipping),
+      notes: clipNullableText(worker.notes, clipping),
+    })),
+    materials: reportBody.materials.slice(0, MAX_PREVIEW_ITEMS).map((material) => ({
+      name: clipText(material.name, clipping),
+      quantity: clipNullableText(material.quantity, clipping),
+      unit: clipNullableText(material.unit, clipping),
+      status: clipNullableText(material.status, clipping),
+      condition: clipNullableText(material.condition, clipping),
+      notes: clipNullableText(material.notes, clipping),
+    })),
+    issues: reportBody.issues.slice(0, MAX_PREVIEW_ITEMS).map((issue) => ({
+      title: clipText(issue.title, clipping),
+      severity: clipNullableText(issue.severity, clipping),
+      description: clipNullableText(issue.description, clipping),
+      action: clipNullableText(issue.action, clipping),
+    })),
+    nextSteps: reportBody.nextSteps
+      .slice(0, MAX_PREVIEW_ITEMS)
+      .map((step) => clipText(step, clipping)),
+    summarySections: reportBody.summarySections.slice(0, MAX_PREVIEW_ITEMS).map((section) => ({
+      title: clipText(section.title, clipping),
+      body: clipText(section.body, clipping),
+    })),
+  };
+
+  return {
+    schemaValid: true,
+    sample,
+    counts: {
+      workers: reportBody.workers.length,
+      materials: reportBody.materials.length,
+      issues: reportBody.issues.length,
+      nextSteps: reportBody.nextSteps.length,
+      summarySections: reportBody.summarySections.length,
+      imageAttachments,
+      documentAttachments,
+    },
+    truncated:
+      hasOmittedArrays || imageAttachments > 0 || documentAttachments > 0 || clipping.occurred,
+    bodySha256: createHash('sha256').update(canonicalJson(reportBody)).digest('hex'),
+  };
+}
+
+function countAttachments(body: GeneratedReportBody, kind: 'images' | 'documents'): number {
+  let count = 0;
+  for (const issue of body.issues) count += issue.attachments?.[kind]?.length ?? 0;
+  for (const section of body.summarySections) count += section.attachments?.[kind]?.length ?? 0;
+  return count;
+}
+
+function clipNullableText(value: string | null, state: { occurred: boolean }): string | null {
+  return value === null ? null : clipText(value, state);
+}
+
+function clipText(value: string, state: { occurred: boolean }): string {
+  const codePoints = Array.from(value);
+  if (codePoints.length <= MAX_PREVIEW_CODE_POINTS) return value;
+  state.occurred = true;
+  return codePoints.slice(0, MAX_PREVIEW_CODE_POINTS).join('');
+}
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(canonicalize(value));
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, child]) => child !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, canonicalize(child)]),
+    );
+  }
+  return value;
+}
+
+function safeIntegerFromDatabase(value: string): number | null {
+  if (!/^(?:0|[1-9][0-9]*)$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 async function readLimits(
   bearerToken: string,
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   fetchImpl: typeof fetch,
   signal: AbortSignal,
 ): Promise<SuccessfulRun['limits']> {
@@ -459,28 +779,29 @@ async function readLimits(
 }
 
 async function cleanupSession(
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   bearerToken: string,
   fetchImpl: typeof fetch,
-  mainSignal: AbortSignal,
 ): Promise<'succeeded' | 'failed'> {
-  if (!mainSignal.aborted) return signOut(configuration, bearerToken, fetchImpl, mainSignal);
-
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), CLEANUP_GRACE_MS);
   try {
-    return await signOut(configuration, bearerToken, fetchImpl, controller.signal);
+    const signedOut = await signOut(configuration, bearerToken, fetchImpl, controller.signal);
+    if (!signedOut) return 'failed';
+    return (await verifySessionRevoked(configuration, bearerToken, fetchImpl, controller.signal))
+      ? 'succeeded'
+      : 'failed';
   } finally {
     clearTimeout(deadline);
   }
 }
 
 async function signOut(
-  configuration: AdminReportDiagnosticConfiguration,
+  configuration: EnabledAdminReportDiagnosticConfiguration,
   bearerToken: string,
   fetchImpl: typeof fetch,
   signal: AbortSignal,
-): Promise<'succeeded' | 'failed'> {
+): Promise<boolean> {
   try {
     const response = await fetchImpl(endpoint(configuration.baseUrl, '/api/auth/sign-out'), {
       method: 'POST',
@@ -489,10 +810,79 @@ async function signOut(
       signal,
       redirect: 'error',
     });
-    return response.ok ? 'succeeded' : 'failed';
+    return response.status === 200;
   } catch {
-    return 'failed';
+    return false;
   }
+}
+
+async function verifySessionRevoked(
+  configuration: EnabledAdminReportDiagnosticConfiguration,
+  bearerToken: string,
+  fetchImpl: typeof fetch,
+  signal: AbortSignal,
+): Promise<boolean> {
+  try {
+    const response = await fetchImpl(endpoint(configuration.baseUrl, '/api/auth/get-session'), {
+      method: 'GET',
+      headers: { accept: 'application/json', authorization: `Bearer ${bearerToken}` },
+      signal,
+      redirect: 'error',
+    });
+    if (response.status !== 200) return false;
+    return (await response.json()) === null;
+  } catch {
+    return false;
+  }
+}
+
+async function defaultQueryApplicationDb(
+  text: string,
+  values: readonly unknown[],
+  _signal: AbortSignal,
+): Promise<{ rows: readonly ApplicationDatabaseRow[] }> {
+  const result = await getPool().query<ApplicationDatabaseRow>(text, [...values]);
+  return { rows: result.rows };
+}
+
+async function queryDatabase(
+  queryApplicationDb: QueryApplicationDb,
+  text: string,
+  values: readonly unknown[],
+  signal: AbortSignal,
+): Promise<{ rows: readonly ApplicationDatabaseRow[] }> {
+  if (signal.aborted) throw abortError();
+  let pending: Promise<{ rows: readonly ApplicationDatabaseRow[] }>;
+  try {
+    pending = queryApplicationDb(text, values, signal);
+  } catch (error) {
+    throw error;
+  }
+  return raceWithAbort(pending, signal);
+}
+
+function raceWithAbort<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(abortError());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    pending.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+function abortError(): Error {
+  const error = new Error('aborted');
+  error.name = 'AbortError';
+  return error;
 }
 
 async function request(
@@ -595,11 +985,11 @@ function jsonHeaders(): Record<string, string> {
   return { accept: 'application/json', 'content-type': 'application/json' };
 }
 
-function reportEndpoint(configuration: AdminReportDiagnosticConfiguration): URL {
+function reportEndpoint(configuration: EnabledAdminReportDiagnosticConfiguration): URL {
   return endpoint(configuration.baseUrl, reportPath(configuration));
 }
 
-function reportPath(configuration: AdminReportDiagnosticConfiguration): string {
+function reportPath(configuration: EnabledAdminReportDiagnosticConfiguration): string {
   return `/projects/${encodeURIComponent(configuration.projectId)}/reports/${configuration.reportNumber}`;
 }
 
@@ -617,6 +1007,13 @@ function normalizedTimeout(timeoutMs: number | undefined): number {
 
 function elapsedMs(start: Date, end: Date): number {
   return Math.min(DEFAULT_TIMEOUT_MS, Math.max(0, Math.round(end.getTime() - start.getTime())));
+}
+
+function elapsedObservationMs(start: Date, end: Date): number {
+  return Math.min(
+    MAX_OBSERVATION_DURATION_MS,
+    Math.max(0, Math.round(end.getTime() - start.getTime())),
+  );
 }
 
 function isAbort(error: unknown, signal: AbortSignal | null | undefined): boolean {

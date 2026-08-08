@@ -16,7 +16,7 @@ import type {
   ReportGenerateDiagnosticObservation,
 } from '@harpa/api-contract';
 import { operations as operationSchemas } from '@harpa/api-contract/schemas';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { adminAuthClient } from '../../lib/admin-auth';
 import type { AdminSession } from '../../lib/admin-auth';
 import { getPublicEnv } from '../../lib/env';
@@ -138,7 +138,7 @@ type R2CapacityState =
   | { status: 'ready'; observation: R2CapacityObservation };
 type R2CapacityFetchResult =
   { status: 'ready'; observation: R2CapacityObservation } | { status: 'unauthorized' };
-type ReportDiagnosticState =
+type ReportCanaryState =
   | { status: 'idle' }
   | { status: 'running' }
   | { status: 'ready'; observation: ReportGenerateDiagnosticObservation }
@@ -146,7 +146,7 @@ type ReportDiagnosticState =
   | { status: 'request-rejected' }
   | { status: 'rate-limited' }
   | { status: 'unavailable' };
-type ReportDiagnosticFetchResult =
+type ReportCanaryFetchResult =
   | { status: 'ready'; observation: ReportGenerateDiagnosticObservation }
   | { status: 'invalid-response' }
   | { status: 'request-rejected' }
@@ -154,12 +154,12 @@ type ReportDiagnosticFetchResult =
   | { status: 'unavailable' }
   | { status: 'unauthorized' };
 
-type ReportDiagnosticSuccess = Extract<
+type ReportCanarySuccess = Extract<
   ReportGenerateDiagnosticObservation,
   { status: 'pass' | 'warning' }
 >;
-type ReportDiagnosticFailure = Extract<ReportGenerateDiagnosticObservation, { status: 'fail' }>;
-type ReportDiagnosticWarning = Extract<
+type ReportCanaryFailure = Extract<ReportGenerateDiagnosticObservation, { status: 'fail' }>;
+type ReportCanaryWarning = Extract<
   ReportGenerateDiagnosticObservation,
   { status: 'warning' }
 >['warnings'][number];
@@ -971,7 +971,7 @@ async function loadR2Capacity(): Promise<R2CapacityFetchResult> {
   };
 }
 
-async function runReportDiagnostic(csrfToken: string): Promise<ReportDiagnosticFetchResult> {
+async function runReportCanary(csrfToken: string): Promise<ReportCanaryFetchResult> {
   let response: Response;
   try {
     response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/report-generate`, {
@@ -1981,9 +1981,9 @@ function R2Capacity({ state }: { state: R2CapacityState }) {
   );
 }
 
-const diagnosticNumber = new Intl.NumberFormat('en-US');
+const canaryNumber = new Intl.NumberFormat('en-US');
 
-function DiagnosticBadge({
+function CanaryBadge({
   label,
   tone,
 }: {
@@ -2003,66 +2003,62 @@ function DiagnosticBadge({
   );
 }
 
-function warningCopy(warning: ReportDiagnosticWarning): string {
-  switch (warning) {
-    case 'replay_only':
-      return 'This run exercised the endpoint and persistence, but did not confirm a fresh live AI provider call.';
-    case 'limits_unavailable':
-      return 'Generation passed, but effective usage limits were unavailable.';
-    case 'sign_out_failed':
-      return 'Generation passed, but sign-out could not be confirmed.';
-  }
+const CANARY_WARNING_COPY: Readonly<Record<string, string>> = {
+  limits_unavailable: 'Effective usage limits were unavailable.',
+  sign_out_failed: 'Application sign-out could not be confirmed.',
+};
+
+function warningCopy(warning: ReportCanaryWarning): string {
+  return CANARY_WARNING_COPY[warning] ?? 'The live canary returned an invalid warning.';
 }
 
-function failureReasonCopy(reason: ReportDiagnosticFailure['reason']): string {
-  switch (reason) {
-    case 'sign_in_failed':
-      return 'The synthetic account could not sign in.';
-    case 'target_not_found':
-      return 'The configured synthetic report was not found.';
-    case 'target_not_draft':
-      return 'The configured synthetic report is not a draft.';
-    case 'conflict':
-      return 'The synthetic report changed during the diagnostic.';
-    case 'usage_limit_exceeded':
-      return 'The synthetic account has reached its report-generation limit.';
-    case 'rate_limited':
-      return 'Rate limiting prevented report generation.';
-    case 'provider_error':
-      return 'The AI provider could not generate the report.';
-    case 'timeout':
-      return 'The diagnostic timed out.';
-    case 'invalid_response':
-      return 'An upstream API returned an invalid response.';
-    case 'upstream_unavailable':
-      return 'An upstream API was unavailable.';
-  }
+const CANARY_FAILURE_REASON_COPY: Readonly<Record<string, string>> = {
+  sign_in_failed: 'The synthetic account could not sign in.',
+  target_not_found: 'The configured synthetic report was not found.',
+  target_not_draft: 'The configured synthetic report is not a draft.',
+  conflict: 'The synthetic report changed during the live canary.',
+  live_mode_required: 'Live provider mode was required but not proven.',
+  live_proof_failed:
+    'The generation and usage evidence did not prove one fresh live provider call.',
+  usage_proof_missing: 'No matching live usage row was recorded.',
+  usage_proof_ambiguous: 'More than one matching live usage row was recorded.',
+  preview_invalid: 'The live report response could not be safely previewed.',
+  usage_limit_exceeded: 'The synthetic account has reached its report-generation limit.',
+  rate_limited: 'Rate limiting prevented report generation.',
+  provider_error: 'The AI provider could not generate the report.',
+  timeout: 'The live canary timed out.',
+  invalid_response: 'An upstream API returned an invalid response.',
+  upstream_unavailable: 'An upstream API was unavailable.',
+};
+
+function failureReasonCopy(reason: ReportCanaryFailure['reason']): string {
+  return CANARY_FAILURE_REASON_COPY[reason] ?? 'The live canary failed for an unknown reason.';
 }
 
-function failurePhaseLabel(phase: ReportDiagnosticFailure['phase']): string {
-  switch (phase) {
-    case 'sign_in':
-      return 'Sign in';
-    case 'target_read':
-      return 'Target read';
-    case 'generate':
-      return 'Generate';
-    case 'proof_read':
-      return 'Proof read';
-    case 'limits':
-      return 'Limits';
-    case 'sign_out':
-      return 'Sign out';
-  }
+const CANARY_FAILURE_PHASE_LABEL: Readonly<Record<string, string>> = {
+  sign_in: 'Sign in',
+  target_read: 'Target read',
+  mode_gate: 'Mode gate',
+  generate: 'Generate',
+  proof_read: 'Proof read',
+  usage_window: 'Usage window',
+  usage_proof: 'Usage proof',
+  preview: 'Preview',
+  limits: 'Limits',
+  sign_out: 'Sign out',
+};
+
+function failurePhaseLabel(phase: ReportCanaryFailure['phase']): string {
+  return CANARY_FAILURE_PHASE_LABEL[phase] ?? 'Unknown phase';
 }
 
-function CleanupResult({ cleanup }: { cleanup: ReportDiagnosticFailure['cleanup'] }) {
+function CleanupResult({ cleanup }: { cleanup: ReportCanaryFailure['cleanup'] }) {
   if (cleanup === 'succeeded') return <p>Sign-out confirmed.</p>;
   if (cleanup === 'failed') return <p>Sign-out could not be confirmed.</p>;
   return <p>No synthetic session was created.</p>;
 }
 
-function DiagnosticLimits({ limits }: { limits: NonNullable<ReportDiagnosticSuccess['limits']> }) {
+function CanaryLimits({ limits }: { limits: NonNullable<ReportCanarySuccess['limits']> }) {
   const rows = [
     ['Report generations', limits.reportGenerate],
     ['AI input tokens', limits.aiInputTokens],
@@ -2079,12 +2075,12 @@ function DiagnosticLimits({ limits }: { limits: NonNullable<ReportDiagnosticSucc
           <article className="rounded-lg bg-secondary p-4" key={label}>
             <h5 className="text-sm font-semibold text-ink">{label}</h5>
             <p className="mt-1 text-sm text-ink-soft">
-              {diagnosticNumber.format(bucket.used)} used
+              {canaryNumber.format(bucket.used)} used
               {' · '}
               {bucket.remaining === null
                 ? 'Unlimited'
-                : `${diagnosticNumber.format(bucket.remaining)} remaining`}
-              {bucket.limit === null ? '' : ` · ${diagnosticNumber.format(bucket.limit)} limit`}
+                : `${canaryNumber.format(bucket.remaining)} remaining`}
+              {bucket.limit === null ? '' : ` · ${canaryNumber.format(bucket.limit)} limit`}
             </p>
             {bucket.overridden && (
               <p className="mt-1 text-xs font-medium text-accent-ink">Custom limit</p>
@@ -2099,7 +2095,178 @@ function DiagnosticLimits({ limits }: { limits: NonNullable<ReportDiagnosticSucc
   );
 }
 
-function SuccessfulDiagnostic({ observation }: { observation: ReportDiagnosticSuccess }) {
+function OptionalPreviewField({ label, value }: { label: string; value: string | null }) {
+  if (value === null) return null;
+  return (
+    <>
+      <dt className="text-ink-soft">{label}</dt>
+      <dd className="break-words text-ink">{value}</dd>
+    </>
+  );
+}
+
+function CanaryPreview({ preview }: { preview: ReportCanarySuccess['preview'] }) {
+  const { sample } = preview;
+  return (
+    <section
+      aria-labelledby="report-live-canary-preview-title"
+      className="mt-5 max-h-[42rem] overflow-y-auto rounded-lg border border-hairline bg-secondary p-4"
+      role="region"
+    >
+      <h3 className="font-semibold text-ink" id="report-live-canary-preview-title">
+        Synthetic report response preview
+      </h3>
+      <p className="mt-1 text-xs text-ink-soft">
+        Validated synthetic report fields rendered as text.
+      </p>
+
+      <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+        {[
+          ['Workers', preview.counts.workers],
+          ['Materials', preview.counts.materials],
+          ['Issues', preview.counts.issues],
+          ['Next steps', preview.counts.nextSteps],
+          ['Summary sections', preview.counts.summarySections],
+          ['Image attachments', preview.counts.imageAttachments],
+          ['Document attachments', preview.counts.documentAttachments],
+        ].map(([label, count]) => (
+          <Fragment key={label}>
+            <dt className="text-ink-soft">{label}</dt>
+            <dd className="text-ink">{canaryNumber.format(count as number)}</dd>
+          </Fragment>
+        ))}
+        <dt className="text-ink-soft">Report body SHA-256</dt>
+        <dd className="break-all font-mono text-xs text-ink">{preview.bodySha256}</dd>
+      </dl>
+      <p className="mt-3 text-xs font-medium text-ink-soft">
+        {preview.truncated ? 'Preview truncated' : 'Preview complete'}
+      </p>
+
+      <div className="mt-5 border-t border-hairline pt-4">
+        <h4 className="text-sm font-semibold text-ink">Report fields</h4>
+        {sample.title === null && sample.summary === null ? (
+          <p className="mt-2 text-sm text-ink-soft">No title or summary text returned.</p>
+        ) : (
+          <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+            <OptionalPreviewField label="Title" value={sample.title} />
+            <OptionalPreviewField label="Summary" value={sample.summary} />
+          </dl>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-4">
+        <h4 className="text-sm font-semibold text-ink">Weather</h4>
+        {sample.weather === null ? (
+          <p className="mt-2 text-sm text-ink-soft">No weather sample returned.</p>
+        ) : (
+          <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+            <OptionalPreviewField label="Condition" value={sample.weather.condition} />
+            <OptionalPreviewField label="Temperature" value={sample.weather.temperature} />
+            <OptionalPreviewField label="Wind" value={sample.weather.wind} />
+            <OptionalPreviewField label="Impact" value={sample.weather.impact} />
+          </dl>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-4">
+        <h4 className="text-sm font-semibold text-ink">Sampled workers</h4>
+        {sample.workers.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-soft">No sampled workers.</p>
+        ) : (
+          <div className="mt-2 grid gap-3 lg:grid-cols-2">
+            {sample.workers.map((worker, index) => (
+              <article className="rounded-lg bg-card p-3" key={`worker-${index + 1}`}>
+                <h5 className="text-sm font-semibold text-ink">Worker {index + 1}</h5>
+                <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+                  <OptionalPreviewField label="Role" value={worker.role} />
+                  <OptionalPreviewField label="Count" value={worker.count} />
+                  <OptionalPreviewField label="Hours" value={worker.hours} />
+                  <OptionalPreviewField label="Notes" value={worker.notes} />
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-4">
+        <h4 className="text-sm font-semibold text-ink">Sampled materials</h4>
+        {sample.materials.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-soft">No sampled materials.</p>
+        ) : (
+          <div className="mt-2 grid gap-3 lg:grid-cols-2">
+            {sample.materials.map((material, index) => (
+              <article className="rounded-lg bg-card p-3" key={`material-${index + 1}`}>
+                <h5 className="text-sm font-semibold text-ink">Material {index + 1}</h5>
+                <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+                  <OptionalPreviewField label="Name" value={material.name} />
+                  <OptionalPreviewField label="Quantity" value={material.quantity} />
+                  <OptionalPreviewField label="Unit" value={material.unit} />
+                  <OptionalPreviewField label="Status" value={material.status} />
+                  <OptionalPreviewField label="Condition" value={material.condition} />
+                  <OptionalPreviewField label="Notes" value={material.notes} />
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 border-t border-hairline pt-4">
+        <h4 className="text-sm font-semibold text-ink">Sampled issues</h4>
+        {sample.issues.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-soft">No sampled issues.</p>
+        ) : (
+          <div className="mt-2 grid gap-3 lg:grid-cols-2">
+            {sample.issues.map((issue, index) => (
+              <article className="rounded-lg bg-card p-3" key={`issue-${index + 1}`}>
+                <h5 className="text-sm font-semibold text-ink">Issue {index + 1}</h5>
+                <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+                  <OptionalPreviewField label="Title" value={issue.title} />
+                  <OptionalPreviewField label="Severity" value={issue.severity} />
+                  <OptionalPreviewField label="Description" value={issue.description} />
+                  <OptionalPreviewField label="Action" value={issue.action} />
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 grid gap-5 border-t border-hairline pt-4 lg:grid-cols-2">
+        <div>
+          <h4 className="text-sm font-semibold text-ink">Sampled next steps</h4>
+          {sample.nextSteps.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-soft">No sampled next steps.</p>
+          ) : (
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink">
+              {sample.nextSteps.map((nextStep, index) => (
+                <li key={`next-step-${index + 1}`}>{nextStep}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold text-ink">Sampled summary sections</h4>
+          {sample.summarySections.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-soft">No sampled summary sections.</p>
+          ) : (
+            <div className="mt-2 space-y-3">
+              {sample.summarySections.map((summarySection, index) => (
+                <article className="rounded-lg bg-card p-3" key={`summary-${index + 1}`}>
+                  <h5 className="text-sm font-semibold text-ink">{summarySection.title}</h5>
+                  <p className="mt-1 text-sm text-ink">{summarySection.body}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SuccessfulCanary({ observation }: { observation: ReportCanarySuccess }) {
   const isWarning = observation.status === 'warning';
   return (
     <div>
@@ -2109,13 +2276,10 @@ function SuccessfulDiagnostic({ observation }: { observation: ReportDiagnosticSu
             Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
           </p>
           <p className="mt-1 text-sm text-ink-soft">
-            Completed in {diagnosticNumber.format(observation.durationMs)} ms.
+            Completed in {canaryNumber.format(observation.durationMs)} ms.
           </p>
         </div>
-        <DiagnosticBadge
-          label={isWarning ? 'Warning' : 'Pass'}
-          tone={isWarning ? 'warning' : 'pass'}
-        />
+        <CanaryBadge label={isWarning ? 'Warning' : 'Pass'} tone={isWarning ? 'warning' : 'pass'} />
       </div>
 
       {isWarning && (
@@ -2160,7 +2324,7 @@ function SuccessfulDiagnostic({ observation }: { observation: ReportDiagnosticSu
             </dd>
             <dt className="text-ink-soft">Latency</dt>
             <dd className="text-ink">
-              {diagnosticNumber.format(observation.generation.durationMs)} ms
+              {canaryNumber.format(observation.generation.durationMs)} ms
             </dd>
             <dt className="text-ink-soft">Idempotency</dt>
             <dd className="text-ink">
@@ -2183,20 +2347,37 @@ function SuccessfulDiagnostic({ observation }: { observation: ReportDiagnosticSu
         ))}
       </div>
 
-      {observation.limits && <DiagnosticLimits limits={observation.limits} />}
+      <div className="mt-5 border-t border-hairline pt-5">
+        <h3 className="font-semibold text-ink">Live usage proof</h3>
+        <p className="mt-2 text-sm text-ink">Usage row matched.</p>
+        <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 text-sm">
+          <dt className="text-ink-soft">Input tokens</dt>
+          <dd className="text-ink">{canaryNumber.format(observation.usage.inputTokens)}</dd>
+          <dt className="text-ink-soft">Output tokens</dt>
+          <dd className="text-ink">{canaryNumber.format(observation.usage.outputTokens)}</dd>
+          <dt className="text-ink-soft">Cached tokens</dt>
+          <dd className="text-ink">{canaryNumber.format(observation.usage.cachedTokens)}</dd>
+          <dt className="text-ink-soft">Latency</dt>
+          <dd className="text-ink">{canaryNumber.format(observation.usage.latencyMs)} ms</dd>
+        </dl>
+      </div>
+
+      <CanaryPreview preview={observation.preview} />
+
+      {observation.limits && <CanaryLimits limits={observation.limits} />}
 
       <div className="mt-5 border-t border-hairline pt-5 text-sm text-ink">
         {observation.cleanup === 'succeeded' ? (
           <p>Sign-out confirmed.</p>
         ) : (
-          <p>Sign-out could not be confirmed.</p>
+          <p>Cleanup: application sign-out not confirmed.</p>
         )}
       </div>
     </div>
   );
 }
 
-function FailedDiagnostic({ observation }: { observation: ReportDiagnosticFailure }) {
+function FailedCanary({ observation }: { observation: ReportCanaryFailure }) {
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2205,10 +2386,10 @@ function FailedDiagnostic({ observation }: { observation: ReportDiagnosticFailur
             Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
           </p>
           <p className="mt-1 text-sm text-ink-soft">
-            Stopped after {diagnosticNumber.format(observation.durationMs)} ms.
+            Stopped after {canaryNumber.format(observation.durationMs)} ms.
           </p>
         </div>
-        <DiagnosticBadge label="Failed" tone="fail" />
+        <CanaryBadge label="Failed" tone="fail" />
       </div>
       <dl className="mt-5 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 border-t border-hairline pt-5 text-sm">
         <dt className="text-ink-soft">Phase</dt>
@@ -2224,23 +2405,23 @@ function FailedDiagnostic({ observation }: { observation: ReportDiagnosticFailur
   );
 }
 
-function DiagnosticResult({ state }: { state: ReportDiagnosticState }) {
+function CanaryResult({ state }: { state: ReportCanaryState }) {
   if (state.status === 'idle') return <p>Not run yet in this browser session.</p>;
-  if (state.status === 'running') return <p>Running diagnostic…</p>;
+  if (state.status === 'running') return <p>Running live canary…</p>;
   if (state.status === 'invalid-response') {
     return (
       <div>
-        <DiagnosticBadge label="Unknown" tone="unknown" />
-        <p className="mt-3 text-sm text-ink-soft">The diagnostic returned an invalid response.</p>
+        <CanaryBadge label="Unknown" tone="unknown" />
+        <p className="mt-3 text-sm text-ink-soft">The live canary returned an invalid response.</p>
       </div>
     );
   }
   if (state.status === 'request-rejected') {
     return (
       <div>
-        <DiagnosticBadge label="Request rejected" tone="fail" />
+        <CanaryBadge label="Request rejected" tone="fail" />
         <p className="mt-3 text-sm text-ink-soft">
-          The admin origin or CSRF check rejected this diagnostic request.
+          The admin origin or CSRF check rejected this live canary request.
         </p>
       </div>
     );
@@ -2248,16 +2429,18 @@ function DiagnosticResult({ state }: { state: ReportDiagnosticState }) {
   if (state.status === 'rate-limited') {
     return (
       <div>
-        <DiagnosticBadge label="Rate limited" tone="warning" />
-        <p className="mt-3 text-sm text-ink-soft">Diagnostic run limit reached. Try again later.</p>
+        <CanaryBadge label="Rate limited" tone="warning" />
+        <p className="mt-3 text-sm text-ink-soft">
+          Live canary run limit reached. Try again later.
+        </p>
       </div>
     );
   }
   if (state.status === 'unavailable') {
     return (
       <div>
-        <DiagnosticBadge label="Unknown" tone="unknown" />
-        <p className="mt-3 text-sm text-ink-soft">The diagnostic could not be reached.</p>
+        <CanaryBadge label="Unknown" tone="unknown" />
+        <p className="mt-3 text-sm text-ink-soft">The live canary could not be reached.</p>
       </div>
     );
   }
@@ -2270,42 +2453,45 @@ function DiagnosticResult({ state }: { state: ReportDiagnosticState }) {
             Observed{' '}
             <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
           </p>
-          <DiagnosticBadge label="Unknown" tone="unknown" />
+          <CanaryBadge label="Unknown" tone="unknown" />
         </div>
         <p className="mt-3 text-sm text-ink-soft">
-          Report-generation diagnostic is not configured.
+          {state.observation.reason === 'not_enabled'
+            ? 'Report-generation live canary is disabled. No provider call occurred.'
+            : 'Report-generation live canary is not configured. No provider call occurred.'}
         </p>
       </div>
     );
   }
   if (state.observation.status === 'fail') {
-    return <FailedDiagnostic observation={state.observation} />;
+    return <FailedCanary observation={state.observation} />;
   }
-  return <SuccessfulDiagnostic observation={state.observation} />;
+  return <SuccessfulCanary observation={state.observation} />;
 }
 
-function ReportDiagnostic({ state, onRun }: { state: ReportDiagnosticState; onRun: () => void }) {
+function ReportCanary({ state, onRun }: { state: ReportCanaryState; onRun: () => void }) {
   const running = state.status === 'running';
   return (
-    <section className="mt-8" aria-labelledby="report-diagnostic-title">
+    <section className="mt-8" aria-labelledby="report-live-canary-title">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-ink" id="report-diagnostic-title">
-            Report generation diagnostic
+          <h2 className="text-xl font-semibold text-ink" id="report-live-canary-title">
+            Report generation live canary
           </h2>
+          <p className="mt-1 text-sm text-ink-soft">Each click updates one synthetic report.</p>
           <p className="mt-1 text-sm text-ink-soft">
-            Each run updates one synthetic report and may consume AI quota.
+            Each click spends a small amount of real AI quota.
           </p>
         </div>
         <button className={buttonClass} disabled={running} type="button" onClick={onRun}>
-          Run diagnostic
+          Run live canary
         </button>
       </div>
       <div
         aria-live="polite"
         className="mt-4 rounded-xl border border-hairline bg-card p-5 text-ink shadow-sm"
       >
-        <DiagnosticResult state={state} />
+        <CanaryResult state={state} />
       </div>
     </section>
   );
@@ -2512,10 +2698,10 @@ function Operations({
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
   const [neonUsage, setNeonUsage] = useState<NeonUsageState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
-  const [reportDiagnostic, setReportDiagnostic] = useState<ReportDiagnosticState>({
+  const [reportCanary, setReportCanary] = useState<ReportCanaryState>({
     status: 'idle',
   });
-  const reportDiagnosticRunning = useRef(false);
+  const reportCanaryRunning = useRef(false);
   const [github, setGitHub] = useState<GitHubState>({ status: 'checking' });
   const refreshGeneration = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -2570,19 +2756,19 @@ function Operations({
     void refresh();
   }, [refresh]);
 
-  const handleRunDiagnostic = useCallback(async () => {
-    if (reportDiagnosticRunning.current) return;
-    reportDiagnosticRunning.current = true;
-    setReportDiagnostic({ status: 'running' });
+  const handleRunCanary = useCallback(async () => {
+    if (reportCanaryRunning.current) return;
+    reportCanaryRunning.current = true;
+    setReportCanary({ status: 'running' });
     try {
-      const result = await runReportDiagnostic(session.csrfToken);
+      const result = await runReportCanary(session.csrfToken);
       if (result.status === 'unauthorized') {
         onSessionExpired();
         return;
       }
-      setReportDiagnostic(result);
+      setReportCanary(result);
     } finally {
-      reportDiagnosticRunning.current = false;
+      reportCanaryRunning.current = false;
     }
   }, [onSessionExpired, session.csrfToken]);
 
@@ -2646,7 +2832,7 @@ function Operations({
         </p>
       </section>
 
-      <ReportDiagnostic state={reportDiagnostic} onRun={() => void handleRunDiagnostic()} />
+      <ReportCanary state={reportCanary} onRun={() => void handleRunCanary()} />
 
       <NeonUsage state={neonUsage} />
 

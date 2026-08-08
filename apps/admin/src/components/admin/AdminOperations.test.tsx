@@ -465,6 +465,84 @@ const unknownStorageLifecycle = {
   reason: 'rollout_state_missing' as const,
 };
 
+const productionFlyApp = {
+  id: 'app_harpa_pro_api',
+  name: 'harpa-pro-api',
+  status: 'deployed',
+  network: 'default',
+  reportedMachineCount: 2,
+  reportedVolumeCount: 1,
+  machines: {
+    status: 'available' as const,
+    truncated: false,
+    items: [
+      {
+        id: 'machine_prod_1',
+        name: 'harpa-prod-1',
+        state: 'started',
+        processGroup: 'app',
+        region: 'hkg',
+        cpuKind: 'shared',
+        cpus: 1,
+        memoryMb: 512,
+        createdAt: '2026-08-08T05:00:00.000Z',
+        updatedAt: '2026-08-08T05:10:00.000Z',
+      },
+    ],
+  },
+  volumes: {
+    status: 'available' as const,
+    truncated: false,
+    returnedAllocatedGb: 3,
+    items: [
+      {
+        id: 'vol_prod_1',
+        name: 'data',
+        state: 'created',
+        sizeGb: 3,
+        region: 'hkg',
+        encrypted: true,
+        attachedMachineId: 'machine_prod_1',
+        createdAt: '2026-08-08T05:01:00.000Z',
+        snapshotRetentionDays: 5,
+        autoBackupEnabled: true,
+      },
+    ],
+  },
+};
+
+const availableFlyInventory = {
+  observedAt,
+  status: 'available' as const,
+  organizationSlug: 'harpa-pro',
+  configuredAppCount: 1,
+  unavailableConfiguredAppCount: 0,
+  apps: [productionFlyApp],
+};
+
+const partialFlyInventory = {
+  observedAt,
+  status: 'partial' as const,
+  organizationSlug: 'harpa-pro',
+  configuredAppCount: 2,
+  unavailableConfiguredAppCount: 1,
+  apps: [
+    {
+      ...productionFlyApp,
+      machines: {
+        status: 'unknown' as const,
+        reason: 'timeout' as const,
+      },
+    },
+  ],
+};
+
+const unknownFlyInventory = {
+  observedAt,
+  status: 'unknown' as const,
+  reason: 'not_configured' as const,
+};
+
 const githubCommits = {
   dev: [
     {
@@ -538,6 +616,9 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
     return jsonResponse(availableStorageLifecycle);
   }
+  if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+    return jsonResponse(availableFlyInventory);
+  }
   if (url === 'https://api.example.test/admin/operations/neon-usage') {
     return jsonResponse(unknownNeonUsage);
   }
@@ -554,6 +635,7 @@ function mockOperationsFetch(
   r2Capacity: unknown = availableR2Capacity,
   neonUsage: unknown = availableNeonUsage,
   storageLifecycle: unknown = availableStorageLifecycle,
+  flyInventory: unknown = availableFlyInventory,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -569,6 +651,9 @@ function mockOperationsFetch(
     if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
       return jsonResponse(storageLifecycle);
     }
+    if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+      return jsonResponse(flyInventory);
+    }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
     throw new Error(`Unexpected request: ${url}`);
@@ -581,6 +666,7 @@ function mockDiagnosticFetch(
   r2Capacity: unknown = availableR2Capacity,
   neonUsage: unknown = availableNeonUsage,
   storageLifecycle: unknown = availableStorageLifecycle,
+  flyInventory: unknown = availableFlyInventory,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -598,6 +684,9 @@ function mockDiagnosticFetch(
     }
     if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
       return jsonResponse(storageLifecycle);
+    }
+    if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+      return jsonResponse(flyInventory);
     }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
@@ -633,6 +722,12 @@ function storageLifecycleRequests(fetchMock: MockInstance<typeof globalThis.fetc
   );
 }
 
+function flyInventoryRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/fly-inventory',
+  );
+}
+
 async function getStorageLifecycleSection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
@@ -642,6 +737,17 @@ async function getStorageLifecycleSection() {
   expect(section).toBeTruthy();
   return section!;
 }
+
+async function getFlyInventorySection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'Fly inventory',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
+}
+
 async function getR2CapacitySection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
@@ -811,7 +917,7 @@ afterEach(() => {
 });
 
 describe('AdminOperations', () => {
-  it('checks Harpa deployments, GitHub, Neon inventory and usage, and R2 and links every provider console', async () => {
+  it('checks Harpa deployments, GitHub, Neon inventory and usage, R2, storage lifecycle, and Fly and links every provider console', async () => {
     const fetchMock = mockOperationsFetch();
 
     render(<AdminOperations />);
@@ -819,7 +925,7 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(11));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
@@ -827,6 +933,7 @@ describe('AdminOperations', () => {
         'https://api.example.test/admin/readyz',
         '/_cf-pages-deployment.json',
         'https://api.example.test/admin/operations/storage-lifecycle',
+        'https://api.example.test/admin/operations/fly-inventory',
         'https://api.example.test/admin/operations/neon',
         'https://api.example.test/admin/operations/neon-usage',
         'https://api.example.test/admin/operations/r2-capacity',
@@ -910,7 +1017,7 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses eleven fixed reads on load and twenty-two after shared Refresh without polling or live-canary autorun', async () => {
+  it('uses twelve fixed reads on load and twenty-four after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -936,6 +1043,10 @@ describe('AdminOperations', () => {
         credentials: 'include',
       },
       {
+        url: 'https://api.example.test/admin/operations/fly-inventory',
+        credentials: 'include',
+      },
+      {
         url: 'https://api.example.test/admin/operations/neon-usage',
         credentials: 'include',
       },
@@ -944,7 +1055,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     let canarySection = await getCanarySection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(11));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -962,7 +1073,7 @@ describe('AdminOperations', () => {
     }
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -973,7 +1084,7 @@ describe('AdminOperations', () => {
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(22));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(24));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -986,7 +1097,7 @@ describe('AdminOperations', () => {
     expect(canarySection.isConnected).toBe(true);
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(22);
+    expect(fetchMock).toHaveBeenCalledTimes(24);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1475,7 +1586,7 @@ describe('AdminOperations', () => {
     );
     // The sequential GitHub loader stops after the first rate-limited request,
     // so the two remaining public GitHub reads are intentionally skipped.
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -1863,11 +1974,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(22));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(24));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -1883,6 +1994,7 @@ describe('AdminOperations', () => {
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Neon Free usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Fly inventory' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -2110,7 +2222,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(22);
+    expect(fetchMock).toHaveBeenCalledTimes(24);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -2256,7 +2368,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(22);
+    expect(fetchMock).toHaveBeenCalledTimes(24);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
@@ -2538,7 +2650,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(22);
+    expect(fetchMock).toHaveBeenCalledTimes(24);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {
@@ -2844,6 +2956,364 @@ describe('AdminOperations', () => {
       expect(renderedText).not.toContain(value);
       expect(serializedDom).not.toContain(value);
     }
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('loads strict Fly inventory with the admin cookie and renders bounded provider facts', async () => {
+    const fetchMock = mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      availableFlyInventory,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(await within(section).findByText('1 configured app observed')).toBeTruthy();
+    expect(within(section).getByText('Organization harpa-pro.')).toBeTruthy();
+    expect(within(section).getByText('Remaining Fly credit: Unknown')).toBeTruthy();
+    expect(
+      within(section).getByText(
+        'Machine state and process group are provider inventory, not Harpa readiness or Machine/worker liveness.',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(section).getByText('Volume size is allocated capacity, not used or free storage.'),
+    ).toBeTruthy();
+    expect(within(section).queryByRole('progressbar')).toBeNull();
+
+    const appHeading = within(section).getByRole('heading', { level: 3, name: 'harpa-pro-api' });
+    const appCard = appHeading.closest('article')!;
+    expect(appCard.textContent).toContain('app_harpa_pro_api');
+    expect(appCard.textContent).toContain('deployed');
+    expect(appCard.textContent).toContain('network default');
+    expect(within(appCard).getByText('2 Machines reported')).toBeTruthy();
+    expect(within(appCard).getByText('1 Volume reported')).toBeTruthy();
+    expect(
+      within(appCard).getByText('1 Machine detail returned from a separate snapshot.'),
+    ).toBeTruthy();
+    expect(
+      within(appCard).getByText('1 Volume detail returned from a separate snapshot.'),
+    ).toBeTruthy();
+    expect(within(appCard).queryByText(/drift/i)).toBeNull();
+    expect(within(appCard).getByText('machine_prod_1')).toBeTruthy();
+    expect(within(appCard).getByText(/Process group(?:\s*[:·-]\s*|\s+)app/i)).toBeTruthy();
+    expect(within(appCard).getByText('shared · 1 CPU · 512 MB')).toBeTruthy();
+    expect(within(appCard).getByText('vol_prod_1')).toBeTruthy();
+    expect(within(appCard).getByText('3 GB allocated')).toBeTruthy();
+    expect(within(appCard).getByText('Attached to machine_prod_1')).toBeTruthy();
+    expect(within(appCard).getByText('Snapshots retained 5 days')).toBeTruthy();
+    expect(within(appCard).getByText('Automatic backups enabled')).toBeTruthy();
+    for (const timestamp of [
+      '2026-08-08T05:00:00.000Z',
+      '2026-08-08T05:10:00.000Z',
+      '2026-08-08T05:01:00.000Z',
+    ]) {
+      expect(appCard.querySelector(`time[datetime="${timestamp}"]`)).toBeTruthy();
+    }
+    expect(section.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
+
+    for (const name of ['Machines for harpa-pro-api', 'Volumes for harpa-pro-api']) {
+      const scroller = within(appCard).getByRole('region', { name });
+      expect(scroller.className).toContain('overflow-y-auto');
+      expect(scroller.className).toMatch(/\bmax-h-/);
+      expect(scroller.tabIndex).toBe(0);
+    }
+
+    const [request] = flyInventoryRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+    const canarySection = await getCanarySection();
+    expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Storage lifecycle' })).toBeTruthy();
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('renders an absent Fly process group as not reported rather than readiness or liveness', async () => {
+    const nullProcessGroupInventory = {
+      ...availableFlyInventory,
+      apps: [
+        {
+          ...productionFlyApp,
+          machines: {
+            ...productionFlyApp.machines,
+            items: [
+              {
+                ...productionFlyApp.machines.items[0],
+                processGroup: null,
+              },
+            ],
+          },
+        },
+      ],
+    };
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      nullProcessGroupInventory,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(
+      await within(section).findByText(/Process group(?:\s*[:·-]\s*|\s+)not reported/i),
+    ).toBeTruthy();
+    expect(section.textContent).not.toContain('Process group null');
+    expect(
+      within(section).getByText(
+        'Machine state and process group are provider inventory, not Harpa readiness or Machine/worker liveness.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('shows a distinct loading state until the Fly observation arrives', async () => {
+    let resolveFlyInventory!: (response: Response) => void;
+    const flyInventoryResponse = new Promise<Response>((resolve) => {
+      resolveFlyInventory = resolve;
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+        return flyInventoryResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(within(section).getByText('Loading Fly inventory…')).toBeTruthy();
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+
+    await act(async () => {
+      resolveFlyInventory(jsonResponse(availableFlyInventory));
+      await flyInventoryResponse;
+    });
+    expect(await within(section).findByText('1 configured app observed')).toBeTruthy();
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+  });
+
+  it('preserves safe app facts when Fly inventory is partial', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      partialFlyInventory,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(await within(section).findByText('Partial Fly inventory')).toBeTruthy();
+    expect(within(section).getByText('1 configured app unavailable.')).toBeTruthy();
+    const appCard = within(section)
+      .getByRole('heading', { level: 3, name: 'harpa-pro-api' })
+      .closest('article')!;
+    expect(appCard.textContent).toContain('app_harpa_pro_api');
+    expect(within(appCard).getByText('Machine inventory unavailable.')).toBeTruthy();
+    expect(within(appCard).getByText('Fly request timed out.')).toBeTruthy();
+    expect(within(appCard).getByText('3 GB allocated')).toBeTruthy();
+  });
+
+  it('labels truncated Fly detail lists without treating snapshot count differences as drift', async () => {
+    const truncatedFlyInventory = {
+      ...availableFlyInventory,
+      status: 'partial' as const,
+      apps: [
+        {
+          ...productionFlyApp,
+          reportedMachineCount: 75,
+          reportedVolumeCount: 80,
+          machines: { ...productionFlyApp.machines, truncated: true },
+          volumes: { ...productionFlyApp.volumes, truncated: true },
+        },
+      ],
+    };
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      truncatedFlyInventory,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(await within(section).findByText('Partial Fly inventory')).toBeTruthy();
+    const appCard = within(section)
+      .getByRole('heading', { level: 3, name: 'harpa-pro-api' })
+      .closest('article')!;
+    expect(within(appCard).getByText('75 Machines reported')).toBeTruthy();
+    expect(within(appCard).getByText('80 Volumes reported')).toBeTruthy();
+    expect(
+      within(appCard).getByText('1 Machine detail returned from a separate snapshot.'),
+    ).toBeTruthy();
+    expect(
+      within(appCard).getByText('1 Volume detail returned from a separate snapshot.'),
+    ).toBeTruthy();
+    expect(within(appCard).getByText('Machine detail list is truncated.')).toBeTruthy();
+    expect(within(appCard).getByText('Volume detail list is truncated.')).toBeTruthy();
+    expect(within(appCard).queryByText(/drift/i)).toBeNull();
+  });
+
+  it('renders an unknown Fly observation without implying provider health or credit', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Fly inventory is not configured.')).toBeTruthy();
+    expect(within(section).getByText('Remaining Fly credit: Unknown')).toBeTruthy();
+    expect(within(section).queryByText(/healthy/i)).toBeNull();
+    expect(within(section).queryByText(/credit remaining/i)).toBeNull();
+    expect(within(section).queryByRole('progressbar')).toBeNull();
+    expect(within(section).getByRole('link', { name: 'Open Fly dashboard ↗' })).toHaveProperty(
+      'href',
+      'https://fly.io/dashboard',
+    );
+  });
+
+  it('returns the whole page to sign-in when Fly inventory finds an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+        return jsonResponse(
+          { error: { code: 'UNAUTHORIZED', message: 'expired-fly-cookie-detail' } },
+          401,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Fly inventory' })).toBeNull();
+    expect(document.body.textContent).not.toContain('expired-fly-cookie-detail');
+    expect(document.documentElement.outerHTML).not.toContain('expired-fly-cookie-detail');
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects Fly secrets, non-allowlisted apps, and raw provider fields', async () => {
+    const forbiddenValues = [
+      'fly-read-only-token-must-never-render',
+      'unreviewed-private-app',
+      'fdaa:0:18:a7b:196:e274:9ce1:2',
+      'registry.fly.io/private/image:latest',
+      'host-dedication-key-must-never-render',
+      'raw Fly provider error body',
+      'unreviewed-process-metadata-must-never-render',
+    ];
+    const poisonedFlyInventory = {
+      ...availableFlyInventory,
+      apiToken: forbiddenValues[0],
+      nonAllowlistedApps: [forbiddenValues[1]],
+      rawProviderError: forbiddenValues[5],
+      apps: [
+        {
+          ...productionFlyApp,
+          machines: {
+            ...productionFlyApp.machines,
+            items: [
+              {
+                ...productionFlyApp.machines.items[0],
+                privateIp: forbiddenValues[2],
+                imageRef: forbiddenValues[3],
+                config: {
+                  env: { SECRET: forbiddenValues[0] },
+                  metadata: { unreviewed: forbiddenValues[6] },
+                },
+                events: [{ status: forbiddenValues[5] }],
+              },
+            ],
+          },
+          volumes: {
+            ...productionFlyApp.volumes,
+            items: [
+              {
+                ...productionFlyApp.volumes.items[0],
+                hostDedicationKey: forbiddenValues[4],
+                blocksAvail: 730_163,
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const fetchMock = mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      poisonedFlyInventory,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getFlyInventorySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Fly inventory returned an invalid response.')).toBeTruthy();
+    expect(within(section).queryByRole('heading', { name: 'harpa-pro-api' })).toBeNull();
+    const renderedText = document.body.textContent ?? '';
+    const serializedDom = document.documentElement.outerHTML;
+    for (const value of forbiddenValues) {
+      expect(renderedText).not.toContain(value);
+      expect(serializedDom).not.toContain(value);
+    }
+
+    const [request] = flyInventoryRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(window.localStorage.length).toBe(0);
     expect(window.sessionStorage.length).toBe(0);
   });

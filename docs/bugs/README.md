@@ -360,6 +360,12 @@ collide with and contradictory payloads that must fail closed.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-09** — The deployed dashboard journey completed its assertions but
+  failed during cleanup because Playwright's direct sign-out request omitted
+  the trusted Pages `Origin`. Fix: derive the exact dashboard origin for that
+  cleanup request and pin it in the live E2E policy without weakening Better
+  Auth's origin guard.
+  [detail](2026-08-09-dashboard-live-sign-out-origin.md)
 - **2026-08-07** _(R18)_ — Admin activity treated live users and projects named
   exactly `Deleted user` or `Deleted project` as unavailable because the UI
   reused fallback label text as deletion state. Fix: add explicit API entity

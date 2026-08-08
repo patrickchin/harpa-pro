@@ -56,6 +56,16 @@ require_before() {
   fi
 }
 
+require_count() {
+  local file="$1" needle="$2" expected="$3" description="$4" actual
+  actual="$(grep -Fc -- "$needle" "$file" || true)"
+  if [[ "$actual" -eq "$expected" ]]; then
+    pass "$description"
+  else
+    fail "$description (expected $expected, found $actual)"
+  fi
+}
+
 echo "dashboard live E2E policy"
 
 require_file "$LIVE_CONFIG" "live Playwright config exists"
@@ -82,6 +92,10 @@ require_fixed "$LIVE_SPEC" "expect(reportDebug.lastGeneration?.fixtureMode).toBe
 require_fixed "$LIVE_SPEC" "finally" "live journey has failure-path cleanup"
 require_fixed "$LIVE_SPEC" "data: {}," \
   "live session cleanup sends the required JSON content type"
+require_fixed "$LIVE_SPEC" "headers: { ...authHeaders(token), origin: dashboardOrigin }," \
+  "live session cleanup sends the trusted dashboard Origin"
+require_count "$LIVE_SPEC" "await revokeSession(request" 4 \
+  "successful and failure paths both exercise direct session revocation"
 require_fixed "$LIVE_SPEC" "This report changed on another device" \
   "live journey protects concurrent keyboard edits"
 require_fixed "$LIVE_SPEC" "Confirm removal" \

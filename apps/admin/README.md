@@ -98,10 +98,25 @@ organization transfer is `Unknown`.
 The R2 card shows estimated Class A and Class B used and remaining percentages
 against the published 1,000,000-operation and 10,000,000-operation references.
 It does not show a storage percentage because the current snapshot and
-GB-month accounting window are not comparable. The GitHub card shows the
-primary public REST request budget for this browser and IP from the existing
-response headers. Invalid or contradictory headers make only that budget
-`Unknown`.
+GB-month accounting window are not comparable.
+
+The R2 card also shows **Published stored now**. The browser adds the published
+payload and metadata bytes for Standard and Infrequent Access storage. Pending
+uploads do not contribute. The card shows a human-readable IEC value and the
+exact byte count.
+
+Ingress and egress volume stay `Unknown`. The documented R2 metrics do not
+expose transferred bytes. Cloudflare lists direct R2 egress as free, but
+the observer cannot measure bytes served. Harpa uploads and downloads use
+signed R2 URLs, so the application API does not carry the object bytes.
+
+This presentation adds no API route, response schema field, credential, or
+provider request. One R2 observation still makes at most three provider
+requests.
+
+The GitHub card shows the primary public REST request budget for this browser
+and IP from the existing response headers. Invalid or contradictory headers
+make only that budget `Unknown`.
 
 Percentage text uses one decimal place. Values can exceed 100.0%, while the
 painted meter stops at 100%. Unsupported provider money, token, invoice, and

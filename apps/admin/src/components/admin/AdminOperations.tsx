@@ -2204,6 +2204,40 @@ function FlyInventory({ state }: { state: FlyInventoryState }) {
 }
 
 const r2Number = new Intl.NumberFormat('en-US');
+const r2IecUnits = [
+  { label: 'PiB', bytes: 1024n ** 5n },
+  { label: 'TiB', bytes: 1024n ** 4n },
+  { label: 'GiB', bytes: 1024n ** 3n },
+  { label: 'MiB', bytes: 1024n ** 2n },
+  { label: 'KiB', bytes: 1024n },
+] as const;
+
+function publishedStoredBytes(
+  standard: R2StorageClassSnapshot,
+  infrequentAccess: R2StorageClassSnapshot,
+): bigint {
+  return (
+    BigInt(standard.publishedPayloadBytes) +
+    BigInt(standard.publishedMetadataBytes) +
+    BigInt(infrequentAccess.publishedPayloadBytes) +
+    BigInt(infrequentAccess.publishedMetadataBytes)
+  );
+}
+
+function formatPublishedStoredBytes(totalBytes: bigint): string {
+  const exactBytes = `${r2Number.format(totalBytes)} bytes`;
+  const unitIndex = r2IecUnits.findIndex(({ bytes }) => totalBytes >= bytes);
+  if (unitIndex === -1) return exactBytes;
+
+  let unit = r2IecUnits[unitIndex]!;
+  let roundedTenths = (totalBytes * 10n + unit.bytes / 2n) / unit.bytes;
+  if (roundedTenths === 10_240n && unitIndex > 0) {
+    unit = r2IecUnits[unitIndex - 1]!;
+    roundedTenths = (totalBytes * 10n + unit.bytes / 2n) / unit.bytes;
+  }
+
+  return `${roundedTenths / 10n}.${roundedTenths % 10n} ${unit.label} (${exactBytes})`;
+}
 
 function r2StatusTone(status: 'available' | 'partial' | 'unknown'): string {
   if (status === 'available') return 'bg-emerald-100 text-emerald-800';
@@ -2373,6 +2407,13 @@ function R2CapacityDetails({
 }: {
   observation: Extract<R2CapacityObservation, { status: 'available' | 'partial' }>;
 }) {
+  const publishedStoredNow =
+    observation.storage.status === 'available'
+      ? formatPublishedStoredBytes(
+          publishedStoredBytes(observation.storage.standard, observation.storage.infrequentAccess),
+        )
+      : 'Unknown';
+
   return (
     <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2399,6 +2440,26 @@ function R2CapacityDetails({
 
       <div className="mt-5 border-t border-hairline pt-5">
         <h3 className="font-semibold text-ink">Current storage snapshot</h3>
+        <dl className="mt-3 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-lg bg-secondary p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Published stored now
+            </dt>
+            <dd className="mt-1 text-sm text-ink">{publishedStoredNow}</dd>
+          </div>
+          <div className="rounded-lg bg-secondary p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Ingress volume
+            </dt>
+            <dd className="mt-1 text-sm text-ink">Unknown</dd>
+          </div>
+          <div className="rounded-lg bg-secondary p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Egress volume
+            </dt>
+            <dd className="mt-1 text-sm text-ink">Unknown</dd>
+          </div>
+        </dl>
         {observation.storage.status === 'unknown' ? (
           <div className="mt-3 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
             <p className="font-semibold text-ink">Storage snapshot unavailable.</p>
@@ -2456,6 +2517,9 @@ function R2CapacityDetails({
           {observation.caveats.map((caveat) => (
             <li key={caveat}>{r2CaveatCopy(caveat, observation)}</li>
           ))}
+          <li>The documented R2 metrics do not expose ingress or egress bytes.</li>
+          <li>Direct R2 egress is free, but this observer cannot measure bytes served.</li>
+          <li>Harpa uploads and downloads use direct signed URLs.</li>
         </ul>
       </div>
     </div>

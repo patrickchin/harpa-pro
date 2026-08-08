@@ -126,11 +126,26 @@ One observation makes at most three fixed provider requests under one
 shows a bounded bucket inventory, current Standard and Infrequent Access
 snapshots, and month-to-date operation estimates against published references.
 
+The card also shows **Published stored now**. The browser adds the published
+payload and metadata bytes for Standard and Infrequent Access storage. Pending
+uploads do not contribute. The card shows a human-readable IEC value and the
+exact byte count.
+
+Ingress and egress volume stay `Unknown`. The documented R2 metrics do not
+expose transferred bytes. Cloudflare lists direct R2 egress as free, but
+the observer cannot measure bytes served. Harpa uploads and downloads use
+signed R2 URLs, so the application API does not carry the object bytes.
+
 The storage values are current snapshots, not remaining GB-month capacity.
 The operation headroom is a conservative estimate, not a billing balance.
 Unclassified operations, Infrequent Access data, and truncated inventory keep
 their explicit caveats. The Class A and Class B percentage rows remain
 explicit estimates against published operation references.
+
+This presentation adds no API route, response schema field, credential, or
+provider request. The three-request R2 ceiling stays unchanged. The full page
+still makes 15 fixed GET reads after session confirmation. One manual
+**Refresh** adds 15 reads, for 30 total.
 
 ## Fly inventory extension
 

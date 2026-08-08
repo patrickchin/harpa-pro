@@ -67,14 +67,17 @@ does not define this repository's runtime; `nvm use` does.
     `harpa-pro-api-pr-<n>` Fly app.
   - `/` renders the activity console. `/operations` renders read-only Harpa
     readiness, service links, a no-token public GitHub branch/PR snapshot,
-    bounded Neon inventory, and bounded R2 capacity. A separate manual
-    report-generation diagnostic is explicitly disclosed as a synthetic
-    mutation. Unknown browser paths return a static 404. `/admin/activity`,
-    `/admin/operations/neon`, `/admin/operations/r2-capacity`, and
+    bounded Neon inventory and Free-plan usage, and bounded R2 capacity. A
+    separate manual report-generation diagnostic is explicitly disclosed as a
+    synthetic mutation. Unknown browser paths return a static 404.
+    `/admin/activity`,
+    `/admin/operations/neon`, `/admin/operations/neon-usage`,
+    `/admin/operations/r2-capacity`, and
     `/admin/operations/report-generate` remain API resource paths. Data and
     diagnostic requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),
     [Admin Neon inventory](design-admin-neon-inventory.md),
+    [Admin provider quota percentages](design-admin-provider-quota-percentages.md),
     [Admin R2 capacity](design-admin-r2-capacity.md), and
     [Admin report-generation diagnostic](design-admin-report-generate-diagnostic.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
@@ -459,6 +462,48 @@ project, with no retries. The count endpoint has no deleted-branch selector,
 while the active-detail request explicitly excludes deleted branches. Neon has
 no documented remaining-credit API, so the console remains the billing source.
 
+### Neon Free usage observer
+
+`GET /admin/operations/neon-usage` reuses the existing optional
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair. It adds no Neon
+credential and does not reuse the CI `NEON_API_KEY`. The route uses the shared
+trusted-Fly-IP gate, dedicated admin session, and a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+One observation makes at most 22 fixed Neon `GET` requests under one shared
+10-second deadline. It reads the configured organization, at most 20 projects,
+and one detail response per verified project. It does not retry, follow a
+project cursor, or use a provider write method. The organization must report
+the exact `free` plan. Every discovered project must report effective
+permission `VIEWER` before any project-detail request.
+
+The UI derives one-decimal used and remaining percentages from provider values
+and fixed published references. Per-project compute uses 360,000 CU-seconds.
+Per-project storage uses 500,000,000 bytes. Organization public transfer uses
+5,000,000,000 bytes only when project coverage is complete and all periods
+match. Otherwise, organization transfer is `Unknown`. Percentage text can
+exceed 100.0%, while the painted meter stops at 100%.
+
+The existing R2 card shows estimated Class A and Class B percentages against
+the published 1,000,000-operation and 10,000,000-operation references. It does
+not derive a storage percentage from a point-in-time snapshot. The public
+GitHub card shows the primary REST request-budget percentage for the current
+browser and IP from existing response headers. It makes no extra request.
+Unsupported money, token, invoice, and provider credit balances stay
+`Unknown`.
+
+The browser calls each read route once after session confirmation and again
+only on manual **Refresh**. The page makes 10 authenticated reads on load and
+20 total after one Refresh. It does not poll. The report diagnostic remains a
+separate manual POST and does not run in either read cycle.
+
+Enablement uses the existing Neon inventory provisioning and exact-SHA proof.
+After deployment, call both Neon routes with the dedicated admin session.
+Confirm `VIEWER` evidence for all returned projects, no more than 22 provider
+reads for one usage observation, and no credential or raw provider response in
+the API response or logs.
+
 ### Cloudflare R2 capacity observer
 
 `ADMIN_CLOUDFLARE_ACCOUNT_ID` and
@@ -487,8 +532,8 @@ errors, object keys, or provider envelopes.
 The storage metrics are current snapshots without a provider timestamp. They
 are not exact remaining GB-month capacity. The Standard free-tier reference
 does not apply to Infrequent Access storage. Month-to-date Class A and Class B
-headroom is a conservative estimate from analytics, not a provider balance or
-invoice.
+used and remaining percentages are conservative estimates against published
+operation references. They are not a provider balance or invoice.
 
 Enable and prove the observer in this order:
 
@@ -573,8 +618,8 @@ are true:
 - `BETTER_AUTH_SECRET` is explicitly set to at least 32 characters and
   is not the checked-in development fallback.
 - `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are both absent or both
-  present. They remain optional because an unconfigured inventory is a typed
-  `Unknown` state.
+  present. They remain optional because unconfigured inventory and Free usage
+  are typed `Unknown` states.
 - `ADMIN_CLOUDFLARE_ACCOUNT_ID` and
   `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are both absent or both present.
   They remain optional because an unconfigured R2 observation is a typed
@@ -692,10 +737,10 @@ the canonical `BETTER_AUTH_URL` themselves:
 
 The API fails boot when a non-preview deployment uses any other auth base URL.
 The optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair survives
-the normal Doppler import because it is API runtime configuration. The three
-optional `ADMIN_REPORT_DIAGNOSTIC_*` values also survive that import; they are
-fixed runtime target metadata, not browser build variables. The CI
-`NEON_API_KEY` stays excluded and never reaches Fly.
+the normal Doppler import because it is API runtime configuration for both
+observer routes. The three optional `ADMIN_REPORT_DIAGNOSTIC_*` values also
+survive that import. They are fixed runtime target metadata, not browser build
+variables. The CI `NEON_API_KEY` stays excluded and never reaches Fly.
 The optional Cloudflare observer pair also survives the normal import. The
 filter excludes Doppler metadata, Neon control-plane values, CI Cloudflare
 tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only flags.

@@ -17295,6 +17295,669 @@
         }
       }
     },
+    "/admin/operations/neon-usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded, read-only Neon Free-plan usage observation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available"
+                          ]
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "plan": {
+                          "type": "string",
+                          "enum": [
+                            "free"
+                          ]
+                        },
+                        "projectsTruncated": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        },
+                        "unavailableProjectCount": {
+                          "type": "number",
+                          "enum": [
+                            0
+                          ]
+                        },
+                        "projects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "available"
+                                ]
+                              },
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "effectivePermission": {
+                                "type": "string",
+                                "enum": [
+                                  "VIEWER"
+                                ]
+                              },
+                              "periodStart": {
+                                "type": "string"
+                              },
+                              "periodEnd": {
+                                "type": "string"
+                              },
+                              "compute": {
+                                "type": "object",
+                                "properties": {
+                                  "used": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "allowance": {
+                                    "type": "number",
+                                    "enum": [
+                                      360000
+                                    ]
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "enum": [
+                                      "cu_seconds"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "used",
+                                  "allowance",
+                                  "unit"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "storage": {
+                                "type": "object",
+                                "properties": {
+                                  "used": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "allowance": {
+                                    "type": "number",
+                                    "enum": [
+                                      500000000
+                                    ]
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "enum": [
+                                      "bytes"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "used",
+                                  "allowance",
+                                  "unit"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "transferBytes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "id",
+                              "name",
+                              "effectivePermission",
+                              "periodStart",
+                              "periodEnd",
+                              "compute",
+                              "storage",
+                              "transferBytes"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 20
+                        },
+                        "organizationTransfer": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available"
+                                  ]
+                                },
+                                "periodStart": {
+                                  "type": "string"
+                                },
+                                "periodEnd": {
+                                  "type": "string"
+                                },
+                                "used": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "allowance": {
+                                  "type": "number",
+                                  "enum": [
+                                    5000000000
+                                  ]
+                                },
+                                "unit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "bytes"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "periodStart",
+                                "periodEnd",
+                                "used",
+                                "allowance",
+                                "unit"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "no_projects"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "provider_values_may_lag"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "free_plan_published_reference"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "storage_uses_published_reference"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "transfer_requires_complete_project_coverage"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "not_invoice_or_credit_balance"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "published_allowances_can_change"
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 6,
+                          "maxItems": 6
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "organizationId",
+                        "plan",
+                        "projectsTruncated",
+                        "unavailableProjectCount",
+                        "projects",
+                        "organizationTransfer",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "partial"
+                          ]
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "plan": {
+                          "type": "string",
+                          "enum": [
+                            "free"
+                          ]
+                        },
+                        "projectsTruncated": {
+                          "type": "boolean"
+                        },
+                        "unavailableProjectCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "projects": {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "available"
+                                    ]
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "effectivePermission": {
+                                    "type": "string",
+                                    "enum": [
+                                      "VIEWER"
+                                    ]
+                                  },
+                                  "periodStart": {
+                                    "type": "string"
+                                  },
+                                  "periodEnd": {
+                                    "type": "string"
+                                  },
+                                  "compute": {
+                                    "type": "object",
+                                    "properties": {
+                                      "used": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "allowance": {
+                                        "type": "number",
+                                        "enum": [
+                                          360000
+                                        ]
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "enum": [
+                                          "cu_seconds"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "used",
+                                      "allowance",
+                                      "unit"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "storage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "used": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "allowance": {
+                                        "type": "number",
+                                        "enum": [
+                                          500000000
+                                        ]
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "enum": [
+                                          "bytes"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "used",
+                                      "allowance",
+                                      "unit"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "transferBytes": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "id",
+                                  "name",
+                                  "effectivePermission",
+                                  "periodStart",
+                                  "periodEnd",
+                                  "compute",
+                                  "storage",
+                                  "transferBytes"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "unknown"
+                                    ]
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "effectivePermission": {
+                                    "type": "string",
+                                    "enum": [
+                                      "VIEWER"
+                                    ]
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "enum": [
+                                      "timeout",
+                                      "rate_limited",
+                                      "forbidden",
+                                      "not_found",
+                                      "invalid_response",
+                                      "provider_unavailable"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "id",
+                                  "name",
+                                  "effectivePermission",
+                                  "reason"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "maxItems": 20
+                        },
+                        "organizationTransfer": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "unknown"
+                              ]
+                            },
+                            "reason": {
+                              "type": "string",
+                              "enum": [
+                                "incomplete_project_coverage",
+                                "period_mismatch",
+                                "invalid_response"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "reason"
+                          ]
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "provider_values_may_lag"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "free_plan_published_reference"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "storage_uses_published_reference"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "transfer_requires_complete_project_coverage"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "not_invoice_or_credit_balance"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "published_allowances_can_change"
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 6,
+                          "maxItems": 6
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "organizationId",
+                        "plan",
+                        "projectsTruncated",
+                        "unavailableProjectCount",
+                        "projects",
+                        "organizationTransfer",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured",
+                            "unsupported_plan",
+                            "unsafe_permissions",
+                            "timeout",
+                            "rate_limited",
+                            "forbidden",
+                            "not_found",
+                            "invalid_response",
+                            "provider_unavailable"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/operations/r2-capacity": {
       "get": {
         "tags": [

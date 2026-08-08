@@ -5,7 +5,8 @@
 >
 > Companion: [`arch-api-design.md`](arch-api-design.md).
 
-The Fly inventory entries below describe an unmerged draft stack.
+The Fly inventory and Harpa-recorded AI usage entries below describe unmerged
+draft stacks.
 
 ## Model
 
@@ -102,6 +103,7 @@ active.
 | `GET /admin/operations/r2-capacity`       | Admin identity and session |    12 |   1 minute |
 | `GET /admin/operations/fly-inventory`     | Admin identity and session |    12 |   1 minute |
 | `GET /admin/operations/storage-lifecycle` | Admin identity and session |    12 |   1 minute |
+| `GET /admin/operations/ai-usage`          | Admin identity and session |    12 |   1 minute |
 | `POST /admin/operations/report-generate`  | Admin identity and session |     3 | 15 minutes |
 
 The login route checks the IP budgets before password verification. It
@@ -139,13 +141,19 @@ gates before any application-database read. Its separate budget allows 12
 requests per minute. One allowed request runs one fixed statement under a
 five-second deadline. It has no retry, mutation, or provider call.
 
+The draft AI usage route must pass the same two gates and its own
+identity/session budget. One allowed request makes one application-database
+aggregate over fixed current-month and previous-24-hour UTC windows. It makes
+no provider request. The query returns at most 72 grouped rows. The response
+contains at most four normalized provider summaries per window.
+
 The report generation live canary must also pass the trusted-IP budget. Exact
 Origin, dedicated admin session, and session-bound CSRF checks run before its
 three-per-15-minute identity/session budget. A permitted live run then consumes
 the shared AI rate limit and monthly usage limits of the real application
 report route. A disabled canary stops before all application and provider work.
 Neon inventory, Neon usage, R2 capacity, Fly inventory, storage lifecycle, and
-live-canary runs use separate named admin buckets.
+AI usage, and live-canary runs use separate named admin buckets.
 
 ## Authentication-route boundary
 
@@ -260,6 +268,9 @@ Current tests cover these properties:
 - `__tests__/admin-storage-lifecycle.integration.test.ts` covers the storage
   lifecycle observer budget, its 12-request limit, and rejection before the
   application-database statement.
+- `__tests__/admin-ai-usage.integration.test.ts` covers the aggregate
+  observer's identity/session budget, its 12-request limit, and rejection
+  before an application-database query.
 - `__tests__/admin-report-diagnostic.integration.test.ts` covers the isolated
   three-request live-canary budget and proves read routes do not spend it. It
   also proves every response remains private and no-store.

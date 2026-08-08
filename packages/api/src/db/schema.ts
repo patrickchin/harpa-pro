@@ -356,26 +356,32 @@ export const llmFixtureModeEnum = pgEnum('llm_fixture_mode', [
 
 export const llmUsageStatusEnum = pgEnum('llm_usage_status', ['ok', 'error']);
 
-export const llmUsageEvents = appSchema.table('llm_usage_events', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
-  projectId: text('project_id'),
-  reportId: text('report_id'),
-  vendor: varchar('vendor', { length: 32 }).notNull(),
-  model: varchar('model', { length: 128 }).notNull(),
-  operation: llmOperationEnum('operation').notNull(),
-  inputTokens: integer('input_tokens').notNull().default(0),
-  outputTokens: integer('output_tokens').notNull().default(0),
-  cachedTokens: integer('cached_tokens').notNull().default(0),
-  // Audio duration (seconds) for `operation='transcribe'` rows. NULL
-  // for chat / generate_report. See migration
-  // `0008_llm_usage_input_seconds.sql`.
-  inputSeconds: numeric('input_seconds', { precision: 10, scale: 3 }),
-  latencyMs: integer('latency_ms').notNull().default(0),
-  fixtureMode: llmFixtureModeEnum('fixture_mode').notNull(),
-  status: llmUsageStatusEnum('status').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const llmUsageEvents = appSchema.table(
+  'llm_usage_events',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    projectId: text('project_id'),
+    reportId: text('report_id'),
+    vendor: varchar('vendor', { length: 32 }).notNull(),
+    model: varchar('model', { length: 128 }).notNull(),
+    operation: llmOperationEnum('operation').notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    cachedTokens: integer('cached_tokens').notNull().default(0),
+    // Audio duration (seconds) for `operation='transcribe'` rows. NULL
+    // for chat / generate_report. See migration
+    // `0008_llm_usage_input_seconds.sql`.
+    inputSeconds: numeric('input_seconds', { precision: 10, scale: 3 }),
+    latencyMs: integer('latency_ms').notNull().default(0),
+    fixtureMode: llmFixtureModeEnum('fixture_mode').notNull(),
+    status: llmUsageStatusEnum('status').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    createdAtIdx: index('llm_usage_events_created_at_idx').on(table.createdAt.desc()),
+  }),
+);
 
 /**
  * Curated product-level activity for the private admin feed. This is

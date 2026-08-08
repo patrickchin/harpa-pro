@@ -96,6 +96,7 @@ active.
 | Failed admin login                       | SHA-256 of canonical email |     5 | 15 minutes |
 | `GET /admin/activity`                    | Admin identity and session |   120 |   1 minute |
 | `GET /admin/operations/neon`             | Admin identity and session |    12 |   1 minute |
+| `GET /admin/operations/neon-usage`       | Admin identity and session |    12 |   1 minute |
 | `GET /admin/operations/r2-capacity`      | Admin identity and session |    12 |   1 minute |
 | `POST /admin/operations/report-generate` | Admin identity and session |     3 | 15 minutes |
 
@@ -113,6 +114,11 @@ The Neon inventory route must pass both its trusted-IP and identity/session
 budgets. One allowed request lists at most 20 projects and at most 100 active
 branch details per project. Provider requests have no retry loop.
 
+The Neon Free usage route must pass the same two gates and its own
+identity/session budget. One allowed request makes at most 22 fixed Neon `GET`
+requests under one shared 10-second timeout. It does not retry, follow project
+pagination, or use a provider write method.
+
 The R2 capacity route must pass the same two gates and its own identity/session
 budget. One allowed request makes at most three fixed provider calls under one
 shared 10-second timeout. It does not retry or follow bucket pagination.
@@ -121,8 +127,8 @@ The report diagnostic must also pass the trusted-IP budget. Exact Origin,
 dedicated admin session, and session-bound CSRF checks run before its
 three-per-15-minute identity/session budget. A permitted run then consumes the
 real application report route's shared AI rate limit and monthly usage limits
-under the fixed synthetic account. Neon reads and report diagnostics use
-separate named admin buckets. R2 capacity reads use a third named bucket.
+under the fixed synthetic account. Neon inventory, Neon usage, R2 capacity,
+and report diagnostics each use separate named admin buckets.
 
 ## Authentication-route boundary
 
@@ -226,6 +232,9 @@ Current tests cover these properties:
 - `__tests__/admin-activity.integration.test.ts` covers the activity budget.
 - `__tests__/admin-neon-operations.integration.test.ts` covers the Neon
   inventory identity/session budget and its 12-request limit.
+- `__tests__/admin-neon-usage.integration.test.ts` covers the Neon Free usage
+  identity/session budget, its 12-request limit, and rejection before provider
+  access.
 - `__tests__/admin-r2-capacity.integration.test.ts` covers the R2 observer
   identity/session budget, its 12-request limit, and rejection before provider
   access.

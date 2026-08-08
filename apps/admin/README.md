@@ -16,12 +16,13 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 
 The root route renders the business activity console. `/operations` provides
 read-only Harpa deployment identity and readiness, a no-token public GitHub
-branch/PR snapshot, bounded Neon inventory, bounded R2 capacity, and links to
-external service consoles. A separately triggered report-generation diagnostic
-is a synthetic mutation of one fixed test report and may consume AI quota; it
-is not part of the read-only refresh. Unknown browser paths return a static 404
-instead of falling back to the console. `/admin/activity` and the
-`/admin/operations/*` routes remain API resource paths, not page URLs.
+branch/PR snapshot, bounded Neon inventory and Free-plan usage, bounded R2
+capacity, and links to external service consoles. A separately triggered
+report-generation diagnostic is a synthetic mutation of one fixed test report
+and may consume AI quota; it is not part of the read-only refresh. Unknown
+browser paths return a static 404 instead of falling back to the console.
+`/admin/activity` and the `/admin/operations/*` routes remain API resource
+paths, not page URLs.
 
 ## Deployment identity
 
@@ -62,6 +63,42 @@ See [Admin Neon inventory](../../docs/v4/design-admin-neon-inventory.md) for
 the route contract. See
 [Neon inventory observer](../../docs/v4/arch-ops.md#neon-inventory-observer)
 for provisioning and exact-SHA deployment proof.
+
+## Provider quota percentages
+
+The browser calls `GET /admin/operations/neon-usage` with the dedicated admin
+cookie and `cache: 'no-store'`. The route reuses the existing
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair. It applies a separate
+12-request-per-minute identity and session budget. One observation makes at
+most 22 fixed Neon `GET` requests under one 10-second deadline. It does not
+retry, follow project pagination, or write to Neon.
+
+The route accepts only the exact Neon `free` plan and requires `VIEWER`
+evidence for every discovered project before it reads project details. The UI
+shows used and remaining percentages against the published per-project
+references of 360,000 CU-seconds and 500,000,000 storage bytes. It shows the
+organization transfer percentage against 5,000,000,000 bytes only when
+project coverage is complete and all consumption periods match. Otherwise,
+organization transfer is `Unknown`.
+
+The R2 card shows estimated Class A and Class B used and remaining percentages
+against the published 1,000,000-operation and 10,000,000-operation references.
+It does not show a storage percentage because the current snapshot and
+GB-month accounting window are not comparable. The GitHub card shows the
+primary public REST request budget for this browser and IP from the existing
+response headers. Invalid or contradictory headers make only that budget
+`Unknown`.
+
+Percentage text uses one decimal place. Values can exceed 100.0%, while the
+painted meter stops at 100%. Unsupported provider money, token, invoice, and
+credit balances stay `Unknown`. The browser runs 10 authenticated reads after
+session confirmation and another 10 only when the operator presses
+**Refresh**, for 20 total after one Refresh. It does not poll. The report
+diagnostic remains a separate manual POST.
+
+See
+[Admin provider quota percentages](../../docs/v4/design-admin-provider-quota-percentages.md)
+for the evidence and calculation contract.
 
 Cloudflare Git deploys this workspace through the independent
 `harpa-pro-admin` Pages project. `main`, `dev`, and mirrored `pr-N` branches

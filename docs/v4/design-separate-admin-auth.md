@@ -203,6 +203,19 @@ keyed by the dedicated admin identity and session. Only then does the route
 read activity from the application database. Anonymous traffic consumes the
 shared IP gate but not the activity bucket.
 
+### `GET /admin/operations/r2-capacity`
+
+Require `withAdminSession()` before any Cloudflare request. Better Auth bearer
+tokens, Better Auth cookies, and the retired application `is_admin` bit cannot
+authorize the route. The shared trusted-Fly-IP gate runs before the dedicated
+admin session lookup. A separate 12-request-per-minute bucket uses the admin
+identity and session after authentication succeeds.
+
+The route is read-only and accepts no request body, query, or provider selector.
+Every response sets `Cache-Control: private, no-store`. See
+[Admin R2 capacity](design-admin-r2-capacity.md) for the credential and provider
+boundaries.
+
 ### `GET /admin/readyz`
 
 Checks the independent admin database connection and
@@ -217,12 +230,17 @@ second to avoid a readiness thundering herd.
 The admin browser surface uses its own Postgres-backed limiter in the
 independent admin database in deployed environments:
 
-- all `/admin/auth/*` and `/admin/activity` requests: 120 per trusted Fly
+- all protected browser-admin requests: 120 per trusted Fly
   client IP per minute;
 - login: 20 attempts per trusted Fly client IP per 15 minutes;
 - login: 3 attempts per trusted Fly client IP per minute;
-- login: 5 attempts per canonical email per 15 minutes; and
-- activity reads: 120 per dedicated admin identity and session per minute.
+- login: 5 attempts per canonical email per 15 minutes;
+- activity reads: 120 per dedicated admin identity and session per minute;
+- Neon inventory reads: 12 per dedicated admin identity and session per
+  minute;
+- R2 capacity reads: 12 per dedicated admin identity and session per minute;
+- report-generation diagnostics: 3 per dedicated admin identity and session
+  per 15 minutes.
 
 The shared IP gate protects admin-session database lookups, including invalid
 cookie probes to the activity route. The login IP limits also reject before
@@ -234,10 +252,12 @@ by attempts from other IPs targeting the same email address.
 Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
-Login and logout reject missing or untrusted `Origin` headers. The activity
-request is read-only. If this browser session later protects an admin
-`POST`, `PUT`, `PATCH`, or `DELETE` other than logout, add a per-session CSRF
-token carried in a custom header as described by the
+Login and logout reject missing or untrusted `Origin` headers. The activity,
+Neon inventory, and R2 capacity requests are read-only. The report-generation
+diagnostic is the first protected admin mutation other than logout, so it also
+requires the exact Origin and a session-derived CSRF token carried in
+`X-Admin-CSRF`. The token stays in browser memory and is invalidated with the
+admin session, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured
@@ -303,6 +323,10 @@ unchanged.
   revocation work against real Postgres.
 - An app session, including an `is_admin = true` app user, cannot read
   `/admin/activity`.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the R2
+  provider through `/admin/operations/r2-capacity`.
+- A dedicated admin request to the R2 route consumes both its trusted-IP and
+  identity/session budgets.
 - Anonymous requests sharing an IP consume only the shared IP gate, not the
   authenticated activity bucket; authenticated activity requests consume
   both.

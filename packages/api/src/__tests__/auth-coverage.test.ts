@@ -92,7 +92,13 @@ describe('auth coverage', () => {
       const headers: Record<string, string> = {
         'x-forwarded-for': nextIp(),
       };
-      if (method === 'POST' && r.path === '/admin/auth/logout') {
+      if (
+        method === 'POST' &&
+        (r.path === '/admin/auth/logout' || r.path === '/admin/operations/report-generate')
+      ) {
+        // Dedicated-admin mutations reject an untrusted Origin before their
+        // cookie-session gate. Supply the trusted admin Origin so this test
+        // reaches and proves the missing-session 401 boundary.
         headers.origin = 'http://localhost:3102';
       }
 

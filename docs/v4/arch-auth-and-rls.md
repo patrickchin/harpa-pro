@@ -31,6 +31,8 @@ browser-admin data route runs. `GET /admin/activity` then reads the application
 database. `GET /admin/operations/neon` requests bounded provider metadata. The
 `GET /admin/operations/neon-usage` route requests bounded Neon Free-plan usage.
 The `GET /admin/operations/r2-capacity` route requests bounded R2 measurements.
+`GET /admin/operations/storage-lifecycle` reads bounded lifecycle state from
+the application database.
 The manual `POST /admin/operations/report-generate` can authenticate one fixed
 synthetic application user and exercise the real report routes in live mode.
 The two databases have no joins or cross-database foreign keys.
@@ -169,7 +171,8 @@ browser storage, URLs, application logs, or the application database.
 `withAdminSession()` is the sole authorization middleware for browser-admin
 data routes. It protects `GET /admin/activity`,
 `GET /admin/operations/neon`, `GET /admin/operations/neon-usage`, and
-`GET /admin/operations/r2-capacity`. It is one required gate on
+`GET /admin/operations/r2-capacity`. It also protects
+`GET /admin/operations/storage-lifecycle`. It is one required gate on
 `POST /admin/operations/report-generate`. It does not inspect
 `public."user".is_admin` and rejects Better Auth bearer tokens and cookies.
 Existing programmatic admin routes retain their app-admin authorization until
@@ -208,8 +211,8 @@ and session budget after the shared trusted-Fly-IP gate and admin-session
 lookup. One observation makes at most 22 fixed Neon `GET` requests. It does not
 retry, follow project pagination, or use a provider write method. The browser
 calls it once after session confirmation and again only on manual **Refresh**.
-It does not poll. Across the full operations page, that is 10 authenticated
-reads on load and 20 total after one Refresh.
+It does not poll. Across the full operations page, that is 11 fixed GET reads
+on load and 22 total after one Refresh.
 
 The Neon percentages use published Free-plan references and are not credit
 balances. R2 operation percentages remain estimates, and the public GitHub
@@ -236,6 +239,24 @@ route uses fixed Cloudflare origins and fixed read queries. Browser input cannot
 select a provider method or resource. The account ID, token, raw errors, and
 provider envelopes never enter the response or logs. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
+
+### Storage lifecycle observer boundary
+
+`GET /admin/operations/storage-lifecycle` uses the shared trusted-Fly-IP gate,
+the dedicated admin session, and a separate 12-request-per-minute identity and
+session budget. Anonymous, Better Auth, and legacy app-admin sessions fail
+before any application-database read.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. It reads the singleton rollout row, calls the existing
+lease-enforcement function, and aggregates durable deletion jobs. The route
+accepts no body or query. It makes no mutation or provider call.
+
+The response excludes queue payloads, user IDs, object keys, raw errors, and
+Fly machine data. Its rollout and queue values are database evidence only. A
+green rollout row or empty queue does not prove current storage worker
+liveness. See
+[`design-admin-storage-lifecycle-observer.md`](design-admin-storage-lifecycle-observer.md).
 
 ### Report generation live canary boundary
 
@@ -540,8 +561,10 @@ wiring**, not a DI stub):
   HTTP fallback. The waitlist CORS tests protect its separate public
   policy.
 - The admin operations scope test rejects anonymous, Better Auth, and legacy
-  app-admin sessions before either observer calls its provider. It allows only
-  a dedicated browser-admin session.
+  app-admin sessions before an observer reads its database or calls a provider.
+  It allows only a dedicated browser-admin session.
+- The storage lifecycle integration tests prove one bounded statement, the
+  separate 12-request budget, strict redaction, and the worker-liveness caveat.
 - The report live-canary integration tests also require the exact
   Origin and session-bound CSRF token, exercise the default HTTP runner, and
   prove live usage, exact cleanup, and strict redaction.

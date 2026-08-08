@@ -14,6 +14,7 @@ import { withTrustedAdminOrigin } from '../middleware/admin-origin.js';
 import { adminAuthIpWindow } from '../middleware/admin-rate-limit.js';
 import { withAdminSession } from '../middleware/admin-session.js';
 import { withRateLimit } from '../middleware/rateLimit.js';
+import { observeAdminStorageLifecycle } from '../services/admin-storage-lifecycle.js';
 
 const MINUTE_MS = 60_000;
 const FIFTEEN_MINUTES_MS = 15 * MINUTE_MS;
@@ -123,6 +124,14 @@ const adminR2CapacityRateLimit = withRateLimit({
 
 const adminNeonUsageRateLimit = withRateLimit({
   name: 'admin.operations.neon-usage.read.1m',
+  keyBy: adminOperationsRateLimitKey,
+  limit: 12,
+  windowMs: MINUTE_MS,
+  getLimiter: getAdminRateLimiter,
+});
+
+const adminStorageLifecycleRateLimit = withRateLimit({
+  name: 'admin.operations.storage-lifecycle.read.1m',
   keyBy: adminOperationsRateLimitKey,
   limit: 12,
   windowMs: MINUTE_MS,
@@ -278,4 +287,36 @@ adminOperationsRoutes.openapi(
     },
   }),
   async (c) => c.json(await observeAdminR2Capacity(), 200),
+);
+
+adminOperationsRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/admin/operations/storage-lifecycle',
+    tags: ['admin'],
+    security: [{ adminSession: [] }],
+    middleware: [
+      privateNoStore,
+      adminAuthIpWindow,
+      withAdminSession(),
+      adminStorageLifecycleRateLimit,
+    ] as const,
+    responses: {
+      200: {
+        description: 'Bounded, read-only application storage lifecycle observation.',
+        content: {
+          'application/json': { schema: operations.storageLifecycleObservation },
+        },
+      },
+      401: {
+        description: 'Unauthorized.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+      429: {
+        description: 'Rate limited.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+    },
+  }),
+  async (c) => c.json(await observeAdminStorageLifecycle(), 200),
 );

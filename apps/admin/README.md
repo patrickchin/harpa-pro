@@ -17,13 +17,18 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 The root route renders the business activity console. `/operations` provides
 read-only Harpa deployment identity and readiness, a no-token public GitHub
 branch/PR snapshot, bounded Neon inventory and Free-plan usage, bounded R2
-capacity, bounded Fly inventory, storage lifecycle database evidence, and links
-to external service consoles. A separate **Report generation live canary** card
-updates one fixed synthetic report and spends real AI tokens. The canary runs
-only after an explicit click. It is not part of the read-only refresh. Unknown
-browser paths return a static 404 instead of falling back to the console.
+capacity, bounded Fly inventory, storage lifecycle database evidence, aggregate
+Harpa-recorded AI usage, and links to external service consoles. A separate
+**Report generation live canary** card updates one fixed synthetic report and
+spends real AI tokens. The canary runs only after an explicit click. It is not
+part of the read-only refresh. Unknown browser paths return a static 404.
 `/admin/activity` and the `/admin/operations/*` routes remain API resource
 paths, not page URLs.
+
+The unmerged Fly inventory and AI usage stacks are drafts. The Fly stack adds
+bounded Machine and Volume inventory for an explicit app allowlist. The AI
+usage stack summarizes Harpa's retained best-effort ledger without adding a
+provider administrator credential.
 
 ## Deployment identity
 
@@ -93,8 +98,9 @@ response headers. Invalid or contradictory headers make only that budget
 Percentage text uses one decimal place. Values can exceed 100.0%, while the
 painted meter stops at 100%. Unsupported provider money, token, invoice, and
 credit balances stay `Unknown`. The browser makes 12 fixed GET reads after
-session confirmation. It makes another 12 only when the operator presses
-**Refresh**, for 24 total after one Refresh. It does not poll. The report
+session confirmation on the base stack. The AI usage draft raises the total to
+13 reads. One manual **Refresh** raises the stacked total to 26. The page does
+not poll. The report
 generation live canary remains a separate manual POST.
 
 See
@@ -148,12 +154,39 @@ liveness. Volume size shows allocated capacity, and remaining Fly credit stays
 `Unknown` with a Fly dashboard link.
 
 The browser requests the inventory once after session confirmation and once
-per manual **Refresh**. The full page makes 12 fixed GET reads on load and 24
-after one Refresh. It does not poll or make a provider write. The report
+per manual **Refresh**. The full stacked page makes 13 fixed GET reads on load
+and 26 after one Refresh. It does not poll or make a provider write. The report
 generation live canary remains a separate manual POST.
 
 See [Admin Fly inventory](../../docs/v4/design-admin-fly-inventory.md) for the
 draft route and credential contract.
+
+## Harpa-recorded AI usage draft
+
+The draft adds `GET /admin/operations/ai-usage`. The route uses the dedicated
+admin cookie, the shared trusted-Fly-IP budget, and a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+One read makes one bounded application-database aggregate over the current UTC
+month and previous 24 hours. It reports successful and failed `live`, `record`,
+and `replay` events, token totals, transcription seconds, operation counts, and
+normalized `openai`, `groq`, `kimi`, or `other` provider categories. Replay is
+separate from provider-attributable use. The response contains no user,
+project, report, model, prompt, transcript, raw vendor, or error details.
+
+This observer uses only `app.llm_usage_events`. It adds no OpenAI, Groq, or Kimi
+administrator credential and makes no provider request. The ledger is
+best-effort and excludes deleted history, so it is not provider billing.
+Remaining provider credit stays `Unknown` with dashboard links.
+
+The browser requests the aggregate once after session confirmation and once
+per manual **Refresh**. It does not poll. On this stacked branch, authenticated
+load performs 13 reads. One Refresh brings the total to 26. The report live
+canary remains a separate manual POST and never runs during either cycle.
+
+See [Admin AI usage ledger](../../docs/v4/design-admin-ai-usage.md) for the
+draft route, accounting, privacy, and migration contract.
 
 ## Report generation live canary
 

@@ -4309,3 +4309,1437 @@ describe('admin operations Fly inventory schema', () => {
     ).toBe(false);
   });
 });
+
+const zeroAiCallOutcome = {
+  succeeded: 0,
+  failed: 0,
+  total: 0,
+};
+
+const zeroSuccessfulProviderUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  cachedTokens: 0,
+  inputSeconds: 0,
+};
+
+const zeroAiOperationUsage = {
+  liveSucceeded: 0,
+  liveFailed: 0,
+  recordSucceeded: 0,
+  recordFailed: 0,
+  replaySucceeded: 0,
+  replayFailed: 0,
+};
+
+const aiUsageMonthToDate = {
+  windowStart: '2026-08-01T00:00:00.000Z',
+  windowEnd: observedAt,
+  recordedEventCount: 10,
+  calls: {
+    live: { succeeded: 4, failed: 2, total: 6 },
+    record: { succeeded: 2, failed: 0, total: 2 },
+    replay: { succeeded: 1, failed: 1, total: 2 },
+  },
+  successfulProviderUsage: {
+    inputTokens: 2_050,
+    outputTokens: 570,
+    cachedTokens: 270,
+    inputSeconds: 45.125,
+  },
+  operations: {
+    chat: {
+      liveSucceeded: 2,
+      liveFailed: 1,
+      recordSucceeded: 0,
+      recordFailed: 0,
+      replaySucceeded: 1,
+      replayFailed: 0,
+    },
+    generateReport: {
+      liveSucceeded: 1,
+      liveFailed: 0,
+      recordSucceeded: 2,
+      recordFailed: 0,
+      replaySucceeded: 0,
+      replayFailed: 1,
+    },
+    transcribe: {
+      liveSucceeded: 1,
+      liveFailed: 1,
+      recordSucceeded: 0,
+      recordFailed: 0,
+      replaySucceeded: 0,
+      replayFailed: 0,
+    },
+  },
+  providers: [
+    {
+      provider: 'openai',
+      recordedEventCount: 4,
+      calls: {
+        live: { succeeded: 2, failed: 1, total: 3 },
+        record: { succeeded: 1, failed: 0, total: 1 },
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: {
+        inputTokens: 1_500,
+        outputTokens: 400,
+        cachedTokens: 200,
+        inputSeconds: 0,
+      },
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    },
+    {
+      provider: 'groq',
+      recordedEventCount: 3,
+      calls: {
+        live: { succeeded: 1, failed: 1, total: 2 },
+        record: zeroAiCallOutcome,
+        replay: { succeeded: 1, failed: 0, total: 1 },
+      },
+      successfulProviderUsage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        inputSeconds: 45.125,
+      },
+      lastRecordedAt: '2026-08-08T07:40:00.000Z',
+    },
+    {
+      provider: 'kimi',
+      recordedEventCount: 2,
+      calls: {
+        live: { succeeded: 1, failed: 0, total: 1 },
+        record: zeroAiCallOutcome,
+        replay: { succeeded: 0, failed: 1, total: 1 },
+      },
+      successfulProviderUsage: {
+        inputTokens: 300,
+        outputTokens: 100,
+        cachedTokens: 20,
+        inputSeconds: 0,
+      },
+      lastRecordedAt: '2026-08-08T07:30:00.000Z',
+    },
+    {
+      provider: 'other',
+      recordedEventCount: 1,
+      calls: {
+        live: zeroAiCallOutcome,
+        record: { succeeded: 1, failed: 0, total: 1 },
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: {
+        inputTokens: 250,
+        outputTokens: 70,
+        cachedTokens: 50,
+        inputSeconds: 0,
+      },
+      lastRecordedAt: '2026-08-08T06:00:00.000Z',
+    },
+  ],
+  unclassifiedVendorEventCount: 1,
+  missingInputSecondsEventCount: 0,
+  lastRecordedAt: '2026-08-08T07:50:00.000Z',
+  warnings: ['unclassified_vendor_events'],
+};
+
+const aiUsageLast24Hours = {
+  windowStart: '2026-08-07T08:00:00.000Z',
+  windowEnd: observedAt,
+  recordedEventCount: 4,
+  calls: {
+    live: { succeeded: 1, failed: 1, total: 2 },
+    record: { succeeded: 1, failed: 0, total: 1 },
+    replay: { succeeded: 1, failed: 0, total: 1 },
+  },
+  successfulProviderUsage: {
+    inputTokens: 650,
+    outputTokens: 170,
+    cachedTokens: 80,
+    inputSeconds: 0,
+  },
+  operations: {
+    chat: {
+      liveSucceeded: 1,
+      liveFailed: 0,
+      recordSucceeded: 0,
+      recordFailed: 0,
+      replaySucceeded: 1,
+      replayFailed: 0,
+    },
+    generateReport: {
+      liveSucceeded: 0,
+      liveFailed: 0,
+      recordSucceeded: 1,
+      recordFailed: 0,
+      replaySucceeded: 0,
+      replayFailed: 0,
+    },
+    transcribe: {
+      liveSucceeded: 0,
+      liveFailed: 1,
+      recordSucceeded: 0,
+      recordFailed: 0,
+      replaySucceeded: 0,
+      replayFailed: 0,
+    },
+  },
+  providers: [
+    {
+      provider: 'openai',
+      recordedEventCount: 2,
+      calls: {
+        live: { succeeded: 1, failed: 0, total: 1 },
+        record: zeroAiCallOutcome,
+        replay: { succeeded: 1, failed: 0, total: 1 },
+      },
+      successfulProviderUsage: {
+        inputTokens: 400,
+        outputTokens: 100,
+        cachedTokens: 50,
+        inputSeconds: 0,
+      },
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    },
+    {
+      provider: 'groq',
+      recordedEventCount: 1,
+      calls: {
+        live: { succeeded: 0, failed: 1, total: 1 },
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: zeroSuccessfulProviderUsage,
+      lastRecordedAt: '2026-08-08T07:40:00.000Z',
+    },
+    {
+      provider: 'kimi',
+      recordedEventCount: 1,
+      calls: {
+        live: zeroAiCallOutcome,
+        record: { succeeded: 1, failed: 0, total: 1 },
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: {
+        inputTokens: 250,
+        outputTokens: 70,
+        cachedTokens: 30,
+        inputSeconds: 0,
+      },
+      lastRecordedAt: '2026-08-08T07:30:00.000Z',
+    },
+  ],
+  unclassifiedVendorEventCount: 0,
+  missingInputSecondsEventCount: 0,
+  lastRecordedAt: '2026-08-08T07:50:00.000Z',
+  warnings: [],
+};
+
+const aiUsageOpenaiProvider = aiUsageMonthToDate.providers[0]!;
+const aiUsageGroqProvider = aiUsageMonthToDate.providers[1]!;
+const aiUsageOtherProvider = aiUsageMonthToDate.providers[3]!;
+
+const aiUsageProviderCapacity = {
+  openai: { status: 'unknown', reason: 'not_observed' },
+  groq: { status: 'unknown', reason: 'not_observed' },
+  kimi: { status: 'unknown', reason: 'not_observed' },
+};
+
+const aiUsageCaveats = [
+  'best_effort_ledger',
+  'not_provider_billing',
+  'replay_not_provider_usage',
+  'record_mode_calls_provider',
+  'deleted_history_excluded',
+];
+
+const aiUsageAvailableObservation = {
+  observedAt,
+  status: 'available',
+  source: 'harpa_usage_ledger',
+  monthToDate: aiUsageMonthToDate,
+  last24Hours: aiUsageLast24Hours,
+  providerCapacity: aiUsageProviderCapacity,
+  caveats: aiUsageCaveats,
+};
+
+const emptyAiUsageWindow = {
+  windowStart: '2026-08-01T00:00:00.000Z',
+  windowEnd: observedAt,
+  recordedEventCount: 0,
+  calls: {
+    live: zeroAiCallOutcome,
+    record: zeroAiCallOutcome,
+    replay: zeroAiCallOutcome,
+  },
+  successfulProviderUsage: zeroSuccessfulProviderUsage,
+  operations: {
+    chat: zeroAiOperationUsage,
+    generateReport: zeroAiOperationUsage,
+    transcribe: zeroAiOperationUsage,
+  },
+  providers: [],
+  unclassifiedVendorEventCount: 0,
+  missingInputSecondsEventCount: 0,
+  lastRecordedAt: null,
+  warnings: [],
+};
+
+const unknownAiUsageObservation = {
+  observedAt,
+  status: 'unknown',
+  reason: 'database_unavailable',
+};
+
+describe('admin operations AI usage observation schema', () => {
+  it('accepts an exact available Harpa-ledger observation', () => {
+    expect(operations.aiUsageObservation.parse(aiUsageAvailableObservation)).toStrictEqual(
+      aiUsageAvailableObservation,
+    );
+  });
+
+  it('accepts an available observation with two empty windows', () => {
+    const observation = {
+      ...aiUsageAvailableObservation,
+      monthToDate: emptyAiUsageWindow,
+      last24Hours: {
+        ...emptyAiUsageWindow,
+        windowStart: '2026-08-07T08:00:00.000Z',
+      },
+    };
+
+    expect(operations.aiUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each(['schema_unavailable', 'database_unavailable', 'timeout', 'invalid_response'] as const)(
+    'accepts the redacted unknown/%s state',
+    (reason) => {
+      const observation = { ...unknownAiUsageObservation, reason };
+
+      expect(operations.aiUsageObservation.parse(observation)).toStrictEqual(observation);
+    },
+  );
+
+  it('accepts exact warning evidence for incomplete transcription duration', () => {
+    const provider = {
+      provider: 'other',
+      recordedEventCount: 2,
+      calls: {
+        live: { succeeded: 1, failed: 0, total: 1 },
+        record: { succeeded: 1, failed: 0, total: 1 },
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: {
+        ...zeroSuccessfulProviderUsage,
+        inputSeconds: 1.234,
+      },
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    };
+    const observation = {
+      ...aiUsageAvailableObservation,
+      monthToDate: {
+        ...emptyAiUsageWindow,
+        recordedEventCount: 2,
+        calls: provider.calls,
+        successfulProviderUsage: provider.successfulProviderUsage,
+        operations: {
+          ...emptyAiUsageWindow.operations,
+          transcribe: {
+            ...zeroAiOperationUsage,
+            liveSucceeded: 1,
+            recordSucceeded: 1,
+          },
+        },
+        providers: [provider],
+        unclassifiedVendorEventCount: 2,
+        missingInputSecondsEventCount: 1,
+        lastRecordedAt: provider.lastRecordedAt,
+        warnings: ['missing_transcription_duration', 'unclassified_vendor_events'],
+      },
+    };
+
+    expect(operations.aiUsageObservation.parse(observation)).toStrictEqual(observation);
+  });
+
+  it.each([
+    ['an arbitrary unknown reason', { ...unknownAiUsageObservation, reason: 'raw SQL error' }],
+    [
+      'unknown state with retained ledger details',
+      { ...unknownAiUsageObservation, monthToDate: aiUsageMonthToDate },
+    ],
+    [
+      'unknown state with provider capacity details',
+      { ...unknownAiUsageObservation, providerCapacity: aiUsageProviderCapacity },
+    ],
+    ['an unsupported source', { ...aiUsageAvailableObservation, source: 'openai_billing_api' }],
+    ['an unsupported status', { ...aiUsageAvailableObservation, status: 'partial' }],
+  ] as const)('rejects %s', (_description, observation) => {
+    expect(operations.aiUsageObservation.safeParse(observation).success).toBe(false);
+  });
+
+  it('requires the fixed five caveats in their reviewed tuple order', () => {
+    const invalidCaveats = [
+      aiUsageCaveats.slice(1),
+      [...aiUsageCaveats, 'provider_dashboard_may_disagree'],
+      [...aiUsageCaveats, aiUsageCaveats[0]],
+      [aiUsageCaveats[1], aiUsageCaveats[0], ...aiUsageCaveats.slice(2)],
+    ];
+    for (const caveats of invalidCaveats) {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          caveats,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it('keeps all provider-capacity claims fixed at Unknown/not-observed', () => {
+    const invalidCapacity = [
+      {
+        ...aiUsageProviderCapacity,
+        openai: { status: 'available', reason: 'not_observed' },
+      },
+      {
+        ...aiUsageProviderCapacity,
+        groq: { status: 'unknown', reason: 'billing_api_unavailable' },
+      },
+      {
+        ...aiUsageProviderCapacity,
+        kimi: { ...aiUsageProviderCapacity.kimi, remainingCredits: 100 },
+      },
+      {
+        ...aiUsageProviderCapacity,
+        anthropic: { status: 'unknown', reason: 'not_observed' },
+      },
+    ];
+
+    for (const providerCapacity of invalidCapacity) {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          providerCapacity,
+        }).success,
+      ).toBe(false);
+    }
+
+    const { kimi, ...missingKimi } = aiUsageProviderCapacity;
+    expect(kimi).toStrictEqual({ status: 'unknown', reason: 'not_observed' });
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        providerCapacity: missingKimi,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['live', 0, 'chat', 'failed'],
+    ['record', 0, 'chat', 'failed'],
+    ['replay', 1, 'chat', 'succeeded'],
+  ] as const)(
+    'rejects inconsistent %s succeeded/failed totals at overall and provider levels',
+    (mode, providerIndex, operation, outcome) => {
+      const operationField = `${mode}${outcome === 'succeeded' ? 'Succeeded' : 'Failed'}` as const;
+      const provider = aiUsageMonthToDate.providers[providerIndex]!;
+      const monthToDate = {
+        ...aiUsageMonthToDate,
+        calls: {
+          ...aiUsageMonthToDate.calls,
+          [mode]: {
+            ...aiUsageMonthToDate.calls[mode],
+            [outcome]: aiUsageMonthToDate.calls[mode][outcome] + 1,
+          },
+        },
+        operations: {
+          ...aiUsageMonthToDate.operations,
+          [operation]: {
+            ...aiUsageMonthToDate.operations[operation],
+            [operationField]: aiUsageMonthToDate.operations[operation][operationField] + 1,
+          },
+        },
+        providers: aiUsageMonthToDate.providers.map((candidate, index) =>
+          index === providerIndex
+            ? {
+                ...provider,
+                calls: {
+                  ...provider.calls,
+                  [mode]: {
+                    ...provider.calls[mode],
+                    [outcome]: provider.calls[mode][outcome] + 1,
+                  },
+                },
+              }
+            : candidate,
+        ),
+      };
+
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          monthToDate,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['overall', { ...aiUsageMonthToDate, recordedEventCount: 11 }],
+    [
+      'provider',
+      {
+        ...aiUsageMonthToDate,
+        providers: [
+          { ...aiUsageOpenaiProvider, recordedEventCount: 5 },
+          ...aiUsageMonthToDate.providers.slice(1),
+        ],
+      },
+    ],
+  ] as const)('rejects an inconsistent %s recorded-event total', (_level, monthToDate) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      'successful calls',
+      {
+        ...aiUsageOpenaiProvider,
+        calls: {
+          ...aiUsageOpenaiProvider.calls,
+          live: { succeeded: 1, failed: 1, total: 2 },
+          record: { succeeded: 2, failed: 0, total: 2 },
+        },
+      },
+    ],
+    [
+      'failed calls',
+      {
+        ...aiUsageOpenaiProvider,
+        calls: {
+          ...aiUsageOpenaiProvider.calls,
+          live: { succeeded: 2, failed: 0, total: 2 },
+          replay: { succeeded: 0, failed: 1, total: 1 },
+        },
+      },
+    ],
+  ] as const)(
+    'rejects a provider mode distribution whose %s do not sum to overall calls',
+    (_description, provider) => {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          monthToDate: {
+            ...aiUsageMonthToDate,
+            providers: [provider, ...aiUsageMonthToDate.providers.slice(1)],
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['inputTokens', 2_051],
+    ['outputTokens', 571],
+    ['cachedTokens', 271],
+    ['inputSeconds', 45.126],
+  ] as const)('rejects a provider-to-overall %s sum mismatch', (field, value) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          successfulProviderUsage: {
+            ...aiUsageMonthToDate.successfulProviderUsage,
+            [field]: value,
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['chat', 'liveSucceeded'],
+    ['chat', 'liveFailed'],
+    ['generateReport', 'recordSucceeded'],
+    ['chat', 'recordFailed'],
+    ['chat', 'replaySucceeded'],
+    ['generateReport', 'replayFailed'],
+  ] as const)('rejects an operation %s/%s sum mismatch', (operation, field) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          operations: {
+            ...aiUsageMonthToDate.operations,
+            [operation]: {
+              ...aiUsageMonthToDate.operations[operation],
+              [field]: aiUsageMonthToDate.operations[operation][field] + 1,
+            },
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([0, 2] as const)(
+    'requires the unclassified-vendor count (%s) to equal other-provider events',
+    (unclassifiedVendorEventCount) => {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          monthToDate: {
+            ...aiUsageMonthToDate,
+            unclassifiedVendorEventCount,
+            warnings: unclassifiedVendorEventCount === 0 ? [] : ['unclassified_vendor_events'],
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('bounds missing-duration evidence by successful provider transcriptions', () => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          missingInputSecondsEventCount: 2,
+          warnings: ['unclassified_vendor_events', 'missing_transcription_duration'],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires cached tokens to be a subset of input tokens at both aggregation levels', () => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          successfulProviderUsage: {
+            ...aiUsageMonthToDate.successfulProviderUsage,
+            cachedTokens: aiUsageMonthToDate.successfulProviderUsage.inputTokens + 1,
+          },
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          providers: [
+            {
+              ...aiUsageOpenaiProvider,
+              successfulProviderUsage: {
+                ...aiUsageOpenaiProvider.successfulProviderUsage,
+                cachedTokens: aiUsageOpenaiProvider.successfulProviderUsage.inputTokens + 1,
+              },
+            },
+            ...aiUsageMonthToDate.providers.slice(1),
+          ],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts replay-only activity but rejects provider usage attributed to it', () => {
+    const replayProvider = {
+      provider: 'openai',
+      recordedEventCount: 1,
+      calls: {
+        live: zeroAiCallOutcome,
+        record: zeroAiCallOutcome,
+        replay: { succeeded: 1, failed: 0, total: 1 },
+      },
+      successfulProviderUsage: zeroSuccessfulProviderUsage,
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    };
+    const replayOnlyWindow = {
+      ...emptyAiUsageWindow,
+      recordedEventCount: 1,
+      calls: replayProvider.calls,
+      operations: {
+        ...emptyAiUsageWindow.operations,
+        chat: { ...zeroAiOperationUsage, replaySucceeded: 1 },
+      },
+      providers: [replayProvider],
+      lastRecordedAt: replayProvider.lastRecordedAt,
+    };
+
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: replayOnlyWindow,
+      }).success,
+    ).toBe(true);
+
+    const impossibleUsage = {
+      inputTokens: 1,
+      outputTokens: 0,
+      cachedTokens: 0,
+      inputSeconds: 0,
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...replayOnlyWindow,
+          successfulProviderUsage: impossibleUsage,
+          providers: [{ ...replayProvider, successfulProviderUsage: impossibleUsage }],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('enforces token and duration semantics against successful provider operations', () => {
+    const failedProvider = {
+      provider: 'openai',
+      recordedEventCount: 1,
+      calls: {
+        live: { succeeded: 0, failed: 1, total: 1 },
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: zeroSuccessfulProviderUsage,
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    };
+    const failedOnlyWindow = {
+      ...emptyAiUsageWindow,
+      recordedEventCount: 1,
+      calls: failedProvider.calls,
+      operations: {
+        ...emptyAiUsageWindow.operations,
+        chat: { ...zeroAiOperationUsage, liveFailed: 1 },
+      },
+      providers: [failedProvider],
+      lastRecordedAt: failedProvider.lastRecordedAt,
+    };
+    const impossibleFailedUsage = {
+      inputTokens: 1,
+      outputTokens: 0,
+      cachedTokens: 0,
+      inputSeconds: 0,
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...failedOnlyWindow,
+          successfulProviderUsage: impossibleFailedUsage,
+          providers: [{ ...failedProvider, successfulProviderUsage: impossibleFailedUsage }],
+        },
+      }).success,
+    ).toBe(false);
+
+    const transcribeUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedTokens: 0,
+      inputSeconds: 1.234,
+    };
+    const transcribeProvider = {
+      ...failedProvider,
+      provider: 'groq',
+      calls: {
+        live: { succeeded: 1, failed: 0, total: 1 },
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: transcribeUsage,
+    };
+    const transcribeWindow = {
+      ...failedOnlyWindow,
+      calls: transcribeProvider.calls,
+      successfulProviderUsage: transcribeUsage,
+      operations: {
+        ...emptyAiUsageWindow.operations,
+        transcribe: { ...zeroAiOperationUsage, liveSucceeded: 1 },
+      },
+      providers: [transcribeProvider],
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: transcribeWindow,
+      }).success,
+    ).toBe(true);
+
+    const allDurationMissingWindow = {
+      ...transcribeWindow,
+      successfulProviderUsage: zeroSuccessfulProviderUsage,
+      providers: [
+        {
+          ...transcribeProvider,
+          successfulProviderUsage: zeroSuccessfulProviderUsage,
+        },
+      ],
+      missingInputSecondsEventCount: 1,
+      warnings: ['missing_transcription_duration'],
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: allDurationMissingWindow,
+      }).success,
+    ).toBe(true);
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...allDurationMissingWindow,
+          successfulProviderUsage: transcribeUsage,
+          providers: [transcribeProvider],
+        },
+      }).success,
+    ).toBe(false);
+
+    const impossibleTranscribeTokens = {
+      ...transcribeUsage,
+      inputTokens: 1,
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...transcribeWindow,
+          successfulProviderUsage: impossibleTranscribeTokens,
+          providers: [
+            {
+              ...transcribeProvider,
+              successfulProviderUsage: impossibleTranscribeTokens,
+            },
+          ],
+        },
+      }).success,
+    ).toBe(false);
+
+    const chatUsage = {
+      inputTokens: 1,
+      outputTokens: 1,
+      cachedTokens: 0,
+      inputSeconds: 0,
+    };
+    const chatProvider = {
+      ...failedProvider,
+      calls: {
+        live: { succeeded: 1, failed: 0, total: 1 },
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: chatUsage,
+    };
+    const chatWindow = {
+      ...failedOnlyWindow,
+      calls: chatProvider.calls,
+      successfulProviderUsage: chatUsage,
+      operations: {
+        ...emptyAiUsageWindow.operations,
+        chat: { ...zeroAiOperationUsage, liveSucceeded: 1 },
+      },
+      providers: [chatProvider],
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...chatWindow,
+          successfulProviderUsage: { ...chatUsage, inputSeconds: 1 },
+          providers: [
+            {
+              ...chatProvider,
+              successfulProviderUsage: { ...chatUsage, inputSeconds: 1 },
+            },
+          ],
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...chatWindow,
+          missingInputSecondsEventCount: 1,
+          warnings: ['missing_transcription_duration'],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['missing unclassified warning', 1, []],
+    ['spurious unclassified warning', 0, ['unclassified_vendor_events']],
+    ['missing duration warning', 1, ['unclassified_vendor_events']],
+    [
+      'spurious duration warning',
+      0,
+      ['unclassified_vendor_events', 'missing_transcription_duration'],
+    ],
+  ] as const)('rejects %s', (description, evidenceCount, warnings) => {
+    const monthToDate = description.includes('duration')
+      ? {
+          ...aiUsageMonthToDate,
+          missingInputSecondsEventCount: evidenceCount,
+          warnings,
+        }
+      : {
+          ...aiUsageMonthToDate,
+          unclassifiedVendorEventCount: evidenceCount,
+          warnings,
+        };
+
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['duplicate warnings', ['unclassified_vendor_events', 'unclassified_vendor_events']],
+    ['an unreviewed warning', ['unclassified_vendor_events', 'provider_rate_limited']],
+  ] as const)('rejects %s', (_description, warnings) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: { ...aiUsageMonthToDate, warnings },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects duplicate, empty, and unreviewed provider rows', () => {
+    const duplicateProvider = {
+      ...aiUsageOtherProvider,
+      provider: 'openai',
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          providers: [...aiUsageMonthToDate.providers.slice(0, 3), duplicateProvider],
+          unclassifiedVendorEventCount: 0,
+          warnings: [],
+        },
+      }).success,
+    ).toBe(false);
+
+    const emptyProvider = {
+      ...aiUsageOpenaiProvider,
+      recordedEventCount: 0,
+      calls: {
+        live: zeroAiCallOutcome,
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: zeroSuccessfulProviderUsage,
+    };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...emptyAiUsageWindow,
+          providers: [emptyProvider],
+        },
+      }).success,
+    ).toBe(false);
+
+    const unreviewedProvider = { ...aiUsageOtherProvider, provider: 'anthropic' };
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          providers: [...aiUsageMonthToDate.providers.slice(0, 3), unreviewedProvider],
+          unclassifiedVendorEventCount: 0,
+          warnings: [],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['monthToDate', aiUsageMonthToDate],
+    ['last24Hours', aiUsageLast24Hours],
+  ] as const)('rejects invalid %s timestamp correlations', (field, window) => {
+    const beforeWindow = new Date(Date.parse(window.windowStart) - 1).toISOString();
+    const invalidWindows = [
+      { ...window, windowEnd: '2026-08-08T07:59:59.999Z' },
+      { ...window, lastRecordedAt: null },
+      { ...window, lastRecordedAt: window.windowEnd },
+      { ...window, lastRecordedAt: '2026-08-08T07:40:00.000Z' },
+      {
+        ...window,
+        providers: [
+          { ...window.providers[0]!, lastRecordedAt: beforeWindow },
+          ...window.providers.slice(1),
+        ],
+      },
+      {
+        ...window,
+        providers: [
+          { ...window.providers[0]!, lastRecordedAt: window.windowEnd },
+          ...window.providers.slice(1),
+        ],
+      },
+    ];
+
+    for (const invalidWindow of invalidWindows) {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          [field]: invalidWindow,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it.each([
+    [
+      'month-to-date',
+      'monthToDate',
+      { ...aiUsageMonthToDate, windowStart: '2026-08-01T00:00:00.001Z' },
+    ],
+    [
+      'last-24-hour',
+      'last24Hours',
+      { ...aiUsageLast24Hours, windowStart: '2026-08-07T08:00:00.001Z' },
+    ],
+  ] as const)('requires the exact %s window start', (_description, field, window) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        [field]: window,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['monthToDate', aiUsageMonthToDate],
+    ['last24Hours', aiUsageLast24Hours],
+  ] as const)('accepts %s last-recorded times at the inclusive lower bound', (field, window) => {
+    const boundaryWindow = {
+      ...window,
+      providers: [
+        { ...window.providers[0]!, lastRecordedAt: window.windowStart },
+        ...window.providers.slice(1),
+      ],
+      lastRecordedAt: '2026-08-08T07:40:00.000Z',
+    };
+
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        [field]: boundaryWindow,
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each(['monthToDate', 'last24Hours'] as const)(
+    'requires an empty %s window to have null last-recorded time',
+    (field) => {
+      const windowStart =
+        field === 'monthToDate' ? emptyAiUsageWindow.windowStart : '2026-08-07T08:00:00.000Z';
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          [field]: {
+            ...emptyAiUsageWindow,
+            windowStart,
+            lastRecordedAt: '2026-08-08T07:00:00.000Z',
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['observedAt', { ...aiUsageAvailableObservation, observedAt: 'not-a-timestamp' }],
+    [
+      'window start',
+      {
+        ...aiUsageAvailableObservation,
+        monthToDate: { ...aiUsageMonthToDate, windowStart: 'not-a-timestamp' },
+      },
+    ],
+    [
+      'window end',
+      {
+        ...aiUsageAvailableObservation,
+        last24Hours: { ...aiUsageLast24Hours, windowEnd: null },
+      },
+    ],
+    [
+      'provider last-recorded time',
+      {
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          providers: [
+            { ...aiUsageOpenaiProvider, lastRecordedAt: 'not-a-timestamp' },
+            ...aiUsageMonthToDate.providers.slice(1),
+          ],
+        },
+      },
+    ],
+  ] as const)('rejects a malformed %s', (_description, observation) => {
+    expect(operations.aiUsageObservation.safeParse(observation).success).toBe(false);
+  });
+
+  const unsafeCounts = [-1, 1.5, Number.MAX_SAFE_INTEGER + 1] as const;
+  it.each(unsafeCounts)('rejects unsafe count and token values (%s)', (value) => {
+    const candidates = [
+      { ...aiUsageMonthToDate, recordedEventCount: value },
+      {
+        ...aiUsageMonthToDate,
+        calls: {
+          ...aiUsageMonthToDate.calls,
+          live: { ...aiUsageMonthToDate.calls.live, succeeded: value },
+        },
+      },
+      {
+        ...aiUsageMonthToDate,
+        successfulProviderUsage: {
+          ...aiUsageMonthToDate.successfulProviderUsage,
+          outputTokens: value,
+        },
+      },
+      {
+        ...aiUsageMonthToDate,
+        operations: {
+          ...aiUsageMonthToDate.operations,
+          chat: { ...aiUsageMonthToDate.operations.chat, replaySucceeded: value },
+        },
+      },
+      {
+        ...aiUsageMonthToDate,
+        providers: [
+          { ...aiUsageOpenaiProvider, recordedEventCount: value },
+          ...aiUsageMonthToDate.providers.slice(1),
+        ],
+      },
+      {
+        ...aiUsageMonthToDate,
+        providers: [
+          {
+            ...aiUsageOpenaiProvider,
+            calls: {
+              ...aiUsageOpenaiProvider.calls,
+              live: { ...aiUsageOpenaiProvider.calls.live, failed: value },
+            },
+          },
+          ...aiUsageMonthToDate.providers.slice(1),
+        ],
+      },
+      {
+        ...aiUsageMonthToDate,
+        providers: [
+          {
+            ...aiUsageOpenaiProvider,
+            successfulProviderUsage: {
+              ...aiUsageOpenaiProvider.successfulProviderUsage,
+              inputTokens: value,
+            },
+          },
+          ...aiUsageMonthToDate.providers.slice(1),
+        ],
+      },
+      { ...aiUsageMonthToDate, unclassifiedVendorEventCount: value },
+      { ...aiUsageMonthToDate, missingInputSecondsEventCount: value },
+    ];
+
+    for (const monthToDate of candidates) {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          monthToDate,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it('rejects unsafe arithmetic sums even when every count and token leaf is safe', () => {
+    const max = Number.MAX_SAFE_INTEGER;
+    const maxProvider = {
+      provider: 'openai',
+      recordedEventCount: max,
+      calls: {
+        live: { succeeded: max, failed: 0, total: max },
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: zeroSuccessfulProviderUsage,
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    };
+    const maxWindow = {
+      ...emptyAiUsageWindow,
+      recordedEventCount: max,
+      calls: maxProvider.calls,
+      operations: {
+        ...emptyAiUsageWindow.operations,
+        chat: { ...zeroAiOperationUsage, liveSucceeded: max },
+      },
+      providers: [maxProvider],
+      lastRecordedAt: maxProvider.lastRecordedAt,
+    };
+    const callOutcomeOverflow = {
+      ...maxWindow,
+      calls: {
+        ...maxWindow.calls,
+        live: { succeeded: max, failed: 1, total: max },
+      },
+      operations: {
+        ...maxWindow.operations,
+        transcribe: { ...zeroAiOperationUsage, liveFailed: 1 },
+      },
+      providers: [
+        {
+          ...maxProvider,
+          calls: {
+            ...maxProvider.calls,
+            live: { succeeded: max, failed: 1, total: max },
+          },
+        },
+      ],
+    };
+    const operationOverflow = {
+      ...maxWindow,
+      operations: {
+        ...maxWindow.operations,
+        transcribe: { ...zeroAiOperationUsage, liveSucceeded: 1 },
+      },
+    };
+
+    const tokenProviders = [
+      {
+        provider: 'openai',
+        recordedEventCount: 1,
+        calls: {
+          live: { succeeded: 1, failed: 0, total: 1 },
+          record: zeroAiCallOutcome,
+          replay: zeroAiCallOutcome,
+        },
+        successfulProviderUsage: {
+          ...zeroSuccessfulProviderUsage,
+          inputTokens: max,
+        },
+        lastRecordedAt: '2026-08-08T07:50:00.000Z',
+      },
+      {
+        provider: 'kimi',
+        recordedEventCount: 1,
+        calls: {
+          live: zeroAiCallOutcome,
+          record: { succeeded: 1, failed: 0, total: 1 },
+          replay: zeroAiCallOutcome,
+        },
+        successfulProviderUsage: {
+          ...zeroSuccessfulProviderUsage,
+          inputTokens: 1,
+        },
+        lastRecordedAt: '2026-08-08T07:40:00.000Z',
+      },
+    ];
+    const providerTokenOverflow = {
+      ...emptyAiUsageWindow,
+      recordedEventCount: 2,
+      calls: {
+        live: { succeeded: 1, failed: 0, total: 1 },
+        record: { succeeded: 1, failed: 0, total: 1 },
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: {
+        ...zeroSuccessfulProviderUsage,
+        inputTokens: max,
+      },
+      operations: {
+        ...emptyAiUsageWindow.operations,
+        chat: { ...zeroAiOperationUsage, liveSucceeded: 1 },
+        generateReport: { ...zeroAiOperationUsage, recordSucceeded: 1 },
+      },
+      providers: tokenProviders,
+      lastRecordedAt: tokenProviders[0]!.lastRecordedAt,
+    };
+
+    for (const monthToDate of [callOutcomeOverflow, operationOverflow, providerTokenOverflow]) {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          monthToDate,
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, 1.2345] as const)(
+    'rejects an invalid successful input-seconds value (%s)',
+    (inputSeconds) => {
+      expect(
+        operations.aiUsageObservation.safeParse({
+          ...aiUsageAvailableObservation,
+          monthToDate: {
+            ...aiUsageMonthToDate,
+            successfulProviderUsage: {
+              ...aiUsageMonthToDate.successfulProviderUsage,
+              inputSeconds,
+            },
+          },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('rejects provider input seconds with more than three decimal places', () => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          providers: [
+            aiUsageOpenaiProvider,
+            {
+              ...aiUsageGroqProvider,
+              successfulProviderUsage: {
+                ...aiUsageGroqProvider.successfulProviderUsage,
+                inputSeconds: 45.1251,
+              },
+            },
+            ...aiUsageMonthToDate.providers.slice(2),
+          ],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts safe-integer and three-decimal upper boundaries when correlations hold', () => {
+    const max = Number.MAX_SAFE_INTEGER;
+    const provider = {
+      provider: 'openai',
+      recordedEventCount: max,
+      calls: {
+        live: { succeeded: max, failed: 0, total: max },
+        record: zeroAiCallOutcome,
+        replay: zeroAiCallOutcome,
+      },
+      successfulProviderUsage: {
+        inputTokens: max,
+        outputTokens: max,
+        cachedTokens: max,
+        inputSeconds: 1.234,
+      },
+      lastRecordedAt: '2026-08-08T07:50:00.000Z',
+    };
+    const window = {
+      ...aiUsageMonthToDate,
+      recordedEventCount: max,
+      calls: provider.calls,
+      successfulProviderUsage: provider.successfulProviderUsage,
+      operations: {
+        chat: { ...zeroAiOperationUsage, liveSucceeded: max - 1 },
+        generateReport: zeroAiOperationUsage,
+        transcribe: { ...zeroAiOperationUsage, liveSucceeded: 1 },
+      },
+      providers: [provider],
+      unclassifiedVendorEventCount: 0,
+      lastRecordedAt: provider.lastRecordedAt,
+      warnings: [],
+    };
+
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: window,
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['user ID', { userId: 'usr_secret' }],
+    ['email', { email: 'private@example.com' }],
+    ['name', { name: 'Private User' }],
+    ['plan assignment', { plan: 'pro' }],
+    ['per-user limits', { perUserLimits: { reports: 10 } }],
+    ['project ID', { projectId: 'prj_secret' }],
+    ['report ID', { reportId: 'rpt_secret' }],
+    ['request ID', { requestId: 'req_secret' }],
+    ['prompt', { prompt: 'private report notes' }],
+    ['transcript', { transcript: 'private voice transcript' }],
+    ['notes', { notes: ['private note'] }],
+    ['report body', { reportBody: 'private generated report' }],
+    ['provider response', { providerResponse: { text: 'private output' } }],
+    ['raw vendor', { rawVendor: 'private-provider-account' }],
+    ['model', { model: 'private-fine-tune' }],
+    ['provider error', { providerError: 'raw upstream error body' }],
+    ['raw rows', { rows: [{ vendor: 'secret' }] }],
+    ['SQL', { sql: 'select * from app.users' }],
+  ] as const)('rejects leaked top-level %s', (_description, leakedField) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        ...leakedField,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects leaked database error text from an unknown observation', () => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...unknownAiUsageObservation,
+        databaseMessage: 'password rejected for private host',
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['user ID', { userId: 'usr_secret' }],
+    ['project ID', { projectId: 'prj_secret' }],
+    ['report ID', { reportId: 'rpt_secret' }],
+    ['request ID', { requestId: 'req_secret' }],
+    ['prompt', { prompt: 'private report notes' }],
+    ['transcript', { transcript: 'private voice transcript' }],
+    ['note', { note: 'private note' }],
+    ['report body', { reportBody: 'private generated report' }],
+    ['provider response', { response: 'private provider output' }],
+    ['raw vendor label', { rawVendor: 'private-provider-account' }],
+    ['model name', { model: 'private-fine-tune' }],
+    ['provider error text', { error: 'raw upstream error body' }],
+  ] as const)('rejects leaked provider-row %s', (_description, leakedField) => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          providers: [
+            { ...aiUsageOpenaiProvider, ...leakedField },
+            ...aiUsageMonthToDate.providers.slice(1),
+          ],
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects counts grouped by customer from operation aggregates', () => {
+    expect(
+      operations.aiUsageObservation.safeParse({
+        ...aiUsageAvailableObservation,
+        monthToDate: {
+          ...aiUsageMonthToDate,
+          operations: {
+            ...aiUsageMonthToDate.operations,
+            chat: { ...aiUsageMonthToDate.operations.chat, userCount: 3 },
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+});

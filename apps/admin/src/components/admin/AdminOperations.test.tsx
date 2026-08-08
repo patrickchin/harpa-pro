@@ -56,7 +56,10 @@ const adminPagesMarker = {
   branch: 'codex/admin-deployment-identity',
 };
 
-const passDiagnostic = {
+const escapedPreviewTitle = '<script>window.canaryPreviewLeak = true</script>';
+const escapedPreviewSummary = '<img src=x onerror="window.canaryImageLeak = true">';
+
+const passCanary = {
   observedAt,
   status: 'pass' as const,
   durationMs: 1_842,
@@ -73,11 +76,67 @@ const passDiagnostic = {
     requestedAt: '2026-08-08T05:29:58.000Z',
     finishedAt: '2026-08-08T05:29:59.300Z',
     reportUpdatedAt: '2026-08-08T05:29:59.500Z',
-    generatedAt: '2026-08-08T05:29:59.300Z',
+    generatedAt: '2026-08-08T05:29:57.000Z',
     vendor: 'openai',
     model: 'gpt-5.1',
     fixtureMode: 'live' as const,
     idempotentReplay: false,
+  },
+  preview: {
+    schemaValid: true as const,
+    sample: {
+      title: escapedPreviewTitle,
+      summary: escapedPreviewSummary,
+      weather: {
+        condition: 'Light rain',
+        temperature: '18 C',
+        wind: '12 km/h',
+        impact: 'External work paused',
+      },
+      workers: Array.from({ length: 5 }, (_, index) => ({
+        role: `Synthetic worker role ${index + 1}`,
+        count: `Synthetic worker count ${index + 1}`,
+        hours: `Synthetic worker hours ${index + 1}`,
+        notes: `Synthetic worker notes ${index + 1}`,
+      })),
+      materials: Array.from({ length: 5 }, (_, index) => ({
+        name: `Synthetic material ${index + 1}`,
+        quantity: `Synthetic material quantity ${index + 1}`,
+        unit: `Synthetic material unit ${index + 1}`,
+        status: `Synthetic material status ${index + 1}`,
+        condition: `Synthetic material condition ${index + 1}`,
+        notes: `Synthetic material notes ${index + 1}`,
+      })),
+      issues: Array.from({ length: 5 }, (_, index) => ({
+        title: `Synthetic issue ${index + 1}`,
+        severity: `Synthetic issue severity ${index + 1}`,
+        description: `Synthetic issue description ${index + 1}`,
+        action: `Synthetic issue action ${index + 1}`,
+      })),
+      nextSteps: Array.from({ length: 5 }, (_, index) => `Synthetic next step ${index + 1}`),
+      summarySections: Array.from({ length: 5 }, (_, index) => ({
+        title: `Synthetic summary title ${index + 1}`,
+        body: `Synthetic summary body ${index + 1}`,
+      })),
+    },
+    counts: {
+      workers: 8,
+      materials: 7,
+      issues: 6,
+      nextSteps: 9,
+      summarySections: 6,
+      imageAttachments: 2,
+      documentAttachments: 1,
+    },
+    truncated: true,
+    bodySha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  },
+  usage: {
+    inputTokens: 321,
+    outputTokens: 123,
+    cachedTokens: 45,
+    latencyMs: 876,
+    matched: true as const,
   },
   limits: {
     plan: 'free' as const,
@@ -106,7 +165,7 @@ const passDiagnostic = {
   cleanup: 'succeeded' as const,
 };
 
-const unknownDiagnostic = {
+const unknownCanary = {
   observedAt,
   status: 'unknown' as const,
   reason: 'not_configured' as const,
@@ -544,10 +603,10 @@ function expectPaintedProgressbar(
   expect(progressbar.style.width).toBe(`${clampedPercent}%`);
   return progressbar;
 }
-async function getDiagnosticSection() {
+async function getCanarySection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
-    name: 'Report generation diagnostic',
+    name: /^Report generation (?:diagnostic|live canary)$/,
   });
   const section = heading.closest('section');
   expect(section).toBeTruthy();
@@ -561,13 +620,104 @@ async function getDeploymentCard(name: string) {
   return card!;
 }
 
-async function renderAndRunDiagnostic(body: unknown, status = 200) {
+function getRunCanaryButton(section: HTMLElement) {
+  return within(section).getByRole('button', { name: /^Run (?:diagnostic|live canary)$/ });
+}
+
+function expectDefinitionValue(container: HTMLElement, label: string | RegExp, value: string) {
+  const term = within(container).getByText(label, { selector: 'dt' });
+  const definition = term.nextElementSibling;
+  expect(definition?.tagName).toBe('DD');
+  expect(definition?.textContent).toBe(value);
+}
+
+function expectSuccessfulCanaryProof(section: HTMLElement) {
+  expect(within(section).getByText('Completed in 1,842 ms.')).toBeTruthy();
+
+  const httpTerm = within(section).getByText(/^HTTP(?: status)?$/i, { selector: 'dt' });
+  const generationDetails = httpTerm.closest('dl');
+  expect(generationDetails).toBeTruthy();
+  expectDefinitionValue(generationDetails!, /^HTTP(?: status)?$/i, '200');
+  expectDefinitionValue(generationDetails!, /^(?:Generation )?(?:duration|latency)$/i, '1,300 ms');
+
+  const inputTokensTerm = within(section).getByText('Input tokens', { selector: 'dt' });
+  const usageDetails = inputTokensTerm.closest('dl');
+  expect(usageDetails).toBeTruthy();
+  expectDefinitionValue(usageDetails!, 'Input tokens', '321');
+  expectDefinitionValue(usageDetails!, 'Output tokens', '123');
+  expectDefinitionValue(usageDetails!, 'Cached tokens', '45');
+  expectDefinitionValue(usageDetails!, /^(?:Usage )?(?:duration|latency)$/i, '876 ms');
+  expect(within(section).getByText('Usage row matched.')).toBeTruthy();
+
+  const previewRegion = within(section).getByRole('region', {
+    name: 'Synthetic report response preview',
+  });
+  expect(previewRegion.className).toMatch(/max-h-/);
+  expect(previewRegion.className).toMatch(/overflow-y-auto/);
+
+  const sample = passCanary.preview.sample;
+  const previewValues = [
+    sample.title,
+    sample.summary,
+    sample.weather?.condition,
+    sample.weather?.temperature,
+    sample.weather?.wind,
+    sample.weather?.impact,
+    ...sample.workers.flatMap((worker) => [worker.role, worker.count, worker.hours, worker.notes]),
+    ...sample.materials.flatMap((material) => [
+      material.name,
+      material.quantity,
+      material.unit,
+      material.status,
+      material.condition,
+      material.notes,
+    ]),
+    ...sample.issues.flatMap((issue) => [
+      issue.title,
+      issue.severity,
+      issue.description,
+      issue.action,
+    ]),
+    ...sample.nextSteps,
+    ...sample.summarySections.flatMap((summarySection) => [
+      summarySection.title,
+      summarySection.body,
+    ]),
+  ].filter((value): value is string => typeof value === 'string');
+  for (const value of previewValues) {
+    expect(within(previewRegion).getByText(value)).toBeTruthy();
+  }
+
+  expect(previewRegion.querySelector('script')).toBeNull();
+  expect(previewRegion.querySelector('img')).toBeNull();
+  expect(previewRegion.innerHTML).toContain('&lt;script&gt;');
+  expect(previewRegion.innerHTML).toContain('&lt;img');
+
+  for (const [label, value] of [
+    ['Workers', '8'],
+    ['Materials', '7'],
+    ['Issues', '6'],
+    ['Next steps', '9'],
+    ['Summary sections', '6'],
+    ['Image attachments', '2'],
+    ['Document attachments', '1'],
+  ] as const) {
+    expectDefinitionValue(previewRegion, label, value);
+  }
+  expectDefinitionValue(
+    previewRegion,
+    /^(?:Report (?:body )?)?SHA-256$/i,
+    passCanary.preview.bodySha256,
+  );
+  expect(within(previewRegion).getByText('Preview truncated')).toBeTruthy();
+}
+
+async function renderAndRunCanary(body: unknown, status = 200) {
   const fetchMock = mockDiagnosticFetch(() => jsonResponse(body, status));
   const user = userEvent.setup();
   render(<AdminOperations />);
-  const section = await getDiagnosticSection();
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
-  await user.click(within(section).getByRole('button', { name: 'Run diagnostic' }));
+  const section = await getCanarySection();
+  await user.click(getRunCanaryButton(section));
   return { fetchMock, section };
 }
 
@@ -685,7 +835,7 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses ten fixed reads on load and twenty after shared Refresh without polling', async () => {
+  it('uses ten fixed reads on load and twenty after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -714,7 +864,11 @@ describe('AdminOperations', () => {
 
     render(<AdminOperations />);
 
+    let canarySection = await getCanarySection();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
+    expect(
+      fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
+    ).toBe(true);
     await waitFor(() => {
       for (const { url } of expectedRequests) {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
@@ -727,8 +881,12 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+    expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
+    await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
     expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(
+      fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
+    ).toBe(true);
     for (const { url } of expectedRequests) {
       expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
     }
@@ -737,13 +895,22 @@ describe('AdminOperations', () => {
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
+    expect(
+      fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
+    ).toBe(true);
     await waitFor(() => {
       for (const { url } of expectedRequests) {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(2);
       }
     });
-    await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+    canarySection = await getCanarySection();
+    expect(canarySection.isConnected).toBe(true);
+    expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
+    await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
     expect(fetchMock).toHaveBeenCalledTimes(20);
+    expect(
+      fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
+    ).toBe(true);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
@@ -2305,68 +2472,51 @@ describe('AdminOperations', () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
-  it('keeps the cost-bearing report diagnostic idle until an administrator runs it', async () => {
+  it('renames the cost-bearing control and clearly states its live quota impact', async () => {
     const fetchMock = mockOperationsFetch(emptyInventory);
 
     render(<AdminOperations />);
 
-    const diagnosticSection = await getDiagnosticSection();
-    const idleCopy = within(diagnosticSection).getByText('Not run yet in this browser session.');
+    const section = await getCanarySection();
+    expect(
+      within(section).getByRole('heading', { level: 2, name: 'Report generation live canary' }),
+    ).toBeTruthy();
+    const idleCopy = within(section).getByText('Not run yet in this browser session.');
     expect(idleCopy.closest('[aria-live="polite"]')).toBeTruthy();
+    expect(within(section).getByText('Each click updates one synthetic report.')).toBeTruthy();
     expect(
-      within(diagnosticSection).getByText(
-        'Each run updates one synthetic report and may consume AI quota.',
-      ),
+      within(section).getByText('Each click spends a small amount of real AI quota.'),
     ).toBeTruthy();
-    expect(
-      within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }),
-    ).toHaveProperty('disabled', false);
+    expect(within(section).getByRole('button', { name: 'Run live canary' })).toHaveProperty(
+      'disabled',
+      false,
+    );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
+    expect(await screen.findByText(apiGitCommit)).toBeTruthy();
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
-  it('keeps shared Refresh read-only and preserves the idle diagnostic state', async () => {
-    const fetchMock = mockOperationsFetch(emptyInventory);
-    const user = userEvent.setup();
+  it('posts only after an explicit click with the current CSRF token and prevents double-submit', async () => {
+    let resolveCanary!: (response: Response) => void;
+    const canaryResponse = new Promise<Response>((resolve) => {
+      resolveCanary = resolve;
+    });
+    const fetchMock = mockDiagnosticFetch(() => canaryResponse);
 
     render(<AdminOperations />);
 
-    const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
-    await user.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(20));
-
+    const section = await getCanarySection();
+    const runButton = getRunCanaryButton(section);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
-    expect(
-      within(diagnosticSection).getByText('Not run yet in this browser session.'),
-    ).toBeTruthy();
-  });
-
-  it('manually posts with the current CSRF token, prevents double-submit, and renders proof', async () => {
-    let resolveDiagnostic!: (response: Response) => void;
-    const diagnosticResponse = new Promise<Response>((resolve) => {
-      resolveDiagnostic = resolve;
+    act(() => {
+      runButton.click();
+      runButton.click();
     });
-    const fetchMock = mockDiagnosticFetch(() => diagnosticResponse);
-    const user = userEvent.setup();
-
-    render(<AdminOperations />);
-
-    const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
-    const runButton = within(diagnosticSection).getByRole('button', {
-      name: 'Run diagnostic',
-    });
-    await user.click(runButton);
 
     await waitFor(() => expect(diagnosticRequests(fetchMock)).toHaveLength(1));
     expect(runButton).toHaveProperty('disabled', true);
-    const progress = within(diagnosticSection).getByText('Running diagnostic…');
+    const progress = within(section).getByText('Running live canary…');
     expect(progress.closest('[aria-live="polite"]')).toBeTruthy();
-
-    await user.click(runButton);
-    expect(diagnosticRequests(fetchMock)).toHaveLength(1);
 
     const [, requestInit] = diagnosticRequests(fetchMock)[0]!;
     expect(requestInit).toMatchObject({
@@ -2380,12 +2530,18 @@ describe('AdminOperations', () => {
     expect(requestHeaders.has('authorization')).toBe(false);
 
     await act(async () => {
-      resolveDiagnostic(jsonResponse(passDiagnostic));
-      await diagnosticResponse;
+      resolveCanary(jsonResponse(passCanary));
+      await canaryResponse;
     });
 
-    expect(await within(diagnosticSection).findByText('Pass')).toBeTruthy();
+    expect(await within(section).findByText('Pass')).toBeTruthy();
     await waitFor(() => expect(runButton).toHaveProperty('disabled', false));
+  });
+
+  it('renders live generation and usage proof plus only the bounded escaped synthetic preview', async () => {
+    const { section } = await renderAndRunCanary(passCanary);
+
+    expect(await within(section).findByText('Pass')).toBeTruthy();
     for (const value of [
       'report-canary@e2e.harpapro.com',
       'prj_01234567',
@@ -2394,182 +2550,543 @@ describe('AdminOperations', () => {
       'gpt-5.1',
       'req-report-canary-1',
     ]) {
-      expect(within(diagnosticSection).getByText(value)).toBeTruthy();
+      expect(within(section).getByText(value)).toBeTruthy();
     }
-    expect(within(diagnosticSection).getByText('Report 42')).toBeTruthy();
-    expect(within(diagnosticSection).getByText('Live')).toBeTruthy();
-    expect(within(diagnosticSection).getByText('Sign-out confirmed.')).toBeTruthy();
-    for (const timestamp of [
-      passDiagnostic.observedAt,
-      passDiagnostic.generation.requestedAt,
-      passDiagnostic.generation.finishedAt,
-      passDiagnostic.generation.reportUpdatedAt,
-      passDiagnostic.generation.generatedAt,
-    ]) {
-      expect(diagnosticSection.querySelector(`time[datetime="${timestamp}"]`)).toBeTruthy();
-    }
+    expect(within(section).getByText('Report 42')).toBeTruthy();
+    expect(within(section).getByText('Live')).toBeTruthy();
+    expect(within(section).getByText('Sign-out confirmed.')).toBeTruthy();
+    expectSuccessfulCanaryProof(section);
 
-    expect(within(diagnosticSection).getByText('Free plan')).toBeTruthy();
-    expect(within(diagnosticSection).getByText('Report generations')).toBeTruthy();
-    expect(within(diagnosticSection).getByText('AI input tokens')).toBeTruthy();
-    expect(within(diagnosticSection).getByText('AI output tokens')).toBeTruthy();
-    const renderedProof = diagnosticSection.textContent ?? '';
-    for (const value of [
-      '2 used',
-      '8 remaining',
-      '10 limit',
-      '125,000 used',
-      '875,000 remaining',
-      '1,000,000 limit',
-      '4,200 used',
-      'Unlimited',
-      'Custom limit',
-    ]) {
-      expect(renderedProof).toContain(value);
-    }
-    expect(diagnosticSection.querySelector(`time[datetime="${resetAt}"]`)).toBeTruthy();
+    expect(within(section).getByText('Free plan')).toBeTruthy();
+    expect(within(section).getByText('Report generations')).toBeTruthy();
+    expect(within(section).getByText('AI input tokens')).toBeTruthy();
+    expect(within(section).getByText('AI output tokens')).toBeTruthy();
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
   });
 
-  it('preserves successful proof while showing only reviewed warning copy', async () => {
-    const warningDiagnostic = {
-      ...passDiagnostic,
-      status: 'warning' as const,
-      generation: {
-        ...passDiagnostic.generation,
-        fixtureMode: 'replay' as const,
-        idempotentReplay: true,
+  it('renders the 80-second cleanup-grace duration while keeping functional latencies bounded', async () => {
+    const { section } = await renderAndRunCanary({
+      ...passCanary,
+      durationMs: 80_000,
+    });
+
+    expect(await within(section).findByText('Pass')).toBeTruthy();
+    expect(within(section).getByText('Completed in 80,000 ms.')).toBeTruthy();
+
+    const httpTerm = within(section).getByText(/^HTTP(?: status)?$/i, { selector: 'dt' });
+    const generationDetails = httpTerm.closest('dl');
+    expect(generationDetails).toBeTruthy();
+    expectDefinitionValue(
+      generationDetails!,
+      /^(?:Generation )?(?:duration|latency)$/i,
+      '1,300 ms',
+    );
+
+    const inputTokensTerm = within(section).getByText('Input tokens', { selector: 'dt' });
+    const usageDetails = inputTokensTerm.closest('dl');
+    expect(usageDetails).toBeTruthy();
+    expectDefinitionValue(usageDetails!, /^(?:Usage )?(?:duration|latency)$/i, '876 ms');
+  });
+
+  it('renders a valid nullable all-empty preview without inventing sample text', async () => {
+    const emptyPreviewHash = 'b'.repeat(64);
+    const { section } = await renderAndRunCanary({
+      ...passCanary,
+      preview: {
+        schemaValid: true,
+        sample: {
+          title: null,
+          summary: null,
+          weather: null,
+          workers: [],
+          materials: [],
+          issues: [],
+          nextSteps: [],
+          summarySections: [],
+        },
+        counts: {
+          workers: 0,
+          materials: 0,
+          issues: 0,
+          nextSteps: 0,
+          summarySections: 0,
+          imageAttachments: 0,
+          documentAttachments: 0,
+        },
+        truncated: false,
+        bodySha256: emptyPreviewHash,
       },
+    });
+
+    expect(await within(section).findByText('Pass')).toBeTruthy();
+    const previewRegion = within(section).getByRole('region', {
+      name: 'Synthetic report response preview',
+    });
+    for (const label of [
+      'Workers',
+      'Materials',
+      'Issues',
+      'Next steps',
+      'Summary sections',
+      'Image attachments',
+      'Document attachments',
+    ]) {
+      expectDefinitionValue(previewRegion, label, '0');
+    }
+    expectDefinitionValue(previewRegion, /^(?:Report (?:body )?)?SHA-256$/i, emptyPreviewHash);
+    expect(previewRegion.textContent).not.toMatch(/undefined|\bnull\b/i);
+    expect(previewRegion.textContent).not.toContain(escapedPreviewTitle);
+    expect(previewRegion.textContent).not.toContain(escapedPreviewSummary);
+    expect(within(previewRegion).queryByText('Preview truncated')).toBeNull();
+    expect(previewRegion.querySelector('script')).toBeNull();
+    expect(previewRegion.querySelector('img')).toBeNull();
+  });
+
+  it('keeps a completed canary result across shared Refresh without repeating its POST', async () => {
+    const { fetchMock, section } = await renderAndRunCanary(passCanary);
+    const user = userEvent.setup();
+    expect(await within(section).findByText('Pass')).toBeTruthy();
+    expect(diagnosticRequests(fetchMock)).toHaveLength(1);
+    await waitFor(() =>
+      expect(deploymentRequests(fetchMock, 'https://api.example.test/healthz')).toHaveLength(1),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    await waitFor(() =>
+      expect(deploymentRequests(fetchMock, 'https://api.example.test/healthz')).toHaveLength(2),
+    );
+    expect(diagnosticRequests(fetchMock)).toHaveLength(1);
+    const refreshedSection = await getCanarySection();
+    expect(refreshedSection.isConnected).toBe(true);
+    expect(within(refreshedSection).getByText('Pass')).toBeTruthy();
+  });
+
+  it('keeps proven live output while showing only the two reviewed warning reasons', async () => {
+    const warningCanary = {
+      ...passCanary,
+      status: 'warning' as const,
       limits: null,
       cleanup: 'failed' as const,
-      warnings: ['replay_only', 'limits_unavailable', 'sign_out_failed'] as const,
+      warnings: ['sign_out_failed', 'limits_unavailable'] as const,
     };
-    const { section } = await renderAndRunDiagnostic(warningDiagnostic);
+    const { section } = await renderAndRunCanary(warningCanary);
 
     expect(await within(section).findByText('Warning')).toBeTruthy();
-    expect(within(section).getByText('Replay')).toBeTruthy();
-    expect(within(section).getByText('openai')).toBeTruthy();
-    expect(within(section).getByText('gpt-5.1')).toBeTruthy();
-    for (const message of [
-      'This run exercised the endpoint and persistence, but did not confirm a fresh live AI provider call.',
-      'Generation passed, but effective usage limits were unavailable.',
-      'Generation passed, but sign-out could not be confirmed.',
-    ]) {
-      expect(within(section).getByText(message)).toBeTruthy();
-    }
+    expect(within(section).getByText('Live')).toBeTruthy();
+    expectSuccessfulCanaryProof(section);
+    expect(within(section).getByText('Effective usage limits were unavailable.')).toBeTruthy();
+    expect(within(section).getByText('Application sign-out could not be confirmed.')).toBeTruthy();
+    expect(section.textContent).not.toMatch(/replay only|fresh live call was not confirmed/i);
     expect(within(section).queryByText('Sign-out confirmed.')).toBeNull();
   });
 
-  it('renders sanitized failed and not-configured observations without implying health', async () => {
-    const failed = {
-      observedAt,
-      status: 'fail' as const,
-      durationMs: 900,
-      phase: 'generate' as const,
-      reason: 'rate_limited' as const,
-      cleanup: 'succeeded' as const,
-    };
-    let result = await renderAndRunDiagnostic(failed);
+  it.each([
+    [
+      'mode_gate',
+      'live_mode_required',
+      'Mode gate',
+      'Live provider mode was required but not proven.',
+    ],
+    [
+      'usage_proof',
+      'live_proof_failed',
+      'Usage proof',
+      'The generation and usage evidence did not prove one fresh live provider call.',
+    ],
+    [
+      'usage_proof',
+      'usage_proof_missing',
+      'Usage proof',
+      'No matching live usage row was recorded.',
+    ],
+    [
+      'usage_proof',
+      'usage_proof_ambiguous',
+      'Usage proof',
+      'More than one matching live usage row was recorded.',
+    ],
+    [
+      'preview',
+      'preview_invalid',
+      'Preview',
+      'The live report response could not be safely previewed.',
+    ],
+    ['usage_window', 'timeout', 'Usage window', 'The live canary timed out.'],
+    ['generate', 'rate_limited', 'Generate', 'Rate limiting prevented report generation.'],
+  ] as const)(
+    'renders reviewed live-canary failure %s/%s',
+    async (phase, reason, phaseLabel, message) => {
+      const failed = {
+        observedAt,
+        status: 'fail' as const,
+        durationMs: 900,
+        phase,
+        reason,
+        cleanup: 'succeeded' as const,
+      };
+      const { section } = await renderAndRunCanary(failed);
 
-    expect(await within(result.section).findByText('Failed')).toBeTruthy();
-    expect(within(result.section).getByText('Generate')).toBeTruthy();
-    expect(
-      within(result.section).getByText('Rate limiting prevented report generation.'),
-    ).toBeTruthy();
-    expect(within(result.section).getByText('Sign-out confirmed.')).toBeTruthy();
-    expect(within(result.section).queryByText(/healthy/i)).toBeNull();
+      expect(await within(section).findByText('Failed')).toBeTruthy();
+      expect(within(section).getByText(phaseLabel)).toBeTruthy();
+      expect(within(section).getByText(message)).toBeTruthy();
+      expect(within(section).getByText('Sign-out confirmed.')).toBeTruthy();
+      expect(within(section).queryByText(/healthy/i)).toBeNull();
+    },
+  );
 
-    cleanup();
-    result = await renderAndRunDiagnostic(unknownDiagnostic);
-    expect(await within(result.section).findByText('Unknown')).toBeTruthy();
-    expect(
-      within(result.section).getByText('Report-generation diagnostic is not configured.'),
-    ).toBeTruthy();
-    expect(within(result.section).queryByText(/healthy/i)).toBeNull();
+  it.each([
+    [
+      'not_configured',
+      'Report-generation live canary is not configured. No provider call occurred.',
+    ],
+    ['not_enabled', 'Report-generation live canary is disabled. No provider call occurred.'],
+  ] as const)('renders unknown/%s without implying a provider call', async (reason, message) => {
+    const { section } = await renderAndRunCanary({
+      ...unknownCanary,
+      reason,
+    });
+
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText(message)).toBeTruthy();
+    expect(within(section).queryByText(/healthy/i)).toBeNull();
   });
 
-  it('distinguishes rejected admin requests from provider failures and rate limits', async () => {
+  it('distinguishes CSRF rejection and route rate limiting without rendering raw detail', async () => {
     const forbiddenBody = {
       error: {
         code: 'FORBIDDEN',
         message: 'csrf-origin-detail-must-never-render',
       },
     };
-    let result = await renderAndRunDiagnostic(forbiddenBody, 403);
+    let result = await renderAndRunCanary(forbiddenBody, 403);
 
     expect(await within(result.section).findByText('Request rejected')).toBeTruthy();
     expect(
       within(result.section).getByText(
-        'The admin origin or CSRF check rejected this diagnostic request.',
+        'The admin origin or CSRF check rejected this live canary request.',
       ),
     ).toBeTruthy();
     expect(result.section.textContent).not.toContain('csrf-origin-detail-must-never-render');
+    expect(document.documentElement.outerHTML).not.toContain(
+      'csrf-origin-detail-must-never-render',
+    );
     expect(within(result.section).queryByText(/provider failed/i)).toBeNull();
 
     cleanup();
-    result = await renderAndRunDiagnostic(
+    result = await renderAndRunCanary(
       { error: { code: 'RATE_LIMITED', message: 'raw limiter detail' } },
       429,
     );
     expect(await within(result.section).findByText('Rate limited')).toBeTruthy();
     expect(
-      within(result.section).getByText('Diagnostic run limit reached. Try again later.'),
+      within(result.section).getByText('Live canary run limit reached. Try again later.'),
     ).toBeTruthy();
     expect(result.section.textContent).not.toContain('raw limiter detail');
+    expect(document.documentElement.outerHTML).not.toContain('raw limiter detail');
   });
 
-  it('returns the whole page to sign-in when a diagnostic request finds an expired session', async () => {
+  it('returns the whole page to sign-in when a live canary request finds an expired session', async () => {
     authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
-    const fetchMock = mockDiagnosticFetch(() =>
+    mockDiagnosticFetch(() =>
       jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'expired-cookie-detail' } }, 401),
     );
     const user = userEvent.setup();
 
     render(<AdminOperations />);
 
-    const diagnosticSection = await getDiagnosticSection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(10));
-    await user.click(within(diagnosticSection).getByRole('button', { name: 'Run diagnostic' }));
+    const section = await getCanarySection();
+    await user.click(getRunCanaryButton(section));
 
     expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
     expect(authMock.getSession).toHaveBeenCalledTimes(2);
-    expect(screen.queryByRole('heading', { name: 'Report generation diagnostic' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Report generation live canary' })).toBeNull();
     expect(document.body.textContent).not.toContain('expired-cookie-detail');
+    expect(document.documentElement.outerHTML).not.toContain('expired-cookie-detail');
     expect(authMock.logout).not.toHaveBeenCalled();
   });
 
-  it('strictly rejects diagnostic responses containing credentials or raw content', async () => {
-    const forbiddenValues = [
-      'test-password-must-never-render',
-      'bearer-token-must-never-render',
-      'admin-cookie-must-never-render',
-      'synthetic-note-content-must-never-render',
-      'raw-model-response-must-never-render',
-      'raw-provider-error-must-never-render',
-    ];
-    const poisonedResponse = {
-      ...passDiagnostic,
-      password: forbiddenValues[0],
-      adminCookie: forbiddenValues[2],
-      target: {
-        ...passDiagnostic.target,
-        bearerToken: forbiddenValues[1],
+  it.each([
+    [
+      'an overlong preview string',
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          sample: { ...passCanary.preview.sample, title: 'x'.repeat(401) },
+        },
       },
-      generation: {
-        ...passDiagnostic.generation,
-        notes: forbiddenValues[3],
-        rawResponse: forbiddenValues[4],
-        providerError: forbiddenValues[5],
+    ],
+    [
+      'a sixth preview item',
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          sample: {
+            ...passCanary.preview.sample,
+            nextSteps: Array.from({ length: 6 }, (_, index) => `Step ${index + 1}`),
+          },
+        },
       },
-    };
-    const { section } = await renderAndRunDiagnostic(poisonedResponse);
+    ],
+    [
+      'an underfilled sample for its structural count',
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          sample: {
+            ...passCanary.preview.sample,
+            workers: passCanary.preview.sample.workers.slice(0, 4),
+          },
+        },
+      },
+    ],
+    [
+      'a structural count below its sample length',
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          counts: {
+            ...passCanary.preview.counts,
+            workers: 4,
+          },
+        },
+      },
+    ],
+    [
+      'a malformed report hash',
+      {
+        ...passCanary,
+        preview: { ...passCanary.preview, bodySha256: 'not-a-sha256' },
+      },
+    ],
+    [
+      'a replay-only success warning',
+      {
+        ...passCanary,
+        status: 'warning',
+        generation: { ...passCanary.generation, fixtureMode: 'replay' },
+        warnings: ['replay_only'],
+      },
+    ],
+  ])('strictly rejects %s', async (_description, poisonedResponse) => {
+    const { section } = await renderAndRunCanary(poisonedResponse);
 
     expect(await within(section).findByText('Unknown')).toBeTruthy();
-    expect(within(section).getByText('The diagnostic returned an invalid response.')).toBeTruthy();
-    const renderedText = document.body.textContent ?? '';
-    for (const value of [...forbiddenValues, adminSession.csrfToken]) {
-      expect(renderedText).not.toContain(value);
-    }
-    expect(window.localStorage.length).toBe(0);
-    expect(window.sessionStorage.length).toBe(0);
+    expect(within(section).getByText('The live canary returned an invalid response.')).toBeTruthy();
   });
+
+  const leakSentinels = {
+    password: 'test-password-must-never-render',
+    bearerToken: 'bearer-token-must-never-render',
+    cookie: 'application-cookie-must-never-render',
+    authToken: 'application-auth-token-must-never-render',
+    prompt: 'source-prompt-must-never-render',
+    notes: 'synthetic-note-content-must-never-render',
+    transcript: 'source-transcript-must-never-render',
+    rawResponse: 'raw-model-response-must-never-render',
+    providerMessage: 'raw-provider-error-must-never-render',
+    databaseError: 'raw-database-error-must-never-render',
+    upstreamException: 'raw-upstream-exception-must-never-render',
+    canonicalJson: 'canonical-report-json-must-never-render',
+    rawBody: 'raw-report-body-must-never-render',
+    usageId: 'lue_private_usage_row',
+    userId: 'usr_private_synthetic_user',
+    issueAttachmentId: 'fil_private_issue_attachment',
+    summaryAttachmentId: 'fil_private_summary_attachment',
+  } as const;
+
+  it.each([
+    [
+      'a test password',
+      leakSentinels.password,
+      { ...passCanary, password: leakSentinels.password },
+    ],
+    [
+      'a Bearer token',
+      leakSentinels.bearerToken,
+      {
+        ...passCanary,
+        target: { ...passCanary.target, bearerToken: leakSentinels.bearerToken },
+      },
+    ],
+    [
+      'an application cookie',
+      leakSentinels.cookie,
+      { ...passCanary, cookie: leakSentinels.cookie },
+    ],
+    [
+      'an application auth token',
+      leakSentinels.authToken,
+      { ...passCanary, authToken: leakSentinels.authToken },
+    ],
+    [
+      'a generation prompt',
+      leakSentinels.prompt,
+      {
+        ...passCanary,
+        generation: { ...passCanary.generation, prompt: leakSentinels.prompt },
+      },
+    ],
+    [
+      'source notes',
+      leakSentinels.notes,
+      {
+        ...passCanary,
+        generation: { ...passCanary.generation, notes: leakSentinels.notes },
+      },
+    ],
+    [
+      'a source transcript',
+      leakSentinels.transcript,
+      {
+        ...passCanary,
+        generation: { ...passCanary.generation, transcript: leakSentinels.transcript },
+      },
+    ],
+    [
+      'a raw provider response',
+      leakSentinels.rawResponse,
+      {
+        ...passCanary,
+        generation: {
+          ...passCanary.generation,
+          response: { body: leakSentinels.rawResponse },
+        },
+      },
+    ],
+    [
+      'a provider message',
+      leakSentinels.providerMessage,
+      {
+        ...passCanary,
+        generation: {
+          ...passCanary.generation,
+          providerMessage: leakSentinels.providerMessage,
+        },
+      },
+    ],
+    [
+      'a database error',
+      leakSentinels.databaseError,
+      {
+        ...passCanary,
+        generation: {
+          ...passCanary.generation,
+          databaseError: leakSentinels.databaseError,
+        },
+      },
+    ],
+    [
+      'an upstream exception',
+      leakSentinels.upstreamException,
+      {
+        ...passCanary,
+        generation: {
+          ...passCanary.generation,
+          upstreamException: leakSentinels.upstreamException,
+        },
+      },
+    ],
+    [
+      'canonical report JSON',
+      leakSentinels.canonicalJson,
+      {
+        ...passCanary,
+        preview: { ...passCanary.preview, canonicalJson: leakSentinels.canonicalJson },
+      },
+    ],
+    [
+      'a raw report body',
+      leakSentinels.rawBody,
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          rawBody: { title: leakSentinels.rawBody },
+        },
+      },
+    ],
+    [
+      'a usage-row ID',
+      leakSentinels.usageId,
+      {
+        ...passCanary,
+        usage: { ...passCanary.usage, id: leakSentinels.usageId },
+      },
+    ],
+    [
+      'a usage user ID',
+      leakSentinels.userId,
+      {
+        ...passCanary,
+        usage: { ...passCanary.usage, userId: leakSentinels.userId },
+      },
+    ],
+    [
+      'an issue attachment ID',
+      leakSentinels.issueAttachmentId,
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          sample: {
+            ...passCanary.preview.sample,
+            issues: passCanary.preview.sample.issues.map((issue, index) =>
+              index === 0
+                ? {
+                    ...issue,
+                    attachments: { images: [leakSentinels.issueAttachmentId] },
+                  }
+                : issue,
+            ),
+          },
+        },
+      },
+    ],
+    [
+      'a summary-section attachment ID',
+      leakSentinels.summaryAttachmentId,
+      {
+        ...passCanary,
+        preview: {
+          ...passCanary.preview,
+          sample: {
+            ...passCanary.preview.sample,
+            summarySections: passCanary.preview.sample.summarySections.map(
+              (summarySection, index) =>
+                index === 0
+                  ? {
+                      ...summarySection,
+                      attachments: { documents: [leakSentinels.summaryAttachmentId] },
+                    }
+                  : summarySection,
+            ),
+          },
+        },
+      },
+    ],
+  ] as const)(
+    'strictly rejects and redacts %s',
+    async (_description, sentinel, poisonedResponse) => {
+      const { section } = await renderAndRunCanary(poisonedResponse);
+
+      expect(await within(section).findByText('Unknown')).toBeTruthy();
+      expect(
+        within(section).getByText('The live canary returned an invalid response.'),
+      ).toBeTruthy();
+      const renderedText = document.body.textContent ?? '';
+      const renderedHtml = document.documentElement.outerHTML;
+      for (const value of [sentinel, adminSession.csrfToken]) {
+        expect(renderedText).not.toContain(value);
+        expect(renderedHtml).not.toContain(value);
+      }
+      expect(window.localStorage.length).toBe(0);
+      expect(window.sessionStorage.length).toBe(0);
+    },
+  );
 });

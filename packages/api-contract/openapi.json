@@ -19780,6 +19780,716 @@
           }
         }
       }
+    },
+    "/admin/operations/fly-inventory": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded, read-only Fly application infrastructure inventory.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available"
+                          ]
+                        },
+                        "organizationSlug": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "configuredAppCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "unavailableConfiguredAppCount": {
+                          "type": "number",
+                          "enum": [
+                            0
+                          ]
+                        },
+                        "apps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "status": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "network": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "reportedMachineCount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "reportedVolumeCount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "machines": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "available"
+                                    ]
+                                  },
+                                  "truncated": {
+                                    "type": "boolean",
+                                    "enum": [
+                                      false
+                                    ]
+                                  },
+                                  "items": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "state": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "processGroup": {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+                                        },
+                                        "region": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "cpuKind": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "cpus": {
+                                          "type": "integer",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "memoryMb": {
+                                          "type": "integer",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "createdAt": {
+                                          "type": "string"
+                                        },
+                                        "updatedAt": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "state",
+                                        "processGroup",
+                                        "region",
+                                        "cpuKind",
+                                        "cpus",
+                                        "memoryMb",
+                                        "createdAt",
+                                        "updatedAt"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "maxItems": 50
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "truncated",
+                                  "items"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "volumes": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "available"
+                                    ]
+                                  },
+                                  "truncated": {
+                                    "type": "boolean",
+                                    "enum": [
+                                      false
+                                    ]
+                                  },
+                                  "returnedAllocatedGb": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "items": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "state": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "sizeGb": {
+                                          "type": "integer",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "region": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "encrypted": {
+                                          "type": "boolean"
+                                        },
+                                        "attachedMachineId": {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "minLength": 1
+                                        },
+                                        "createdAt": {
+                                          "type": "string"
+                                        },
+                                        "snapshotRetentionDays": {
+                                          "type": "integer",
+                                          "nullable": true,
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "autoBackupEnabled": {
+                                          "type": "boolean",
+                                          "nullable": true
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "state",
+                                        "sizeGb",
+                                        "region",
+                                        "encrypted",
+                                        "attachedMachineId",
+                                        "createdAt",
+                                        "snapshotRetentionDays",
+                                        "autoBackupEnabled"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "maxItems": 50
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "truncated",
+                                  "returnedAllocatedGb",
+                                  "items"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "status",
+                              "network",
+                              "reportedMachineCount",
+                              "reportedVolumeCount",
+                              "machines",
+                              "volumes"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1,
+                          "maxItems": 10
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "organizationSlug",
+                        "configuredAppCount",
+                        "unavailableConfiguredAppCount",
+                        "apps"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "partial"
+                          ]
+                        },
+                        "organizationSlug": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "configuredAppCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "unavailableConfiguredAppCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 10
+                        },
+                        "apps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "status": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "network": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "reportedMachineCount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "reportedVolumeCount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "machines": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available"
+                                        ]
+                                      },
+                                      "truncated": {
+                                        "type": "boolean"
+                                      },
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "state": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "processGroup": {
+                                              "type": "string",
+                                              "nullable": true,
+                                              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+                                            },
+                                            "region": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "cpuKind": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "cpus": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "memoryMb": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "createdAt": {
+                                              "type": "string"
+                                            },
+                                            "updatedAt": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name",
+                                            "state",
+                                            "processGroup",
+                                            "region",
+                                            "cpuKind",
+                                            "cpus",
+                                            "memoryMb",
+                                            "createdAt",
+                                            "updatedAt"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "maxItems": 50
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "truncated",
+                                      "items"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unknown"
+                                        ]
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                          "not_configured",
+                                          "timeout",
+                                          "rate_limited",
+                                          "forbidden",
+                                          "not_found",
+                                          "invalid_response",
+                                          "provider_unavailable"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "volumes": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "available"
+                                        ]
+                                      },
+                                      "truncated": {
+                                        "type": "boolean"
+                                      },
+                                      "returnedAllocatedGb": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "items": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "state": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "sizeGb": {
+                                              "type": "integer",
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "region": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "encrypted": {
+                                              "type": "boolean"
+                                            },
+                                            "attachedMachineId": {
+                                              "type": "string",
+                                              "nullable": true,
+                                              "minLength": 1
+                                            },
+                                            "createdAt": {
+                                              "type": "string"
+                                            },
+                                            "snapshotRetentionDays": {
+                                              "type": "integer",
+                                              "nullable": true,
+                                              "minimum": -9007199254740991,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "autoBackupEnabled": {
+                                              "type": "boolean",
+                                              "nullable": true
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name",
+                                            "state",
+                                            "sizeGb",
+                                            "region",
+                                            "encrypted",
+                                            "attachedMachineId",
+                                            "createdAt",
+                                            "snapshotRetentionDays",
+                                            "autoBackupEnabled"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "maxItems": 50
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "truncated",
+                                      "returnedAllocatedGb",
+                                      "items"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unknown"
+                                        ]
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                          "not_configured",
+                                          "timeout",
+                                          "rate_limited",
+                                          "forbidden",
+                                          "not_found",
+                                          "invalid_response",
+                                          "provider_unavailable"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "status",
+                              "network",
+                              "reportedMachineCount",
+                              "reportedVolumeCount",
+                              "machines",
+                              "volumes"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1,
+                          "maxItems": 10
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "organizationSlug",
+                        "configuredAppCount",
+                        "unavailableConfiguredAppCount",
+                        "apps"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured",
+                            "timeout",
+                            "rate_limited",
+                            "forbidden",
+                            "not_found",
+                            "invalid_response",
+                            "provider_unavailable"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

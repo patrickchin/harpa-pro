@@ -3,11 +3,11 @@
 **Status:** Implemented on `dev`; not yet promoted to production as of
 2026-08-04.
 
-The provider quota percentage, R2 capacity, and deployment-identity extensions
-below are drafts for unmerged stacked pull requests. The Neon usage route
-reuses the existing observer pair. The R2 change does not provision its
-observer credential. The storage lifecycle observer is a separate read-only
-stack and adds no credential.
+The Fly inventory extension below is a draft for an unmerged stacked pull
+request. It does not provision its observer credential. The Neon usage route
+reuses the existing observer pair. The R2 code does not provision its observer
+credential. The storage lifecycle observer remains a separate read-only
+stacked draft and adds no credential.
 
 ## Goal
 
@@ -102,8 +102,8 @@ GitHub request, token, or credential is added.
 
 Provider money, token, invoice, and credit balances remain `Unknown`. These
 usage and request-budget percentages are not provider billing balances. With
-all read observers in the stack, the browser makes 11 fixed GET reads after
-session confirmation. It makes another 11 only on manual **Refresh**, for 22
+all read observers in the stack, the browser makes 12 fixed GET reads after
+session confirmation. It makes another 12 only on manual **Refresh**, for 24
 total after one Refresh. It does not poll. The report generation live canary
 remains a separate manual POST.
 
@@ -131,6 +131,43 @@ The operation headroom is a conservative estimate, not a billing balance.
 Unclassified operations, Infrequent Access data, and truncated inventory keep
 their explicit caveats. The Class A and Class B percentage rows remain
 explicit estimates against published operation references.
+
+## Fly inventory extension
+
+The Fly inventory observer is another narrow server-side extension. It remains
+an unmerged draft. See [Admin Fly inventory](design-admin-fly-inventory.md) for
+the full contract. `GET /admin/operations/fly-inventory` uses the dedicated
+browser-admin session and shared trusted-Fly-IP budget. It also uses a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+The API accepts `ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+`ADMIN_FLY_APP_NAMES` as one optional triplet. All three values must be absent
+or present together. The app list contains one to ten unique, exact names. The
+dedicated token must have read-only access to the configured Fly organization.
+The token and configuration never reach the browser.
+
+One observation uses only fixed `GET` requests to
+`https://api.machines.dev`. It has one 10-second deadline and at most 31
+provider calls. Apps run serially, while three fixed reads for one app may
+overlap. The observer does not follow redirects or pagination, and it does not
+retry or write to Fly.
+
+The response contains at most ten allowlisted apps, 50 Machines per app, and
+50 Volumes per app. A strict field allowlist removes raw Machine configuration,
+image and service details, Volume internals, and provider error text. The
+nullable `processGroup` value comes only from the reviewed Machine metadata
+field.
+
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Volume size shows allocated capacity, not used or free storage. Fly
+does not document a stable remaining-credit REST field, so that value stays
+`Unknown` with a dashboard link.
+
+The browser calls the route once after session confirmation and again only on
+manual **Refresh**. It never polls. The full stacked page makes 12 fixed GET
+reads on load and 24 after one Refresh. The report generation live canary
+remains a separate manual POST.
 
 ## Deployment identity extension
 
@@ -181,8 +218,8 @@ lifecycle card.
 - Do not add provider credentials to the browser. Secret-backed provider reads
   require a narrow admin API adapter with a response allowlist; do not add one
   broad aggregation endpoint that can silently gain new credential access.
-  The Neon inventory, Neon usage, and R2 capacity routes are the only
-  account-specific provider endpoints in this design.
+  The Neon inventory, Neon usage, R2 capacity, and draft Fly inventory routes
+  are the only account-specific provider endpoints in this design.
 - Do not claim that linked providers are healthy. Only first-party build
   identity and the two Harpa readiness probes receive live states.
 - Do not poll. Check once on page load and again only when the operator presses
@@ -191,8 +228,9 @@ lifecycle card.
   or invoice claims. The Neon usage percentages compare documented Free-plan
   values with published references. They are not billing credit. Undocumented
   remaining capacity stays `Unknown`. The R2 estimates are not provider
-  billing balances. Existing Sentry, provider, and budget alerts remain
-  responsible for notification.
+  billing balances. Fly Machine and Volume values are inventory, and remaining
+  Fly credit stays `Unknown`. Existing Sentry, provider, and budget alerts
+  remain responsible for notification.
 
 These limits keep the page useful without creating another monitoring system
 that the solo operator must maintain.
@@ -206,10 +244,10 @@ value must remain attributable to one of five evidence classes:
    databases are ready.
 2. **Public delivery metadata** — advisory public repository or vendor-status
    data. This never proves that a commit is deployed.
-3. **Account usage and capacity** — authenticated provider facts with an
-   explicit observation time and accounting window. `Used`, `limit`,
-   `remaining`, and `credit balance` are different fields; unavailable fields
-   render as `Unknown` and are never derived without a documented provider
+3. **Account inventory, usage, and capacity** — authenticated provider facts
+   with an explicit observation time and accounting window. `Inventory`,
+   `used`, `limit`, `remaining`, and `credit balance` are different fields.
+   Unavailable fields render as `Unknown` without a documented provider
    contract.
 4. **Lifecycle database state:** bounded rollout and durable queue facts. This
    state does not prove worker liveness or provider health.
@@ -265,6 +303,13 @@ and complete organization transfer against published references. Until Neon
 exposes a trustworthy balance source and an acceptable credential boundary,
 remaining credits stay `Unknown` with a console link.
 
+Fly Machine and Volume facts use the same narrow adapter rule. The adapter
+returns only configured apps and reviewed fields from Fly's public REST API.
+An absent Machine process-group field stays `null`. Machine state and process
+group do not prove Harpa readiness or worker liveness. The adapter does not use
+internal GraphQL, scrape the dashboard, or infer remaining credit. The
+dashboard remains the billing source.
+
 ### Report generation live canary
 
 The report generation endpoint authenticates an application account, reads
@@ -303,15 +348,18 @@ the full contract.
   provider access, paired-configuration fallback, fixed bounds, rate limit,
   no-store response, and absence of retries.
 - Neon usage tests prove exact Free-plan and Viewer gates, the 22-call read-only
-  ceiling, strict redaction, fixed references, transfer completeness, the
-  separate 12-request budget, 11/22 browser reads, and no polling.
+  ceiling, strict redaction, fixed references, transfer completeness, and the
+  separate 12-request budget.
 - R2 capacity tests prove strict redaction, paired configuration, fixed
   provider calls, bounded output, caveats, rate limits, and manual refresh.
+- Fly inventory tests prove triplet validation, fixed read-only requests,
+  allowlist filtering, strict redaction, nullable process-group inventory,
+  bounds, rate limits, 12/24 browser reads, and no polling.
 - Deployment-identity tests prove the four fixed reads, independent partial
   states, strict redaction, full identifiers, exact CORS policy, and absence of
   polling.
 - Storage lifecycle tests prove one fixed statement, the five-second deadline,
-  separate 12-request budget, strict redaction, 11/22 reads, and the explicit
+  separate 12-request budget, strict redaction, 12/24 reads, and the explicit
   worker-liveness caveat.
 - Report live-canary tests prove its development-only gate, dedicated cookie,
   exact Origin, session-derived CSRF, fixed target, live usage proof, bounded

@@ -17,11 +17,11 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 The root route renders the business activity console. `/operations` provides
 read-only Harpa deployment identity and readiness, a no-token public GitHub
 branch/PR snapshot, bounded Neon inventory and Free-plan usage, bounded R2
-capacity, storage lifecycle database evidence, and links to external service
-consoles. A separate **Report generation live canary** card updates one fixed
-synthetic report and spends real AI tokens. The canary runs only after an
-explicit click. It is not part of the read-only refresh. Unknown browser paths
-return a static 404 instead of falling back to the console.
+capacity, bounded Fly inventory, storage lifecycle database evidence, and links
+to external service consoles. A separate **Report generation live canary** card
+updates one fixed synthetic report and spends real AI tokens. The canary runs
+only after an explicit click. It is not part of the read-only refresh. Unknown
+browser paths return a static 404 instead of falling back to the console.
 `/admin/activity` and the `/admin/operations/*` routes remain API resource
 paths, not page URLs.
 
@@ -92,9 +92,9 @@ response headers. Invalid or contradictory headers make only that budget
 
 Percentage text uses one decimal place. Values can exceed 100.0%, while the
 painted meter stops at 100%. Unsupported provider money, token, invoice, and
-credit balances stay `Unknown`. The browser makes 11 fixed GET reads after
-session confirmation. It makes another 11 only when the operator presses
-**Refresh**, for 22 total after one Refresh. It does not poll. The report
+credit balances stay `Unknown`. The browser makes 12 fixed GET reads after
+session confirmation. It makes another 12 only when the operator presses
+**Refresh**, for 24 total after one Refresh. It does not poll. The report
 generation live canary remains a separate manual POST.
 
 See
@@ -121,6 +121,39 @@ The browser reads this route on page load and shared **Refresh** only. It does
 not poll. See
 [Admin storage lifecycle observer](../../docs/v4/design-admin-storage-lifecycle-observer.md)
 for the full boundary.
+
+## Fly inventory draft
+
+The draft adds `GET /admin/operations/fly-inventory`. The route uses the
+dedicated admin cookie and the shared trusted-Fly-IP budget. It also has a
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+The API accepts `ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+`ADMIN_FLY_APP_NAMES` as one optional triplet. All three values must be absent
+or present together. The app list contains one to ten unique, exact Fly app
+names. The dedicated token must have read-only access to the configured
+organization. None of these values enters the browser bundle.
+
+One observation uses fixed `GET` requests to `https://api.machines.dev` under
+one 10-second deadline. It makes at most 31 provider calls. It does not follow
+redirects or pagination, and it does not retry. The response returns at most
+ten apps, 50 Machines per app, and 50 Volumes per app.
+
+The response allowlist excludes private IPs, raw Machine configuration, image
+details, service configuration, Volume internals, and raw provider errors.
+`processGroup` is nullable inventory from the reviewed Machine metadata field.
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Volume size shows allocated capacity, and remaining Fly credit stays
+`Unknown` with a Fly dashboard link.
+
+The browser requests the inventory once after session confirmation and once
+per manual **Refresh**. The full page makes 12 fixed GET reads on load and 24
+after one Refresh. It does not poll or make a provider write. The report
+generation live canary remains a separate manual POST.
+
+See [Admin Fly inventory](../../docs/v4/design-admin-fly-inventory.md) for the
+draft route and credential contract.
 
 ## Report generation live canary
 

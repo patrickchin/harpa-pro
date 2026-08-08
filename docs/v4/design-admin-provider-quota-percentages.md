@@ -162,11 +162,14 @@ The route applies, in order:
 3. the dedicated administrator cookie session; and
 4. a separate 12-request-per-minute identity-and-session budget.
 
-Anonymous callers, Better Auth sessions, legacy application-admin Bearer
-tokens, and cross-origin requests fail before any Neon call. The browser calls
-the route once after the dedicated session is confirmed and again only when
-the operator presses **Refresh**. There is no polling, background refresh,
-retry, or provider write.
+Anonymous callers, Better Auth sessions, and legacy application-admin Bearer
+tokens fail before any Neon call. Exact administrator CORS remains the browser
+read boundary; like the existing read-only operations routes, `Origin` is not
+a second GET authorization input. The state-changing request origin guard does
+not run for this `GET`; the administrator session and rate limit remain its
+server-side request boundary. The browser calls the route once after the
+dedicated session is confirmed and again only when the operator presses
+**Refresh**. There is no polling, background refresh, retry, or provider write.
 
 ### Fixed upstream plan
 
@@ -251,12 +254,41 @@ The strict response contains only:
 - raw project transfer bytes; and
 - complete organization transfer used/reference bytes when provable.
 
+An available project uses this unit-explicit shape:
+
+```ts
+{
+  status: 'available';
+  id: string;
+  name: string;
+  effectivePermission: 'VIEWER';
+  periodStart: string;
+  periodEnd: string;
+  compute: {
+    used: number;
+    allowance: 360_000;
+    unit: 'cu_seconds';
+  }
+  storage: {
+    used: number;
+    allowance: 500_000_000;
+    unit: 'bytes';
+  }
+  transferBytes: number;
+}
+```
+
+Complete organization transfer uses `used`, literal
+`allowance: 5_000_000_000`, `unit: 'bytes'`, and the common project period.
+The response does not carry pre-rounded percentages; the browser derives them
+from these safe integers.
+
 Do not return organization name or handle, member data, owner IDs, connection
 URIs, proxy hosts, database names, roles, passwords, endpoints, IP allowlists,
 settings, annotations, integration maps, application maps, raw provider
 responses, response headers, or provider error bodies.
 
-Finite unknown reasons are:
+Top-level finite unknown reasons are:
 
 - `not_configured`;
 - `unsupported_plan`;
@@ -267,6 +299,23 @@ Finite unknown reasons are:
 - `not_found`;
 - `invalid_response`; and
 - `provider_unavailable`.
+
+An unavailable project detail uses only `timeout`, `rate_limited`,
+`forbidden`, `not_found`, `invalid_response`, or `provider_unavailable`.
+Organization transfer uses the narrower
+`incomplete_project_coverage`, `period_mismatch`, `invalid_response`, or
+`no_projects` reason set. `no_projects` requires exact complete empty discovery:
+`projects: []`, `projectsTruncated: false`, and
+`unavailableProjectCount: 0`; the top-level observation remains `available`.
+`incomplete_project_coverage` requires a cursor, an unavailable provider
+project, or an unavailable project detail. `period_mismatch` requires at least
+two available project details with different valid consumption periods.
+`invalid_response` is used only when otherwise valid, complete, period-aligned
+project transfer values overflow a safe-integer sum. When more than one
+failure signal exists, the exact priority is incomplete project coverage,
+then period mismatch, then invalid sum. These correlations prevent the
+response from claiming a more specific degradation than the returned evidence
+supports.
 
 Available and partial observations include fixed caveats:
 

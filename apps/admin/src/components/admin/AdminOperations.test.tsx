@@ -543,6 +543,290 @@ const unknownFlyInventory = {
   reason: 'not_configured' as const,
 };
 
+const zeroAiCallOutcome = {
+  succeeded: 0,
+  failed: 0,
+  total: 0,
+};
+
+const zeroAiOperationUsage = {
+  liveSucceeded: 0,
+  liveFailed: 0,
+  recordSucceeded: 0,
+  recordFailed: 0,
+  replaySucceeded: 0,
+  replayFailed: 0,
+};
+
+const providerCapacityUnknown = {
+  openai: { status: 'unknown' as const, reason: 'not_observed' as const },
+  groq: { status: 'unknown' as const, reason: 'not_observed' as const },
+  kimi: { status: 'unknown' as const, reason: 'not_observed' as const },
+};
+
+const aiUsageCaveats = [
+  'best_effort_ledger',
+  'not_provider_billing',
+  'replay_not_provider_usage',
+  'record_mode_calls_provider',
+  'deleted_history_excluded',
+] as const;
+
+function emptyAiUsageWindow(windowStart: string) {
+  return {
+    windowStart,
+    windowEnd: observedAt,
+    recordedEventCount: 0,
+    calls: {
+      live: zeroAiCallOutcome,
+      record: zeroAiCallOutcome,
+      replay: zeroAiCallOutcome,
+    },
+    successfulProviderUsage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedTokens: 0,
+      inputSeconds: 0,
+    },
+    operations: {
+      chat: zeroAiOperationUsage,
+      generateReport: zeroAiOperationUsage,
+      transcribe: zeroAiOperationUsage,
+    },
+    providers: [],
+    unclassifiedVendorEventCount: 0,
+    missingInputSecondsEventCount: 0,
+    lastRecordedAt: null,
+    warnings: [],
+  };
+}
+
+const availableAiUsage = {
+  observedAt,
+  status: 'available' as const,
+  source: 'harpa_usage_ledger' as const,
+  monthToDate: {
+    windowStart: '2026-08-01T00:00:00.000Z',
+    windowEnd: observedAt,
+    recordedEventCount: 19,
+    calls: {
+      live: { succeeded: 7, failed: 3, total: 10 },
+      record: { succeeded: 3, failed: 1, total: 4 },
+      replay: { succeeded: 4, failed: 1, total: 5 },
+    },
+    successfulProviderUsage: {
+      inputTokens: 114_200,
+      outputTokens: 22_800,
+      cachedTokens: 31_000,
+      inputSeconds: 45.125,
+    },
+    operations: {
+      chat: {
+        liveSucceeded: 3,
+        liveFailed: 1,
+        recordSucceeded: 1,
+        recordFailed: 0,
+        replaySucceeded: 2,
+        replayFailed: 0,
+      },
+      generateReport: {
+        liveSucceeded: 2,
+        liveFailed: 1,
+        recordSucceeded: 2,
+        recordFailed: 1,
+        replaySucceeded: 2,
+        replayFailed: 1,
+      },
+      transcribe: {
+        liveSucceeded: 2,
+        liveFailed: 1,
+        recordSucceeded: 0,
+        recordFailed: 0,
+        replaySucceeded: 0,
+        replayFailed: 0,
+      },
+    },
+    providers: [
+      {
+        provider: 'openai' as const,
+        recordedEventCount: 8,
+        calls: {
+          live: { succeeded: 4, failed: 1, total: 5 },
+          record: { succeeded: 1, failed: 0, total: 1 },
+          replay: { succeeded: 2, failed: 0, total: 2 },
+        },
+        successfulProviderUsage: {
+          inputTokens: 100_000,
+          outputTokens: 20_000,
+          cachedTokens: 30_000,
+          inputSeconds: 0,
+        },
+        lastRecordedAt: '2026-08-08T05:20:00.000Z',
+      },
+      {
+        provider: 'groq' as const,
+        recordedEventCount: 3,
+        calls: {
+          live: { succeeded: 2, failed: 1, total: 3 },
+          record: zeroAiCallOutcome,
+          replay: zeroAiCallOutcome,
+        },
+        successfulProviderUsage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+          inputSeconds: 45.125,
+        },
+        lastRecordedAt: '2026-08-08T05:10:00.000Z',
+      },
+      {
+        provider: 'kimi' as const,
+        recordedEventCount: 5,
+        calls: {
+          live: { succeeded: 1, failed: 0, total: 1 },
+          record: { succeeded: 1, failed: 1, total: 2 },
+          replay: { succeeded: 1, failed: 1, total: 2 },
+        },
+        successfulProviderUsage: {
+          inputTokens: 13_000,
+          outputTokens: 2_500,
+          cachedTokens: 1_000,
+          inputSeconds: 0,
+        },
+        lastRecordedAt: '2026-08-08T04:30:00.000Z',
+      },
+      {
+        provider: 'other' as const,
+        recordedEventCount: 3,
+        calls: {
+          live: { succeeded: 0, failed: 1, total: 1 },
+          record: { succeeded: 1, failed: 0, total: 1 },
+          replay: { succeeded: 1, failed: 0, total: 1 },
+        },
+        successfulProviderUsage: {
+          inputTokens: 1_200,
+          outputTokens: 300,
+          cachedTokens: 0,
+          inputSeconds: 0,
+        },
+        lastRecordedAt: '2026-08-08T03:00:00.000Z',
+      },
+    ],
+    unclassifiedVendorEventCount: 3,
+    missingInputSecondsEventCount: 1,
+    lastRecordedAt: '2026-08-08T05:20:00.000Z',
+    warnings: ['unclassified_vendor_events', 'missing_transcription_duration'] as const,
+  },
+  last24Hours: {
+    windowStart: '2026-08-07T05:30:00.000Z',
+    windowEnd: observedAt,
+    recordedEventCount: 5,
+    calls: {
+      live: { succeeded: 2, failed: 1, total: 3 },
+      record: zeroAiCallOutcome,
+      replay: { succeeded: 2, failed: 0, total: 2 },
+    },
+    successfulProviderUsage: {
+      inputTokens: 2_500,
+      outputTokens: 500,
+      cachedTokens: 200,
+      inputSeconds: 12.5,
+    },
+    operations: {
+      chat: {
+        liveSucceeded: 1,
+        liveFailed: 0,
+        recordSucceeded: 0,
+        recordFailed: 0,
+        replaySucceeded: 1,
+        replayFailed: 0,
+      },
+      generateReport: {
+        liveSucceeded: 0,
+        liveFailed: 0,
+        recordSucceeded: 0,
+        recordFailed: 0,
+        replaySucceeded: 1,
+        replayFailed: 0,
+      },
+      transcribe: {
+        liveSucceeded: 1,
+        liveFailed: 1,
+        recordSucceeded: 0,
+        recordFailed: 0,
+        replaySucceeded: 0,
+        replayFailed: 0,
+      },
+    },
+    providers: [
+      {
+        provider: 'openai' as const,
+        recordedEventCount: 2,
+        calls: {
+          live: { succeeded: 1, failed: 0, total: 1 },
+          record: zeroAiCallOutcome,
+          replay: { succeeded: 1, failed: 0, total: 1 },
+        },
+        successfulProviderUsage: {
+          inputTokens: 2_500,
+          outputTokens: 500,
+          cachedTokens: 200,
+          inputSeconds: 0,
+        },
+        lastRecordedAt: '2026-08-08T05:20:00.000Z',
+      },
+      {
+        provider: 'groq' as const,
+        recordedEventCount: 2,
+        calls: {
+          live: { succeeded: 1, failed: 1, total: 2 },
+          record: zeroAiCallOutcome,
+          replay: zeroAiCallOutcome,
+        },
+        successfulProviderUsage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+          inputSeconds: 12.5,
+        },
+        lastRecordedAt: '2026-08-08T05:10:00.000Z',
+      },
+      {
+        provider: 'other' as const,
+        recordedEventCount: 1,
+        calls: {
+          live: zeroAiCallOutcome,
+          record: zeroAiCallOutcome,
+          replay: { succeeded: 1, failed: 0, total: 1 },
+        },
+        successfulProviderUsage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+          inputSeconds: 0,
+        },
+        lastRecordedAt: '2026-08-08T03:00:00.000Z',
+      },
+    ],
+    unclassifiedVendorEventCount: 1,
+    missingInputSecondsEventCount: 0,
+    lastRecordedAt: '2026-08-08T05:20:00.000Z',
+    warnings: ['unclassified_vendor_events'] as const,
+  },
+  providerCapacity: providerCapacityUnknown,
+  caveats: aiUsageCaveats,
+};
+
+const emptyAiUsage = {
+  observedAt,
+  status: 'available' as const,
+  source: 'harpa_usage_ledger' as const,
+  monthToDate: emptyAiUsageWindow('2026-08-01T00:00:00.000Z'),
+  last24Hours: emptyAiUsageWindow('2026-08-07T05:30:00.000Z'),
+  providerCapacity: providerCapacityUnknown,
+  caveats: aiUsageCaveats,
+};
+
 const githubCommits = {
   dev: [
     {
@@ -622,6 +906,9 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/admin/operations/neon-usage') {
     return jsonResponse(unknownNeonUsage);
   }
+  if (url === 'https://api.example.test/admin/operations/ai-usage') {
+    return jsonResponse(availableAiUsage);
+  }
   if (url.includes('/commits?sha=dev&per_page=1')) return githubJson(githubCommits.dev, 59);
   if (url.includes('/commits?sha=main&per_page=1')) return githubJson(githubCommits.main, 58);
   if (url.includes('/pulls?state=open&sort=updated&direction=desc&per_page=30')) {
@@ -636,6 +923,7 @@ function mockOperationsFetch(
   neonUsage: unknown = availableNeonUsage,
   storageLifecycle: unknown = availableStorageLifecycle,
   flyInventory: unknown = availableFlyInventory,
+  aiUsage: unknown = availableAiUsage,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -654,6 +942,9 @@ function mockOperationsFetch(
     if (url === 'https://api.example.test/admin/operations/fly-inventory') {
       return jsonResponse(flyInventory);
     }
+    if (url === 'https://api.example.test/admin/operations/ai-usage') {
+      return jsonResponse(aiUsage);
+    }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
     throw new Error(`Unexpected request: ${url}`);
@@ -667,6 +958,7 @@ function mockDiagnosticFetch(
   neonUsage: unknown = availableNeonUsage,
   storageLifecycle: unknown = availableStorageLifecycle,
   flyInventory: unknown = availableFlyInventory,
+  aiUsage: unknown = availableAiUsage,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
@@ -687,6 +979,9 @@ function mockDiagnosticFetch(
     }
     if (url === 'https://api.example.test/admin/operations/fly-inventory') {
       return jsonResponse(flyInventory);
+    }
+    if (url === 'https://api.example.test/admin/operations/ai-usage') {
+      return jsonResponse(aiUsage);
     }
     const deploymentResponse = defaultDeploymentResponse(url);
     if (deploymentResponse) return deploymentResponse;
@@ -728,6 +1023,12 @@ function flyInventoryRequests(fetchMock: MockInstance<typeof globalThis.fetch>) 
   );
 }
 
+function aiUsageRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/ai-usage',
+  );
+}
+
 async function getStorageLifecycleSection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
@@ -752,6 +1053,16 @@ async function getR2CapacitySection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
     name: 'R2 capacity',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
+}
+
+async function getAiUsageSection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'Harpa-recorded AI usage',
   });
   const section = heading.closest('section');
   expect(section).toBeTruthy();
@@ -917,7 +1228,7 @@ afterEach(() => {
 });
 
 describe('AdminOperations', () => {
-  it('checks Harpa deployments, GitHub, Neon inventory and usage, R2, storage lifecycle, and Fly and links every provider console', async () => {
+  it('checks Harpa deployments, GitHub, Neon inventory and usage, R2, storage lifecycle, Fly, and AI usage and links every provider console', async () => {
     const fetchMock = mockOperationsFetch();
 
     render(<AdminOperations />);
@@ -925,7 +1236,7 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(13));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
@@ -937,6 +1248,7 @@ describe('AdminOperations', () => {
         'https://api.example.test/admin/operations/neon',
         'https://api.example.test/admin/operations/neon-usage',
         'https://api.example.test/admin/operations/r2-capacity',
+        'https://api.example.test/admin/operations/ai-usage',
         'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
         'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
         'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
@@ -1017,7 +1329,7 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses twelve fixed reads on load and twenty-four after shared Refresh without polling or live-canary autorun', async () => {
+  it('uses thirteen fixed reads on load and twenty-six after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -1050,12 +1362,16 @@ describe('AdminOperations', () => {
         url: 'https://api.example.test/admin/operations/neon-usage',
         credentials: 'include',
       },
+      {
+        url: 'https://api.example.test/admin/operations/ai-usage',
+        credentials: 'include',
+      },
     ] as const;
 
     render(<AdminOperations />);
 
     let canarySection = await getCanarySection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(12));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(13));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1073,7 +1389,7 @@ describe('AdminOperations', () => {
     }
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(12);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1084,7 +1400,7 @@ describe('AdminOperations', () => {
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(24));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(26));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1097,7 +1413,7 @@ describe('AdminOperations', () => {
     expect(canarySection.isConnected).toBe(true);
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(24);
+    expect(fetchMock).toHaveBeenCalledTimes(26);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1586,7 +1902,7 @@ describe('AdminOperations', () => {
     );
     // The sequential GitHub loader stops after the first rate-limited request,
     // so the two remaining public GitHub reads are intentionally skipped.
-    expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -1974,11 +2290,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(12);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(24));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(26));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -1995,6 +2311,7 @@ describe('AdminOperations', () => {
     expect(screen.queryByRole('heading', { name: 'Neon Free usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Fly inventory' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Harpa-recorded AI usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -2008,6 +2325,7 @@ describe('AdminOperations', () => {
     expect(screen.queryByRole('heading', { name: 'Neon inventory' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Neon Free usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Harpa-recorded AI usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
   });
@@ -2222,7 +2540,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(24);
+    expect(fetchMock).toHaveBeenCalledTimes(26);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -2368,7 +2686,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(24);
+    expect(fetchMock).toHaveBeenCalledTimes(26);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
@@ -2650,7 +2968,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(24);
+    expect(fetchMock).toHaveBeenCalledTimes(26);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {
@@ -3318,6 +3636,321 @@ describe('AdminOperations', () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
+  it('shows a distinct loading state until the Harpa usage-ledger observation arrives', async () => {
+    let resolveAiUsage!: (response: Response) => void;
+    const aiUsageResponse = new Promise<Response>((resolve) => {
+      resolveAiUsage = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/ai-usage') {
+        return aiUsageResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+        return jsonResponse(unknownFlyInventory);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getAiUsageSection();
+    expect(within(section).getByText('Loading Harpa-recorded AI usage…')).toBeTruthy();
+
+    await act(async () => {
+      resolveAiUsage(jsonResponse(emptyAiUsage));
+      await aiUsageResponse;
+    });
+    expect(
+      await within(section).findAllByText('No AI usage recorded in this window.'),
+    ).toHaveLength(2);
+  });
+
+  it('renders non-empty Harpa usage windows with modes, operations, providers, tokens, seconds, warnings, and unknown credit', async () => {
+    const fetchMock = mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      availableAiUsage,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getAiUsageSection();
+    const canarySection = await getCanarySection();
+    expect(
+      canarySection.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      within(section).getByText(
+        'Harpa-recorded metadata is a retained, best-effort ledger. It is not provider billing.',
+      ),
+    ).toBeTruthy();
+    expect(section.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
+
+    const monthHeading = within(section).getByRole('heading', {
+      level: 3,
+      name: 'Month to date',
+    });
+    const month = monthHeading.closest('article');
+    expect(month).toBeTruthy();
+    for (const value of [
+      '19 recorded events',
+      'Live: 7 succeeded, 3 failed, 10 total',
+      'Record: 3 succeeded, 1 failed, 4 total',
+      'Replay: 4 succeeded, 1 failed, 5 total',
+      '114,200 input tokens',
+      '22,800 output tokens',
+      '31,000 cached tokens',
+      '45.125 transcription input seconds',
+    ]) {
+      expect(within(month!).getByText(value)).toBeTruthy();
+    }
+    expect(month!.querySelector('time[datetime="2026-08-01T00:00:00.000Z"]')).toBeTruthy();
+    expect(month!.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
+
+    const monthOperations = within(month!).getByRole('list', {
+      name: 'Month-to-date operations',
+    });
+    const operationExpectations = [
+      {
+        name: 'Chat',
+        patterns: [
+          /Live\D+3 succeeded\D+1 failed/,
+          /Record\D+1 succeeded\D+0 failed/,
+          /Replay\D+2 succeeded\D+0 failed/,
+        ],
+      },
+      {
+        name: 'Report generation',
+        patterns: [
+          /Live\D+2 succeeded\D+1 failed/,
+          /Record\D+2 succeeded\D+1 failed/,
+          /Replay\D+2 succeeded\D+1 failed/,
+        ],
+      },
+      {
+        name: 'Transcription',
+        patterns: [
+          /Live\D+2 succeeded\D+1 failed/,
+          /Record\D+0 succeeded\D+0 failed/,
+          /Replay\D+0 succeeded\D+0 failed/,
+        ],
+      },
+    ] as const;
+    for (const { name, patterns } of operationExpectations) {
+      const item = within(monthOperations).getByText(name).closest('li');
+      expect(item).toBeTruthy();
+      const text = item!.textContent ?? '';
+      for (const pattern of patterns) expect(text).toMatch(pattern);
+    }
+
+    const monthProviders = within(month!).getByRole('list', {
+      name: 'Month-to-date providers',
+    });
+    const providerExpectations = [
+      ['OpenAI', '8 recorded events'],
+      ['Groq', '3 recorded events'],
+      ['Kimi', '5 recorded events'],
+      ['Other', '3 recorded events'],
+    ] as const;
+    for (const [name, count] of providerExpectations) {
+      const item = within(monthProviders).getByText(name).closest('li');
+      expect(item).toBeTruthy();
+      expect(item!.textContent).toContain(count);
+    }
+    const openAiProvider = within(monthProviders).getByText('OpenAI').closest('li')!;
+    expect(openAiProvider.textContent).toContain('100,000 input tokens');
+    expect(openAiProvider.textContent).toContain('20,000 output tokens');
+    expect(openAiProvider.textContent).toContain('30,000 cached tokens');
+    const groqProvider = within(monthProviders).getByText('Groq').closest('li')!;
+    expect(groqProvider.textContent).toContain('45.125 transcription input seconds');
+
+    const last24Heading = within(section).getByRole('heading', {
+      level: 3,
+      name: 'Last 24 hours',
+    });
+    const last24 = last24Heading.closest('article');
+    expect(last24).toBeTruthy();
+    for (const value of [
+      '5 recorded events',
+      'Live: 2 succeeded, 1 failed, 3 total',
+      'Record: 0 succeeded, 0 failed, 0 total',
+      'Replay: 2 succeeded, 0 failed, 2 total',
+      '2,500 input tokens',
+      '500 output tokens',
+      '200 cached tokens',
+      '12.5 transcription input seconds',
+    ]) {
+      expect(within(last24!).getByText(value)).toBeTruthy();
+    }
+    expect(last24!.querySelector('time[datetime="2026-08-07T05:30:00.000Z"]')).toBeTruthy();
+    expect(last24!.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
+    const last24Providers = within(last24!).getByRole('list', {
+      name: 'Last-24-hours providers',
+    });
+    for (const name of ['OpenAI', 'Groq', 'Other']) {
+      expect(within(last24Providers).getByText(name)).toBeTruthy();
+    }
+    expect(within(last24Providers).queryByText('Kimi')).toBeNull();
+
+    for (const warning of [
+      '3 retained events used an unclassified vendor label and are grouped as Other.',
+      '1 successful transcription event has no recorded input duration; transcription seconds are incomplete.',
+      '1 retained event used an unclassified vendor label and is grouped as Other.',
+    ]) {
+      expect(within(section).getByText(warning)).toBeTruthy();
+    }
+
+    expect(within(section).getAllByText('Remaining provider credit: Unknown')).toHaveLength(3);
+    for (const [name, href] of [
+      ['Open OpenAI dashboard ↗', 'https://platform.openai.com/usage'],
+      ['Open Groq dashboard ↗', 'https://console.groq.com/keys'],
+      ['Open Kimi dashboard ↗', 'https://platform.kimi.ai/console'],
+    ] as const) {
+      expect(within(section).getByRole('link', { name })).toHaveProperty('href', href);
+    }
+    expect(within(section).queryByText(/remaining quota/i)).toBeNull();
+    expect(within(section).queryByText(/credit remaining/i)).toBeNull();
+
+    const [request] = aiUsageRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+  });
+
+  it('renders both empty ledger windows as available without inventing provider usage', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      emptyAiUsage,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getAiUsageSection();
+    expect(await within(section).findByText('Available')).toBeTruthy();
+    expect(within(section).getAllByText('No AI usage recorded in this window.')).toHaveLength(2);
+    expect(within(section).getAllByText('0 recorded events')).toHaveLength(2);
+    expect(within(section).queryByText('No AI providers are configured.')).toBeNull();
+    expect(within(section).queryByText(/healthy/i)).toBeNull();
+    expect(within(section).getAllByText('Remaining provider credit: Unknown')).toHaveLength(3);
+  });
+
+  it('returns the whole page to sign-in when the AI usage observer finds an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/ai-usage') {
+        return jsonResponse(
+          { error: { code: 'UNAUTHORIZED', message: 'expired-ai-ledger-cookie-detail' } },
+          401,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      if (url === 'https://api.example.test/admin/operations/fly-inventory') {
+        return jsonResponse(unknownFlyInventory);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Harpa-recorded AI usage' })).toBeNull();
+    expect(document.body.textContent).not.toContain('expired-ai-ledger-cookie-detail');
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects and redacts AI credentials, identities, content, raw vendors, and inconsistent aggregates', async () => {
+    const forbiddenValues = [
+      'openai-admin-key-must-never-render',
+      'groq-provider-token-must-never-render',
+      'usr_private_customer',
+      'customer@example.test',
+      'prj_private_customer',
+      'rpt_private_customer',
+      'raw prompt and transcript must never render',
+      'shadow-provider-private-label',
+      'raw provider error detail',
+    ];
+    const poisonedAiUsage = {
+      ...availableAiUsage,
+      openAiAdminKey: forbiddenValues[0],
+      groqApiKey: forbiddenValues[1],
+      userId: forbiddenValues[2],
+      email: forbiddenValues[3],
+      projectId: forbiddenValues[4],
+      reportId: forbiddenValues[5],
+      prompt: forbiddenValues[6],
+      rawVendor: forbiddenValues[7],
+      rawProviderError: forbiddenValues[8],
+      monthToDate: {
+        ...availableAiUsage.monthToDate,
+        recordedEventCount: 20,
+      },
+    };
+    const fetchMock = mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      poisonedAiUsage,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getAiUsageSection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(
+      within(section).getByText('The AI usage ledger returned an invalid response.'),
+    ).toBeTruthy();
+    expect(within(section).queryByText('19 recorded events')).toBeNull();
+    const renderedText = document.body.textContent ?? '';
+    for (const value of forbiddenValues) expect(renderedText).not.toContain(value);
+
+    const [request] = aiUsageRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
   it('renames the cost-bearing control and clearly states its live quota impact', async () => {
     const fetchMock = mockOperationsFetch(emptyInventory);
 
@@ -3358,7 +3991,6 @@ describe('AdminOperations', () => {
       runButton.click();
       runButton.click();
     });
-
     await waitFor(() => expect(diagnosticRequests(fetchMock)).toHaveLength(1));
     expect(runButton).toHaveProperty('disabled', true);
     const progress = within(section).getByText('Running live canary…');

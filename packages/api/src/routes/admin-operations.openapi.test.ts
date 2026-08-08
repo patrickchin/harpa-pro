@@ -155,6 +155,63 @@ describe('admin operations OpenAPI contract', () => {
     }
   });
 
+  it('publishes Harpa-recorded AI usage as an admin-session protected GET', () => {
+    const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
+    const path = doc.paths?.['/admin/operations/ai-usage'];
+    const operation = path?.get;
+
+    expect(operation).toBeDefined();
+    expect(Object.keys(path ?? {}).sort()).toEqual(['get']);
+    expect(operation?.security).toEqual([{ adminSession: [] }]);
+    expect(operation?.parameters).toBeUndefined();
+    expect(operation?.requestBody).toBeUndefined();
+    expect(Object.keys(operation?.responses ?? {}).sort()).toEqual(['200', '401', '429']);
+    expect(operation?.responses).toMatchObject({
+      200: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      401: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      429: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+    });
+
+    const successResponse = operation?.responses?.[200];
+    const successSchema =
+      successResponse && 'content' in successResponse
+        ? successResponse.content?.['application/json']?.schema
+        : undefined;
+    const serializedSchema = JSON.stringify(successSchema);
+    expect(serializedSchema).toContain('harpa_usage_ledger');
+    expect(serializedSchema).toContain('providerCapacity');
+    expect(serializedSchema).toContain('missingInputSecondsEventCount');
+    for (const redacted of [
+      'userId',
+      'projectId',
+      'reportId',
+      'email',
+      'model',
+      'prompt',
+      'transcript',
+      'notes',
+      'rawVendor',
+      'providerError',
+      'sqlText',
+      'errorText',
+      'errorMessage',
+    ]) {
+      expect(serializedSchema).not.toContain(redacted);
+    }
+  });
+
   it('publishes the exact Fly inventory observer as an admin-session read-only GET', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
     const path = doc.paths?.['/admin/operations/fly-inventory'];

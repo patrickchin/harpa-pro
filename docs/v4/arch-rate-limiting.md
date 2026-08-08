@@ -88,17 +88,18 @@ The hourly and daily signup counters are additive.
 Admin counters live in the independent admin database when Postgres mode is
 active.
 
-| Route or surface                         | Key                        | Limit |     Window |
-| ---------------------------------------- | -------------------------- | ----: | ---------: |
-| All admin auth and protected data routes | Trusted Fly client IP      |   120 |   1 minute |
-| `POST /admin/auth/login`                 | Trusted Fly client IP      |     3 |   1 minute |
-| `POST /admin/auth/login`                 | Trusted Fly client IP      |    20 | 15 minutes |
-| Failed admin login                       | SHA-256 of canonical email |     5 | 15 minutes |
-| `GET /admin/activity`                    | Admin identity and session |   120 |   1 minute |
-| `GET /admin/operations/neon`             | Admin identity and session |    12 |   1 minute |
-| `GET /admin/operations/neon-usage`       | Admin identity and session |    12 |   1 minute |
-| `GET /admin/operations/r2-capacity`      | Admin identity and session |    12 |   1 minute |
-| `POST /admin/operations/report-generate` | Admin identity and session |     3 | 15 minutes |
+| Route or surface                          | Key                        | Limit |     Window |
+| ----------------------------------------- | -------------------------- | ----: | ---------: |
+| All admin auth and protected data routes  | Trusted Fly client IP      |   120 |   1 minute |
+| `POST /admin/auth/login`                  | Trusted Fly client IP      |     3 |   1 minute |
+| `POST /admin/auth/login`                  | Trusted Fly client IP      |    20 | 15 minutes |
+| Failed admin login                        | SHA-256 of canonical email |     5 | 15 minutes |
+| `GET /admin/activity`                     | Admin identity and session |   120 |   1 minute |
+| `GET /admin/operations/neon`              | Admin identity and session |    12 |   1 minute |
+| `GET /admin/operations/neon-usage`        | Admin identity and session |    12 |   1 minute |
+| `GET /admin/operations/r2-capacity`       | Admin identity and session |    12 |   1 minute |
+| `GET /admin/operations/storage-lifecycle` | Admin identity and session |    12 |   1 minute |
+| `POST /admin/operations/report-generate`  | Admin identity and session |     3 | 15 minutes |
 
 The login route checks the IP budgets before password verification. It
 consumes the email budget before verification but rejects on that budget only
@@ -122,6 +123,11 @@ pagination, or use a provider write method.
 The R2 capacity route must pass the same two gates and its own identity/session
 budget. One allowed request makes at most three fixed provider calls under one
 shared 10-second timeout. It does not retry or follow bucket pagination.
+
+The storage lifecycle route must pass the trusted-IP and identity/session
+gates before any application-database read. Its separate budget allows 12
+requests per minute. One allowed request runs one fixed statement under a
+five-second deadline. It has no retry, mutation, or provider call.
 
 The report generation live canary must also pass the trusted-IP budget. Exact
 Origin, dedicated admin session, and session-bound CSRF checks run before its
@@ -239,6 +245,9 @@ Current tests cover these properties:
 - `__tests__/admin-r2-capacity.integration.test.ts` covers the R2 observer
   identity/session budget, its 12-request limit, and rejection before provider
   access.
+- `__tests__/admin-storage-lifecycle.integration.test.ts` covers the storage
+  lifecycle observer budget, its 12-request limit, and rejection before the
+  application-database statement.
 - `__tests__/admin-report-diagnostic.integration.test.ts` covers the isolated
   three-request live-canary budget and proves read routes do not spend it. It
   also proves every response remains private and no-store.

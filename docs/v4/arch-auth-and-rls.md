@@ -172,6 +172,7 @@ browser storage, URLs, application logs, or the application database.
 data routes. It protects `GET /admin/activity`,
 `GET /admin/operations/neon`, `GET /admin/operations/neon-usage`, and
 `GET /admin/operations/r2-capacity`. It also protects
+`GET /admin/operations/fly-inventory` and
 `GET /admin/operations/storage-lifecycle`. It is one required gate on
 `POST /admin/operations/report-generate`. It does not inspect
 `public."user".is_admin` and rejects Better Auth bearer tokens and cookies.
@@ -211,8 +212,8 @@ and session budget after the shared trusted-Fly-IP gate and admin-session
 lookup. One observation makes at most 22 fixed Neon `GET` requests. It does not
 retry, follow project pagination, or use a provider write method. The browser
 calls it once after session confirmation and again only on manual **Refresh**.
-It does not poll. Across the full operations page, that is 11 fixed GET reads
-on load and 22 total after one Refresh.
+It does not poll. Across the full operations page, that is 12 fixed GET reads
+on load and 24 total after one Refresh.
 
 The Neon percentages use published Free-plan references and are not credit
 balances. R2 operation percentages remain estimates, and the public GitHub
@@ -239,6 +240,35 @@ route uses fixed Cloudflare origins and fixed read queries. Browser input cannot
 select a provider method or resource. The account ID, token, raw errors, and
 provider envelopes never enter the response or logs. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
+
+### Fly observer boundary
+
+The draft Fly inventory route requires the shared trusted-Fly-IP gate before
+`withAdminSession()`. A separate 12-request-per-minute bucket uses the admin
+identity and session after authentication. Better Auth and the retired
+application-admin bit cannot authorize the route.
+
+`ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+`ADMIN_FLY_APP_NAMES` are optional server-only variables. All three must be
+absent or present together. A partial or blank triplet fails API environment
+parsing. An absent triplet returns `Unknown` without contacting Fly.
+
+The app list contains one to ten unique, exact names. The route returns only
+configured apps that Fly reports in the configured organization. Provision a
+dedicated organization token with `fly tokens create readonly`. The API cannot
+infer the token policy from successful `GET` requests, so the operator must
+review its organization and read-only scope.
+
+Do not reuse a deploy token, CI token, or `fly auth login` token. The route uses
+only fixed `GET` requests to `https://api.machines.dev`. It has no request body,
+query, provider selector, write method, or polling path.
+
+The token, raw provider errors, unconfigured app data, and excluded Machine or
+Volume fields never enter browser storage, responses, URLs, or logs. The
+nullable process group comes only from the reviewed Machine metadata field.
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Remaining Fly credit stays `Unknown`. See
+[`design-admin-fly-inventory.md`](design-admin-fly-inventory.md).
 
 ### Storage lifecycle observer boundary
 
@@ -667,6 +697,9 @@ introduces that data contract.
 | `ADMIN_MIGRATIONS_REQUIRED_HEAD`         | API image | Admin migration filename expected by `/admin/readyz`                                 |
 | `ADMIN_CLOUDFLARE_ACCOUNT_ID`            | API       | Optional fixed Cloudflare account paired with the R2 observer token                  |
 | `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` | API       | Optional dedicated token for the read-only R2 capacity observer                      |
+| `ADMIN_FLY_APP_NAMES`                    | API       | Optional list of one to ten exact Fly apps in the observer allowlist                 |
+| `ADMIN_FLY_ORG_SLUG`                     | API       | Optional Fly organization paired with the observer token and app allowlist           |
+| `ADMIN_FLY_READ_ONLY_API_TOKEN`          | API       | Optional dedicated organization token for the read-only Fly observer                 |
 | `ADMIN_NEON_ORG_ID`                      | API       | Optional Neon scope paired with the Viewer key for inventory and Free usage          |
 | `ADMIN_NEON_VIEWER_API_KEY`              | API       | Optional personal key for the fixed inventory and Free-usage Viewer                  |
 | `ADMIN_REPORT_LIVE_CANARY_ENABLED`       | API       | `0` by default. `1` is valid only for the exact live development deployment          |

@@ -1586,7 +1586,7 @@ describe('AdminOperations', () => {
     );
     // The sequential GitHub loader stops after the first rate-limited request,
     // so the two remaining public GitHub reads are intentionally skipped.
-    expect(fetchMock).toHaveBeenCalledTimes(9);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {

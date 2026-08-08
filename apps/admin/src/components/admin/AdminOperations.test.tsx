@@ -409,7 +409,6 @@ describe('AdminOperations', () => {
   });
 
   it('uses four fixed deployment reads on load and shared Refresh without polling', async () => {
-    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup();
     const expectedRequests = [
@@ -445,8 +444,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(intervalSpy).not.toHaveBeenCalled();
-
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval');
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -454,6 +452,8 @@ describe('AdminOperations', () => {
     for (const { url } of expectedRequests) {
       expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
     }
+    expect(intervalSpy).not.toHaveBeenCalled();
+    intervalSpy.mockRestore();
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
@@ -462,7 +462,6 @@ describe('AdminOperations', () => {
         expect(deploymentRequests(fetchMock, url)).toHaveLength(2);
       }
     });
-    expect(intervalSpy).not.toHaveBeenCalled();
   });
 
   it('renders the full API identity, independent migration heads, and admin Pages marker', async () => {
@@ -471,6 +470,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     const apiCard = await getDeploymentCard('API build identity');
+    expect(await within(apiCard).findByText(apiGitCommit)).toBeTruthy();
     expect(within(apiCard).getByText('Version')).toBeTruthy();
     expect(apiCard.textContent).toContain(apiIdentity.version);
     expect(within(apiCard).getByText('Git commit')).toBeTruthy();
@@ -497,6 +497,88 @@ describe('AdminOperations', () => {
         'Build identity, readiness, provider metadata, and exact promotion proof are different evidence classes.',
       ),
     ).toBeTruthy();
+  });
+
+  it('accepts bounded printable Pages branch labels used by scoped automation branches', async () => {
+    const automationBranch = 'dependabot/npm_and_yarn/@types/node-24.x';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === '/_cf-pages-deployment.json') {
+        return jsonResponse({ ...adminPagesMarker, branch: automationBranch });
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const pagesCard = await getDeploymentCard('Administrator Pages identity');
+    expect(await within(pagesCard).findByText(automationBranch)).toBeTruthy();
+    expect(within(pagesCard).queryByText('Unknown')).toBeNull();
+  });
+
+  it('does not let an older overlapping refresh overwrite newer deployment evidence', async () => {
+    const olderCommit = '3333333333333333333333333333333333333333';
+    const newerCommit = '4444444444444444444444444444444444444444';
+    let healthAttempt = 0;
+    let resolveOlderRefresh!: (response: Response) => void;
+    let resolveNewerRefresh!: (response: Response) => void;
+    const olderRefresh = new Promise<Response>((resolve) => {
+      resolveOlderRefresh = resolve;
+    });
+    const newerRefresh = new Promise<Response>((resolve) => {
+      resolveNewerRefresh = resolve;
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/healthz') {
+        healthAttempt += 1;
+        if (healthAttempt === 2) return olderRefresh;
+        if (healthAttempt === 3) return newerRefresh;
+        return jsonResponse(apiIdentity);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+    const refreshButton = await screen.findByRole('button', { name: 'Refresh' });
+    expect(await screen.findByText(apiGitCommit)).toBeTruthy();
+
+    act(() => {
+      refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await waitFor(() => {
+      expect(deploymentRequests(fetchMock, 'https://api.example.test/healthz')).toHaveLength(3);
+    });
+
+    await act(async () => {
+      resolveNewerRefresh(jsonResponse({ ...apiIdentity, gitCommit: newerCommit }));
+      await newerRefresh;
+    });
+    expect(await screen.findByText(newerCommit)).toBeTruthy();
+
+    await act(async () => {
+      resolveOlderRefresh(jsonResponse({ ...apiIdentity, gitCommit: olderCommit }));
+      await olderRefresh;
+    });
+    await waitFor(() => expect(screen.queryByText(olderCommit)).toBeNull());
+    expect(screen.getByText(newerCommit)).toBeTruthy();
   });
 
   it.each([

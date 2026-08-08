@@ -142,6 +142,7 @@ const MOBILE_SKIP_PATHS = new Set<string>([
   'get /admin/auth/session',
   'post /admin/auth/logout',
   'get /admin/activity',
+  'get /admin/operations/fly-inventory',
   'get /admin/operations/neon',
   'get /admin/operations/neon-usage',
   'get /admin/operations/r2-capacity',

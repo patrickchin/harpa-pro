@@ -219,7 +219,7 @@ describe('AdminOperations', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url.endsWith('/readyz')) return new Response(null, { status: 200 });
-      if (url.includes('api.github.com')) {
+      if (new URL(url).origin === 'https://api.github.com') {
         return new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
           status: 403,
           headers: {
@@ -248,16 +248,19 @@ describe('AdminOperations', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url.endsWith('/readyz')) return new Response(null, { status: 200 });
-      if (url.includes('api.github.com')) {
-        return new Response(JSON.stringify({ message: 'You have exceeded a secondary rate limit.' }), {
-          status: 429,
-          headers: {
-            'Retry-After': '60',
-            'X-RateLimit-Limit': '60',
-            'X-RateLimit-Remaining': '12',
-            'X-RateLimit-Reset': '1786140366',
+      if (new URL(url).origin === 'https://api.github.com') {
+        return new Response(
+          JSON.stringify({ message: 'You have exceeded a secondary rate limit.' }),
+          {
+            status: 429,
+            headers: {
+              'Retry-After': '60',
+              'X-RateLimit-Limit': '60',
+              'X-RateLimit-Remaining': '12',
+              'X-RateLimit-Reset': '1786140366',
+            },
           },
-        });
+        );
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });

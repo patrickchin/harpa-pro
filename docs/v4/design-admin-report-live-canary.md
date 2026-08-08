@@ -20,7 +20,8 @@ The check must prove all of these results in one run:
 6. Harpa records exactly one matching live `app.llm_usage_events` row.
 7. The administrator receives a bounded, text-safe preview of the validated
    synthetic report response.
-8. The runner attempts application sign-out after every successful sign-in.
+8. The runner signs out after every successful sign-in and confirms that the
+   exact temporary Bearer session is no longer readable.
 
 This canary is not a general API console. The browser cannot select an
 account, report, provider, model, fixture, URL, header, or request body.
@@ -114,7 +115,9 @@ second request until the first request finishes.
 ## Execution sequence
 
 Use `BETTER_AUTH_URL` as the fixed application origin. Use one 75-second
-functional deadline and no functional retry.
+functional deadline and no functional retry. Cleanup may use one additional
+five-second grace window, so the complete observation duration is at most
+80 seconds.
 
 1. Check the development enablement gate.
 2. Sign in the configured synthetic account through Better Auth and capture
@@ -130,13 +133,17 @@ functional deadline and no functional retry.
 11. Read the three existing synthetic-account limit buckets.
 12. Attempt Better Auth sign-out in `finally` with the exact Bearer token that
     authorized the report reads and generation request.
+13. Read Better Auth `GET /api/auth/get-session` with that same Bearer token
+    and require an HTTP 200 response whose complete JSON body is `null`.
 
 The generation request omits `fixtureName`. Its idempotency key remains bound
 to the fixed target and captured report version.
 
-If the 75-second signal has fired, sign-out gets the existing five-second
-cleanup-only grace signal. Cleanup succeeds only when Better Auth accepts
-revocation of that exact Bearer session. The cleanup signal must never restart
+After functional work ends, sign-out and session verification share one
+separate five-second cleanup-only grace signal. A sign-out HTTP 200 is not
+sufficient: cleanup succeeds only when the follow-up read proves that the
+exact Bearer session is absent. A non-null, malformed, failed, or timed-out
+session read is `sign_out_failed`. The cleanup signal must never restart
 generation, proof, usage, preview, or limits work.
 
 ## Live generation proof
@@ -162,6 +169,13 @@ required even though normal product calls treat accounting as best effort.
 
 Immediately before generation, read the application database clock. After the
 persisted proof succeeds, run one bounded ledger query.
+
+The default application-database adapter must stop waiting when the functional
+signal aborts, including while the pool is waiting for a connection. The
+underlying query is read-only and may finish later under the pool's statement
+timeout, but it must not delay the canary response or start cleanup work. The
+adapter must observe the late promise outcome so it cannot produce an
+unhandled rejection.
 
 The query filters by:
 
@@ -286,7 +300,8 @@ An unknown result contains only:
 A pass or warning contains:
 
 - the existing fixed target identifiers;
-- HTTP status, request ID, and bounded duration;
+- HTTP status, request ID, and bounded duration of at most 80,000 ms, including
+  cleanup;
 - `fixtureMode: live` and `idempotentReplay: false`;
 - the bounded report response preview;
 - `usage.inputTokens`, `usage.outputTokens`, and `usage.cachedTokens`;
@@ -296,6 +311,9 @@ A pass or warning contains:
 
 A pass requires limits and confirmed sign-out. A warning keeps proven live
 generation but allows only `limits_unavailable` or `sign_out_failed`.
+Generation latency and usage latency remain bounded by the 75-second
+functional deadline; only the top-level observation duration can include the
+five-second cleanup grace.
 
 A fail contains a reviewed phase, reason, duration, and cleanup state. Add
 `mode_gate`, `usage_window`, `usage_proof`, and `preview` to the existing
@@ -357,8 +375,9 @@ Keep one **Report generation live canary** card on `/operations`.
 - A `401` returns the entire operations page to the signed-out state.
 
 Do not render a provider message, prompt, source note, attachment identifier,
-or any field outside the bounded response preview. Do not store a result
-outside the current browser session.
+or any field outside the bounded response preview. Keep the result only in the
+mounted page's component memory. Do not write it to `localStorage`,
+`sessionStorage`, IndexedDB, or another browser persistence mechanism.
 
 ## Test contract
 
@@ -387,8 +406,11 @@ Follow the repository TDD workflow.
   deterministic SHA-256 hash from the complete validated body.
 - Sentinel prompts, source notes, provider debug text, secrets, attachment
   identifiers, and errors never leak; bounded synthetic report fields do.
-- Sign-out runs after every post-login result.
-- Timeout uses one functional abort and one cleanup-only grace signal.
+- Sign-out and same-token session verification run after every post-login
+  result. Only a strict `null` session response confirms cleanup.
+- Timeout uses one functional abort and one cleanup-only grace signal. A
+  default-adapter test proves that a stalled application pool cannot extend
+  the functional deadline.
 - No functional request retries or downgrades to replay.
 
 ### Security, browser, and live acceptance

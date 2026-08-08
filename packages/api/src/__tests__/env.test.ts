@@ -18,6 +18,8 @@ const KEYS = [
   'ADMIN_DATABASE_URL',
   'ADMIN_NEON_VIEWER_API_KEY',
   'ADMIN_NEON_ORG_ID',
+  'ADMIN_CLOUDFLARE_ACCOUNT_ID',
+  'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN',
   'ADMIN_REPORT_DIAGNOSTIC_EMAIL',
   'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID',
   'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER',
@@ -325,6 +327,75 @@ describe('env: admin Neon observer', () => {
     process.env.ADMIN_NEON_ORG_ID = value;
 
     await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY|ADMIN_NEON_ORG_ID/);
+  });
+});
+
+describe('env: admin Cloudflare R2 observer', () => {
+  const completeObserver = {
+    ADMIN_CLOUDFLARE_ACCOUNT_ID: '023e105f4ecef8ad9ca31a8372d0c353',
+    ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: 'test-cloudflare-r2-observer-token',
+  } as const;
+
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
+    expect(mod.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN).toBeUndefined();
+  });
+
+  it('accepts a lowercase 32-character account ID and observer token together', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CLOUDFLARE_ACCOUNT_ID).toBe(completeObserver.ADMIN_CLOUDFLARE_ACCOUNT_ID);
+    expect(mod.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN).toBe(
+      completeObserver.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN,
+    );
+  });
+
+  it('rejects an observer token without an account ID', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN =
+      completeObserver.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+
+  it('rejects an account ID without an observer token', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_CLOUDFLARE_ACCOUNT_ID = completeObserver.ADMIN_CLOUDFLARE_ACCOUNT_ID;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN/);
+  });
+
+  it.each([
+    ['empty account ID', 'ADMIN_CLOUDFLARE_ACCOUNT_ID', ''],
+    ['whitespace-only account ID', 'ADMIN_CLOUDFLARE_ACCOUNT_ID', '   '],
+    ['empty observer token', 'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN', ''],
+    ['whitespace-only observer token', 'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN', '   '],
+  ] as const)('rejects %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each([
+    '023e105f4ecef8ad9ca31a8372d0c35',
+    '023E105F4ECEF8AD9CA31A8372D0C353',
+    '023e105f4ecef8ad9ca31a8372d0c35g',
+    'https://dash.cloudflare.com/023e105f4ecef8ad9ca31a8372d0c353',
+  ])('rejects malformed Cloudflare account ID %s', async (accountId) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_CLOUDFLARE_ACCOUNT_ID: accountId,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
   });
 });
 

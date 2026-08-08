@@ -1,5 +1,5 @@
 /**
- * Scope test for GET /admin/operations/neon.
+ * Scope tests for read-only GET /admin/operations provider observations.
  *
  * The provider observation must begin only after the dedicated browser-admin
  * session succeeds. Better Auth and the legacy app is_admin bit are not admin
@@ -23,6 +23,8 @@ vi.mock('../../env.js', async (importOriginal) => {
     ...actual,
     env: {
       ...actual.env,
+      ADMIN_CLOUDFLARE_ACCOUNT_ID: '0123456789abcdef0123456789abcdef',
+      ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: 'scope-r2-observer-token',
       ADMIN_NEON_VIEWER_API_KEY: 'scope-neon-viewer-key',
       ADMIN_NEON_ORG_ID: 'org-harpa-pro',
     },
@@ -160,6 +162,32 @@ describe('scope: GET /admin/operations/neon', () => {
     });
     expect(init?.method).toBe('GET');
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer scope-neon-viewer-key');
+  });
+});
+
+describe('scope: GET /admin/operations/r2-capacity', () => {
+  it('rejects an anonymous request before observing Cloudflare', async () => {
+    const response = await createApp().request('/admin/operations/r2-capacity');
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a regular Better Auth bearer session before observing Cloudflare', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+    const response = await createApp().request('/admin/operations/r2-capacity', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a legacy app-admin bearer session before observing Cloudflare', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+    const response = await createApp().request('/admin/operations/r2-capacity', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
   });
 });
 

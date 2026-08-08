@@ -7,6 +7,7 @@ import type { AppEnv } from '../app.js';
 import { runAdminReportGenerateDiagnostic } from '../lib/admin-report-diagnostic.js';
 import { ADMIN_CSRF_HEADER, withAdminCsrf } from '../lib/admin-csrf.js';
 import { observeAdminNeonInventory } from '../lib/neon-operations.js';
+import { observeAdminR2Capacity } from '../lib/r2-operations.js';
 import { getAdminRateLimiter } from '../lib/adminRateLimiter.js';
 import { withTrustedAdminOrigin } from '../middleware/admin-origin.js';
 import { adminAuthIpWindow } from '../middleware/admin-rate-limit.js';
@@ -84,6 +85,14 @@ function auditReportDiagnostic(
 
 const adminNeonOperationsRateLimit = withRateLimit({
   name: 'admin.operations.neon.read.1m',
+  keyBy: adminOperationsRateLimitKey,
+  limit: 12,
+  windowMs: MINUTE_MS,
+  getLimiter: getAdminRateLimiter,
+});
+
+const adminR2CapacityRateLimit = withRateLimit({
+  name: 'admin.operations.r2-capacity.read.1m',
   keyBy: adminOperationsRateLimitKey,
   limit: 12,
   windowMs: MINUTE_MS,
@@ -175,4 +184,36 @@ adminOperationsRoutes.openapi(
     auditReportDiagnostic(c, observation);
     return c.json(observation, 200);
   },
+);
+
+adminOperationsRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/admin/operations/r2-capacity',
+    tags: ['admin'],
+    security: [{ adminSession: [] }],
+    middleware: [
+      privateNoStore,
+      adminAuthIpWindow,
+      withAdminSession(),
+      adminR2CapacityRateLimit,
+    ] as const,
+    responses: {
+      200: {
+        description: 'Bounded, read-only Cloudflare R2 capacity observation.',
+        content: {
+          'application/json': { schema: operations.r2CapacityObservation },
+        },
+      },
+      401: {
+        description: 'Unauthorized.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+      429: {
+        description: 'Rate limited.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+    },
+  }),
+  async (c) => c.json(await observeAdminR2Capacity(), 200),
 );

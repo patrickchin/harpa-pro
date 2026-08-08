@@ -3,6 +3,9 @@
 **Status:** Implemented on `dev`; not yet promoted to production as of
 2026-08-04.
 
+The R2 capacity extension below is a draft for an unmerged stacked pull
+request. This change does not provision its observer credential.
+
 ## Goal
 
 Add a read-only operations page to the standalone admin site so a solo operator
@@ -60,16 +63,40 @@ the dedicated Viewer principal and key, the paired variables in the intended
 environment, the exact deployed API and admin-site SHAs, and an authenticated
 response that confirms `VIEWER` for every returned project.
 
+## R2 capacity extension
+
+The R2 capacity observer is a second narrow server-side extension. See
+[Admin R2 capacity](design-admin-r2-capacity.md) for the full contract.
+`GET /admin/operations/r2-capacity` uses the dedicated browser-admin session,
+the shared trusted-Fly-IP budget, and its own 12-request-per-minute identity
+and session budget. Every response sets `Cache-Control: private, no-store`.
+
+The API accepts `ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+`ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` only as an optional pair. An absent
+pair returns `Unknown` without a Cloudflare request. The dedicated token has
+only `Workers R2 Storage Read` and `Account Analytics: Read` for the intended
+account. The token never reaches the browser.
+
+One observation makes at most three fixed provider requests under one
+10-second timeout. It does not retry or follow bucket pagination. The card
+shows a bounded bucket inventory, current Standard and Infrequent Access
+snapshots, and month-to-date operation estimates against published references.
+
+The storage values are current snapshots, not remaining GB-month capacity.
+The operation headroom is a conservative estimate, not a billing balance.
+Unclassified operations, Infrequent Access data, and truncated inventory keep
+their explicit caveats.
+
 ## Deliberate limits
 
-- Do not add provider credentials to the browser. The Neon inventory route is
-  the only account-specific provider endpoint in this design.
+- Do not add provider credentials to the browser. The Neon and R2 routes are
+  the only account-specific provider endpoints in this design.
 - Do not claim that linked services are healthy; only the two Harpa readiness
   probes receive live states.
 - Do not poll. Check once on page load and again only when the operator presses
   Refresh.
-- Do not add charts, history, alert configuration, or account-specific quota
-  reads. The bounded Neon inventory is metadata, not quota or billing data.
+- Do not add charts, history, alert configuration, arbitrary provider proxies,
+  or invoice claims. The R2 estimates are not provider billing balances.
   Existing Sentry, provider, and budget alerts remain responsible for
   notification.
 
@@ -87,5 +114,7 @@ that the solo operator must maintain.
 - Neon inventory tests prove the dedicated-cookie boundary, Viewer-only
   provider access, paired-configuration fallback, fixed bounds, rate limit,
   no-store response, and absence of retries.
+- R2 capacity tests prove strict redaction, paired configuration, fixed
+  provider calls, bounded output, caveats, rate limits, and manual refresh.
 - Run admin lint, typecheck, unit tests, and build plus the focused API CORS
-  and Neon inventory tests.
+  and observer tests.

@@ -901,6 +901,33 @@ describe('AdminOperations', () => {
     expect(within(section).queryByText(/GB-month remaining/i)).toBeNull();
   });
 
+  it('uses neutral copy when the admin route rate-limits the R2 observation', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse({ error: { code: 'RATE_LIMITED', message: 'route bucket' } }, 429);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (
+        url === 'https://api.example.test/readyz' ||
+        url === 'https://api.example.test/admin/readyz'
+      ) {
+        return new Response(null, { status: 200 });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('R2 capacity observation was rate limited.')).toBeTruthy();
+    expect(within(section).queryByText(/Cloudflare rate limiting/i)).toBeNull();
+    expect(document.body.textContent).not.toContain('route bucket');
+  });
+
   it('returns the whole page to sign-in when the R2 observer finds an expired session', async () => {
     authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {

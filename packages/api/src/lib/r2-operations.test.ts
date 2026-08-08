@@ -84,8 +84,14 @@ function bucketsResponse({
   };
 }
 
+type MetricState = { payloadSize?: number; metadataSize?: number; objects?: number };
+type MetricsResult = {
+  standard?: { published?: MetricState; uploaded?: MetricState };
+  infrequentAccess?: { published?: MetricState; uploaded?: MetricState };
+};
+
 function metricsResponse(
-  result: Record<string, unknown> = {
+  result: MetricsResult = {
     standard: {
       published: { payloadSize: 1_024, metadataSize: 64, objects: 8 },
       uploaded: { payloadSize: 256, metadataSize: 16, objects: 2 },
@@ -270,6 +276,7 @@ describe('observeAdminR2Capacity', () => {
 
     for (const call of [buckets, metrics]) {
       expect(call.init?.method).toBe('GET');
+      expect(call.init?.redirect).toBe('error');
       expect(call.init?.body).toBeUndefined();
       expect(new Headers(call.init?.headers).get('accept')).toBe('application/json');
       expect(new Headers(call.init?.headers).get('authorization')).toBe(
@@ -279,6 +286,7 @@ describe('observeAdminR2Capacity', () => {
     }
 
     expect(analytics.init?.method).toBe('POST');
+    expect(analytics.init?.redirect).toBe('error');
     expect(new Headers(analytics.init?.headers).get('accept')).toBe('application/json');
     expect(new Headers(analytics.init?.headers).get('content-type')).toBe('application/json');
     expect(new Headers(analytics.init?.headers).get('authorization')).toBe(
@@ -667,7 +675,7 @@ describe('observeAdminR2Capacity', () => {
       if (url.pathname === `${API_ROOT}/buckets`) return json(bucketsResponse());
       if (url.pathname === `${API_ROOT}/metrics`) {
         const invalid = metricsResponse();
-        invalid.result.standard.published.objects = -1;
+        invalid.result.standard!.published!.objects = -1;
         return json(invalid);
       }
       return json(operationsResponse());
@@ -712,25 +720,49 @@ describe('observeAdminR2Capacity', () => {
     expect(JSON.stringify(result)).not.toContain(API_TOKEN);
   });
 
-  it('rejects unsafe metric and analytics numbers while preserving valid bucket inventory', async () => {
-    const fetchImpl = fetchMock((url) => {
-      if (url.pathname === `${API_ROOT}/buckets`) return json(bucketsResponse());
-      if (url.pathname === `${API_ROOT}/metrics`) {
-        const invalid = metricsResponse();
-        invalid.result.infrequentAccess.uploaded.payloadSize = Number.MAX_SAFE_INTEGER + 1;
-        return json(invalid);
-      }
-      return json(operationsResponse([operation('PutObject', 'success', 1.5)]));
-    });
+  it.each([1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects unsafe metric value %s while preserving the other reads',
+    async (invalidValue) => {
+      const fetchImpl = fetchMock((url) => {
+        if (url.pathname === `${API_ROOT}/buckets`) return json(bucketsResponse());
+        if (url.pathname === `${API_ROOT}/metrics`) {
+          const invalid = metricsResponse();
+          invalid.result.infrequentAccess!.uploaded!.payloadSize = invalidValue;
+          return json(invalid);
+        }
+        return json(operationsResponse());
+      });
 
-    const result = await observeAdminR2Capacity(options(fetchImpl));
+      const result = await observeAdminR2Capacity(options(fetchImpl));
 
-    expect(result).toMatchObject({
-      status: 'partial',
-      buckets: { status: 'available' },
-      storage: { status: 'unknown', reason: 'invalid_response' },
-      operations: { status: 'unknown', reason: 'invalid_response' },
-    });
-    expect(fetchImpl).toHaveBeenCalledTimes(3);
-  });
+      expect(result).toMatchObject({
+        status: 'partial',
+        buckets: { status: 'available' },
+        storage: { status: 'unknown', reason: 'invalid_response' },
+        operations: { status: 'available' },
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it.each([1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects unsafe analytics request count %s while preserving the other reads',
+    async (invalidValue) => {
+      const fetchImpl = fetchMock((url) => {
+        if (url.pathname === `${API_ROOT}/buckets`) return json(bucketsResponse());
+        if (url.pathname === `${API_ROOT}/metrics`) return json(metricsResponse());
+        return json(operationsResponse([operation('PutObject', 'success', invalidValue)]));
+      });
+
+      const result = await observeAdminR2Capacity(options(fetchImpl));
+
+      expect(result).toMatchObject({
+        status: 'partial',
+        buckets: { status: 'available' },
+        storage: { status: 'available' },
+        operations: { status: 'unknown', reason: 'invalid_response' },
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+    },
+  );
 });

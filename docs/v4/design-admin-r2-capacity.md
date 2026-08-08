@@ -301,7 +301,9 @@ Required explanatory copy states:
 
 Unknown reasons use reviewed static copy. The UI never displays a raw provider
 message. Invalid or extra response fields fail strict parsing and render a safe
-Unknown state.
+Unknown state. The `rate_limited` copy is deliberately neutral because an HTTP
+`429` may come from the route's isolated administrator bucket before a
+Cloudflare request, or from Cloudflare during the fixed observation.
 
 ## Tests
 

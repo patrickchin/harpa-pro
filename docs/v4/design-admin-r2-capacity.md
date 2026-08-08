@@ -323,7 +323,8 @@ Required explanatory copy states:
 
 The published total is a browser-derived sum of the Standard and Infrequent
 Access published payload and metadata fields. It excludes pending uploads. The
-UI uses integer arithmetic, so a valid large response does not lose precision.
+UI shows one decimal in binary IEC units and the exact grouped byte count. It
+uses integer arithmetic, so a valid large response does not lose precision.
 The UI does not calculate a storage percentage from the 10 GB-month reference.
 
 This transparency extension does not change the route, response schema,

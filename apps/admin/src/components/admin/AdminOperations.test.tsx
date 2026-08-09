@@ -13,7 +13,11 @@ vi.mock('../../lib/admin-auth', () => ({
 }));
 
 vi.mock('../../lib/env', () => ({
-  getPublicEnv: () => ({ apiBaseUrl: 'https://api.example.test' }),
+  getPublicEnv: () => ({
+    apiBaseUrl: 'https://api.example.test',
+    siteBaseUrl: 'https://site.example.test',
+    dashboardUrl: 'https://dashboard.example.test',
+  }),
 }));
 
 import AdminOperations from './AdminOperations';
@@ -28,6 +32,8 @@ const observedAt = '2026-08-08T05:30:00.000Z';
 const resetAt = '2026-09-01T00:00:00.000Z';
 const apiGitCommit = '1111111111111111111111111111111111111111';
 const adminPagesCommit = '2222222222222222222222222222222222222222';
+const publicPagesCommit = '3333333333333333333333333333333333333333';
+const dashboardPagesCommit = '4444444444444444444444444444444444444444';
 const productMigrationHead = '0028_report_version_monotonic.sql';
 const adminMigrationHead = '0002_admin_rate_limit_buckets.sql';
 
@@ -53,7 +59,17 @@ const adminReadiness = {
 
 const adminPagesMarker = {
   commit: adminPagesCommit,
-  branch: 'codex/admin-deployment-identity',
+  branch: 'pr-315',
+};
+
+const publicPagesMarker = {
+  commit: publicPagesCommit,
+  branch: 'main',
+};
+
+const dashboardPagesMarker = {
+  commit: dashboardPagesCommit,
+  branch: 'dev',
 };
 
 const escapedPreviewTitle = '<script>window.canaryPreviewLeak = true</script>';
@@ -896,7 +912,13 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/healthz') return jsonResponse(apiIdentity);
   if (url === 'https://api.example.test/readyz') return jsonResponse(productReadiness);
   if (url === 'https://api.example.test/admin/readyz') return jsonResponse(adminReadiness);
+  if (url === 'https://site.example.test/_cf-pages-deployment.json') {
+    return jsonResponse(publicPagesMarker);
+  }
   if (url === '/_cf-pages-deployment.json') return jsonResponse(adminPagesMarker);
+  if (url === 'https://dashboard.example.test/_cf-pages-deployment.json') {
+    return jsonResponse(dashboardPagesMarker);
+  }
   if (url === 'https://api.example.test/admin/operations/storage-lifecycle') {
     return jsonResponse(availableStorageLifecycle);
   }
@@ -1236,13 +1258,15 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(13));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(15));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
         'https://api.example.test/readyz',
         'https://api.example.test/admin/readyz',
+        'https://site.example.test/_cf-pages-deployment.json',
         '/_cf-pages-deployment.json',
+        'https://dashboard.example.test/_cf-pages-deployment.json',
         'https://api.example.test/admin/operations/storage-lifecycle',
         'https://api.example.test/admin/operations/fly-inventory',
         'https://api.example.test/admin/operations/neon',
@@ -1329,7 +1353,7 @@ describe('AdminOperations', () => {
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses thirteen fixed reads on load and twenty-six after shared Refresh without polling or live-canary autorun', async () => {
+  it('uses fifteen fixed reads on load and thirty after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -1347,8 +1371,16 @@ describe('AdminOperations', () => {
         credentials: 'include',
       },
       {
+        url: 'https://site.example.test/_cf-pages-deployment.json',
+        credentials: 'omit',
+      },
+      {
         url: '/_cf-pages-deployment.json',
         credentials: 'same-origin',
+      },
+      {
+        url: 'https://dashboard.example.test/_cf-pages-deployment.json',
+        credentials: 'omit',
       },
       {
         url: 'https://api.example.test/admin/operations/storage-lifecycle',
@@ -1371,7 +1403,7 @@ describe('AdminOperations', () => {
     render(<AdminOperations />);
 
     let canarySection = await getCanarySection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(13));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(15));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1389,7 +1421,7 @@ describe('AdminOperations', () => {
     }
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(13);
+    expect(fetchMock).toHaveBeenCalledTimes(15);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1400,7 +1432,7 @@ describe('AdminOperations', () => {
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(26));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(30));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1413,7 +1445,7 @@ describe('AdminOperations', () => {
     expect(canarySection.isConnected).toBe(true);
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
     await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(26);
+    expect(fetchMock).toHaveBeenCalledTimes(30);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1902,7 +1934,7 @@ describe('AdminOperations', () => {
     );
     // The sequential GitHub loader stops after the first rate-limited request,
     // so the two remaining public GitHub reads are intentionally skipped.
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -1950,7 +1982,7 @@ describe('AdminOperations', () => {
     );
   });
 
-  it('renders the full API identity, independent migration heads, and admin Pages marker', async () => {
+  it('renders the full API identity, independent migration heads, and all three Pages markers', async () => {
     mockOperationsFetch();
 
     render(<AdminOperations />);
@@ -1973,11 +2005,23 @@ describe('AdminOperations', () => {
     expect(within(adminCard).getByText('Migration head')).toBeTruthy();
     expect(adminCard.textContent).toContain(adminMigrationHead);
 
-    const pagesCard = await getDeploymentCard('Administrator Pages identity');
-    expect(within(pagesCard).getByText('Commit')).toBeTruthy();
-    expect(pagesCard.textContent).toContain(adminPagesCommit);
-    expect(within(pagesCard).getByText('Branch')).toBeTruthy();
-    expect(pagesCard.textContent).toContain(adminPagesMarker.branch);
+    const publicPagesCard = await getDeploymentCard('Public site Pages identity');
+    expect(within(publicPagesCard).getByText('Commit')).toBeTruthy();
+    expect(publicPagesCard.textContent).toContain(publicPagesCommit);
+    expect(within(publicPagesCard).getByText('Branch')).toBeTruthy();
+    expect(publicPagesCard.textContent).toContain(publicPagesMarker.branch);
+
+    const adminPagesCard = await getDeploymentCard('Administrator Pages identity');
+    expect(within(adminPagesCard).getByText('Commit')).toBeTruthy();
+    expect(adminPagesCard.textContent).toContain(adminPagesCommit);
+    expect(within(adminPagesCard).getByText('Branch')).toBeTruthy();
+    expect(adminPagesCard.textContent).toContain(adminPagesMarker.branch);
+
+    const dashboardPagesCard = await getDeploymentCard('Office dashboard Pages identity');
+    expect(within(dashboardPagesCard).getByText('Commit')).toBeTruthy();
+    expect(dashboardPagesCard.textContent).toContain(dashboardPagesCommit);
+    expect(within(dashboardPagesCard).getByText('Branch')).toBeTruthy();
+    expect(dashboardPagesCard.textContent).toContain(dashboardPagesMarker.branch);
     expect(
       screen.getByText(
         'Build identity, readiness, provider metadata, and exact promotion proof are different evidence classes.',
@@ -1985,12 +2029,22 @@ describe('AdminOperations', () => {
     ).toBeTruthy();
   });
 
-  it('accepts bounded printable Pages branch labels used by scoped automation branches', async () => {
-    const automationBranch = 'dependabot/npm_and_yarn/@types/node-24.x';
+  it('accepts only main, dev, and positive preview Pages branch labels', async () => {
+    const unsupportedBranches = {
+      publicSite: 'pr-0',
+      administrator: 'dependabot/npm_and_yarn/@types/node-24.x',
+      dashboard: 'pr-01',
+    } as const;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
+      if (url === 'https://site.example.test/_cf-pages-deployment.json') {
+        return jsonResponse({ ...publicPagesMarker, branch: unsupportedBranches.publicSite });
+      }
       if (url === '/_cf-pages-deployment.json') {
-        return jsonResponse({ ...adminPagesMarker, branch: automationBranch });
+        return jsonResponse({ ...adminPagesMarker, branch: unsupportedBranches.administrator });
+      }
+      if (url === 'https://dashboard.example.test/_cf-pages-deployment.json') {
+        return jsonResponse({ ...dashboardPagesMarker, branch: unsupportedBranches.dashboard });
       }
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
@@ -2005,15 +2059,72 @@ describe('AdminOperations', () => {
 
     render(<AdminOperations />);
 
-    const pagesCard = await getDeploymentCard('Administrator Pages identity');
-    expect(await within(pagesCard).findByText(automationBranch)).toBeTruthy();
-    expect(within(pagesCard).queryByText('Unknown')).toBeNull();
+    for (const cardName of [
+      'Public site Pages identity',
+      'Administrator Pages identity',
+      'Office dashboard Pages identity',
+    ]) {
+      expect(await within(await getDeploymentCard(cardName)).findByText('Unknown')).toBeTruthy();
+    }
+    for (const branch of Object.values(unsupportedBranches)) {
+      expect(document.body.textContent).not.toContain(branch);
+    }
   });
 
-  it('does not let an older overlapping refresh overwrite newer deployment evidence', async () => {
-    const olderCommit = '3333333333333333333333333333333333333333';
-    const newerCommit = '4444444444444444444444444444444444444444';
-    let healthAttempt = 0;
+  it('keeps public-site and dashboard Pages loading independent from each other and the admin marker', async () => {
+    let resolvePublicMarker!: (response: Response) => void;
+    let resolveDashboardMarker!: (response: Response) => void;
+    const publicMarkerResponse = new Promise<Response>((resolve) => {
+      resolvePublicMarker = resolve;
+    });
+    const dashboardMarkerResponse = new Promise<Response>((resolve) => {
+      resolveDashboardMarker = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://site.example.test/_cf-pages-deployment.json') {
+        return publicMarkerResponse;
+      }
+      if (url === 'https://dashboard.example.test/_cf-pages-deployment.json') {
+        return dashboardMarkerResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(availableR2Capacity);
+      }
+      const deploymentResponse = defaultDeploymentResponse(url);
+      if (deploymentResponse) return deploymentResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const publicCard = await getDeploymentCard('Public site Pages identity');
+    const dashboardCard = await getDeploymentCard('Office dashboard Pages identity');
+    expect(within(publicCard).getByText('Checking')).toBeTruthy();
+    expect(within(dashboardCard).getByText('Checking')).toBeTruthy();
+    expect(await screen.findByText(adminPagesCommit)).toBeTruthy();
+
+    await act(async () => {
+      resolveDashboardMarker(jsonResponse(dashboardPagesMarker));
+      await dashboardMarkerResponse;
+    });
+    expect(await within(dashboardCard).findByText(dashboardPagesCommit)).toBeTruthy();
+    expect(within(publicCard).getByText('Checking')).toBeTruthy();
+
+    await act(async () => {
+      resolvePublicMarker(jsonResponse(publicPagesMarker));
+      await publicMarkerResponse;
+    });
+    expect(await within(publicCard).findByText(publicPagesCommit)).toBeTruthy();
+  });
+
+  it('does not let an older overlapping refresh overwrite newer dashboard Pages evidence', async () => {
+    const olderCommit = '5555555555555555555555555555555555555555';
+    const newerCommit = '6666666666666666666666666666666666666666';
+    let dashboardAttempt = 0;
     let resolveOlderRefresh!: (response: Response) => void;
     let resolveNewerRefresh!: (response: Response) => void;
     const olderRefresh = new Promise<Response>((resolve) => {
@@ -2024,11 +2135,11 @@ describe('AdminOperations', () => {
     });
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
-      if (url === 'https://api.example.test/healthz') {
-        healthAttempt += 1;
-        if (healthAttempt === 2) return olderRefresh;
-        if (healthAttempt === 3) return newerRefresh;
-        return jsonResponse(apiIdentity);
+      if (url === 'https://dashboard.example.test/_cf-pages-deployment.json') {
+        dashboardAttempt += 1;
+        if (dashboardAttempt === 2) return olderRefresh;
+        if (dashboardAttempt === 3) return newerRefresh;
+        return jsonResponse(dashboardPagesMarker);
       }
       if (url === 'https://api.example.test/admin/operations/neon') {
         return jsonResponse(emptyInventory);
@@ -2043,24 +2154,26 @@ describe('AdminOperations', () => {
 
     render(<AdminOperations />);
     const refreshButton = await screen.findByRole('button', { name: 'Refresh' });
-    expect(await screen.findByText(apiGitCommit)).toBeTruthy();
+    expect(await screen.findByText(dashboardPagesCommit)).toBeTruthy();
 
     act(() => {
       refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     await waitFor(() => {
-      expect(deploymentRequests(fetchMock, 'https://api.example.test/healthz')).toHaveLength(3);
+      expect(
+        deploymentRequests(fetchMock, 'https://dashboard.example.test/_cf-pages-deployment.json'),
+      ).toHaveLength(3);
     });
 
     await act(async () => {
-      resolveNewerRefresh(jsonResponse({ ...apiIdentity, gitCommit: newerCommit }));
+      resolveNewerRefresh(jsonResponse({ ...dashboardPagesMarker, commit: newerCommit }));
       await newerRefresh;
     });
     expect(await screen.findByText(newerCommit)).toBeTruthy();
 
     await act(async () => {
-      resolveOlderRefresh(jsonResponse({ ...apiIdentity, gitCommit: olderCommit }));
+      resolveOlderRefresh(jsonResponse({ ...dashboardPagesMarker, commit: olderCommit }));
       await olderRefresh;
     });
     await waitFor(() => expect(screen.queryByText(olderCommit)).toBeNull());
@@ -2075,7 +2188,13 @@ describe('AdminOperations', () => {
       cardName: 'API build identity',
       status: 'Unknown',
       missing: apiGitCommit,
-      preserved: [productMigrationHead, adminMigrationHead, adminPagesCommit],
+      preserved: [
+        productMigrationHead,
+        adminMigrationHead,
+        publicPagesCommit,
+        adminPagesCommit,
+        dashboardPagesCommit,
+      ],
     },
     {
       surface: 'product readiness',
@@ -2084,7 +2203,13 @@ describe('AdminOperations', () => {
       cardName: 'Product database readiness',
       status: 'Unavailable',
       missing: productMigrationHead,
-      preserved: [apiGitCommit, adminMigrationHead, adminPagesCommit],
+      preserved: [
+        apiGitCommit,
+        adminMigrationHead,
+        publicPagesCommit,
+        adminPagesCommit,
+        dashboardPagesCommit,
+      ],
     },
     {
       surface: 'administrator readiness',
@@ -2095,7 +2220,28 @@ describe('AdminOperations', () => {
       cardName: 'Administrator database readiness',
       status: 'Unavailable',
       missing: adminMigrationHead,
-      preserved: [apiGitCommit, productMigrationHead, adminPagesCommit],
+      preserved: [
+        apiGitCommit,
+        productMigrationHead,
+        publicPagesCommit,
+        adminPagesCommit,
+        dashboardPagesCommit,
+      ],
+    },
+    {
+      surface: 'public-site Pages marker',
+      failedUrl: 'https://site.example.test/_cf-pages-deployment.json',
+      failedResponse: () => new Response(null, { status: 404 }),
+      cardName: 'Public site Pages identity',
+      status: 'Unknown',
+      missing: publicPagesCommit,
+      preserved: [
+        apiGitCommit,
+        productMigrationHead,
+        adminMigrationHead,
+        adminPagesCommit,
+        dashboardPagesCommit,
+      ],
     },
     {
       surface: 'administrator Pages marker',
@@ -2104,7 +2250,30 @@ describe('AdminOperations', () => {
       cardName: 'Administrator Pages identity',
       status: 'Unknown',
       missing: adminPagesCommit,
-      preserved: [apiGitCommit, productMigrationHead, adminMigrationHead],
+      preserved: [
+        apiGitCommit,
+        productMigrationHead,
+        adminMigrationHead,
+        publicPagesCommit,
+        dashboardPagesCommit,
+      ],
+    },
+    {
+      surface: 'office-dashboard Pages marker',
+      failedUrl: 'https://dashboard.example.test/_cf-pages-deployment.json',
+      failedResponse: () => {
+        throw new Error('dashboard marker unavailable');
+      },
+      cardName: 'Office dashboard Pages identity',
+      status: 'Unknown',
+      missing: dashboardPagesCommit,
+      preserved: [
+        apiGitCommit,
+        productMigrationHead,
+        adminMigrationHead,
+        publicPagesCommit,
+        adminPagesCommit,
+      ],
     },
   ])('keeps a $surface failure independent from the other evidence', async (testCase) => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -2173,7 +2342,9 @@ describe('AdminOperations', () => {
     expect(document.querySelector('script')).toBeNull();
     expect(await screen.findByText(apiGitCommit)).toBeTruthy();
     expect(await screen.findByText(adminMigrationHead)).toBeTruthy();
+    expect(await screen.findByText(publicPagesCommit)).toBeTruthy();
     expect(await screen.findByText(adminPagesCommit)).toBeTruthy();
+    expect(await screen.findByText(dashboardPagesCommit)).toBeTruthy();
   });
 
   it('strictly rejects extra fields, secrets, shortened SHAs, and HTML-shaped values', async () => {
@@ -2183,6 +2354,8 @@ describe('AdminOperations', () => {
       '<img src=x onerror=secret-must-never-run>',
       '<script>pages-secret-must-never-run</script>',
       'pages-cookie-must-never-render',
+      'public-pages-token-must-never-render',
+      '<svg onload=dashboard-pages-secret-must-never-run>',
     ];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
@@ -2200,11 +2373,20 @@ describe('AdminOperations', () => {
       if (url === 'https://api.example.test/admin/readyz') {
         return jsonResponse({ ...adminReadiness, head: forbiddenValues[2] });
       }
+      if (url === 'https://site.example.test/_cf-pages-deployment.json') {
+        return jsonResponse({ ...publicPagesMarker, token: forbiddenValues[5] });
+      }
       if (url === '/_cf-pages-deployment.json') {
         return jsonResponse({
           ...adminPagesMarker,
           branch: forbiddenValues[3],
           cookie: forbiddenValues[4],
+        });
+      }
+      if (url === 'https://dashboard.example.test/_cf-pages-deployment.json') {
+        return jsonResponse({
+          ...dashboardPagesMarker,
+          branch: forbiddenValues[6],
         });
       }
       if (url === 'https://api.example.test/admin/operations/neon') {
@@ -2230,7 +2412,15 @@ describe('AdminOperations', () => {
       ),
     ).toBeTruthy();
     expect(
+      await within(await getDeploymentCard('Public site Pages identity')).findByText('Unknown'),
+    ).toBeTruthy();
+    expect(
       await within(await getDeploymentCard('Administrator Pages identity')).findByText('Unknown'),
+    ).toBeTruthy();
+    expect(
+      await within(await getDeploymentCard('Office dashboard Pages identity')).findByText(
+        'Unknown',
+      ),
     ).toBeTruthy();
 
     const renderedText = document.body.textContent ?? '';
@@ -2239,7 +2429,9 @@ describe('AdminOperations', () => {
       'deadbeef',
       productMigrationHead,
       adminMigrationHead,
+      publicPagesCommit,
       adminPagesCommit,
+      dashboardPagesCommit,
     ]) {
       expect(renderedText).not.toContain(value);
     }
@@ -2290,11 +2482,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(13);
+    expect(fetchMock).toHaveBeenCalledTimes(15);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(26));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(30));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -2313,7 +2505,9 @@ describe('AdminOperations', () => {
     expect(screen.queryByRole('heading', { name: 'Fly inventory' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Harpa-recorded AI usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Public site Pages identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Office dashboard Pages identity' })).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
 
     view.unmount();
@@ -2327,7 +2521,9 @@ describe('AdminOperations', () => {
     expect(screen.queryByRole('heading', { name: 'R2 capacity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Harpa-recorded AI usage' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'API build identity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Public site Pages identity' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Administrator Pages identity' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Office dashboard Pages identity' })).toBeNull();
   });
 
   it('shows a distinct loading state until the Neon observation arrives', async () => {
@@ -2540,7 +2736,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(26);
+    expect(fetchMock).toHaveBeenCalledTimes(30);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -2686,7 +2882,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(26);
+    expect(fetchMock).toHaveBeenCalledTimes(30);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
@@ -2968,7 +3164,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(26);
+    expect(fetchMock).toHaveBeenCalledTimes(30);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {

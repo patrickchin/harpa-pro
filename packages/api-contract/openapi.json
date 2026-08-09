@@ -19506,6 +19506,460 @@
         }
       }
     },
+    "/admin/operations/sentry": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded, read-only Sentry aggregate issue and mobile session observation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available"
+                          ]
+                        },
+                        "unresolvedErrors": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "available"
+                              ]
+                            },
+                            "count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "countKind": {
+                              "type": "string",
+                              "enum": [
+                                "exact",
+                                "lower_bound"
+                              ]
+                            },
+                            "cap": {
+                              "type": "number",
+                              "enum": [
+                                100
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "count",
+                            "countKind",
+                            "cap"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "mobileSessions": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "available"
+                              ]
+                            },
+                            "window": {
+                              "type": "string",
+                              "enum": [
+                                "last_24_hours"
+                              ]
+                            },
+                            "windowStart": {
+                              "type": "string"
+                            },
+                            "windowEnd": {
+                              "type": "string"
+                            },
+                            "totalSessions": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            "healthySessions": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "erroredSessions": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "abnormalSessions": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "crashedSessions": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "window",
+                            "windowStart",
+                            "windowEnd",
+                            "totalSessions",
+                            "healthySessions",
+                            "erroredSessions",
+                            "abnormalSessions",
+                            "crashedSessions"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "issue_groups_not_events",
+                              "mobile_sessions_only",
+                              "telemetry_coverage_applies",
+                              "issue_count_truncated"
+                            ]
+                          },
+                          "minItems": 3,
+                          "maxItems": 4
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "unresolvedErrors",
+                        "mobileSessions",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "partial"
+                          ]
+                        },
+                        "unresolvedErrors": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available"
+                                  ]
+                                },
+                                "count": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "countKind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "exact",
+                                    "lower_bound"
+                                  ]
+                                },
+                                "cap": {
+                                  "type": "number",
+                                  "enum": [
+                                    100
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "count",
+                                "countKind",
+                                "cap"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_configured",
+                                    "forbidden",
+                                    "not_found",
+                                    "rate_limited",
+                                    "timeout",
+                                    "invalid_response",
+                                    "provider_unavailable",
+                                    "no_session_data"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "mobileSessions": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available"
+                                  ]
+                                },
+                                "window": {
+                                  "type": "string",
+                                  "enum": [
+                                    "last_24_hours"
+                                  ]
+                                },
+                                "windowStart": {
+                                  "type": "string"
+                                },
+                                "windowEnd": {
+                                  "type": "string"
+                                },
+                                "totalSessions": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991
+                                },
+                                "healthySessions": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "erroredSessions": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "abnormalSessions": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "crashedSessions": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "window",
+                                "windowStart",
+                                "windowEnd",
+                                "totalSessions",
+                                "healthySessions",
+                                "erroredSessions",
+                                "abnormalSessions",
+                                "crashedSessions"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_configured",
+                                    "forbidden",
+                                    "not_found",
+                                    "rate_limited",
+                                    "timeout",
+                                    "invalid_response",
+                                    "provider_unavailable",
+                                    "no_session_data"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "issue_groups_not_events",
+                              "mobile_sessions_only",
+                              "telemetry_coverage_applies",
+                              "issue_count_truncated"
+                            ]
+                          },
+                          "minItems": 3,
+                          "maxItems": 4
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "unresolvedErrors",
+                        "mobileSessions",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured",
+                            "forbidden",
+                            "not_found",
+                            "rate_limited",
+                            "timeout",
+                            "invalid_response",
+                            "provider_unavailable",
+                            "no_session_data"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/operations/storage-lifecycle": {
       "get": {
         "tags": [

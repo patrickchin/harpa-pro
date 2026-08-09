@@ -108,9 +108,11 @@ existing credentialed administrator-origin behavior. The administrator marker
 uses same-origin credentials. There is no retry, timer, background refresh, or
 operator-controlled URL.
 
-The full stacked page makes 15 fixed GET requests after session confirmation.
-One manual **Refresh** makes the same 15 requests again. The report live canary
-remains a separate manual POST and never runs during either cycle.
+This panel still contributes only the six fixed reads above. The full stacked
+page makes 16 fixed GET requests after session confirmation because the Sentry
+observer adds one extra read route. One manual **Refresh** makes the same 16
+requests again. The report live canary remains a separate manual POST and never
+runs during either cycle.
 
 The existing `/healthz` CORS policy permits the exact administrator origin. The
 health route remains public and read-only. An unrelated origin receives no
@@ -231,7 +233,7 @@ Add RED tests before implementation that prove:
   manual Refresh, with the required cache and credential modes;
 - valid API identity, both migration heads, and all three markers render with
   full identifiers and clear evidence labels;
-- the full stacked page makes exactly 15 GETs on load and 30 after one Refresh;
+- the full stacked page makes exactly 16 GETs on load and 32 after one Refresh;
 - the admin environment rejects absent, malformed, or unsafe marker origins;
 - the Pages build wrapper emits exact main, dev, and preview marker origins;
 - exact `main`, `dev`, and `pr-<n>` branch labels pass, while unsupported and

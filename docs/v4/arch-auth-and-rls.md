@@ -34,9 +34,11 @@ browser-admin data route runs. `GET /admin/activity` then reads the application
 database. `GET /admin/operations/neon` requests bounded provider metadata. The
 `GET /admin/operations/neon-usage` route requests bounded Neon Free-plan usage.
 The `GET /admin/operations/r2-capacity` route requests bounded R2 measurements.
-The draft `GET /admin/operations/fly-inventory` route requests bounded Fly
-inventory. The draft `GET /admin/operations/ai-usage` route reads one bounded
-aggregate from the application usage ledger without a provider request.
+The draft `GET /admin/operations/sentry` route requests bounded Sentry
+issue-group and mobile-session aggregates. The draft
+`GET /admin/operations/fly-inventory` route requests bounded Fly inventory.
+The draft `GET /admin/operations/ai-usage` route reads one bounded aggregate
+from the application usage ledger without a provider request.
 `GET /admin/operations/storage-lifecycle` reads bounded lifecycle state from
 the application database. The
 manual `POST /admin/operations/report-generate` can authenticate one fixed
@@ -179,6 +181,7 @@ browser storage, URLs, application logs, or the application database.
 data routes. It protects `GET /admin/activity`,
 `GET /admin/operations/neon`, `GET /admin/operations/neon-usage`, and
 `GET /admin/operations/r2-capacity`. It also protects
+`GET /admin/operations/sentry`,
 `GET /admin/operations/fly-inventory` and
 `GET /admin/operations/storage-lifecycle`. It protects the draft
 `GET /admin/operations/ai-usage` route. It is one required gate on
@@ -220,8 +223,8 @@ and session budget after the shared trusted-Fly-IP gate and admin-session
 lookup. One observation makes at most 22 fixed Neon `GET` requests. It does not
 retry, follow project pagination, or use a provider write method. The browser
 calls it once after session confirmation and again only on manual **Refresh**.
-It does not poll. Across the full stacked operations page, that is 13 fixed GET
-reads on load and 26 total after one Refresh.
+It does not poll. Across the full stacked operations page, that is 16 fixed GET
+reads on load and 32 total after one Refresh.
 
 The Neon percentages use published Free-plan references and are not credit
 balances. R2 operation percentages remain estimates, and the public GitHub
@@ -248,6 +251,36 @@ route uses fixed Cloudflare origins and fixed read queries. Browser input cannot
 select a provider method or resource. The account ID, token, raw errors, and
 provider envelopes never enter the response or logs. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
+
+### Sentry observer boundary
+
+The draft Sentry route requires the shared trusted-Fly-IP gate before
+`withAdminSession()`. A separate 12-request-per-minute bucket uses the admin
+identity and session after authentication. Better Auth and the retired
+application-admin bit cannot authorize the route. Every response sets
+`Cache-Control: private, no-store`.
+
+`ADMIN_SENTRY_ORG_SLUG`, `ADMIN_SENTRY_READ_TOKEN`,
+`ADMIN_SENTRY_PROJECT_SLUGS`, `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`, and
+`ADMIN_SENTRY_ENVIRONMENT` are one optional server-only set.
+`ADMIN_SENTRY_REGION` is optional, defaults to `global`, and accepts only
+`global`, `us`, or `de`. The first five values must be absent or present
+together. A partial or blank configuration fails API environment parsing. An
+absent full set returns `Unknown` without contacting Sentry.
+
+The project list contains one to three unique reviewed projects. The mobile
+project must be one of them. The token is one dedicated organization
+integration token with only `event:read` and `org:read`. Do not reuse a DSN,
+the source-map upload `SENTRY_AUTH_TOKEN`, a personal token, or a token with
+write or admin permission.
+
+The route uses only two fixed Sentry `GET` requests under one shared
+10-second deadline. The requests run in parallel, never retry, and never
+follow pagination. The response exposes only aggregate unresolved error
+issue-group counts, bounded mobile-session totals, reviewed caveats, and
+bounded unknown reasons. It never returns issue titles, event data, people,
+project names, provider diagnostics, raw pagination data, or the token itself.
+See [`design-admin-sentry-observer.md`](design-admin-sentry-observer.md).
 
 ### Fly observer boundary
 
@@ -735,6 +768,12 @@ introduces that data contract.
 | `ADMIN_FLY_READ_ONLY_API_TOKEN`          | API       | Optional dedicated organization token for the read-only Fly observer                 |
 | `ADMIN_NEON_ORG_ID`                      | API       | Optional Neon scope paired with the Viewer key for inventory and Free usage          |
 | `ADMIN_NEON_VIEWER_API_KEY`              | API       | Optional personal key for the fixed inventory and Free-usage Viewer                  |
+| `ADMIN_SENTRY_ENVIRONMENT`               | API       | Optional exact Sentry environment for the read-only Sentry observer                  |
+| `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`       | API       | Optional reviewed mobile Sentry project paired with the observer token               |
+| `ADMIN_SENTRY_ORG_SLUG`                  | API       | Optional Sentry organization paired with the observer token and project list         |
+| `ADMIN_SENTRY_PROJECT_SLUGS`             | API       | Optional list of one to three reviewed Sentry projects in the observer allowlist     |
+| `ADMIN_SENTRY_READ_TOKEN`                | API       | Optional dedicated integration token for the read-only Sentry observer               |
+| `ADMIN_SENTRY_REGION`                    | API       | Optional fixed Sentry API region: `global`, `us`, or `de`                            |
 | `ADMIN_REPORT_LIVE_CANARY_ENABLED`       | API       | `0` by default. `1` is valid only for the exact live development deployment          |
 | `ADMIN_REPORT_DIAGNOSTIC_EMAIL`          | API       | Optional fixed canary email; must be an exact test-account member                    |
 | `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`     | API       | Optional fixed synthetic project ID, paired with the other canary target values      |

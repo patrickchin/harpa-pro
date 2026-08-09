@@ -147,6 +147,7 @@ const MOBILE_SKIP_PATHS = new Set<string>([
   'get /admin/operations/neon',
   'get /admin/operations/neon-usage',
   'get /admin/operations/r2-capacity',
+  'get /admin/operations/sentry',
   'get /admin/operations/storage-lifecycle',
   'post /admin/operations/report-generate',
   'get /readyz',

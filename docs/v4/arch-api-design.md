@@ -143,19 +143,20 @@ contain `reportId` and `reportNumber`. A missing or cross-user target returns
 
 The browser admin surface uses a dedicated admin identity and cookie.
 
-| Method | Path                                  | Purpose                               |
-| ------ | ------------------------------------- | ------------------------------------- |
-| `POST` | `/admin/auth/login`                   | Create an admin session               |
-| `GET`  | `/admin/auth/session`                 | Validate an admin session             |
-| `POST` | `/admin/auth/logout`                  | Revoke an admin session               |
-| `GET`  | `/admin/activity`                     | Read the business-activity feed       |
-| `GET`  | `/admin/operations/neon`              | Read bounded Neon inventory data      |
-| `GET`  | `/admin/operations/neon-usage`        | Read bounded Neon Free usage data     |
-| `GET`  | `/admin/operations/r2-capacity`       | Read bounded R2 capacity data         |
-| `GET`  | `/admin/operations/fly-inventory`     | Read bounded Fly inventory data       |
-| `GET`  | `/admin/operations/storage-lifecycle` | Read storage lifecycle database state |
-| `GET`  | `/admin/operations/ai-usage`          | Read aggregate Harpa AI usage data    |
-| `POST` | `/admin/operations/report-generate`   | Run the fixed synthetic report canary |
+| Method | Path                                  | Purpose                                             |
+| ------ | ------------------------------------- | --------------------------------------------------- |
+| `POST` | `/admin/auth/login`                   | Create an admin session                             |
+| `GET`  | `/admin/auth/session`                 | Validate an admin session                           |
+| `POST` | `/admin/auth/logout`                  | Revoke an admin session                             |
+| `GET`  | `/admin/activity`                     | Read the business-activity feed                     |
+| `GET`  | `/admin/operations/neon`              | Read bounded Neon inventory data                    |
+| `GET`  | `/admin/operations/neon-usage`        | Read bounded Neon Free usage data                   |
+| `GET`  | `/admin/operations/r2-capacity`       | Read bounded R2 capacity data                       |
+| `GET`  | `/admin/operations/sentry`            | Read aggregate Sentry issue and mobile-session data |
+| `GET`  | `/admin/operations/fly-inventory`     | Read bounded Fly inventory data                     |
+| `GET`  | `/admin/operations/storage-lifecycle` | Read storage lifecycle database state               |
+| `GET`  | `/admin/operations/ai-usage`          | Read aggregate Harpa AI usage data                  |
+| `POST` | `/admin/operations/report-generate`   | Run the fixed synthetic report canary               |
 
 `GET /admin/operations/neon` uses `withAdminSession()`. Better Auth and the
 legacy application-admin bit cannot authorize it. The route uses the shared
@@ -209,6 +210,31 @@ operation estimate. It never claims exact remaining GB-month capacity or
 returns credentials, raw provider errors, or object metadata. See
 [`design-admin-r2-capacity.md`](design-admin-r2-capacity.md).
 
+The draft `GET /admin/operations/sentry` route uses the same dedicated admin
+boundary and shared trusted-Fly-IP budget. It has a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`. The route accepts no request body, query,
+provider selector, or write method.
+
+The route accepts `ADMIN_SENTRY_ORG_SLUG`, `ADMIN_SENTRY_READ_TOKEN`,
+`ADMIN_SENTRY_PROJECT_SLUGS`, `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`, and
+`ADMIN_SENTRY_ENVIRONMENT` as one optional server-only set.
+`ADMIN_SENTRY_REGION` is optional, defaults to `global`, and accepts only
+`global`, `us`, or `de`. The first five values must be absent or present
+together. An absent full set returns `Unknown` without a provider request.
+
+One observation makes exactly two fixed Sentry `GET` requests under one shared
+10-second deadline. The requests run in parallel. The route never retries or
+follows pagination. One request counts unresolved error issue groups for the
+configured projects and environment. The other request reads last-24-hour
+mobile-session totals for one configured mobile project.
+
+The token uses only `event:read` and `org:read`. The response returns only
+aggregate counts, reviewed caveats, and bounded unknown reasons. It never
+returns issue titles, event data, people, project names, provider diagnostics,
+or the token itself. See
+[`design-admin-sentry-observer.md`](design-admin-sentry-observer.md).
+
 The draft `GET /admin/operations/fly-inventory` route uses the same dedicated
 admin boundary and shared trusted-Fly-IP budget. It has a separate
 12-request-per-minute identity and session budget. Every response sets
@@ -258,8 +284,8 @@ contradictory headers render that value `Unknown` without adding a GitHub
 request. Unsupported provider credit and billing balances stay `Unknown`.
 
 The browser calls all read-only operations routes once after session
-confirmation and again only on manual **Refresh**. The page makes 13 fixed GET
-reads on load and 26 total after one Refresh. It does not poll. The report
+confirmation and again only on manual **Refresh**. The page makes 16 fixed GET
+reads on load and 32 total after one Refresh. It does not poll. The report
 generation live canary remains a separate manual POST.
 
 The draft `GET /admin/operations/ai-usage` route uses the same dedicated admin

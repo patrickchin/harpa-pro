@@ -353,17 +353,22 @@ green. Both the poll loop and the surrounding job are bounded.
   and empty standbys. If clearing succeeds but later work fails, exact singleton
   stopped/no-standby and started/no-standby states are retry-safe; all other
   drift fails closed.
-- Run the read-only started-worker verifier again, then select the exact sole
-  started worker from a fresh inventory and arm the monotonic upload-lease
-  rollout through `flyctl machine exec`. Each of at most three attempts has a
-  120-second provider timeout. Before a retry, another fresh inventory must
-  prove the worker id has not changed; success requires the command's database
+- Run the read-only started-worker verifier again, then stop. Production deploy
+  does not arm lifecycle or enable account deletion. CI and manual deploys use
+  the same deploy-to-repair-to-verify path. The GitHub deploy step has a
+  30-minute outer timeout.
+- After the exact production SHA and worker have passed the separate worker
+  proof in `arch-ops.md`, run
+  `bash scripts/ci/arm-storage-lifecycle-rollout.sh harpa-pro-api` as an
+  explicit authorized action. It selects the exact sole started worker from a
+  fresh inventory and arms the monotonic upload-lease rollout through
+  `flyctl machine exec`. Each of at most three attempts has a 120-second
+  provider timeout. Before a retry, another fresh inventory must prove the
+  worker id has not changed; success requires the command's database
   confirmation marker. A transport failure after commit is retry-safe because
   the SQL cannot reopen the grace or turn account deletion back off. Arming
   inherits Fly's staged `DATABASE_URL`, so the production URL remains out of
-  GitHub Actions and manual operator environments. Manual production deploys
-  use the same deploy-to-repair-to-verify-to-arm path as CI. The GitHub deploy
-  step also has a 30-minute outer timeout.
+  GitHub Actions and manual operator environments.
 
 ```sql
 SELECT armed_at, enforce_after, account_delete_enabled, updated_at
@@ -371,7 +376,9 @@ FROM app.storage_lifecycle_rollout
 WHERE singleton;
 ```
 
-For production, require non-null `armed_at` and `enforce_after`. Also require
+Before the separate arming action, production may intentionally have null
+`armed_at` and `enforce_after` with `account_delete_enabled = false`. After
+arming, require non-null `armed_at` and `enforce_after`, plus
 `account_delete_enabled = true`. A future `enforce_after` means the grace
 period is still active.
 

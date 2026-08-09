@@ -51,9 +51,6 @@ bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api
 # Fail closed unless Fly now reports a started service-less worker.
 bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api
 
-# Arm only after deploy, narrow repair, and worker verification succeed. The
-# helper targets the exact started worker through Fly's bounded Machine exec
-# API, retries the monotonic command safely, and requires its confirmation
-# marker. CI and manual callers never need the production DATABASE_URL because
-# the command inherits the Machine's staged Fly secrets.
-bash scripts/ci/arm-storage-lifecycle-rollout.sh harpa-pro-api
+# Lifecycle arming is intentionally separate from deployment. Observe the
+# exact production worker through at least one hourly memory sample, then run
+# scripts/ci/arm-storage-lifecycle-rollout.sh as an explicit operator action.

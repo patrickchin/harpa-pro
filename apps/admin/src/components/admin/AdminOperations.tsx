@@ -1,4 +1,6 @@
 import type {
+  AiUsageObservation,
+  AiUsageReason,
   FlyApp,
   FlyInventoryObservation,
   FlyInventoryReason,
@@ -155,6 +157,10 @@ type StorageLifecycleState =
   | { status: 'ready'; observation: StorageLifecycleObservation };
 type StorageLifecycleFetchResult =
   { status: 'ready'; observation: StorageLifecycleObservation } | { status: 'unauthorized' };
+type AiUsageState =
+  { status: 'idle' } | { status: 'loading' } | { status: 'ready'; observation: AiUsageObservation };
+type AiUsageFetchResult =
+  { status: 'ready'; observation: AiUsageObservation } | { status: 'unauthorized' };
 type ReportCanaryState =
   | { status: 'idle' }
   | { status: 'running' }
@@ -186,9 +192,19 @@ type AvailableStorageLifecycleObservation = Extract<
 >;
 
 type ActiveNeonUsageObservation = Exclude<NeonUsageObservation, { status: 'unknown' }>;
+type AvailableAiUsageObservation = Extract<AiUsageObservation, { status: 'available' }>;
+type AiUsageWindow = AvailableAiUsageObservation['monthToDate'];
+type AiUsageProvider = AiUsageWindow['providers'][number];
+type AiUsageOperation = AiUsageWindow['operations'][keyof AiUsageWindow['operations']];
+type AiUsageWarning = AiUsageWindow['warnings'][number];
+type AiUsageCaveat = AvailableAiUsageObservation['caveats'][number];
+
 const NEON_CONSOLE_URL = 'https://console.neon.tech/app/projects';
 const CLOUDFLARE_CONSOLE_URL = 'https://dash.cloudflare.com/';
 const FLY_DASHBOARD_URL = 'https://fly.io/dashboard';
+const OPENAI_USAGE_URL = 'https://platform.openai.com/usage';
+const GROQ_DASHBOARD_URL = 'https://console.groq.com/keys';
+const KIMI_DASHBOARD_URL = 'https://platform.kimi.ai/console';
 const GITHUB_REPOSITORY_URL = 'https://github.com/patrickchin/harpa-pro';
 const GITHUB_API_URL = 'https://api.github.com/repos/patrickchin/harpa-pro';
 const GITHUB_ACCEPT = 'application/vnd.github+json';
@@ -1132,6 +1148,72 @@ async function loadStorageLifecycle(): Promise<StorageLifecycleFetchResult> {
     observation: parsed.success
       ? parsed.data
       : unknownStorageLifecycleObservation('invalid_response'),
+  };
+}
+
+function unknownAiUsageObservation(reason: AiUsageReason): AiUsageObservation {
+  return {
+    observedAt: new Date().toISOString(),
+    status: 'unknown',
+    reason,
+  };
+}
+
+function aiUsageReasonCopy(reason: AiUsageReason): string {
+  switch (reason) {
+    case 'schema_unavailable':
+      return 'The AI usage ledger schema is unavailable.';
+    case 'database_unavailable':
+      return 'The AI usage ledger is temporarily unavailable.';
+    case 'timeout':
+      return 'The AI usage ledger query timed out.';
+    case 'invalid_response':
+      return 'The AI usage ledger returned an invalid response.';
+  }
+}
+
+function aiUsageResponseFailureReason(status: number): AiUsageReason {
+  if (status === 408 || status === 504) return 'timeout';
+  return 'database_unavailable';
+}
+
+async function loadAiUsage(): Promise<AiUsageFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/ai-usage`, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownAiUsageObservation('database_unavailable'),
+    };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (!response.ok) {
+    return {
+      status: 'ready',
+      observation: unknownAiUsageObservation(aiUsageResponseFailureReason(response.status)),
+    };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownAiUsageObservation('invalid_response'),
+    };
+  }
+
+  const parsed = operationSchemas.aiUsageObservation.safeParse(body);
+  return {
+    status: 'ready',
+    observation: parsed.success ? parsed.data : unknownAiUsageObservation('invalid_response'),
   };
 }
 
@@ -2416,6 +2498,376 @@ function R2Capacity({ state }: { state: R2CapacityState }) {
 }
 
 const storageLifecycleNumber = new Intl.NumberFormat('en-US');
+const aiUsageNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
+
+function AiUsageStatusBadge({ status }: { status: 'available' | 'unknown' }) {
+  const available = status === 'available';
+  return (
+    <span
+      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+        available ? 'bg-emerald-100 text-emerald-800' : 'bg-secondary text-ink-soft'
+      }`}
+    >
+      {available ? 'Available' : 'Unknown'}
+    </span>
+  );
+}
+
+function AiCallOutcomeLine({
+  label,
+  outcome,
+  fragmented = false,
+}: {
+  label: 'Live' | 'Record' | 'Replay';
+  outcome: AiUsageWindow['calls']['live'];
+  fragmented?: boolean;
+}) {
+  if (fragmented) {
+    return (
+      <li>
+        <span>
+          {label}: {aiUsageNumber.format(outcome.succeeded)} succeeded,{' '}
+        </span>
+        <span>{aiUsageNumber.format(outcome.failed)} failed, </span>
+        <span>{aiUsageNumber.format(outcome.total)} total</span>
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      {label}: {aiUsageNumber.format(outcome.succeeded)} succeeded,{' '}
+      {aiUsageNumber.format(outcome.failed)} failed, {aiUsageNumber.format(outcome.total)} total
+    </li>
+  );
+}
+
+function AiOperationModeLines({ operation }: { operation: AiUsageOperation }) {
+  return (
+    <div className="mt-2 space-y-1 text-xs text-ink-soft">
+      <p>
+        Live: {aiUsageNumber.format(operation.liveSucceeded)} succeeded,{' '}
+        {aiUsageNumber.format(operation.liveFailed)} failed
+      </p>
+      <p>
+        Record: {aiUsageNumber.format(operation.recordSucceeded)} succeeded,{' '}
+        {aiUsageNumber.format(operation.recordFailed)} failed
+      </p>
+      <p>
+        Replay: {aiUsageNumber.format(operation.replaySucceeded)} succeeded,{' '}
+        {aiUsageNumber.format(operation.replayFailed)} failed
+      </p>
+    </div>
+  );
+}
+
+function AiUsageOperations({ window, ariaLabel }: { window: AiUsageWindow; ariaLabel: string }) {
+  const operations = [
+    { label: 'Chat', usage: window.operations.chat },
+    { label: 'Report generation', usage: window.operations.generateReport },
+    { label: 'Transcription', usage: window.operations.transcribe },
+  ] as const;
+
+  return (
+    <div className="mt-5 border-t border-hairline pt-5">
+      <h4 className="font-semibold text-ink">Operations</h4>
+      <ul aria-label={ariaLabel} className="mt-3 grid gap-3 lg:grid-cols-3">
+        {operations.map((operation) => (
+          <li className="rounded-lg bg-secondary p-4" key={operation.label}>
+            <p className="font-semibold text-ink">{operation.label}</p>
+            <AiOperationModeLines operation={operation.usage} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function aiProviderLabel(provider: AiUsageProvider['provider']): string {
+  if (provider === 'openai') return 'OpenAI';
+  if (provider === 'groq') return 'Groq';
+  if (provider === 'kimi') return 'Kimi';
+  return 'Other';
+}
+
+function AiUsageProviderItem({ provider }: { provider: AiUsageProvider }) {
+  return (
+    <li className="rounded-lg border border-hairline p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="font-semibold text-ink">{aiProviderLabel(provider.provider)}</p>
+        <p className="text-xs font-medium text-ink-soft">
+          {aiUsageNumber.format(provider.recordedEventCount)} recorded events
+        </p>
+      </div>
+      <ul className="mt-3 space-y-1 text-xs text-ink-soft">
+        <AiCallOutcomeLine fragmented label="Live" outcome={provider.calls.live} />
+        <AiCallOutcomeLine fragmented label="Record" outcome={provider.calls.record} />
+        <AiCallOutcomeLine fragmented label="Replay" outcome={provider.calls.replay} />
+      </ul>
+      <ul className="mt-3 space-y-1 border-t border-hairline pt-3 text-xs text-ink-soft">
+        <li>
+          <span>{aiUsageNumber.format(provider.successfulProviderUsage.inputTokens)}</span>
+          <span> input tokens</span>
+        </li>
+        <li>
+          <span>{aiUsageNumber.format(provider.successfulProviderUsage.outputTokens)}</span>
+          <span> output tokens</span>
+        </li>
+        <li>
+          <span>{aiUsageNumber.format(provider.successfulProviderUsage.cachedTokens)}</span>
+          <span> cached tokens</span>
+        </li>
+        <li>
+          <span>{aiUsageNumber.format(provider.successfulProviderUsage.inputSeconds)}</span>
+          <span> transcription input seconds</span>
+        </li>
+      </ul>
+      <p className="mt-3 text-xs text-ink-soft">
+        Last retained event{' '}
+        <time dateTime={provider.lastRecordedAt}>{provider.lastRecordedAt}</time>
+      </p>
+    </li>
+  );
+}
+
+function AiUsageProviders({ window, ariaLabel }: { window: AiUsageWindow; ariaLabel: string }) {
+  return (
+    <div className="mt-5 border-t border-hairline pt-5">
+      <h4 className="font-semibold text-ink">Providers</h4>
+      <ul aria-label={ariaLabel} className="mt-3 grid gap-3 lg:grid-cols-2">
+        {window.providers.map((provider) => (
+          <AiUsageProviderItem key={provider.provider} provider={provider} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function aiUsageWarningCopy(warning: AiUsageWarning, window: AiUsageWindow): string {
+  if (warning === 'unclassified_vendor_events') {
+    const count = window.unclassifiedVendorEventCount;
+    return `${aiUsageNumber.format(count)} retained ${count === 1 ? 'event' : 'events'} used an unclassified vendor label and ${count === 1 ? 'is' : 'are'} grouped as Other.`;
+  }
+
+  const count = window.missingInputSecondsEventCount;
+  return `${aiUsageNumber.format(count)} successful transcription ${count === 1 ? 'event has' : 'events have'} no recorded input duration; transcription seconds are incomplete.`;
+}
+
+function AiUsageWindowCard({
+  label,
+  ariaPrefix,
+  window,
+}: {
+  label: 'Month to date' | 'Last 24 hours';
+  ariaPrefix: 'Month-to-date' | 'Last-24-hours';
+  window: AiUsageWindow;
+}) {
+  return (
+    <article className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-ink">{label}</h3>
+          <p className="mt-1 text-xs text-ink-soft">
+            <time dateTime={window.windowStart}>{window.windowStart}</time>
+            {' to '}
+            <time dateTime={window.windowEnd}>{window.windowEnd}</time>
+          </p>
+        </div>
+        <p className="text-sm font-semibold text-ink">
+          {aiUsageNumber.format(window.recordedEventCount)} recorded events
+        </p>
+      </div>
+
+      {window.recordedEventCount === 0 ? (
+        <p className="mt-5 rounded-lg bg-secondary p-4 text-sm text-ink-soft">
+          No AI usage recorded in this window.
+        </p>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg bg-secondary p-4">
+              <h4 className="font-semibold text-ink">Calls by mode</h4>
+              <ul className="mt-3 space-y-1 text-sm text-ink-soft">
+                <AiCallOutcomeLine label="Live" outcome={window.calls.live} />
+                <AiCallOutcomeLine label="Record" outcome={window.calls.record} />
+                <AiCallOutcomeLine label="Replay" outcome={window.calls.replay} />
+              </ul>
+              <p className="mt-3 text-xs text-ink-soft">
+                Replay is separate from provider-attributable live and record calls.
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-secondary p-4">
+              <h4 className="font-semibold text-ink">Successful provider usage</h4>
+              <ul className="mt-3 space-y-1 text-sm text-ink-soft">
+                <li>
+                  {aiUsageNumber.format(window.successfulProviderUsage.inputTokens)} input tokens
+                </li>
+                <li>
+                  {aiUsageNumber.format(window.successfulProviderUsage.outputTokens)} output tokens
+                </li>
+                <li>
+                  {aiUsageNumber.format(window.successfulProviderUsage.cachedTokens)} cached tokens
+                </li>
+                <li>
+                  {aiUsageNumber.format(window.successfulProviderUsage.inputSeconds)} transcription
+                  input seconds
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <AiUsageOperations window={window} ariaLabel={`${ariaPrefix} operations`} />
+          <AiUsageProviders window={window} ariaLabel={`${ariaPrefix} providers`} />
+
+          {window.warnings.length > 0 && (
+            <div className="mt-5 border-t border-hairline pt-5">
+              <h4 className="font-semibold text-amber-800">Warnings</h4>
+              <ul
+                aria-label={`${ariaPrefix} warnings`}
+                className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-800"
+              >
+                {window.warnings.map((warning) => (
+                  <li key={warning}>{aiUsageWarningCopy(warning, window)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <p className="mt-5 border-t border-hairline pt-4 text-xs text-ink-soft">
+            Last retained event{' '}
+            {window.lastRecordedAt ? (
+              <time dateTime={window.lastRecordedAt}>{window.lastRecordedAt}</time>
+            ) : (
+              'Unknown'
+            )}
+          </p>
+        </>
+      )}
+    </article>
+  );
+}
+
+function aiUsageCaveatCopy(caveat: AiUsageCaveat): string {
+  switch (caveat) {
+    case 'best_effort_ledger':
+      return 'Accounting writes are best effort, so the retained ledger may be incomplete.';
+    case 'not_provider_billing':
+      return 'These values are not provider billing, spend, balance, or rate-limit evidence.';
+    case 'replay_not_provider_usage':
+      return 'Replay events are recorded separately and are not provider usage.';
+    case 'record_mode_calls_provider':
+      return 'Record-mode events call a provider and are provider-attributable.';
+    case 'deleted_history_excluded':
+      return 'Deleted-account history and events that were not recorded are excluded.';
+  }
+}
+
+const AI_PROVIDER_DASHBOARDS = [
+  { name: 'OpenAI', href: OPENAI_USAGE_URL },
+  { name: 'Groq', href: GROQ_DASHBOARD_URL },
+  { name: 'Kimi', href: KIMI_DASHBOARD_URL },
+] as const;
+
+function AiProviderCapacityLinks() {
+  return (
+    <div className="mt-4 grid gap-3 md:grid-cols-3">
+      {AI_PROVIDER_DASHBOARDS.map((provider) => (
+        <article
+          className="rounded-xl border border-hairline bg-card p-5 shadow-sm"
+          key={provider.name}
+        >
+          <p className="font-semibold text-ink">{provider.name}</p>
+          <p className="mt-2 text-sm font-semibold text-ink">Remaining provider credit: Unknown</p>
+          <p className="mt-1 text-xs text-ink-soft">
+            This page does not use a provider-admin billing credential.
+          </p>
+          <a
+            className="mt-3 inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
+            href={provider.href}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open {provider.name} dashboard ↗
+          </a>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function AiUsage({ state }: { state: AiUsageState }) {
+  if (state.status === 'idle') return null;
+
+  return (
+    <section className="mt-8" aria-labelledby="ai-usage-title">
+      <div>
+        <h2 className="text-xl font-semibold text-ink" id="ai-usage-title">
+          Harpa-recorded AI usage
+        </h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Harpa-recorded metadata is a retained, best-effort ledger. It is not provider billing.
+        </p>
+      </div>
+
+      <AiProviderCapacityLinks />
+
+      <div className="mt-4" aria-live="polite">
+        {state.status === 'loading' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 text-sm text-ink-soft shadow-sm">
+            Loading Harpa-recorded AI usage…
+          </div>
+        ) : state.observation.status === 'unknown' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-xs text-ink-soft">
+                Observed{' '}
+                <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+              </p>
+              <AiUsageStatusBadge status="unknown" />
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">
+              {aiUsageReasonCopy(state.observation.reason)}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <p className="text-xs text-ink-soft">
+                  Observed{' '}
+                  <time dateTime={state.observation.observedAt}>
+                    {state.observation.observedAt}
+                  </time>
+                </p>
+                <AiUsageStatusBadge status="available" />
+              </div>
+              <h3 className="mt-5 font-semibold text-ink">Interpretation notes</h3>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+                {state.observation.caveats.map((caveat) => (
+                  <li key={caveat}>{aiUsageCaveatCopy(caveat)}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              <AiUsageWindowCard
+                label="Month to date"
+                ariaPrefix="Month-to-date"
+                window={state.observation.monthToDate}
+              />
+              <AiUsageWindowCard
+                label="Last 24 hours"
+                ariaPrefix="Last-24-hours"
+                window={state.observation.last24Hours}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function storageLifecycleCaveatCopy(
   caveat: AvailableStorageLifecycleObservation['caveats'][number],
@@ -3311,6 +3763,7 @@ function Operations({
   const [neonUsage, setNeonUsage] = useState<NeonUsageState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
   const [flyInventory, setFlyInventory] = useState<FlyInventoryState>({ status: 'idle' });
+  const [aiUsage, setAiUsage] = useState<AiUsageState>({ status: 'idle' });
   const [reportCanary, setReportCanary] = useState<ReportCanaryState>({
     status: 'idle',
   });
@@ -3329,29 +3782,42 @@ function Operations({
     setNeonUsage({ status: 'loading' });
     setR2Capacity({ status: 'loading' });
     setFlyInventory({ status: 'loading' });
+    setAiUsage({ status: 'loading' });
     setGitHub({ status: 'checking' });
     try {
-      const [, , , , lifecycle, inventory, usageObservation, capacity, fly, githubStatus] =
-        await Promise.all([
-          loadApiIdentity().then((api) => {
-            if (isCurrent()) setDeployment((current) => ({ ...current, api }));
-          }),
-          loadReadiness('/readyz').then((product) => {
-            if (isCurrent()) setDeployment((current) => ({ ...current, product }));
-          }),
-          loadReadiness('/admin/readyz').then((admin) => {
-            if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
-          }),
-          loadPagesMarker().then((pages) => {
-            if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
-          }),
-          loadStorageLifecycle(),
-          loadNeonInventory(),
-          loadNeonUsage(),
-          loadR2Capacity(),
-          loadFlyInventory(),
-          loadGitHubStatus(),
-        ]);
+      const [
+        ,
+        ,
+        ,
+        ,
+        lifecycle,
+        inventory,
+        usageObservation,
+        capacity,
+        fly,
+        aiUsageResult,
+        githubStatus,
+      ] = await Promise.all([
+        loadApiIdentity().then((api) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, api }));
+        }),
+        loadReadiness('/readyz').then((product) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, product }));
+        }),
+        loadReadiness('/admin/readyz').then((admin) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
+        }),
+        loadPagesMarker().then((pages) => {
+          if (isCurrent()) setDeployment((current) => ({ ...current, pages }));
+        }),
+        loadStorageLifecycle(),
+        loadNeonInventory(),
+        loadNeonUsage(),
+        loadR2Capacity(),
+        loadFlyInventory(),
+        loadAiUsage(),
+        loadGitHubStatus(),
+      ]);
       if (!isCurrent()) return;
       setGitHub(githubStatus);
       if (
@@ -3359,7 +3825,8 @@ function Operations({
         inventory.status === 'unauthorized' ||
         usageObservation.status === 'unauthorized' ||
         capacity.status === 'unauthorized' ||
-        fly.status === 'unauthorized'
+        fly.status === 'unauthorized' ||
+        aiUsageResult.status === 'unauthorized'
       ) {
         onSessionExpired();
         return;
@@ -3369,6 +3836,7 @@ function Operations({
       setNeonUsage(usageObservation);
       setR2Capacity(capacity);
       setFlyInventory(fly);
+      setAiUsage(aiUsageResult);
     } finally {
       if (isCurrent()) setRefreshing(false);
     }
@@ -3459,6 +3927,8 @@ function Operations({
       <ReportCanary state={reportCanary} onRun={() => void handleRunCanary()} />
 
       <NeonUsage state={neonUsage} />
+
+      <AiUsage state={aiUsage} />
 
       <NeonInventory state={neonInventory} />
 

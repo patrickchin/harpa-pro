@@ -3,6 +3,9 @@
 > Resolves [Pitfall 5](pitfalls.md#pitfall-5--auth-glue-done-late-env-handling-brittle)
 > and [Pitfall 6](pitfalls.md#pitfall-6--per-request-db-scope-rls-replacement-added-late).
 
+The Fly inventory and Harpa-recorded AI usage additions below are unmerged
+draft stacks.
+
 ## Overview
 
 Mobile application and office-dashboard auth is handled by
@@ -31,11 +34,15 @@ browser-admin data route runs. `GET /admin/activity` then reads the application
 database. `GET /admin/operations/neon` requests bounded provider metadata. The
 `GET /admin/operations/neon-usage` route requests bounded Neon Free-plan usage.
 The `GET /admin/operations/r2-capacity` route requests bounded R2 measurements.
+The draft `GET /admin/operations/fly-inventory` route requests bounded Fly
+inventory. The draft `GET /admin/operations/ai-usage` route reads one bounded
+aggregate from the application usage ledger without a provider request.
 `GET /admin/operations/storage-lifecycle` reads bounded lifecycle state from
-the application database.
-The manual `POST /admin/operations/report-generate` can authenticate one fixed
+the application database. The
+manual `POST /admin/operations/report-generate` can authenticate one fixed
 synthetic application user and exercise the real report routes in live mode.
-The two databases have no joins or cross-database foreign keys.
+The two
+databases have no joins or cross-database foreign keys.
 
 ## Auth flow
 
@@ -173,7 +180,8 @@ data routes. It protects `GET /admin/activity`,
 `GET /admin/operations/neon`, `GET /admin/operations/neon-usage`, and
 `GET /admin/operations/r2-capacity`. It also protects
 `GET /admin/operations/fly-inventory` and
-`GET /admin/operations/storage-lifecycle`. It is one required gate on
+`GET /admin/operations/storage-lifecycle`. It protects the draft
+`GET /admin/operations/ai-usage` route. It is one required gate on
 `POST /admin/operations/report-generate`. It does not inspect
 `public."user".is_admin` and rejects Better Auth bearer tokens and cookies.
 Existing programmatic admin routes retain their app-admin authorization until
@@ -212,8 +220,8 @@ and session budget after the shared trusted-Fly-IP gate and admin-session
 lookup. One observation makes at most 22 fixed Neon `GET` requests. It does not
 retry, follow project pagination, or use a provider write method. The browser
 calls it once after session confirmation and again only on manual **Refresh**.
-It does not poll. Across the full operations page, that is 12 fixed GET reads
-on load and 24 total after one Refresh.
+It does not poll. Across the full stacked operations page, that is 13 fixed GET
+reads on load and 26 total after one Refresh.
 
 The Neon percentages use published Free-plan references and are not credit
 balances. R2 operation percentages remain estimates, and the public GitHub
@@ -287,6 +295,31 @@ Fly machine data. Its rollout and queue values are database evidence only. A
 green rollout row or empty queue does not prove current storage worker
 liveness. See
 [`design-admin-storage-lifecycle-observer.md`](design-admin-storage-lifecycle-observer.md).
+
+### AI usage aggregate boundary
+
+The draft AI usage route requires the shared trusted-Fly-IP gate before
+`withAdminSession()`. A separate 12-request-per-minute bucket uses the admin
+identity and session after authentication. Better Auth and the retired
+application-admin bit cannot authorize the route.
+
+After authentication, an admin service uses the application database pool for
+one reviewed cross-user aggregate. The query uses fixed current-month and
+previous-24-hour UTC windows. The route layer does not import `rawDb()`. The
+admin database proves identity before the application database runs the
+aggregate. The two databases do not join.
+
+The response groups only normalized provider category, operation, fixture
+mode, and status. It returns no user, project, report, model, prompt,
+transcript, raw vendor, provider response, or database error details. `live`
+and `record` are provider-attributable. Replay remains separate. The ledger is
+best-effort and excludes deleted history. It is not a billing or immutable
+audit record.
+
+The route adds no provider credential and makes no OpenAI, Groq, or Kimi
+request. Provider balance, quota, free-tier capacity, and remaining credit all
+stay `Unknown`. See
+[`design-admin-ai-usage.md`](design-admin-ai-usage.md).
 
 ### Report generation live canary boundary
 
@@ -591,8 +624,8 @@ wiring**, not a DI stub):
   HTTP fallback. The waitlist CORS tests protect its separate public
   policy.
 - The admin operations scope test rejects anonymous, Better Auth, and legacy
-  app-admin sessions before an observer reads its database or calls a provider.
-  It allows only a dedicated browser-admin session.
+  app-admin sessions before an observer reads its database, runs an aggregate,
+  or calls a provider. It allows only a dedicated browser-admin session.
 - The storage lifecycle integration tests prove one bounded statement, the
   separate 12-request budget, strict redaction, and the worker-liveness caveat.
 - The report live-canary integration tests also require the exact

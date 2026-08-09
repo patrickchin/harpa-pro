@@ -30,6 +30,12 @@ vi.mock('../../env.js', async (importOriginal) => {
       ADMIN_FLY_READ_ONLY_API_TOKEN: 'scope-fly-read-only-token',
       ADMIN_NEON_VIEWER_API_KEY: 'scope-neon-viewer-key',
       ADMIN_NEON_ORG_ID: 'org-harpa-pro',
+      ADMIN_SENTRY_ORG_SLUG: 'harpa-pro',
+      ADMIN_SENTRY_READ_TOKEN: 'scope-sentry-read-token',
+      ADMIN_SENTRY_PROJECT_SLUGS: 'harpa-pro-api,harpa-pro-mobile',
+      ADMIN_SENTRY_MOBILE_PROJECT_SLUG: 'harpa-pro-mobile',
+      ADMIN_SENTRY_ENVIRONMENT: 'production',
+      ADMIN_SENTRY_REGION: 'global',
     },
   };
 });
@@ -258,6 +264,32 @@ describe('scope: GET /admin/operations/fly-inventory', () => {
   it('rejects a legacy app-admin bearer session before observing Fly', async () => {
     const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
     const response = await createApp().request('/admin/operations/fly-inventory', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+});
+
+describe('scope: GET /admin/operations/sentry', () => {
+  it('rejects an anonymous request before observing Sentry', async () => {
+    const response = await createApp().request('/admin/operations/sentry');
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a regular Better Auth bearer session before observing Sentry', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+    const response = await createApp().request('/admin/operations/sentry', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    await expectRejectedBeforeProviderCall(response);
+  });
+
+  it('rejects a legacy app-admin bearer session before observing Sentry', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+    const response = await createApp().request('/admin/operations/sentry', {
       headers: { authorization: `Bearer ${token}` },
     });
 

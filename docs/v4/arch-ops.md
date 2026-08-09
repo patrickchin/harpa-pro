@@ -67,17 +67,19 @@ does not define this repository's runtime; `nvm use` does.
     `harpa-pro-api-pr-<n>` Fly app.
   - `/` renders the activity console. `/operations` renders read-only Harpa
     readiness, service links, a no-token public GitHub branch/PR snapshot,
-    bounded Neon inventory and Free-plan usage, bounded R2 capacity, and
-    storage lifecycle database evidence. The draft stack adds bounded Fly
-    inventory and Harpa-recorded AI usage summaries. A separate manual report
-    generation live canary is explicitly disclosed as a synthetic mutation.
-    Unknown browser paths return a static 404. `/admin/activity` and
-    `/admin/operations/*` remain API resource paths. Data and live-canary
-    requests require the dedicated API admin session. See
+    bounded Neon inventory and Free-plan usage, bounded R2 capacity, aggregate
+    Sentry issue-group and mobile-session evidence, and storage lifecycle
+    database evidence. The draft stack adds bounded Fly inventory and
+    Harpa-recorded AI usage summaries. A separate manual report generation live
+    canary is explicitly disclosed as a synthetic mutation. Unknown browser
+    paths return a static 404. `/admin/activity` and `/admin/operations/*`
+    remain API resource paths. Data and live-canary requests require the
+    dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md),
     [Admin Neon inventory](design-admin-neon-inventory.md),
     [Admin provider quota percentages](design-admin-provider-quota-percentages.md),
     [Admin R2 capacity](design-admin-r2-capacity.md),
+    [Admin Sentry observer](design-admin-sentry-observer.md),
     [Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md),
     and [Admin live report-generation canary](design-admin-report-live-canary.md).
     The unmerged additions are specified in
@@ -497,8 +499,8 @@ Unsupported money, token, invoice, and provider credit balances stay
 `Unknown`.
 
 The browser calls each read route once after session confirmation and again
-only on manual **Refresh**. A successful full-stack load makes 15 fixed GET
-reads. One successful Refresh makes another 15, for 30 total. The page does not
+only on manual **Refresh**. A successful full-stack load makes 16 fixed GET
+reads. One successful Refresh makes another 16, for 32 total. The page does not
 poll. The report generation live canary remains a separate manual POST and does
 not run in either read cycle.
 
@@ -572,8 +574,8 @@ signed R2 URLs, so the application API does not carry the object bytes.
 This presentation adds no API route, response schema field, credential, or
 provider request. The three-request R2 ceiling stays unchanged. The browser
 reads the R2 route once after session confirmation and again only on manual
-**Refresh**. The full page still makes 15 fixed GET reads after session
-confirmation. One Refresh adds 15 reads, for 30 total. The page does not poll.
+**Refresh**. The full page still makes 16 fixed GET reads after session
+confirmation. One Refresh adds 16 reads, for 32 total. The page does not poll.
 
 Enable and prove the observer in this order:
 
@@ -595,6 +597,52 @@ Enable and prove the observer in this order:
 Development approval does not authorize production enablement. Repeat the
 token review and deployment proof before enabling production. See
 [Admin R2 capacity](design-admin-r2-capacity.md) for the full contract.
+
+### Sentry aggregate observer
+
+The Sentry stack remains an unmerged draft. It does not provision a live
+observer token. The API accepts this optional server-only set:
+
+- `ADMIN_SENTRY_ORG_SLUG`.
+- `ADMIN_SENTRY_READ_TOKEN`.
+- `ADMIN_SENTRY_PROJECT_SLUGS`.
+- `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`.
+- `ADMIN_SENTRY_ENVIRONMENT`.
+- optional `ADMIN_SENTRY_REGION`.
+
+The first five values must be absent or present together. A partial
+configuration fails API boot. `ADMIN_SENTRY_PROJECT_SLUGS` contains one to
+three unique reviewed projects, and the mobile project must be one of them.
+`ADMIN_SENTRY_ENVIRONMENT` is exactly `production`, `preview`, or
+`development`. `ADMIN_SENTRY_REGION` selects only the fixed `global`, `us`, or
+`de` Sentry API origin.
+
+Provision one dedicated Sentry organization integration token with only
+`event:read` and `org:read`. Do not reuse a DSN, the source-map upload
+`SENTRY_AUTH_TOKEN`, a personal token, or a token with write or admin
+permission. The token never reaches the browser, logs, response contract, or
+fixtures.
+
+One configured observation makes exactly two fixed `GET` requests under one
+shared 10-second deadline. The requests run in parallel, use
+`redirect: 'error'`, never retry, and never follow pagination. One request
+counts unresolved error issue groups for the configured projects and
+environment. The other request reads the last 24 hours of mobile-session health
+for one configured mobile project.
+
+The response returns only aggregate counts, reviewed caveats, and bounded
+unknown reasons. It excludes project names, issue titles, event data, people,
+provider diagnostics, and raw pagination data. A zero issue-group count is not
+proof that every Harpa path is healthy. Mobile-session health covers only the
+configured mobile project and does not cover the API or browser apps. Missing
+or zero session data stays `Unknown`.
+
+The browser reads this route once after session confirmation and once on manual
+**Refresh**. The full page makes 16 fixed GET reads after session confirmation.
+One Refresh makes another 16, for 32 total. The page does not poll or trigger
+the report generation live canary. See
+[Admin Sentry observer](design-admin-sentry-observer.md) for the full
+contract.
 
 ### Fly inventory observer
 
@@ -648,8 +696,8 @@ remaining plan capacity. Fly does not document a stable remaining-credit REST
 field, so the dashboard remains the billing source.
 
 The browser requests the route once after session confirmation and once on
-manual **Refresh**. A successful full-stack load makes 15 fixed GET reads. One
-successful Refresh makes another 15, for 30 total. The page does not poll or
+manual **Refresh**. A successful full-stack load makes 16 fixed GET reads. One
+successful Refresh makes another 16, for 32 total. The page does not poll or
 trigger the report generation live canary.
 
 Do not add the triplet until the operator reviews this draft. After approval,
@@ -713,8 +761,8 @@ balance, rate-limit headroom, free-tier capacity, and remaining credit all
 stay `Unknown`; use the linked provider dashboards for those facts.
 
 The browser reads this route once after session confirmation and once per
-manual **Refresh**. It does not poll. A successful full-stack load makes 15
-fixed GET reads. One successful Refresh makes another 15, for 30 total. The
+manual **Refresh**. It does not poll. A successful full-stack load makes 16
+fixed GET reads. One successful Refresh makes another 16, for 32 total. The
 manual report generation live canary remains a separate POST and never runs in
 those cycles.
 
@@ -1018,7 +1066,9 @@ without coupling Fly routing to admin availability.
 The administrator operations page displays `/healthz` build identity, both
 readiness heads, and three independent Pages markers as read-only evidence.
 The marker cards identify the public site, administrator site, and office
-dashboard. They do not infer one Pages identity from another.
+dashboard. A separate Sentry card displays only aggregate unresolved issue
+groups and mobile-session health. The page does not infer one Pages identity
+from another.
 
 The admin build sets `PUBLIC_SITE_BASE_URL` and `PUBLIC_DASHBOARD_URL` to fixed
 public origins for the current `main`, `dev`, or `pr-<n>` branch. The browser
@@ -1028,8 +1078,8 @@ credentials. All requests disable caching, and the page does not poll.
 
 The UI does not compare API and Pages SHAs or label a difference as drift. Fly
 pull-request previews can report the synthetic merge ref while Pages reports
-the pull-request head. A successful full-stack load makes 15 fixed GET reads.
-One successful manual **Refresh** makes another 15, for 30 total.
+the pull-request head. A successful full-stack load makes 16 fixed GET reads.
+One successful manual **Refresh** makes another 16, for 32 total.
 
 The `/healthz` browser CORS policy accepts only the exact configured
 administrator origins and does not allow credentials. `/readyz` and

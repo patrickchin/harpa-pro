@@ -17,18 +17,21 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 The root route renders the business activity console. `/operations` provides
 read-only Harpa deployment identity and readiness, a no-token public GitHub
 branch/PR snapshot, bounded Neon inventory and Free-plan usage, bounded R2
-capacity, bounded Fly inventory, storage lifecycle database evidence, aggregate
-Harpa-recorded AI usage, and links to external service consoles. A separate
-**Report generation live canary** card updates one fixed synthetic report and
-spends real AI tokens. The canary runs only after an explicit click. It is not
-part of the read-only refresh. Unknown browser paths return a static 404.
+capacity, aggregate Sentry issue-group and mobile-session evidence, bounded Fly
+inventory, storage lifecycle database evidence, aggregate Harpa-recorded AI
+usage, and links to external service consoles. A separate **Report generation
+live canary** card updates one fixed synthetic report and spends real AI
+tokens. The canary runs only after an explicit click. It is not part of the
+read-only refresh. Unknown browser paths return a static 404.
 `/admin/activity` and the `/admin/operations/*` routes remain API resource
 paths, not page URLs.
 
-The unmerged Fly inventory and AI usage stacks are drafts. The Fly stack adds
-bounded Machine and Volume inventory for an explicit app allowlist. The AI
-usage stack summarizes Harpa's retained best-effort ledger without adding a
-provider administrator credential.
+The unmerged Fly inventory, AI usage, and Sentry stacks are drafts. The Fly
+stack adds bounded Machine and Volume inventory for an explicit app allowlist.
+The AI usage stack summarizes the retained Harpa best-effort ledger without
+adding a provider administrator credential. The Sentry stack adds aggregate
+unresolved error issue groups and mobile-session health without exposing issue
+details, project names, or provider diagnostics.
 
 ## Deployment identity
 
@@ -46,8 +49,8 @@ credentials. Every GET disables caching, and the page does not poll.
 The cards also keep API build identity and both migration heads separate. The
 UI does not compare these SHAs or label a difference as drift. Pull-request Fly
 previews can use a synthetic merge commit while Pages reports the pull-request
-head. A successful full-stack load makes 15 fixed GETs. One successful manual
-Refresh makes 15 more, for 30 total. The report live canary remains a separate
+head. A successful full-stack load makes 16 fixed GETs. One successful manual
+Refresh makes 16 more, for 32 total. The report live canary remains a separate
 manual POST.
 
 The panel supplies corroborating evidence only. Use the protected deployment
@@ -120,14 +123,44 @@ make only that budget `Unknown`.
 
 Percentage text uses one decimal place. Values can exceed 100.0%, while the
 painted meter stops at 100%. Unsupported provider money, token, invoice, and
-credit balances stay `Unknown`. The full stacked browser makes 15 fixed GET
-reads after session confirmation. One manual **Refresh** makes another 15, for
-30 total. The page does not poll. The report generation live canary remains a
+credit balances stay `Unknown`. The full stacked browser makes 16 fixed GET
+reads after session confirmation. One manual **Refresh** makes another 16, for
+32 total. The page does not poll. The report generation live canary remains a
 separate manual POST.
 
 See
 [Admin provider quota percentages](../../docs/v4/design-admin-provider-quota-percentages.md)
 for the evidence and calculation contract.
+
+## Sentry observer draft
+
+The draft adds `GET /admin/operations/sentry`. The route uses the dedicated
+admin cookie and `Cache-Control: private, no-store`. It applies the shared
+trusted-Fly-IP budget and a separate 12-request-per-minute identity and session
+budget. It accepts no body or query, and it does not poll.
+
+The API accepts `ADMIN_SENTRY_ORG_SLUG`, `ADMIN_SENTRY_READ_TOKEN`,
+`ADMIN_SENTRY_PROJECT_SLUGS`, `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`, and
+`ADMIN_SENTRY_ENVIRONMENT` as one optional set. `ADMIN_SENTRY_REGION` is
+optional and defaults to `global`. The first five values must be absent or
+present together. The read token uses only `event:read` and `org:read`. None
+of these values enters the browser bundle.
+
+One configured observation makes exactly two fixed `GET` requests under one
+shared 10-second deadline. The requests run in parallel. They never retry and
+never follow pagination. One request counts unresolved issue groups for the
+configured Sentry projects and environment. The other request reads the last 24
+hours of mobile-session health for the configured mobile project. The response
+exposes only aggregate counts and reviewed caveats. It does not expose issue
+titles, event data, people, project names, or provider diagnostics.
+
+The browser requests the aggregate once after session confirmation and once per
+manual **Refresh**. A successful full-stack load makes 16 fixed GET reads. One
+successful Refresh makes another 16, for 32 total. The report generation live
+canary remains a separate manual POST.
+
+See [Admin Sentry observer](../../docs/v4/design-admin-sentry-observer.md) for
+the draft route, credential, privacy, and request-plan contract.
 
 ## Storage lifecycle
 
@@ -176,8 +209,8 @@ liveness. Volume size shows allocated capacity, and remaining Fly credit stays
 `Unknown` with a Fly dashboard link.
 
 The browser requests the inventory once after session confirmation and once
-per manual **Refresh**. A successful full-stack load makes 15 fixed GET reads.
-One successful Refresh makes another 15, for 30 total. The page does not poll
+per manual **Refresh**. A successful full-stack load makes 16 fixed GET reads.
+One successful Refresh makes another 16, for 32 total. The page does not poll
 or make a provider write. The report generation live canary remains a separate
 manual POST.
 
@@ -204,8 +237,8 @@ best-effort and excludes deleted history, so it is not provider billing.
 Remaining provider credit stays `Unknown` with dashboard links.
 
 The browser requests the aggregate once after session confirmation and once
-per manual **Refresh**. It does not poll. A successful full-stack load makes 15
-reads. One successful Refresh adds 15 more, for 30 total. The report live
+per manual **Refresh**. It does not poll. A successful full-stack load makes 16
+reads. One successful Refresh adds 16 more, for 32 total. The report live
 canary remains a separate manual POST and never runs during either cycle.
 
 See [Admin AI usage ledger](../../docs/v4/design-admin-ai-usage.md) for the

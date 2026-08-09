@@ -547,6 +547,187 @@ describe('admin operations OpenAPI contract', () => {
     }
   });
 
+  it('publishes the strict Sentry observer on one admin-session read-only GET', () => {
+    const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
+    const path = doc.paths?.['/admin/operations/sentry'];
+    const operation = path?.get;
+
+    expect(operation).toBeDefined();
+    expect(Object.keys(path ?? {}).sort()).toEqual(['get']);
+    expect(operation?.security).toEqual([{ adminSession: [] }]);
+    expect(operation?.parameters).toBeUndefined();
+    expect(operation?.requestBody).toBeUndefined();
+    expect(Object.keys(operation?.responses ?? {}).sort()).toEqual(['200', '401', '429']);
+    expect(operation?.responses).toMatchObject({
+      200: {
+        description: expect.stringMatching(/read-only.*Sentry/i),
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      401: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+      429: {
+        content: {
+          'application/json': { schema: expect.any(Object) },
+        },
+      },
+    });
+
+    const successResponse = operation?.responses?.[200];
+    const successSchema =
+      successResponse && 'content' in successResponse
+        ? successResponse.content?.['application/json']?.schema
+        : undefined;
+    expect(schemaPropertyNames(successSchema)).toEqual(
+      [
+        'abnormalSessions',
+        'cap',
+        'caveats',
+        'count',
+        'countKind',
+        'crashedSessions',
+        'erroredSessions',
+        'healthySessions',
+        'mobileSessions',
+        'observedAt',
+        'reason',
+        'status',
+        'totalSessions',
+        'unresolvedErrors',
+        'window',
+        'windowEnd',
+        'windowStart',
+      ].sort(),
+    );
+
+    const topLevelBranches = schemaObjectNodes(successSchema).filter((node) => {
+      const properties = asSchemaObject(node.properties);
+      return properties?.observedAt !== undefined && properties.status !== undefined;
+    });
+    expect(topLevelBranches).toHaveLength(3);
+    const topLevelBranch = (status: string): SchemaObject => {
+      const matches = topLevelBranches.filter((node) =>
+        schemaStringLiterals(schemaProperty(node, 'status')).has(status),
+      );
+      expect(matches).toHaveLength(1);
+      const branch = matches[0];
+      if (!branch) throw new Error(`missing top-level ${status} Sentry schema branch`);
+      return branch;
+    };
+
+    const availableBranch = topLevelBranch('available');
+    expectClosedObjectSchema(availableBranch, [
+      'observedAt',
+      'status',
+      'unresolvedErrors',
+      'mobileSessions',
+      'caveats',
+    ]);
+    expectClosedObjectSchema(topLevelBranch('partial'), [
+      'observedAt',
+      'status',
+      'unresolvedErrors',
+      'mobileSessions',
+      'caveats',
+    ]);
+    expectClosedObjectSchema(topLevelBranch('unknown'), ['observedAt', 'status', 'reason']);
+    expectClosedObjectSchema(schemaProperty(availableBranch, 'unresolvedErrors'), [
+      'status',
+      'count',
+      'countKind',
+      'cap',
+    ]);
+    expectClosedObjectSchema(schemaProperty(availableBranch, 'mobileSessions'), [
+      'status',
+      'window',
+      'windowStart',
+      'windowEnd',
+      'totalSessions',
+      'healthySessions',
+      'erroredSessions',
+      'abnormalSessions',
+      'crashedSessions',
+    ]);
+
+    const numericSchemas = (propertyName: string): SchemaObject[] =>
+      schemaObjectNodes(successSchema).flatMap((node) => {
+        const property = asSchemaObject(schemaProperty(node, propertyName));
+        return property ? [property] : [];
+      });
+    const issueCounts = numericSchemas('count');
+    expect(issueCounts).toHaveLength(2);
+    for (const issueCount of issueCounts) {
+      expect(issueCount.minimum).toBe(0);
+      expect(issueCount.maximum).toBe(100);
+    }
+    for (const propertyName of [
+      'healthySessions',
+      'erroredSessions',
+      'abnormalSessions',
+      'crashedSessions',
+    ]) {
+      const sessionCounts = numericSchemas(propertyName);
+      expect(sessionCounts).toHaveLength(2);
+      for (const sessionCount of sessionCounts) expect(sessionCount.minimum).toBe(0);
+    }
+    const totalSessions = numericSchemas('totalSessions');
+    expect(totalSessions).toHaveLength(2);
+    for (const totalSessionCount of totalSessions) expect(totalSessionCount.minimum).toBe(1);
+
+    expect([...schemaStringLiterals(successSchema)].sort()).toEqual(
+      [
+        'available',
+        'partial',
+        'unknown',
+        'not_configured',
+        'forbidden',
+        'not_found',
+        'rate_limited',
+        'timeout',
+        'invalid_response',
+        'provider_unavailable',
+        'no_session_data',
+        'exact',
+        'lower_bound',
+        'last_24_hours',
+        'issue_groups_not_events',
+        'mobile_sessions_only',
+        'telemetry_coverage_applies',
+        'issue_count_truncated',
+      ].sort(),
+    );
+
+    const serializedSchema = JSON.stringify(successSchema);
+    for (const forbiddenProperty of [
+      'organizationSlug',
+      'orgSlug',
+      'projectSlug',
+      'projectSlugs',
+      'apiToken',
+      'readToken',
+      'issueId',
+      'shortId',
+      'title',
+      'culprit',
+      'message',
+      'stacktrace',
+      'tags',
+      'users',
+      'email',
+      'url',
+      'headers',
+      'rawIssues',
+      'rawSessions',
+      'providerError',
+    ]) {
+      expect(serializedSchema).not.toContain(`"${forbiddenProperty}"`);
+    }
+  });
+
   it('keeps the strict live canary on the existing admin-session POST path', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
     const path = doc.paths?.['/admin/operations/report-generate'];

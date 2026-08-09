@@ -7,8 +7,9 @@ The Fly inventory and Harpa-recorded AI usage extensions below are drafts for
 unmerged stacked pull requests. The Fly change does not provision its observer
 credential. The AI usage change does not add a provider administrator
 credential. The Neon usage route reuses the existing observer pair. The R2
-code does not provision its observer credential. The storage lifecycle
-observer remains a separate read-only stacked draft and adds no credential.
+code does not provision its observer credential. The Sentry observer does not
+provision its credential. The storage lifecycle observer remains a separate
+read-only stacked draft and adds no credential.
 
 ## Goal
 
@@ -103,8 +104,8 @@ GitHub request, token, or credential is added.
 
 Provider money, token, invoice, and credit balances remain `Unknown`. These
 usage and request-budget percentages are not provider billing balances. A
-successful full-stack load makes 15 fixed GET reads after session confirmation.
-One successful manual **Refresh** makes another 15, for 30 total. The page does
+successful full-stack load makes 16 fixed GET reads after session confirmation.
+One successful manual **Refresh** makes another 16, for 32 total. The page does
 not poll. The report generation live canary remains a separate manual POST.
 
 ## R2 capacity extension
@@ -144,8 +145,41 @@ explicit estimates against published operation references.
 
 This presentation adds no API route, response schema field, credential, or
 provider request. The three-request R2 ceiling stays unchanged. The full page
-still makes 15 fixed GET reads after session confirmation. One manual
-**Refresh** adds 15 reads, for 30 total.
+still makes 16 fixed GET reads after session confirmation. One manual
+**Refresh** adds 16 reads, for 32 total.
+
+## Sentry observer extension
+
+The Sentry observer is another narrow server-side extension. It remains an
+unmerged draft. See [Admin Sentry observer](design-admin-sentry-observer.md)
+for the full contract. `GET /admin/operations/sentry` uses the dedicated
+browser-admin session, the shared trusted-Fly-IP budget, and a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+The API accepts `ADMIN_SENTRY_ORG_SLUG`, `ADMIN_SENTRY_READ_TOKEN`,
+`ADMIN_SENTRY_PROJECT_SLUGS`, `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`, and
+`ADMIN_SENTRY_ENVIRONMENT` as one optional set. `ADMIN_SENTRY_REGION` is
+optional and defaults to `global`. The first five values must be absent or
+present together. The token never reaches the browser and uses only
+`event:read` and `org:read`.
+
+One configured observation makes exactly two fixed Sentry `GET` requests. They
+run in parallel under one shared 10-second deadline. The observer never
+retries, never follows pagination, and never writes to Sentry. One request
+counts unresolved error issue groups for the configured projects and
+environment. The other request reads last-24-hour mobile session totals for one
+configured mobile project.
+
+The response exposes only aggregate counts, fixed caveats, and reviewed unknown
+reasons. It does not expose issue titles, event data, people, project names, or
+provider diagnostics. A zero issue-group count is not proof that every Harpa
+path is healthy. Missing or zero session data is `Unknown`, not zero crashes.
+
+The browser calls the route once after session confirmation and again only on
+manual **Refresh**. It never polls. A successful full-stack load makes 16 fixed
+GET reads. One successful Refresh makes another 16, for 32 total. The report
+generation live canary remains a separate manual POST.
 
 ## Fly inventory extension
 
@@ -180,8 +214,8 @@ does not document a stable remaining-credit REST field, so that value stays
 `Unknown` with a dashboard link.
 
 The browser calls the route once after session confirmation and again only on
-manual **Refresh**. It never polls. A successful full-stack load makes 15 fixed
-GET reads. One successful Refresh makes another 15, for 30 total. The report
+manual **Refresh**. It never polls. A successful full-stack load makes 16 fixed
+GET reads. One successful Refresh makes another 16, for 32 total. The report
 generation live canary remains a separate manual POST.
 
 ## Harpa-recorded AI usage extension
@@ -214,8 +248,8 @@ Provider balance, free tier, rate-limit headroom, and remaining credit stay
 `Unknown` with provider-dashboard links.
 
 The browser calls the route once after session confirmation and again only on
-manual **Refresh**. It never polls. A successful full-stack load makes 15 fixed
-GET reads. One successful Refresh makes another 15, for 30 total. The
+manual **Refresh**. It never polls. A successful full-stack load makes 16 fixed
+GET reads. One successful Refresh makes another 16, for 32 total. The
 manual report generation live canary remains a separate POST. It does not run
 during either cycle.
 
@@ -236,8 +270,8 @@ The administrator marker uses same-origin credentials. The page does not poll.
 Six cards keep API build identity, both migration heads, and the three Pages
 builds independent. The UI does not compare the SHAs or label a difference as
 drift. Fly pull-request previews can run a synthetic merge commit while Pages
-reports the pull-request head. A successful full-stack load makes 15 fixed GET
-reads. One successful manual Refresh makes another 15, for 30 total.
+reports the pull-request head. A successful full-stack load makes 16 fixed GET
+reads. One successful manual Refresh makes another 16, for 32 total.
 
 `/healthz` remains public and read-only. Its browser CORS allowlist contains
 only the exact configured administrator origins and does not allow credentials.
@@ -277,8 +311,9 @@ lifecycle card.
 - Do not add provider credentials to the browser. Secret-backed provider reads
   require a narrow admin API adapter with a response allowlist; do not add one
   broad aggregation endpoint that can silently gain new credential access.
-  The Neon inventory, Neon usage, R2 capacity, and draft Fly inventory routes
-  are the only account-specific provider endpoints in this design.
+  The Neon inventory, Neon usage, R2 capacity, Sentry observer, and draft Fly
+  inventory routes are the only account-specific provider endpoints in this
+  design.
 - Do not claim that linked providers are healthy. Only first-party build
   identity and the two Harpa readiness probes receive live states.
 - Do not poll. Check once on page load and again only when the operator presses
@@ -371,6 +406,11 @@ group do not prove Harpa readiness or worker liveness. The adapter does not use
 internal GraphQL, scrape the dashboard, or infer remaining credit. The
 dashboard remains the billing source.
 
+Sentry uses the same narrow adapter rule. It makes two fixed read-only requests
+with one reviewed token and returns only aggregate issue-group and mobile
+session facts. It does not expose project names, issue details, people, or
+provider diagnostics. It does not claim quota balance or provider health.
+
 Harpa-recorded AI usage does not need a provider adapter. It reads only the
 application usage ledger through one bounded cross-user aggregate service.
 The heading and caveats preserve that source distinction. No ledger value
@@ -420,15 +460,18 @@ the full contract.
   provider calls, bounded output, caveats, rate limits, and manual refresh.
 - Fly inventory tests prove triplet validation, fixed read-only requests,
   allowlist filtering, strict redaction, nullable process-group inventory,
-  bounds, rate limits, 15/30 browser reads, and no polling.
+  bounds, rate limits, 16/32 browser reads, and no polling.
+- Sentry observer tests prove the all-or-none configuration gate, fixed two-call
+  request plan, manual refresh only, strict redaction, generic external link,
+  12-request budget, and 16/32 browser reads.
 - AI usage tests prove the one-query aggregate, fixed UTC windows, normalized
   providers, replay separation, warning correlations, strict redaction,
-  12-request budget, 15/30 read counts, and absence of polling or provider
+  12-request budget, 16/32 read counts, and absence of polling or provider
   calls.
 - Deployment-identity tests prove the six fixed reads, three independent Pages
   cards, strict redaction, full identifiers, exact CORS policy, and no polling.
 - Storage lifecycle tests prove one fixed statement, the five-second deadline,
-  separate 12-request budget, strict redaction, 15/30 reads, and the explicit
+  separate 12-request budget, strict redaction, 16/32 reads, and the explicit
   worker-liveness caveat.
 - Report live-canary tests prove its development-only gate, dedicated cookie,
   exact Origin, session-derived CSRF, fixed target, live usage proof, bounded

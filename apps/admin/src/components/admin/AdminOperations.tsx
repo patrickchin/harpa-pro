@@ -18,6 +18,8 @@ import type {
   R2CapacityReason,
   R2OperationEstimate,
   R2StorageClassSnapshot,
+  SentryObservation,
+  SentryObservationReason,
   ReportGenerateDiagnosticObservation,
   StorageLifecycleObservation,
   StorageLifecycleReason,
@@ -147,6 +149,10 @@ type R2CapacityState =
   | { status: 'ready'; observation: R2CapacityObservation };
 type R2CapacityFetchResult =
   { status: 'ready'; observation: R2CapacityObservation } | { status: 'unauthorized' };
+type SentryState =
+  { status: 'idle' } | { status: 'loading' } | { status: 'ready'; observation: SentryObservation };
+type SentryFetchResult =
+  { status: 'ready'; observation: SentryObservation } | { status: 'unauthorized' };
 type FlyInventoryState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -1013,6 +1019,80 @@ async function loadR2Capacity(): Promise<R2CapacityFetchResult> {
   return {
     status: 'ready',
     observation: parsed.success ? parsed.data : unknownR2CapacityObservation('invalid_response'),
+  };
+}
+
+function unknownSentryObservation(reason: SentryObservationReason): SentryObservation {
+  return {
+    observedAt: new Date().toISOString(),
+    status: 'unknown',
+    reason,
+  };
+}
+
+function sentryReasonCopy(reason: SentryObservationReason): string {
+  switch (reason) {
+    case 'not_configured':
+      return 'Sentry observation is not configured.';
+    case 'timeout':
+      return 'Sentry request timed out.';
+    case 'rate_limited':
+      return 'Sentry observation was rate limited.';
+    case 'forbidden':
+      return 'Sentry denied access to this observation.';
+    case 'not_found':
+      return 'The configured Sentry organization or project was not found.';
+    case 'invalid_response':
+      return 'Sentry returned an invalid response.';
+    case 'provider_unavailable':
+      return 'Sentry is temporarily unavailable.';
+    case 'no_session_data':
+      return 'No mobile session data was available.';
+  }
+}
+
+function sentryResponseFailureReason(status: number): SentryObservationReason {
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'not_found';
+  if (status === 408 || status === 504) return 'timeout';
+  if (status === 429) return 'rate_limited';
+  return 'provider_unavailable';
+}
+
+async function loadSentryObservation(): Promise<SentryFetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/sentry`, {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return {
+      status: 'ready',
+      observation: unknownSentryObservation('provider_unavailable'),
+    };
+  }
+
+  if (response.status === 401) return { status: 'unauthorized' };
+  if (!response.ok) {
+    return {
+      status: 'ready',
+      observation: unknownSentryObservation(sentryResponseFailureReason(response.status)),
+    };
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { status: 'ready', observation: unknownSentryObservation('invalid_response') };
+  }
+
+  const parsed = operationSchemas.sentryObservation.safeParse(body);
+  return {
+    status: 'ready',
+    observation: parsed.success ? parsed.data : unknownSentryObservation('invalid_response'),
   };
 }
 
@@ -2574,6 +2654,156 @@ function R2Capacity({ state }: { state: R2CapacityState }) {
   );
 }
 
+function SentryStatusBadge({ status }: { status: 'available' | 'partial' | 'unknown' }) {
+  const className =
+    status === 'available'
+      ? 'bg-emerald-100 text-emerald-800'
+      : status === 'partial'
+        ? 'bg-amber-100 text-amber-900'
+        : 'bg-secondary text-ink-soft';
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${className}`}>
+      {status === 'available' ? 'Available' : status === 'partial' ? 'Partial' : 'Unknown'}
+    </span>
+  );
+}
+
+function SentryObservationCard({
+  observation,
+}: {
+  observation: Exclude<SentryObservation, { status: 'unknown' }>;
+}) {
+  return (
+    <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-xs text-ink-soft">
+          Observed <time dateTime={observation.observedAt}>{observation.observedAt}</time>
+        </p>
+        <SentryStatusBadge status={observation.status} />
+      </div>
+
+      <dl className="mt-4 grid gap-x-6 gap-y-4 md:grid-cols-2">
+        <dt className="text-sm font-semibold text-ink">Unresolved error issue groups</dt>
+        <dd className="text-sm text-ink-soft">
+          {observation.unresolvedErrors.status === 'available' ? (
+            <span className="text-2xl font-semibold text-ink">
+              {r2Number.format(observation.unresolvedErrors.count)}
+              {observation.unresolvedErrors.countKind === 'lower_bound' ? '+' : ''}
+            </span>
+          ) : (
+            <>
+              <span className="font-semibold text-ink">Unknown</span>
+              <p className="mt-1">{sentryReasonCopy(observation.unresolvedErrors.reason)}</p>
+            </>
+          )}
+        </dd>
+
+        <dt className="text-sm font-semibold text-ink">Mobile sessions · last 24 hours</dt>
+        <dd className="text-sm text-ink-soft">
+          {observation.mobileSessions.status === 'available' ? (
+            <span className="text-2xl font-semibold text-ink">
+              {r2Number.format(observation.mobileSessions.totalSessions)}
+            </span>
+          ) : (
+            <>
+              <span className="font-semibold text-ink">Unknown</span>
+              <p className="mt-1">{sentryReasonCopy(observation.mobileSessions.reason)}</p>
+            </>
+          )}
+        </dd>
+
+        {observation.mobileSessions.status === 'available' ? (
+          <>
+            <dt className="text-sm font-semibold text-ink">Healthy</dt>
+            <dd className="text-sm text-ink-soft">
+              {r2Number.format(observation.mobileSessions.healthySessions)}
+            </dd>
+            <dt className="text-sm font-semibold text-ink">Errored</dt>
+            <dd className="text-sm text-ink-soft">
+              {r2Number.format(observation.mobileSessions.erroredSessions)}
+            </dd>
+            <dt className="text-sm font-semibold text-ink">Abnormal</dt>
+            <dd className="text-sm text-ink-soft">
+              {r2Number.format(observation.mobileSessions.abnormalSessions)}
+            </dd>
+            <dt className="text-sm font-semibold text-ink">Crashed</dt>
+            <dd className="text-sm text-ink-soft">
+              {r2Number.format(observation.mobileSessions.crashedSessions)}
+            </dd>
+          </>
+        ) : null}
+      </dl>
+
+      <div className="mt-5 space-y-2 text-sm text-ink-soft">
+        {observation.unresolvedErrors.status === 'available' &&
+        observation.unresolvedErrors.countKind === 'lower_bound' ? (
+          <p>
+            The unresolved issue-group count is a lower bound because Sentry reported another page.
+          </p>
+        ) : null}
+        <p>One issue group can contain many error events. Issue details stay in Sentry.</p>
+        <p>
+          Mobile release health covers the configured mobile project only; it does not cover the API
+          or browser applications.
+        </p>
+        <p>Zero unresolved groups is not proof that all systems have no errors.</p>
+        <p>A crashed session is recent activity, not an unresolved issue.</p>
+        <p>Missing or zero session data is Unknown, not zero crashes.</p>
+      </div>
+    </div>
+  );
+}
+
+function Sentry({ state }: { state: SentryState }) {
+  if (state.status === 'idle') return null;
+
+  return (
+    <section className="mt-8" aria-labelledby="sentry-title">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-ink" id="sentry-title">
+            Sentry errors and mobile crashes
+          </h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Aggregate unresolved error groups and mobile session evidence.
+          </p>
+        </div>
+        <a
+          className="inline-flex text-sm font-semibold text-accent-ink underline underline-offset-4 ring-focus"
+          href="https://sentry.io/issues/"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Open Sentry issues ↗
+        </a>
+      </div>
+
+      <div className="mt-4" aria-live="polite">
+        {state.status === 'loading' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 text-sm text-ink-soft shadow-sm">
+            Loading Sentry observation…
+          </div>
+        ) : state.observation.status === 'unknown' ? (
+          <div className="rounded-xl border border-hairline bg-card p-5 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className="text-xs text-ink-soft">
+                Observed{' '}
+                <time dateTime={state.observation.observedAt}>{state.observation.observedAt}</time>
+              </p>
+              <SentryStatusBadge status="unknown" />
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">
+              {sentryReasonCopy(state.observation.reason)}
+            </p>
+          </div>
+        ) : (
+          <SentryObservationCard observation={state.observation} />
+        )}
+      </div>
+    </section>
+  );
+}
+
 const storageLifecycleNumber = new Intl.NumberFormat('en-US');
 const aiUsageNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 
@@ -3839,6 +4069,7 @@ function Operations({
   const [neonInventory, setNeonInventory] = useState<NeonInventoryState>({ status: 'idle' });
   const [neonUsage, setNeonUsage] = useState<NeonUsageState>({ status: 'idle' });
   const [r2Capacity, setR2Capacity] = useState<R2CapacityState>({ status: 'idle' });
+  const [sentryObservation, setSentryObservation] = useState<SentryState>({ status: 'idle' });
   const [flyInventory, setFlyInventory] = useState<FlyInventoryState>({ status: 'idle' });
   const [aiUsage, setAiUsage] = useState<AiUsageState>({ status: 'idle' });
   const [reportCanary, setReportCanary] = useState<ReportCanaryState>({
@@ -3853,77 +4084,115 @@ function Operations({
     const generation = refreshGeneration.current + 1;
     refreshGeneration.current = generation;
     const isCurrent = () => refreshGeneration.current === generation;
+    let sessionExpired = false;
+    const expireSession = () => {
+      if (!isCurrent() || sessionExpired) return;
+      sessionExpired = true;
+      onSessionExpired();
+    };
     setRefreshing(true);
     setStorageLifecycle({ status: 'loading' });
     setNeonInventory({ status: 'loading' });
     setNeonUsage({ status: 'loading' });
     setR2Capacity({ status: 'loading' });
+    setSentryObservation({ status: 'loading' });
     setFlyInventory({ status: 'loading' });
     setAiUsage({ status: 'loading' });
     setGitHub({ status: 'checking' });
     try {
-      const [
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        lifecycle,
-        inventory,
-        usageObservation,
-        capacity,
-        fly,
-        aiUsageResult,
-        githubStatus,
-      ] = await Promise.all([
+      await Promise.allSettled([
         loadApiIdentity().then((api) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, api }));
+          if (isCurrent() && !sessionExpired) {
+            setDeployment((current) => ({ ...current, api }));
+          }
         }),
         loadReadiness('/readyz').then((product) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, product }));
+          if (isCurrent() && !sessionExpired) {
+            setDeployment((current) => ({ ...current, product }));
+          }
         }),
         loadReadiness('/admin/readyz').then((admin) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, admin }));
+          if (isCurrent() && !sessionExpired) {
+            setDeployment((current) => ({ ...current, admin }));
+          }
         }),
         loadPagesMarker(`${siteBaseUrl}/_cf-pages-deployment.json`, 'omit').then((publicPages) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, publicPages }));
+          if (isCurrent() && !sessionExpired) {
+            setDeployment((current) => ({ ...current, publicPages }));
+          }
         }),
         loadPagesMarker('/_cf-pages-deployment.json', 'same-origin').then((adminPages) => {
-          if (isCurrent()) setDeployment((current) => ({ ...current, adminPages }));
+          if (isCurrent() && !sessionExpired) {
+            setDeployment((current) => ({ ...current, adminPages }));
+          }
         }),
         loadPagesMarker(`${dashboardUrl}/_cf-pages-deployment.json`, 'omit').then(
           (dashboardPages) => {
-            if (isCurrent()) setDeployment((current) => ({ ...current, dashboardPages }));
+            if (isCurrent() && !sessionExpired) {
+              setDeployment((current) => ({ ...current, dashboardPages }));
+            }
           },
         ),
-        loadStorageLifecycle(),
-        loadNeonInventory(),
-        loadNeonUsage(),
-        loadR2Capacity(),
-        loadFlyInventory(),
-        loadAiUsage(),
-        loadGitHubStatus(),
+        loadStorageLifecycle().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setStorageLifecycle(result);
+          }
+        }),
+        loadNeonInventory().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setNeonInventory(result);
+          }
+        }),
+        loadNeonUsage().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setNeonUsage(result);
+          }
+        }),
+        loadR2Capacity().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setR2Capacity(result);
+          }
+        }),
+        loadSentryObservation().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setSentryObservation(result);
+          }
+        }),
+        loadFlyInventory().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setFlyInventory(result);
+          }
+        }),
+        loadAiUsage().then((result) => {
+          if (!isCurrent()) return;
+          if (result.status === 'unauthorized') {
+            expireSession();
+          } else if (!sessionExpired) {
+            setAiUsage(result);
+          }
+        }),
+        loadGitHubStatus().then((githubStatus) => {
+          if (isCurrent() && !sessionExpired) setGitHub(githubStatus);
+        }),
       ]);
-      if (!isCurrent()) return;
-      setGitHub(githubStatus);
-      if (
-        lifecycle.status === 'unauthorized' ||
-        inventory.status === 'unauthorized' ||
-        usageObservation.status === 'unauthorized' ||
-        capacity.status === 'unauthorized' ||
-        fly.status === 'unauthorized' ||
-        aiUsageResult.status === 'unauthorized'
-      ) {
-        onSessionExpired();
-        return;
-      }
-      setStorageLifecycle(lifecycle);
-      setNeonInventory(inventory);
-      setNeonUsage(usageObservation);
-      setR2Capacity(capacity);
-      setFlyInventory(fly);
-      setAiUsage(aiUsageResult);
     } finally {
       if (isCurrent()) setRefreshing(false);
     }
@@ -4032,6 +4301,8 @@ function Operations({
       <AiUsage state={aiUsage} />
 
       <NeonInventory state={neonInventory} />
+
+      <Sentry state={sentryObservation} />
 
       <FlyInventory state={flyInventory} />
 

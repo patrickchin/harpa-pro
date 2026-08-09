@@ -553,6 +553,198 @@ const partialFlyInventory = {
   ],
 };
 
+const sentryCaveats = [
+  'issue_groups_not_events',
+  'mobile_sessions_only',
+  'telemetry_coverage_applies',
+] as const;
+
+const availableSentryObservation = {
+  observedAt,
+  status: 'available' as const,
+  unresolvedErrors: {
+    status: 'available' as const,
+    count: 3,
+    countKind: 'exact' as const,
+    cap: 100 as const,
+  },
+  mobileSessions: {
+    status: 'available' as const,
+    window: 'last_24_hours' as const,
+    windowStart: '2026-08-07T05:30:00.000Z',
+    windowEnd: observedAt,
+    totalSessions: 12,
+    healthySessions: 9,
+    erroredSessions: 2,
+    abnormalSessions: 0,
+    crashedSessions: 1,
+  },
+  caveats: sentryCaveats,
+};
+
+const lowerBoundSentryObservation = {
+  ...availableSentryObservation,
+  status: 'partial' as const,
+  unresolvedErrors: {
+    status: 'available' as const,
+    count: 100,
+    countKind: 'lower_bound' as const,
+    cap: 100 as const,
+  },
+  caveats: [...sentryCaveats, 'issue_count_truncated'] as const,
+};
+
+const partialSentryObservation = {
+  ...availableSentryObservation,
+  status: 'partial' as const,
+  mobileSessions: {
+    status: 'unknown' as const,
+    reason: 'no_session_data' as const,
+  },
+};
+
+const issueUnknownSentryObservation = {
+  ...availableSentryObservation,
+  status: 'partial' as const,
+  unresolvedErrors: {
+    status: 'unknown' as const,
+    reason: 'timeout' as const,
+  },
+};
+
+const unknownSentryObservation = {
+  observedAt,
+  status: 'unknown' as const,
+  reason: 'forbidden' as const,
+};
+
+function sentryTopLevelLeak(field: string, value: unknown) {
+  return { ...availableSentryObservation, [field]: value };
+}
+
+function sentryIssueLeak(field: string, value: unknown) {
+  return {
+    ...availableSentryObservation,
+    unresolvedErrors: { ...availableSentryObservation.unresolvedErrors, [field]: value },
+  };
+}
+
+function sentrySessionLeak(field: string, value: unknown) {
+  return {
+    ...availableSentryObservation,
+    mobileSessions: { ...availableSentryObservation.mobileSessions, [field]: value },
+  };
+}
+
+const sentryRedactionCases = [
+  {
+    label: 'top-level organization identifier',
+    value: 'private-organization-slug',
+    observation: sentryTopLevelLeak('organizationSlug', 'private-organization-slug'),
+  },
+  {
+    label: 'top-level project identifiers',
+    value: 'private-top-level-project-slug',
+    observation: sentryTopLevelLeak('projectSlugs', ['private-top-level-project-slug']),
+  },
+  {
+    label: 'top-level observer token',
+    value: 'sentry-read-token-must-never-render',
+    observation: sentryTopLevelLeak('token', 'sentry-read-token-must-never-render'),
+  },
+  {
+    label: 'top-level provider headers',
+    value: 'private provider header must never render',
+    observation: sentryTopLevelLeak('providerHeaders', {
+      link: 'private provider header must never render',
+    }),
+  },
+  {
+    label: 'top-level raw provider error',
+    value: 'raw Sentry error detail must never render',
+    observation: sentryTopLevelLeak('rawError', 'raw Sentry error detail must never render'),
+  },
+  {
+    label: 'issue id',
+    value: 'ISSUE-PRIVATE-123',
+    observation: sentryIssueLeak('id', 'ISSUE-PRIVATE-123'),
+  },
+  {
+    label: 'issue short id',
+    value: 'PRIVATE-456',
+    observation: sentryIssueLeak('shortId', 'PRIVATE-456'),
+  },
+  {
+    label: 'issue title',
+    value: 'private issue title must never render',
+    observation: sentryIssueLeak('title', 'private issue title must never render'),
+  },
+  {
+    label: 'issue culprit',
+    value: 'private culprit must never render',
+    observation: sentryIssueLeak('culprit', 'private culprit must never render'),
+  },
+  {
+    label: 'issue message',
+    value: 'private event message must never render',
+    observation: sentryIssueLeak('message', 'private event message must never render'),
+  },
+  {
+    label: 'issue stack trace',
+    value: 'private stack trace must never render',
+    observation: sentryIssueLeak('stackTrace', 'private stack trace must never render'),
+  },
+  {
+    label: 'issue tags',
+    value: 'private tag value must never render',
+    observation: sentryIssueLeak('tags', [{ value: 'private tag value must never render' }]),
+  },
+  {
+    label: 'issue user',
+    value: 'usr_private_sentry_person',
+    observation: sentryIssueLeak('user', { id: 'usr_private_sentry_person' }),
+  },
+  {
+    label: 'issue email',
+    value: 'private-customer@example.test',
+    observation: sentryIssueLeak('email', 'private-customer@example.test'),
+  },
+  {
+    label: 'issue URL',
+    value: 'https://private.example.test/customer/path',
+    observation: sentryIssueLeak('url', 'https://private.example.test/customer/path'),
+  },
+  {
+    label: 'issue project identifier',
+    value: 'private-issue-project-slug',
+    observation: sentryIssueLeak('projectSlug', 'private-issue-project-slug'),
+  },
+  {
+    label: 'mobile project identifier',
+    value: 'private-mobile-project-slug',
+    observation: sentrySessionLeak('projectSlug', 'private-mobile-project-slug'),
+  },
+  {
+    label: 'mobile release identifier',
+    value: 'private-mobile-release',
+    observation: sentrySessionLeak('release', 'private-mobile-release'),
+  },
+  {
+    label: 'raw mobile session groups',
+    value: 'raw session group must never render',
+    observation: sentrySessionLeak('rawSessionGroups', [
+      { status: 'raw session group must never render', sessions: 12 },
+    ]),
+  },
+  {
+    label: 'legacy mobile session counts',
+    value: 'private legacy session status',
+    observation: sentrySessionLeak('sessionCounts', [
+      { status: 'private legacy session status', sessions: 12 },
+    ]),
+  },
+] as const;
+
 const unknownFlyInventory = {
   observedAt,
   status: 'unknown' as const,
@@ -925,6 +1117,9 @@ function defaultDeploymentResponse(url: string): Response | null {
   if (url === 'https://api.example.test/admin/operations/fly-inventory') {
     return jsonResponse(availableFlyInventory);
   }
+  if (url === 'https://api.example.test/admin/operations/sentry') {
+    return jsonResponse(availableSentryObservation);
+  }
   if (url === 'https://api.example.test/admin/operations/neon-usage') {
     return jsonResponse(unknownNeonUsage);
   }
@@ -945,6 +1140,7 @@ function mockOperationsFetch(
   neonUsage: unknown = availableNeonUsage,
   storageLifecycle: unknown = availableStorageLifecycle,
   flyInventory: unknown = availableFlyInventory,
+  sentryObservation: unknown = availableSentryObservation,
   aiUsage: unknown = availableAiUsage,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -964,6 +1160,9 @@ function mockOperationsFetch(
     if (url === 'https://api.example.test/admin/operations/fly-inventory') {
       return jsonResponse(flyInventory);
     }
+    if (url === 'https://api.example.test/admin/operations/sentry') {
+      return jsonResponse(sentryObservation);
+    }
     if (url === 'https://api.example.test/admin/operations/ai-usage') {
       return jsonResponse(aiUsage);
     }
@@ -980,6 +1179,7 @@ function mockDiagnosticFetch(
   neonUsage: unknown = availableNeonUsage,
   storageLifecycle: unknown = availableStorageLifecycle,
   flyInventory: unknown = availableFlyInventory,
+  sentryObservation: unknown = availableSentryObservation,
   aiUsage: unknown = availableAiUsage,
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -1001,6 +1201,9 @@ function mockDiagnosticFetch(
     }
     if (url === 'https://api.example.test/admin/operations/fly-inventory') {
       return jsonResponse(flyInventory);
+    }
+    if (url === 'https://api.example.test/admin/operations/sentry') {
+      return jsonResponse(sentryObservation);
     }
     if (url === 'https://api.example.test/admin/operations/ai-usage') {
       return jsonResponse(aiUsage);
@@ -1045,6 +1248,12 @@ function flyInventoryRequests(fetchMock: MockInstance<typeof globalThis.fetch>) 
   );
 }
 
+function sentryRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
+  return fetchMock.mock.calls.filter(
+    ([url]) => String(url) === 'https://api.example.test/admin/operations/sentry',
+  );
+}
+
 function aiUsageRequests(fetchMock: MockInstance<typeof globalThis.fetch>) {
   return fetchMock.mock.calls.filter(
     ([url]) => String(url) === 'https://api.example.test/admin/operations/ai-usage',
@@ -1065,6 +1274,16 @@ async function getFlyInventorySection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
     name: 'Fly inventory',
+  });
+  const section = heading.closest('section');
+  expect(section).toBeTruthy();
+  return section!;
+}
+
+async function getSentrySection() {
+  const heading = await screen.findByRole('heading', {
+    level: 2,
+    name: 'Sentry errors and mobile crashes',
   });
   const section = heading.closest('section');
   expect(section).toBeTruthy();
@@ -1250,7 +1469,7 @@ afterEach(() => {
 });
 
 describe('AdminOperations', () => {
-  it('checks Harpa deployments, GitHub, Neon inventory and usage, R2, storage lifecycle, Fly, and AI usage and links every provider console', async () => {
+  it('checks Harpa deployments, GitHub, Neon inventory and usage, R2, storage lifecycle, Fly, Sentry, and AI usage and links every provider console', async () => {
     const fetchMock = mockOperationsFetch();
 
     render(<AdminOperations />);
@@ -1258,7 +1477,7 @@ describe('AdminOperations', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Service monitoring' }),
     ).toBeTruthy();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(15));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(16));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
       expect.arrayContaining([
         'https://api.example.test/healthz',
@@ -1269,6 +1488,7 @@ describe('AdminOperations', () => {
         'https://dashboard.example.test/_cf-pages-deployment.json',
         'https://api.example.test/admin/operations/storage-lifecycle',
         'https://api.example.test/admin/operations/fly-inventory',
+        'https://api.example.test/admin/operations/sentry',
         'https://api.example.test/admin/operations/neon',
         'https://api.example.test/admin/operations/neon-usage',
         'https://api.example.test/admin/operations/r2-capacity',
@@ -1350,13 +1570,22 @@ describe('AdminOperations', () => {
     ]) {
       expect(screen.getByRole('heading', { level: 3, name: service })).toBeTruthy();
     }
+    const sentrySection = await getSentrySection();
+    expect(within(sentrySection).getByText('Available')).toBeTruthy();
+    expect(within(sentrySection).getByText('3')).toBeTruthy();
+    expect(within(sentrySection).getByText('12')).toBeTruthy();
+    expect(within(sentrySection).getByText('1', { selector: 'dd' })).toBeTruthy();
+    expect(
+      within(sentrySection).getByRole('link', { name: 'Open Sentry issues ↗' }),
+    ).toHaveProperty('href', 'https://sentry.io/issues/');
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
   });
 
-  it('uses fifteen fixed reads on load and thirty after shared Refresh without polling or live-canary autorun', async () => {
+  it('uses sixteen fixed reads on load and thirty-two after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = mockOperationsFetch();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const noPollWindowMs = 24 * 60 * 60_000;
     const expectedRequests = [
       {
         url: 'https://api.example.test/healthz',
@@ -1387,7 +1616,15 @@ describe('AdminOperations', () => {
         credentials: 'include',
       },
       {
+        url: 'https://api.example.test/admin/operations/neon',
+        credentials: 'include',
+      },
+      {
         url: 'https://api.example.test/admin/operations/fly-inventory',
+        credentials: 'include',
+      },
+      {
+        url: 'https://api.example.test/admin/operations/sentry',
         credentials: 'include',
       },
       {
@@ -1402,12 +1639,25 @@ describe('AdminOperations', () => {
         url: 'https://api.example.test/admin/operations/ai-usage',
         credentials: 'include',
       },
+      {
+        url: 'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=dev&per_page=1',
+        credentials: 'omit',
+      },
+      {
+        url: 'https://api.github.com/repos/patrickchin/harpa-pro/commits?sha=main&per_page=1',
+        credentials: 'omit',
+      },
+      {
+        url: 'https://api.github.com/repos/patrickchin/harpa-pro/pulls?state=open&sort=updated&direction=desc&per_page=30',
+        credentials: 'omit',
+      },
     ] as const;
+    expect(expectedRequests).toHaveLength(16);
 
     render(<AdminOperations />);
 
     let canarySection = await getCanarySection();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(15));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(16));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1424,19 +1674,20 @@ describe('AdminOperations', () => {
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
-    await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(15);
+    await act(async () => vi.advanceTimersByTimeAsync(noPollWindowMs));
+    expect(fetchMock).toHaveBeenCalledTimes(16);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
     for (const { url } of expectedRequests) {
       expect(deploymentRequests(fetchMock, url)).toHaveLength(1);
     }
+    expect(sentryRequests(fetchMock)).toHaveLength(1);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(30));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(32));
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
@@ -1448,11 +1699,12 @@ describe('AdminOperations', () => {
     canarySection = await getCanarySection();
     expect(canarySection.isConnected).toBe(true);
     expect(within(canarySection).getByText('Not run yet in this browser session.')).toBeTruthy();
-    await act(async () => vi.advanceTimersByTimeAsync(30 * 60_000));
-    expect(fetchMock).toHaveBeenCalledTimes(30);
+    await act(async () => vi.advanceTimersByTimeAsync(noPollWindowMs));
+    expect(fetchMock).toHaveBeenCalledTimes(32);
     expect(
       fetchMock.mock.calls.every(([, requestInit]) => (requestInit?.method ?? 'GET') === 'GET'),
     ).toBe(true);
+    expect(sentryRequests(fetchMock)).toHaveLength(2);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
   });
 
@@ -1938,7 +2190,7 @@ describe('AdminOperations', () => {
     );
     // The sequential GitHub loader stops after the first rate-limited request,
     // so the two remaining public GitHub reads are intentionally skipped.
-    expect(fetchMock).toHaveBeenCalledTimes(13);
+    expect(fetchMock).toHaveBeenCalledTimes(14);
   });
 
   it('identifies GitHub secondary throttling and provides retry guidance', async () => {
@@ -2486,11 +2738,11 @@ describe('AdminOperations', () => {
       .closest('article')!;
     expect(await within(productCard).findByText('Unavailable')).toBeTruthy();
     expect(await within(adminCard).findByText('Unavailable')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(15);
+    expect(fetchMock).toHaveBeenCalledTimes(16);
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(30));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(32));
     expect(await within(productCard).findByText('Healthy')).toBeTruthy();
     expect(await within(adminCard).findByText('Healthy')).toBeTruthy();
   });
@@ -2740,7 +2992,7 @@ describe('AdminOperations', () => {
       ([url]) => String(url) === 'https://api.example.test/admin/operations/neon',
     );
     expect(inventoryCalls).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(30);
+    expect(fetchMock).toHaveBeenCalledTimes(32);
   });
 
   it('uses only the admin cookie request and never renders credentials or raw provider data', async () => {
@@ -2886,7 +3138,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(30);
+    expect(fetchMock).toHaveBeenCalledTimes(32);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
@@ -3168,7 +3420,7 @@ describe('AdminOperations', () => {
       expect(requestInit).not.toHaveProperty('body');
       expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
     }
-    expect(fetchMock).toHaveBeenCalledTimes(30);
+    expect(fetchMock).toHaveBeenCalledTimes(32);
   });
 
   it('shows a distinct loading state until the R2 observation arrives', async () => {
@@ -3934,6 +4186,466 @@ describe('AdminOperations', () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
+  it('shows a distinct loading state until the Sentry observation arrives', async () => {
+    let resolveSentry!: (response: Response) => void;
+    const sentryResponse = new Promise<Response>((resolve) => {
+      resolveSentry = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/sentry') {
+        return sentryResponse;
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(within(section).getByText('Loading Sentry observation…')).toBeTruthy();
+
+    const neonHeading = await screen.findByRole('heading', { level: 2, name: 'Neon inventory' });
+    const neonSection = neonHeading.closest('section')!;
+    expect(await within(neonSection).findByText('No accessible Neon projects.')).toBeTruthy();
+    expect(
+      await within(await getR2CapacitySection()).findByText('R2 capacity is not configured.'),
+    ).toBeTruthy();
+    expect(
+      await within(await getFlyInventorySection()).findByText('1 configured app observed'),
+    ).toBeTruthy();
+    expect(await within(await getAiUsageSection()).findByText('19 recorded events')).toBeTruthy();
+
+    await act(async () => {
+      resolveSentry(jsonResponse(availableSentryObservation));
+      await sentryResponse;
+    });
+    expect(await within(section).findByText('Available')).toBeTruthy();
+    expectDefinitionValue(section, 'Crashed', '1');
+  });
+
+  it('renders only fixed Sentry aggregates, caveats, and the generic issues link', async () => {
+    const fetchMock = mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      availableSentryObservation,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Available')).toBeTruthy();
+    expect(section.querySelector(`time[datetime="${observedAt}"]`)).toBeTruthy();
+    expectDefinitionValue(section, 'Unresolved error issue groups', '3');
+    expectDefinitionValue(section, 'Mobile sessions · last 24 hours', '12');
+    expectDefinitionValue(section, 'Healthy', '9');
+    expectDefinitionValue(section, 'Errored', '2');
+    expectDefinitionValue(section, 'Abnormal', '0');
+    expectDefinitionValue(section, 'Crashed', '1');
+
+    for (const caveat of [
+      'One issue group can contain many error events. Issue details stay in Sentry.',
+      'Mobile release health covers the configured mobile project only; it does not cover the API or browser applications.',
+      'Zero unresolved groups is not proof that all systems have no errors.',
+      'A crashed session is recent activity, not an unresolved issue.',
+      'Missing or zero session data is Unknown, not zero crashes.',
+    ]) {
+      expect(within(section).getByText(caveat)).toBeTruthy();
+    }
+
+    const issuesLink = within(section).getByRole('link', { name: 'Open Sentry issues ↗' });
+    expect(issuesLink).toHaveProperty('href', 'https://sentry.io/issues/');
+    expect(issuesLink.getAttribute('href')).not.toMatch(/organizations|projects|harpa/i);
+    expect(within(section).queryByText(/project slug|organization slug/i)).toBeNull();
+    expect(within(section).queryByRole('progressbar')).toBeNull();
+
+    const [request] = sentryRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+  });
+
+  it('renders a truncated unresolved issue count as a lower bound and marks the card partial', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      lowerBoundSentryObservation,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Partial')).toBeTruthy();
+    expectDefinitionValue(section, 'Unresolved error issue groups', '100+');
+    expectDefinitionValue(section, 'Mobile sessions · last 24 hours', '12');
+    expect(
+      within(section).getByText(
+        'The unresolved issue-group count is a lower bound because Sentry reported another page.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('preserves the unresolved issue aggregate when mobile session evidence is unavailable', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      partialSentryObservation,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Partial')).toBeTruthy();
+    expectDefinitionValue(section, 'Unresolved error issue groups', '3');
+    expect(within(section).getByText('Mobile sessions · last 24 hours')).toBeTruthy();
+    expect(within(section).getByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('No mobile session data was available.')).toBeTruthy();
+    expect(within(section).queryByText(/0 crashes/i)).toBeNull();
+  });
+
+  it('preserves all mobile session aggregates when unresolved issue evidence is unavailable', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      issueUnknownSentryObservation,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Partial')).toBeTruthy();
+    const issueTerm = within(section).getByText('Unresolved error issue groups', {
+      selector: 'dt',
+    });
+    const issueDefinition = issueTerm.nextElementSibling as HTMLElement | null;
+    expect(issueDefinition?.tagName).toBe('DD');
+    expect(within(issueDefinition!).getByText('Unknown')).toBeTruthy();
+    expect(within(issueDefinition!).getByText('Sentry request timed out.')).toBeTruthy();
+    expect(issueDefinition?.textContent).not.toMatch(/\b0\b|no unresolved|zero errors?/i);
+
+    expectDefinitionValue(section, 'Mobile sessions · last 24 hours', '12');
+    expectDefinitionValue(section, 'Healthy', '9');
+    expectDefinitionValue(section, 'Errored', '2');
+    expectDefinitionValue(section, 'Abnormal', '0');
+    expectDefinitionValue(section, 'Crashed', '1');
+  });
+
+  it('renders a wholly unknown Sentry observation without implying zero errors or crashes', async () => {
+    mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      unknownSentryObservation,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Sentry denied access to this observation.')).toBeTruthy();
+    for (const aggregateLabel of [
+      'Unresolved error issue groups',
+      'Mobile sessions · last 24 hours',
+      'Healthy',
+      'Errored',
+      'Abnormal',
+      'Crashed',
+    ]) {
+      expect(within(section).queryByText(aggregateLabel, { selector: 'dt' })).toBeNull();
+    }
+    expect(within(section).queryByText(/0 unresolved/i)).toBeNull();
+    expect(within(section).queryByText(/0 crashes/i)).toBeNull();
+    expect(within(section).queryByText(/healthy/i)).toBeNull();
+  });
+
+  it('returns the whole page to sign-in when the Sentry observer finds an expired session', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/sentry') {
+        return jsonResponse(
+          { error: { code: 'UNAUTHORIZED', message: 'expired-sentry-cookie-detail' } },
+          401,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    expect(await screen.findByText('Admin sign-in required.')).toBeTruthy();
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('heading', { name: 'Sentry errors and mobile crashes' })).toBeNull();
+    expect(document.body.textContent).not.toContain('expired-sentry-cookie-detail');
+    expect(document.documentElement.outerHTML).not.toContain('expired-sentry-cookie-detail');
+    expect(authMock.logout).not.toHaveBeenCalled();
+  });
+
+  it('maps a rejected Sentry fetch to typed Unknown copy without rendering the Error message', async () => {
+    const privateError = 'private-sentry-fetch-error-must-never-render';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/sentry') {
+        throw new Error(privateError);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Sentry is temporarily unavailable.')).toBeTruthy();
+    expect(document.body.textContent).not.toContain(privateError);
+    expect(document.documentElement.outerHTML).not.toContain(privateError);
+  });
+
+  it('maps a Sentry route 500 to typed Unknown copy without rendering the provider body', async () => {
+    const privateProviderBody = 'private-sentry-route-500-body-must-never-render';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/sentry') {
+        return jsonResponse(
+          { error: { code: 'INTERNAL_ERROR', message: privateProviderBody } },
+          500,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Sentry is temporarily unavailable.')).toBeTruthy();
+    expect(document.body.textContent).not.toContain(privateProviderBody);
+    expect(document.documentElement.outerHTML).not.toContain(privateProviderBody);
+  });
+
+  it('maps a Sentry route rate limit to typed copy without rendering the provider body', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/sentry') {
+        return jsonResponse(
+          {
+            error: {
+              code: 'RATE_LIMITED',
+              message: 'sentry-rate-limit-provider-detail-must-never-render',
+            },
+          },
+          429,
+        );
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Sentry observation was rate limited.')).toBeTruthy();
+    expect(document.body.textContent).not.toContain(
+      'sentry-rate-limit-provider-detail-must-never-render',
+    );
+    expect(document.documentElement.outerHTML).not.toContain(
+      'sentry-rate-limit-provider-detail-must-never-render',
+    );
+  });
+
+  it.each(sentryRedactionCases)(
+    'strictly rejects and redacts a Sentry $label field at its reviewed nesting level',
+    async ({ value, observation }) => {
+      const fetchMock = mockOperationsFetch(
+        emptyInventory,
+        unknownR2Capacity,
+        availableNeonUsage,
+        availableStorageLifecycle,
+        unknownFlyInventory,
+        observation,
+      );
+
+      render(<AdminOperations />);
+
+      const section = await getSentrySection();
+      expect(await within(section).findByText('Unknown')).toBeTruthy();
+      expect(within(section).getByText('Sentry returned an invalid response.')).toBeTruthy();
+      expect(within(section).queryByText('3')).toBeNull();
+      expect(document.body.textContent).not.toContain(value);
+      expect(document.documentElement.outerHTML).not.toContain(value);
+
+      const [request] = sentryRequests(fetchMock);
+      expect(request).toBeDefined();
+      const [, requestInit] = request!;
+      expect(requestInit).toMatchObject({
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      expect(requestInit).not.toHaveProperty('body');
+      expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+      expect(window.localStorage.length).toBe(0);
+      expect(window.sessionStorage.length).toBe(0);
+    },
+  );
+
+  it('strictly rejects inconsistent Sentry aggregate totals', async () => {
+    const inconsistentSentryObservation = {
+      ...availableSentryObservation,
+      mobileSessions: {
+        ...availableSentryObservation.mobileSessions,
+        totalSessions: 13,
+      },
+    };
+    const fetchMock = mockOperationsFetch(
+      emptyInventory,
+      unknownR2Capacity,
+      availableNeonUsage,
+      availableStorageLifecycle,
+      unknownFlyInventory,
+      inconsistentSentryObservation,
+    );
+
+    render(<AdminOperations />);
+
+    const section = await getSentrySection();
+    expect(await within(section).findByText('Unknown')).toBeTruthy();
+    expect(within(section).getByText('Sentry returned an invalid response.')).toBeTruthy();
+    expect(within(section).queryByText('3')).toBeNull();
+
+    const [request] = sentryRequests(fetchMock);
+    expect(request).toBeDefined();
+    const [, requestInit] = request!;
+    expect(requestInit).toMatchObject({
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(requestInit).not.toHaveProperty('body');
+    expect(new Headers(requestInit?.headers).has('authorization')).toBe(false);
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('does not let an older overlapping refresh overwrite newer Sentry evidence', async () => {
+    let sentryAttempt = 0;
+    let resolveOlderRefresh!: (response: Response) => void;
+    let resolveNewerRefresh!: (response: Response) => void;
+    const olderRefresh = new Promise<Response>((resolve) => {
+      resolveOlderRefresh = resolve;
+    });
+    const newerRefresh = new Promise<Response>((resolve) => {
+      resolveNewerRefresh = resolve;
+    });
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://api.example.test/admin/operations/sentry') {
+        sentryAttempt += 1;
+        if (sentryAttempt === 2) return olderRefresh;
+        if (sentryAttempt === 3) return newerRefresh;
+        return jsonResponse(unknownSentryObservation);
+      }
+      if (url === 'https://api.example.test/admin/operations/neon') {
+        return jsonResponse(emptyInventory);
+      }
+      if (url === 'https://api.example.test/admin/operations/r2-capacity') {
+        return jsonResponse(unknownR2Capacity);
+      }
+      const response = defaultDeploymentResponse(url);
+      if (response) return response;
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<AdminOperations />);
+    const section = await getSentrySection();
+    const refreshButton = await screen.findByRole('button', { name: 'Refresh' });
+    expect(
+      await within(section).findByText('Sentry denied access to this observation.'),
+    ).toBeTruthy();
+
+    act(() => {
+      refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      refreshButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await waitFor(() => expect(sentryRequests(fetchMock)).toHaveLength(3));
+
+    await act(async () => {
+      resolveNewerRefresh(jsonResponse(availableSentryObservation));
+      await newerRefresh;
+    });
+    expect(await within(section).findByText('Available')).toBeTruthy();
+    expectDefinitionValue(section, 'Crashed', '1');
+
+    await act(async () => {
+      resolveOlderRefresh(jsonResponse(unknownSentryObservation));
+      await olderRefresh;
+    });
+    await waitFor(() =>
+      expect(within(section).queryByText('Sentry denied access to this observation.')).toBeNull(),
+    );
+    expect(within(section).getByText('Available')).toBeTruthy();
+    expectDefinitionValue(section, 'Crashed', '1');
+  });
+
   it('shows a distinct loading state until the Harpa usage-ledger observation arrives', async () => {
     let resolveAiUsage!: (response: Response) => void;
     const aiUsageResponse = new Promise<Response>((resolve) => {
@@ -3979,6 +4691,7 @@ describe('AdminOperations', () => {
       availableNeonUsage,
       availableStorageLifecycle,
       unknownFlyInventory,
+      availableSentryObservation,
       availableAiUsage,
     );
 
@@ -4140,6 +4853,7 @@ describe('AdminOperations', () => {
       availableNeonUsage,
       availableStorageLifecycle,
       unknownFlyInventory,
+      availableSentryObservation,
       emptyAiUsage,
     );
 
@@ -4221,6 +4935,7 @@ describe('AdminOperations', () => {
       availableNeonUsage,
       availableStorageLifecycle,
       unknownFlyInventory,
+      availableSentryObservation,
       poisonedAiUsage,
     );
 
@@ -4285,6 +5000,7 @@ describe('AdminOperations', () => {
     const section = await getCanarySection();
     const runButton = getRunCanaryButton(section);
     expect(diagnosticRequests(fetchMock)).toHaveLength(0);
+    expect(sentryRequests(fetchMock)).toHaveLength(1);
     act(() => {
       runButton.click();
       runButton.click();
@@ -4312,6 +5028,7 @@ describe('AdminOperations', () => {
 
     expect(await within(section).findByText('Pass')).toBeTruthy();
     await waitFor(() => expect(runButton).toHaveProperty('disabled', false));
+    expect(sentryRequests(fetchMock)).toHaveLength(1);
   });
 
   it('renders live generation and usage proof plus only the bounded escaped synthetic preview', async () => {

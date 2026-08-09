@@ -84,7 +84,7 @@ else
 fi
 
 builder=scripts/ci/build-cloudflare-pages.sh
-require "$builder" '^(main|dev|pr-[0-9]+)$' \
+require "$builder" '^(main|dev|pr-[1-9][0-9]*)$' \
   'builder fails closed outside managed branches'
 require "$builder" 'https://api.harpapro.com' \
   'builder declares the production API'
@@ -92,6 +92,10 @@ require "$builder" 'https://harpa-pro-api-dev.fly.dev' \
   'builder declares the development API'
 require "$builder" 'https://harpa-pro-api-pr-${pr_number}.fly.dev' \
   'builder derives the exact PR API'
+require "$builder" 'PUBLIC_SITE_BASE_URL="$site_origin"' \
+  'admin receives the fixed public-site marker origin'
+require "$builder" 'PUBLIC_DASHBOARD_URL="$dashboard_origin"' \
+  'admin receives the fixed dashboard marker origin'
 require "$builder" 'VITE_API_BASE_URL="$api_origin"' \
   'dashboard receives its Vite API variable'
 require "$builder" 'VITE_SENTRY_RELEASE="$commit"' \

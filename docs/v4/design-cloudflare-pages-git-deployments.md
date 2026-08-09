@@ -68,11 +68,35 @@ configuration as follows:
 The public header does not render the reserved dashboard URL while the product
 is not ready for public discovery.
 
+The build wrapper sets two fixed, non-secret marker origins for the
+administrator app:
+
+| Branch        | `PUBLIC_SITE_BASE_URL`                    | `PUBLIC_DASHBOARD_URL`                              |
+| ------------- | ----------------------------------------- | --------------------------------------------------- |
+| `main`        | `https://harpa-pro.pages.dev`             | `https://harpa-pro-dashboard.pages.dev`             |
+| `dev`         | `https://dev.harpa-pro.pages.dev`         | `https://dev.harpa-pro-dashboard.pages.dev`         |
+| `pr-<number>` | `https://pr-<number>.harpa-pro.pages.dev` | `https://pr-<number>.harpa-pro-dashboard.pages.dev` |
+
+For `pr-<number>`, both values use the exact stable `pr-<number>` Pages alias.
+The administrator browser does not accept a marker origin from input or an API
+response.
+
 Every successful build writes a non-sensitive deployment marker containing
-`CF_PAGES_COMMIT_SHA` and `CF_PAGES_BRANCH`. Verification workflows poll the
-stable Pages origin until that marker matches the expected Git SHA, then run
-the surface-specific HTTP checks. A `200` from an old deployment is not
-success.
+`CF_PAGES_COMMIT_SHA` and `CF_PAGES_BRANCH`. Each static application serves the
+marker with `Access-Control-Allow-Origin: *`. This public policy applies only
+to the marker and does not authorize an authenticated API request.
+
+The administrator operations page reads the public-site and dashboard markers
+across origins without credentials. It reads its own marker from the current
+origin. It displays three independent cards and does not compare their SHAs.
+It reads the markers only on authenticated load and manual **Refresh**. It does
+not poll. See
+[Admin deployment identity](design-admin-deployment-identity.md).
+
+Verification workflows poll each stable Pages origin until its marker matches
+the expected Git SHA. They then run the surface-specific HTTP checks. A `200`
+from an old deployment is not success. These CI checks remain the exact release
+proof. The administrator cards show only current browser observations.
 
 ### Wrangler tooling contract
 

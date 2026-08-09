@@ -65,10 +65,10 @@ afterAll(async () => {
 });
 
 describe('admin AI usage ledger index migration', () => {
-  it('is the exact lexical application head and uses one concurrent expand-only index', () => {
+  it('uses one concurrent expand-only index statement', () => {
     const files = listMigrationFiles(MIGRATIONS_DIR);
 
-    expect(files.at(-1)).toBe(MIGRATION);
+    expect(files).toContain(MIGRATION);
     const migrationSql = executableSql(readFileSync(join(MIGRATIONS_DIR, MIGRATION), 'utf8'));
     expect(migrationSql).toMatch(
       /^CREATE INDEX CONCURRENTLY llm_usage_events_created_at_idx\s+ON app\.llm_usage_events \(created_at DESC\);$/i,
@@ -78,16 +78,17 @@ describe('admin AI usage ledger index migration', () => {
     expect(migrationSql).not.toMatch(/\b(ALTER|DROP|DELETE|UPDATE|INSERT|TRUNCATE)\b/i);
   });
 
-  it('applies outside a transaction, records the exact head, and creates a ready valid index', async () => {
+  it('applies outside a transaction, records its identity, and creates a ready valid index', async () => {
     await resetDatabase();
     const firstRun = await migrate(connectionString);
-    expect(firstRun.applied.at(-1)).toBe(MIGRATION);
+    expect(firstRun.applied).toContain(MIGRATION);
 
     const client = new pg.Client({ connectionString });
     await client.connect();
     try {
       const ledger = await client.query<{ name: string }>(
-        'SELECT name FROM app._migrations ORDER BY name DESC LIMIT 1',
+        'SELECT name FROM app._migrations WHERE name = $1',
+        [MIGRATION],
       );
       expect(ledger.rows).toEqual([{ name: MIGRATION }]);
 

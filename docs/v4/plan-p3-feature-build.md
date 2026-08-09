@@ -485,11 +485,11 @@ route.
       (`id lue_id`, `user_id`, `project_id?`, `report_id?`, `vendor`,
       `model`, `operation` enum `{chat,transcribe,generate_report}`,
       `input_tokens`, `output_tokens`, `cached_tokens`,
-      `total_tokens` generated, `latency_ms`, `fixture_mode`,
-      `status`, `created_at`). Indexes on `(user_id, created_at desc)` and
-      `(user_id, vendor, model)`.
+      `input_seconds?`, `latency_ms`, `fixture_mode` enum,
+      `status` enum, `created_at`). Indexes on `(user_id, created_at desc)` and
+      `(user_id, vendor, model, operation)`.
       (`packages/api/migrations/0005_llm_usage_events.sql`.)
-- [x] RLS / scoped role: `llm_usage_events_self_read` +
+- [x] RLS / scoped role: `llm_usage_events_self_select` +
       `llm_usage_events_self_insert` enforce `user_id =
 current_setting('app.user_id')`. INSERT goes through the
       per-request scoped accessor; no mobile-side writes.
@@ -498,16 +498,15 @@ current_setting('app.user_id')`. INSERT goes through the
       the SDK response per vendor:
   - OpenAI: `response.usage.{prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens}`.
   - Kimi: equivalent fields from its SDK.
-  - Transcribe (Whisper-class): audio duration becomes
-    `inputTokens = ceil(durationSec)`, a convention documented in
-    `services/ai-usage.ts` so the unified `input_tokens` column
-    carries non-zero observability for every call.
+  - Transcribe (Whisper-class): audio duration is stored separately as
+    `input_seconds`; `input_tokens` remains a token count and is zero when the
+    provider does not report tokens.
 
     Shipped in P3.15.5 close-out: OpenAI adapter reads
     `prompt_tokens_details.cached_tokens`; new Kimi live adapter
     (`packages/ai-fixtures/src/providers/kimi.ts`, Moonshot REST,
-    OpenAI-compatible); `services/ai.ts::transcribe()` derives
-    input tokens from the provider-reported `durationSec`.
+    OpenAI-compatible); `services/ai.ts::transcribe()` records the
+    provider-reported `durationSec` as input seconds.
 
 - [x] Fixture replays return canonical `usage` values stored
       alongside the fixture payload (so replay-mode tests have

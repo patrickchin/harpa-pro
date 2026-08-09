@@ -95,15 +95,14 @@ async function recreateObservedDevDrift(client: pg.Client): Promise<void> {
 }
 
 async function schemaSnapshot(client: pg.Client): Promise<unknown> {
-  const [columns, constraints, indexes, policies] = await Promise.all([
-    client.query(`
+  const columns = await client.query(`
       SELECT column_name, data_type, udt_schema, udt_name,
              character_maximum_length, is_nullable, column_default
       FROM information_schema.columns
       WHERE table_schema = 'app' AND table_name = 'llm_usage_events'
       ORDER BY ordinal_position
-    `),
-    client.query(`
+    `);
+  const constraints = await client.query(`
       SELECT constraint_name, pg_get_constraintdef(pg_constraint.oid) AS definition
       FROM information_schema.table_constraints
       JOIN pg_constraint ON pg_constraint.conname = constraint_name
@@ -111,20 +110,19 @@ async function schemaSnapshot(client: pg.Client): Promise<unknown> {
                            AND pg_namespace.nspname = 'app'
       WHERE table_schema = 'app' AND table_name = 'llm_usage_events'
       ORDER BY constraint_name
-    `),
-    client.query(`
+    `);
+  const indexes = await client.query(`
       SELECT indexname, indexdef
       FROM pg_indexes
       WHERE schemaname = 'app' AND tablename = 'llm_usage_events'
       ORDER BY indexname
-    `),
-    client.query(`
+    `);
+  const policies = await client.query(`
       SELECT policyname, cmd, roles, qual, with_check
       FROM pg_policies
       WHERE schemaname = 'app' AND tablename = 'llm_usage_events'
       ORDER BY policyname
-    `),
-  ]);
+    `);
 
   return {
     columns: columns.rows,

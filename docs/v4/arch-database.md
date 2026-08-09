@@ -93,6 +93,12 @@ rules. Summary below.
   the migration. Verify `pg_index.indisvalid = true` after the rerun. Normal
   rollback uses a later forward migration after no deployed read needs the
   index.
+- Migrations `0030_reconcile_llm_usage_events_schema.sql` and
+  `0031_remove_retired_llm_usage_ledger.sql` repair the one known development
+  drift incident without editing applied files. The first is conditional DDL
+  and is a schema no-op on the already-current production shape. The second
+  is data-only and removes exactly the retired
+  `0003_llm_usage_events.sql` ledger identity.
 - Both streams are forward-only. Never run an admin migration through the
   application loader or edit an applied migration.
 - The repository does not have an immutable migration manifest or applied-file

@@ -516,13 +516,19 @@ Under `packages/api/src/__tests__/`:
      **503 `db: 'down'`** within the 5s timeout.
   5. With `MIGRATIONS_REQUIRED_HEAD` set to the exact
      `0029_llm_usage_events_created_at.notx.sql` filename, environment parsing
-     succeeds and `/readyz` compares that full name without stripping the
-     suffix.
+     succeeds and `/readyz` reports that full expected name against the 0031
+     actual head without stripping the suffix.
 - `admin-ai-usage-migration.integration.test.ts` — applies the draft
   non-transactional head through the real loader and verifies its ledger row.
   It checks `llm_usage_events_created_at_idx` on `created_at DESC` and requires
   `pg_index.indisvalid = true`. It also proves that a same-name invalid index
   makes the no-`IF NOT EXISTS` rerun fail without a ledger row.
+- `llm-usage-migration-drift.integration.test.ts` — starts from the 0029
+  schema, recreates the retired development table shape and ledger identity,
+  then applies 0030 and 0031 through the real loader. It proves row
+  preservation, the exact current column/index/policy contract, exact-only
+  ledger cleanup, a no-op schema path for an already-current production
+  shape, and fail-closed rollback when nullable latency data is present.
 - `migrate.advisory-lock.integration.test.ts` — run two concurrent
   `migrate(url)` calls against the same Testcontainers DB. A dedicated fixture
   holds a write transaction open while the first migrator runs
@@ -653,6 +659,21 @@ file set or file hashes with an earlier release.
 If an applied file changes, stop the promotion. Restore the original path and
 bytes from Git history. Do not patch a production migration ledger during a
 normal release. Treat any existing ledger drift as a database incident.
+
+The 2026-08-10 development incident is repaired only through forward
+migrations. `0030_reconcile_llm_usage_events_schema.sql` conditionally
+converts the retired `0003_llm_usage_events.sql` table shape to the current
+`0005_llm_usage_events.sql` contract. It validates every value before DDL,
+uses bounded lock and statement timeouts, preserves rows, and performs no DDL
+when the schema is already current. The separate data-only migration
+`0031_remove_retired_llm_usage_ledger.sql` deletes only the retired filename;
+it does not touch `0003_report_last_generation.sql`.
+
+`/readyz` compares only the newest lexical ledger filename. A green head is
+not proof that every older filename or table definition matches the checkout.
+For suspected drift, compare the full ledger and relevant PostgreSQL catalog
+shape. Do not run the 0031 `DELETE` manually or treat it as a generic ledger
+repair procedure.
 
 ---
 

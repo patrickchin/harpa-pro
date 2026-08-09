@@ -20,6 +20,7 @@ import { resetReadyzCache } from '../routes/readyz.js';
 let container: StartedPostgreSqlContainer;
 let url: string;
 const AI_USAGE_INDEX_MIGRATION = '0029_llm_usage_events_created_at.notx.sql';
+const CURRENT_MIGRATION_HEAD = '0031_remove_retired_llm_usage_ledger.sql';
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer('postgres:16-alpine')
@@ -76,7 +77,7 @@ describe('GET /readyz', () => {
     expect(body.head).toMatch(/^[0-9]+_[a-z0-9_]+(?:\.notx)?\.sql$/);
   });
 
-  it('accepts and compares the exact non-transactional required head', async () => {
+  it('preserves the exact non-transactional filename while comparing heads', async () => {
     await migrate(url);
     process.env.MIGRATIONS_REQUIRED_HEAD = AI_USAGE_INDEX_MIGRATION;
     resetReadyzCache();
@@ -84,9 +85,19 @@ describe('GET /readyz', () => {
 
     const app = createApp();
     const res = await app.request('/readyz');
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; db: string; head: string };
-    expect(body).toEqual({ ok: true, db: 'up', head: AI_USAGE_INDEX_MIGRATION });
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as {
+      ok: boolean;
+      db: string;
+      expected: string;
+      actual: string;
+    };
+    expect(body).toEqual({
+      ok: false,
+      db: 'head-mismatch',
+      expected: AI_USAGE_INDEX_MIGRATION,
+      actual: CURRENT_MIGRATION_HEAD,
+    });
   });
 
   it('does not normalize away the non-transactional suffix when comparing heads', async () => {
@@ -108,7 +119,7 @@ describe('GET /readyz', () => {
       ok: false,
       db: 'head-mismatch',
       expected: '0029_llm_usage_events_created_at.sql',
-      actual: AI_USAGE_INDEX_MIGRATION,
+      actual: CURRENT_MIGRATION_HEAD,
     });
   });
 

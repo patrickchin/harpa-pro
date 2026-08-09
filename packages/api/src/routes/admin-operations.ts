@@ -15,6 +15,7 @@ import { withTrustedAdminOrigin } from '../middleware/admin-origin.js';
 import { adminAuthIpWindow } from '../middleware/admin-rate-limit.js';
 import { withAdminSession } from '../middleware/admin-session.js';
 import { withRateLimit } from '../middleware/rateLimit.js';
+import { observeAdminAiUsage } from '../services/admin-ai-usage.js';
 import { observeAdminStorageLifecycle } from '../services/admin-storage-lifecycle.js';
 
 const MINUTE_MS = 60_000;
@@ -141,6 +142,14 @@ const adminStorageLifecycleRateLimit = withRateLimit({
 
 const adminFlyInventoryRateLimit = withRateLimit({
   name: 'admin.operations.fly-inventory.read.1m',
+  keyBy: adminOperationsRateLimitKey,
+  limit: 12,
+  windowMs: MINUTE_MS,
+  getLimiter: getAdminRateLimiter,
+});
+
+const adminAiUsageRateLimit = withRateLimit({
+  name: 'admin.operations.ai-usage.read.1m',
   keyBy: adminOperationsRateLimitKey,
   limit: 12,
   windowMs: MINUTE_MS,
@@ -328,6 +337,38 @@ adminOperationsRoutes.openapi(
     },
   }),
   async (c) => c.json(await observeAdminStorageLifecycle(), 200),
+);
+
+adminOperationsRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/admin/operations/ai-usage',
+    tags: ['admin'],
+    security: [{ adminSession: [] }],
+    middleware: [
+      privateNoStore,
+      adminAuthIpWindow,
+      withAdminSession(),
+      adminAiUsageRateLimit,
+    ] as const,
+    responses: {
+      200: {
+        description: 'Bounded, read-only Harpa AI usage ledger observation.',
+        content: {
+          'application/json': { schema: operations.aiUsageObservation },
+        },
+      },
+      401: {
+        description: 'Unauthorized.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+      429: {
+        description: 'Rate limited.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+    },
+  }),
+  async (c) => c.json(await observeAdminAiUsage(), 200),
 );
 
 adminOperationsRoutes.openapi(

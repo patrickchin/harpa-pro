@@ -309,17 +309,20 @@ const Env = z
      * infra/fly/Dockerfile ARG MIGRATIONS_REQUIRED_HEAD). Used by /readyz
      * to detect "code ahead of schema" — see docs/v4/arch-cicd-and-migrations.md.
      *
-     * Format is intentionally permissive (`<digits>_<slug>.sql`) because the
+     * Format is intentionally permissive (`<digits>_<slug>[.notx].sql`) because the
      * project has two historical filename conventions in flight (`NNNN_*.sql`
      * on dev/v4 and `YYYYMMDDHHmm_*.sql` on the live main branch). The lexical
-     * sort still produces the right "newest" answer for either.
+     * sort still produces the right "newest" answer for either. The optional
+     * `.notx` suffix is exact migration identity for statements such as
+     * `CREATE INDEX CONCURRENTLY` that the runner must execute outside a
+     * transaction.
      *
      * Optional in dev/test (so a local API can boot without setting it).
      * Required in production: enforced by the refinement below.
      */
     MIGRATIONS_REQUIRED_HEAD: z
       .string()
-      .regex(/^[0-9]+_[a-z0-9_]+\.sql$/, 'must match <digits>_<slug>.sql')
+      .regex(/^[0-9]+_[a-z0-9_]+(?:\.notx)?\.sql$/, 'must match <digits>_<slug>[.notx].sql')
       .optional(),
     /**
      * Independent admin database migration head expected by `/admin/readyz`.

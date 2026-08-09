@@ -19,7 +19,7 @@ Harpa Pro uses two independent Neon projects:
 
 | Project             | Data                                                              | API connection       |
 | ------------------- | ----------------------------------------------------------------- | -------------------- |
-| Application project | Better Auth, product data, and `app.activity_events`              | `DATABASE_URL`       |
+| Application project | Better Auth, product data, activity, and AI usage ledgers         | `DATABASE_URL`       |
 | `harpa-pro-admin`   | Dedicated admin identities and sessions in database `harpa_admin` | `ADMIN_DATABASE_URL` |
 
 The separate project is a recovery boundary, not merely a separate schema.
@@ -69,9 +69,9 @@ rules. Summary below.
   `pnpm --filter @harpa/api db:generate`, but generated SQL is only a candidate:
   authors must review and commit the repository migration file. Policy-only
   and data migrations can use reviewed hand-written SQL. Committed files use
-  `<digits>_<slug>.sql`. The current sequence uses four-digit prefixes, such as
-  `0028_report_version_monotonic.sql`, while the loader also accepts older
-  numeric timestamp prefixes.
+  `<digits>_<slug>.sql` or `<digits>_<slug>.notx.sql`. The current sequence
+  uses four-digit prefixes, such as `0028_report_version_monotonic.sql`, while
+  the loader also accepts older numeric timestamp prefixes.
 - Admin SQL lives under `packages/api/admin-migrations` and is applied with
   `pnpm --filter @harpa/api db:migrate:admin` against
   `ADMIN_DATABASE_URL`.
@@ -81,9 +81,18 @@ rules. Summary below.
 - The application runner applies each normal file in its own transaction.
   It rejects new top-level transaction control. A `.notx.sql` file runs
   without the wrapper and requires its own documented recovery plan.
-- The runner accepts `.notx.sql`, but `MIGRATIONS_REQUIRED_HEAD` currently
-  rejects that filename shape. A `.notx.sql` file cannot be the deployable
-  required head until readiness parsing is fixed. This is an unresolved gap.
+- The runner, deployment guards, API environment parser, and `/readyz` required
+  head contract accept the same optional `.notx.sql` suffix. The exact
+  filename remains in `app._migrations` and is compared without normalizing the
+  suffix away.
+- Draft migration `0029_llm_usage_events_created_at.notx.sql` adds
+  `llm_usage_events_created_at_idx` with `CREATE INDEX CONCURRENTLY` and no
+  `IF NOT EXISTS`. The runner records it only after the index build succeeds.
+  A same-name invalid index makes the rerun fail closed. Verify
+  `pg_index.indisvalid = false`, drop that exact index concurrently, and rerun
+  the migration. Verify `pg_index.indisvalid = true` after the rerun. Normal
+  rollback uses a later forward migration after no deployed read needs the
+  index.
 - Both streams are forward-only. Never run an admin migration through the
   application loader or edit an applied migration.
 - The repository does not have an immutable migration manifest or applied-file
@@ -142,6 +151,16 @@ against the separate admin database. Its constrained registry contains
 signup, project, and report milestones plus text, voice, image, and document
 note details. Event level is derived in the API and is not stored. See
 [design-admin-business-activity.md](design-admin-business-activity.md).
+
+`app.llm_usage_events` is the best-effort metadata ledger for AI calls. Normal
+application reads remain user-scoped. The draft admin AI usage service forms a
+reviewed cross-user aggregate boundary. The admin database validates the
+dedicated session first. The service then makes one application-pool query over
+fixed current-month and previous-24-hour windows. It returns no row-level user,
+project, report, model, prompt, transcript, raw vendor, or error data. Migration
+`0029` adds a leading `created_at DESC` index for that global time-window query.
+See
+[design-admin-ai-usage.md](design-admin-ai-usage.md).
 
 Cross-schema FK: `app.project_members.user_id REFERENCES public."user"(id)`.
 

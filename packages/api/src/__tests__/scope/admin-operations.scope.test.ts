@@ -119,6 +119,21 @@ async function expectRejectedBeforeProviderCall(response: Response): Promise<voi
   expect(fetchImpl).not.toHaveBeenCalled();
 }
 
+async function expectRejectedBeforeAiUsageQuery(
+  request: () => Response | Promise<Response>,
+): Promise<void> {
+  const query = vi.spyOn(getPool(), 'query');
+  try {
+    const response = await request();
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(query).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  } finally {
+    query.mockRestore();
+  }
+}
+
 describe('scope: GET /admin/operations/neon', () => {
   it('rejects an anonymous request before observing Neon', async () => {
     const response = await createApp().request('/admin/operations/neon');
@@ -291,6 +306,32 @@ describe('scope: GET /admin/operations/storage-lifecycle', () => {
     expect(applicationQuery).not.toHaveBeenCalled();
     expect(fetchImpl).not.toHaveBeenCalled();
     applicationQuery.mockRestore();
+  });
+});
+
+describe('scope: GET /admin/operations/ai-usage', () => {
+  it('rejects an anonymous request before querying the cross-user usage ledger', async () => {
+    await expectRejectedBeforeAiUsageQuery(() => createApp().request('/admin/operations/ai-usage'));
+  });
+
+  it('rejects a regular Better Auth bearer session before querying the usage ledger', async () => {
+    const token = await signTestToken(regularId, regularSessionId);
+
+    await expectRejectedBeforeAiUsageQuery(() =>
+      createApp().request('/admin/operations/ai-usage', {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    );
+  });
+
+  it('rejects a legacy app-admin bearer session before querying the usage ledger', async () => {
+    const token = await signTestToken(legacyAdminId, legacyAdminSessionId);
+
+    await expectRejectedBeforeAiUsageQuery(() =>
+      createApp().request('/admin/operations/ai-usage', {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    );
   });
 });
 

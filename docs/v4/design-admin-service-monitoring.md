@@ -3,11 +3,12 @@
 **Status:** Implemented on `dev`; not yet promoted to production as of
 2026-08-04.
 
-The Fly inventory extension below is a draft for an unmerged stacked pull
-request. It does not provision its observer credential. The Neon usage route
-reuses the existing observer pair. The R2 code does not provision its observer
-credential. The storage lifecycle observer remains a separate read-only
-stacked draft and adds no credential.
+The Fly inventory and Harpa-recorded AI usage extensions below are drafts for
+unmerged stacked pull requests. The Fly change does not provision its observer
+credential. The AI usage change does not add a provider administrator
+credential. The Neon usage route reuses the existing observer pair. The R2
+code does not provision its observer credential. The storage lifecycle
+observer remains a separate read-only stacked draft and adds no credential.
 
 ## Goal
 
@@ -102,8 +103,8 @@ GitHub request, token, or credential is added.
 
 Provider money, token, invoice, and credit balances remain `Unknown`. These
 usage and request-budget percentages are not provider billing balances. With
-all read observers in the stack, the browser makes 12 fixed GET reads after
-session confirmation. It makes another 12 only on manual **Refresh**, for 24
+all read observers in the stack, the browser makes 13 fixed GET reads after
+session confirmation. It makes another 13 only on manual **Refresh**, for 26
 total after one Refresh. It does not poll. The report generation live canary
 remains a separate manual POST.
 
@@ -165,9 +166,44 @@ does not document a stable remaining-credit REST field, so that value stays
 `Unknown` with a dashboard link.
 
 The browser calls the route once after session confirmation and again only on
-manual **Refresh**. It never polls. The full stacked page makes 12 fixed GET
-reads on load and 24 after one Refresh. The report generation live canary
+manual **Refresh**. It never polls. The full stacked page makes 13 fixed GET
+reads on load and 26 after one Refresh. The report generation live canary
 remains a separate manual POST.
+
+## Harpa-recorded AI usage extension
+
+The AI usage observer is a first-party aggregate extension. It remains an
+unmerged draft. See [Admin AI usage ledger](design-admin-ai-usage.md) for the
+full contract. `GET /admin/operations/ai-usage` uses the dedicated
+browser-admin session and shared trusted-Fly-IP budget. It also uses a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+One observation runs one application-database query over a fixed current UTC
+month window and fixed previous-24-hour window. It groups only normalized
+provider category, operation, fixture mode, and status. The result contains at
+most 72 aggregate query rows and at most four provider summaries per window.
+It never returns user, project, report, model, prompt, transcript, raw vendor,
+or error details.
+
+`live` and `record` events are provider-attributable. Replay activity remains
+separate and is not presented as provider consumption. Token and transcription
+totals include only successful provider-attributable calls. Unknown vendor
+labels become `other`, and missing historical transcription duration stays an
+explicit warning.
+
+The data source is Harpa's retained, best-effort `app.llm_usage_events` ledger.
+Recording failures and account deletion can remove activity from the summary,
+so it is not provider billing or an immutable audit ledger. The route makes no
+OpenAI, Groq, or Kimi request and adds no provider administrator credential.
+Provider balance, free tier, rate-limit headroom, and remaining credit stay
+`Unknown` with provider-dashboard links.
+
+The browser calls the route once after session confirmation and again only on
+manual **Refresh**. It never polls. On this stacked branch, the AI usage route
+raises authenticated reads from 12 to 13 on load and from 24 to 26 after one
+Refresh. The manual report generation live canary remains a separate POST. It
+does not run during either cycle.
 
 ## Deployment identity extension
 
@@ -229,7 +265,9 @@ lifecycle card.
   values with published references. They are not billing credit. Undocumented
   remaining capacity stays `Unknown`. The R2 estimates are not provider
   billing balances. Fly Machine and Volume values are inventory, and remaining
-  Fly credit stays `Unknown`. Existing Sentry, provider, and budget alerts
+  Fly credit stays `Unknown`. The AI ledger is a
+  best-effort Harpa aggregate, not provider capacity, and every remaining AI
+  provider credit stays `Unknown`. Existing Sentry, provider, and budget alerts
   remain responsible for notification.
 
 These limits keep the page useful without creating another monitoring system
@@ -310,6 +348,11 @@ group do not prove Harpa readiness or worker liveness. The adapter does not use
 internal GraphQL, scrape the dashboard, or infer remaining credit. The
 dashboard remains the billing source.
 
+Harpa-recorded AI usage does not need a provider adapter. It reads only the
+application usage ledger through one bounded cross-user aggregate service.
+The heading and caveats preserve that source distinction. No ledger value
+becomes provider spend, balance, free-tier capacity, or remaining credit.
+
 ### Report generation live canary
 
 The report generation endpoint authenticates an application account, reads
@@ -354,12 +397,16 @@ the full contract.
   provider calls, bounded output, caveats, rate limits, and manual refresh.
 - Fly inventory tests prove triplet validation, fixed read-only requests,
   allowlist filtering, strict redaction, nullable process-group inventory,
-  bounds, rate limits, 12/24 browser reads, and no polling.
+  bounds, rate limits, 13/26 browser reads, and no polling.
+- AI usage tests prove the one-query aggregate, fixed UTC windows, normalized
+  providers, replay separation, warning correlations, strict redaction,
+  12-request budget, 13/26 read counts, and absence of polling or provider
+  calls.
 - Deployment-identity tests prove the four fixed reads, independent partial
   states, strict redaction, full identifiers, exact CORS policy, and absence of
   polling.
 - Storage lifecycle tests prove one fixed statement, the five-second deadline,
-  separate 12-request budget, strict redaction, 12/24 reads, and the explicit
+  separate 12-request budget, strict redaction, 13/26 reads, and the explicit
   worker-liveness caveat.
 - Report live-canary tests prove its development-only gate, dedicated cookie,
   exact Origin, session-derived CSRF, fixed target, live usage proof, bounded

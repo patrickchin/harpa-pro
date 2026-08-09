@@ -7041,6 +7041,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/operations/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Harpa AI usage ledger observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            /** @enum {string} */
+                            source: "harpa_usage_ledger";
+                            monthToDate: {
+                                windowStart: string;
+                                windowEnd: string;
+                                recordedEventCount: number;
+                                calls: {
+                                    live: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    record: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    replay: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                };
+                                successfulProviderUsage: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cachedTokens: number;
+                                    inputSeconds: number;
+                                };
+                                operations: {
+                                    chat: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    generateReport: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    transcribe: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                };
+                                providers: {
+                                    /** @enum {string} */
+                                    provider: "openai" | "groq" | "kimi" | "other";
+                                    recordedEventCount: number;
+                                    calls: {
+                                        live: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        record: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        replay: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                    };
+                                    successfulProviderUsage: {
+                                        inputTokens: number;
+                                        outputTokens: number;
+                                        cachedTokens: number;
+                                        inputSeconds: number;
+                                    };
+                                    lastRecordedAt: string;
+                                }[];
+                                unclassifiedVendorEventCount: number;
+                                missingInputSecondsEventCount: number;
+                                lastRecordedAt: string | null;
+                                warnings: ("unclassified_vendor_events" | "missing_transcription_duration")[];
+                            };
+                            last24Hours: {
+                                windowStart: string;
+                                windowEnd: string;
+                                recordedEventCount: number;
+                                calls: {
+                                    live: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    record: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    replay: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                };
+                                successfulProviderUsage: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cachedTokens: number;
+                                    inputSeconds: number;
+                                };
+                                operations: {
+                                    chat: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    generateReport: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    transcribe: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                };
+                                providers: {
+                                    /** @enum {string} */
+                                    provider: "openai" | "groq" | "kimi" | "other";
+                                    recordedEventCount: number;
+                                    calls: {
+                                        live: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        record: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        replay: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                    };
+                                    successfulProviderUsage: {
+                                        inputTokens: number;
+                                        outputTokens: number;
+                                        cachedTokens: number;
+                                        inputSeconds: number;
+                                    };
+                                    lastRecordedAt: string;
+                                }[];
+                                unclassifiedVendorEventCount: number;
+                                missingInputSecondsEventCount: number;
+                                lastRecordedAt: string | null;
+                                warnings: ("unclassified_vendor_events" | "missing_transcription_duration")[];
+                            };
+                            providerCapacity: {
+                                openai: {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_observed";
+                                };
+                                groq: {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_observed";
+                                };
+                                kimi: {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_observed";
+                                };
+                            };
+                            caveats: ("best_effort_ledger" | "not_provider_billing" | "replay_not_provider_usage" | "record_mode_calls_provider" | "deleted_history_excluded")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "schema_unavailable" | "database_unavailable" | "timeout" | "invalid_response";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/operations/fly-inventory": {
         parameters: {
             query?: never;

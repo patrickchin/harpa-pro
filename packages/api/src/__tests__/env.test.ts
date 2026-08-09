@@ -130,6 +130,15 @@ describe('env: email OTP transport', () => {
 });
 
 describe('env: production services fail closed', () => {
+  it('accepts an exact non-transactional application migration head', async () => {
+    setValidProductionEnv();
+    process.env.MIGRATIONS_REQUIRED_HEAD = '0029_llm_usage_events_created_at.notx.sql';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.MIGRATIONS_REQUIRED_HEAD).toBe('0029_llm_usage_events_created_at.notx.sql');
+  });
+
   it('accepts a fully configured production environment', async () => {
     setValidProductionEnv();
 

@@ -4,10 +4,11 @@
  * Idempotent: tracks applied files in app._migrations.
  *
  * Safety properties (added 2026-05 — see docs/v4/arch-cicd-and-migrations.md):
- *   - Single-writer via pg_advisory_lock(MIGRATION_LOCK_KEY) so two
- *     concurrent Fly release machines (or a deploy + a human running
- *     `pnpm db:migrate`) cannot race the apply loop. The second waits
- *     for the first, then no-ops.
+ *   - Single-writer via a session advisory lock so two concurrent Fly
+ *     release machines (or a deploy + a human running `pnpm db:migrate`)
+ *     cannot race the apply loop. Contenders poll pg_try_advisory_lock so
+ *     each unsuccessful statement finishes before a non-transactional
+ *     concurrent-index migration waits for older snapshots.
  *   - Each *.sql file runs inside its own BEGIN/COMMIT. Failure aborts
  *     the file's transaction and exits non-zero with the filename in
  *     stderr; no half-applied file is recorded in app._migrations. The
@@ -32,12 +33,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(here, '../../migrations');
 
 /**
- * Fixed bigint key for pg_advisory_lock. Chosen as `0x4861727061504d31`
+ * Fixed bigint key for the session advisory lock. Chosen as `0x4861727061504d31`
  * (the ASCII for "HarpaPM1"). Stable across processes; never re-use for
  * a different lock. Decimal form is inlined into the SQL so pg's bigint
  * parameter binding is not involved.
  */
 const MIGRATION_LOCK_KEY = '5215575670466301233'; // 0x4861727061504d31
+const MIGRATION_LOCK_RETRY_MS = 100;
 const LEGACY_OUTER_TRANSACTION_WRAPPERS = new Set([
   '0014_better_auth_init.sql',
   '0019_account_deletion.sql',
@@ -310,6 +312,29 @@ function normalizeMigrationSql(file: string, sql: string): string {
   throw new Error(`[migrate] ${file} contains top-level transaction control; ${guidance}`);
 }
 
+async function acquireMigrationLock(client: pg.Client): Promise<void> {
+  for (;;) {
+    const result = await client.query<{ acquired: boolean }>(
+      `SELECT pg_try_advisory_lock(${MIGRATION_LOCK_KEY}::bigint) AS acquired`,
+    );
+    const acquired = result.rows[0]?.acquired;
+    if (acquired === true) return;
+    if (acquired !== false) {
+      throw new Error('[migrate] advisory lock query returned an invalid result');
+    }
+    await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, MIGRATION_LOCK_RETRY_MS));
+  }
+}
+
+async function releaseMigrationLock(client: pg.Client): Promise<void> {
+  const result = await client.query<{ released: boolean }>(
+    `SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY}::bigint) AS released`,
+  );
+  if (result.rows[0]?.released !== true) {
+    throw new Error('[migrate] advisory lock release returned an invalid result');
+  }
+}
+
 export async function migrate(
   connectionString: string,
   options: { dir?: string } = {},
@@ -318,7 +343,7 @@ export async function migrate(
   const client = new pg.Client(parseConnection(connectionString));
   await client.connect();
   try {
-    await client.query(`SELECT pg_advisory_lock(${MIGRATION_LOCK_KEY}::bigint)`);
+    await acquireMigrationLock(client);
     try {
       await client.query(`CREATE SCHEMA IF NOT EXISTS app`);
       await client.query(`
@@ -372,7 +397,7 @@ export async function migrate(
       }
       return { applied: newly };
     } finally {
-      await client.query(`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY}::bigint)`);
+      await releaseMigrationLock(client);
     }
   } finally {
     await client.end();
@@ -388,7 +413,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   migrate(url)
     .then(({ applied }) => {
-      console.log(applied.length === 0 ? 'no migrations to apply' : `applied: ${applied.join(', ')}`);
+      console.log(
+        applied.length === 0 ? 'no migrations to apply' : `applied: ${applied.join(', ')}`,
+      );
     })
     .catch((err) => {
       console.error(err);

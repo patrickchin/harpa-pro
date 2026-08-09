@@ -1395,6 +1395,10 @@ describe('AdminOperations', () => {
         credentials: 'include',
       },
       {
+        url: 'https://api.example.test/admin/operations/r2-capacity',
+        credentials: 'include',
+      },
+      {
         url: 'https://api.example.test/admin/operations/ai-usage',
         credentials: 'include',
       },
@@ -3264,6 +3268,104 @@ describe('AdminOperations', () => {
       'href',
       'https://dash.cloudflare.com/',
     );
+  });
+
+  it('shows the exact published stored total without counting uploading bytes', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity);
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expectDefinitionValue(section, 'Published stored now', '70.3 MiB (73,716,713 bytes)');
+    expect(section.textContent).not.toContain('73,717,865 bytes');
+  });
+
+  it.each([
+    {
+      caseName: 'zero published bytes',
+      standard: {
+        ...availableR2Capacity.storage.standard,
+        publishedPayloadBytes: 0,
+        publishedMetadataBytes: 0,
+        uploadingPayloadBytes: Number.MAX_SAFE_INTEGER,
+        uploadingMetadataBytes: 0,
+      },
+      infrequentAccess: {
+        ...availableR2Capacity.storage.infrequentAccess,
+        publishedPayloadBytes: 0,
+        publishedMetadataBytes: 0,
+      },
+      expected: '0 bytes',
+    },
+    {
+      caseName: 'a multi-field maximum-safe-integer total',
+      standard: {
+        ...availableR2Capacity.storage.standard,
+        publishedPayloadBytes: Number.MAX_SAFE_INTEGER - 3,
+        publishedMetadataBytes: 1,
+        uploadingPayloadBytes: 4_096,
+        uploadingMetadataBytes: 2_048,
+      },
+      infrequentAccess: {
+        ...availableR2Capacity.storage.infrequentAccess,
+        publishedPayloadBytes: 1,
+        publishedMetadataBytes: 1,
+      },
+      expected: '8.0 PiB (9,007,199,254,740,991 bytes)',
+    },
+    {
+      caseName: 'a rounded value just below the next IEC unit',
+      standard: {
+        ...availableR2Capacity.storage.standard,
+        publishedPayloadBytes: 1_048_525,
+        publishedMetadataBytes: 0,
+      },
+      infrequentAccess: {
+        ...availableR2Capacity.storage.infrequentAccess,
+        publishedPayloadBytes: 0,
+        publishedMetadataBytes: 0,
+      },
+      expected: '1.0 MiB (1,048,525 bytes)',
+    },
+  ])(
+    'formats $caseName without precision loss',
+    async ({ standard, infrequentAccess, expected }) => {
+      const observation = {
+        ...availableR2Capacity,
+        storage: {
+          status: 'available' as const,
+          standard,
+          infrequentAccess,
+        },
+      };
+      mockOperationsFetch(emptyInventory, observation);
+
+      render(<AdminOperations />);
+
+      const section = await getR2CapacitySection();
+      expectDefinitionValue(section, 'Published stored now', expected);
+    },
+  );
+
+  it('keeps ingress and egress volume explicitly Unknown with the documented evidence limits', async () => {
+    mockOperationsFetch(emptyInventory, availableR2Capacity);
+
+    render(<AdminOperations />);
+
+    const section = await getR2CapacitySection();
+    expectDefinitionValue(section, 'Ingress volume', 'Unknown');
+    expectDefinitionValue(section, 'Egress volume', 'Unknown');
+    expect(
+      within(section).getByText('The documented R2 metrics do not expose ingress or egress bytes.'),
+    ).toBeTruthy();
+    expect(
+      within(section).getByText(
+        'Direct R2 egress is free, but this observer cannot measure bytes served.',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(section).getByText('Harpa uploads and downloads use direct signed URLs.'),
+    ).toBeTruthy();
   });
 
   it.each([

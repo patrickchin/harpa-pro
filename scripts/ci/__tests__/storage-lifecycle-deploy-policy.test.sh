@@ -134,8 +134,8 @@ PATH="$TMP/bin:$PATH" \
   env -u DATABASE_URL bash "$DEPLOY_SCRIPT" --remote-only >/dev/null
 
 mapfile -t ACTIONS < "$TMP/actions.log"
-if [[ "${#ACTIONS[@]}" -ne 5 ]]; then
-  printf '  FAIL - expected 5 deploy actions, got %s\n' "${#ACTIONS[@]}"
+if [[ "${#ACTIONS[@]}" -ne 3 ]]; then
+  printf '  FAIL - expected 3 deploy actions, got %s\n' "${#ACTIONS[@]}"
   printf '    %s\n' "${ACTIONS[@]}"
   exit 1
 fi
@@ -154,20 +154,13 @@ fi
   echo "  FAIL - started-worker verification does not follow repair"
   exit 1
 }
-[[ "${ACTIONS[3]}" == \
-  "flyctl machines list --app harpa-pro-api --json" ]] || {
-  echo "  FAIL - arming does not select a fresh exact worker target"
+if [[ -f "$TMP/exec-count" ]]; then
+  echo "  FAIL - production deploy armed storage lifecycle before observation"
   exit 1
-}
-[[ "${ACTIONS[4]}" == \
-  "flyctl machine exec worker-started env STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases --app harpa-pro-api --timeout 120" ]] || {
-  echo "  FAIL - remote lifecycle arming does not follow worker verification"
-  exit 1
-}
+fi
 
-echo "  ok   - deploy, narrow repair, verification, and arming run in order"
-echo "  ok   - arming targets the exact worker through bounded Machine exec"
-echo "  ok   - production DATABASE_URL stays inside Fly"
+echo "  ok   - deploy, narrow repair, and verification run in order"
+echo "  ok   - production deploy leaves lifecycle arming to a separate action"
 
 PROD_DEPLOY_STEP=$(
   sed -n \

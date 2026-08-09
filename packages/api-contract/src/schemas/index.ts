@@ -13,6 +13,16 @@ export * as usageLimits from './usage-limits.js';
 export * as activity from './activity.js';
 export * as operations from './operations.js';
 export type {
+  AiCallOutcome,
+  AiOperationUsage,
+  AiProviderCapacity,
+  AiSuccessfulProviderUsage,
+  AiUsageObservation,
+  AiUsageProvider,
+  AiUsageProviderCategory,
+  AiUsageReason,
+  AiUsageWarning,
+  AiUsageWindow,
   FlyApp,
   FlyInventoryObservation,
   FlyInventoryReason,

@@ -360,6 +360,11 @@ collide with and contradictory payloads that must fail closed.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-08** — A second application migrator blocked inside
+  `pg_advisory_lock` while the lock owner ran `CREATE INDEX CONCURRENTLY`, so
+  each session waited for the other. Fix: poll the session lock with
+  `pg_try_advisory_lock` and finish each unsuccessful statement before the next
+  attempt. [detail](2026-08-08-migration-lock-concurrent-index-deadlock.md)
 - **2026-08-09** — The deployed dashboard journey completed its assertions but
   failed during cleanup because Playwright's direct sign-out request omitted
   the trusted Pages `Origin`. Fix: derive the exact dashboard origin for that

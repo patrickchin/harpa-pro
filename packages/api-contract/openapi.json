@@ -19781,6 +19781,1218 @@
         }
       }
     },
+    "/admin/operations/ai-usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "adminSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded, read-only Harpa AI usage ledger observation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "available"
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "harpa_usage_ledger"
+                          ]
+                        },
+                        "monthToDate": {
+                          "type": "object",
+                          "properties": {
+                            "windowStart": {
+                              "type": "string"
+                            },
+                            "windowEnd": {
+                              "type": "string"
+                            },
+                            "recordedEventCount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "calls": {
+                              "type": "object",
+                              "properties": {
+                                "live": {
+                                  "type": "object",
+                                  "properties": {
+                                    "succeeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "failed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "succeeded",
+                                    "failed",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "record": {
+                                  "type": "object",
+                                  "properties": {
+                                    "succeeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "failed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "succeeded",
+                                    "failed",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "replay": {
+                                  "type": "object",
+                                  "properties": {
+                                    "succeeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "failed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "succeeded",
+                                    "failed",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "live",
+                                "record",
+                                "replay"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "successfulProviderUsage": {
+                              "type": "object",
+                              "properties": {
+                                "inputTokens": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "outputTokens": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "cachedTokens": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "inputSeconds": {
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "inputTokens",
+                                "outputTokens",
+                                "cachedTokens",
+                                "inputSeconds"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "operations": {
+                              "type": "object",
+                              "properties": {
+                                "chat": {
+                                  "type": "object",
+                                  "properties": {
+                                    "liveSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "liveFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replaySucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replayFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "liveSucceeded",
+                                    "liveFailed",
+                                    "recordSucceeded",
+                                    "recordFailed",
+                                    "replaySucceeded",
+                                    "replayFailed"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "generateReport": {
+                                  "type": "object",
+                                  "properties": {
+                                    "liveSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "liveFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replaySucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replayFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "liveSucceeded",
+                                    "liveFailed",
+                                    "recordSucceeded",
+                                    "recordFailed",
+                                    "replaySucceeded",
+                                    "replayFailed"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "transcribe": {
+                                  "type": "object",
+                                  "properties": {
+                                    "liveSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "liveFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replaySucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replayFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "liveSucceeded",
+                                    "liveFailed",
+                                    "recordSucceeded",
+                                    "recordFailed",
+                                    "replaySucceeded",
+                                    "replayFailed"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "chat",
+                                "generateReport",
+                                "transcribe"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "providers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "provider": {
+                                    "type": "string",
+                                    "enum": [
+                                      "openai",
+                                      "groq",
+                                      "kimi",
+                                      "other"
+                                    ]
+                                  },
+                                  "recordedEventCount": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "calls": {
+                                    "type": "object",
+                                    "properties": {
+                                      "live": {
+                                        "type": "object",
+                                        "properties": {
+                                          "succeeded": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "failed": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "succeeded",
+                                          "failed",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "record": {
+                                        "type": "object",
+                                        "properties": {
+                                          "succeeded": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "failed": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "succeeded",
+                                          "failed",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "replay": {
+                                        "type": "object",
+                                        "properties": {
+                                          "succeeded": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "failed": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "succeeded",
+                                          "failed",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "live",
+                                      "record",
+                                      "replay"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "successfulProviderUsage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "inputTokens": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "outputTokens": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "cachedTokens": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "inputSeconds": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "inputTokens",
+                                      "outputTokens",
+                                      "cachedTokens",
+                                      "inputSeconds"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "lastRecordedAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "provider",
+                                  "recordedEventCount",
+                                  "calls",
+                                  "successfulProviderUsage",
+                                  "lastRecordedAt"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 4
+                            },
+                            "unclassifiedVendorEventCount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "missingInputSecondsEventCount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "lastRecordedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "unclassified_vendor_events",
+                                  "missing_transcription_duration"
+                                ]
+                              },
+                              "maxItems": 2
+                            }
+                          },
+                          "required": [
+                            "windowStart",
+                            "windowEnd",
+                            "recordedEventCount",
+                            "calls",
+                            "successfulProviderUsage",
+                            "operations",
+                            "providers",
+                            "unclassifiedVendorEventCount",
+                            "missingInputSecondsEventCount",
+                            "lastRecordedAt",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "last24Hours": {
+                          "type": "object",
+                          "properties": {
+                            "windowStart": {
+                              "type": "string"
+                            },
+                            "windowEnd": {
+                              "type": "string"
+                            },
+                            "recordedEventCount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "calls": {
+                              "type": "object",
+                              "properties": {
+                                "live": {
+                                  "type": "object",
+                                  "properties": {
+                                    "succeeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "failed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "succeeded",
+                                    "failed",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "record": {
+                                  "type": "object",
+                                  "properties": {
+                                    "succeeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "failed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "succeeded",
+                                    "failed",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "replay": {
+                                  "type": "object",
+                                  "properties": {
+                                    "succeeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "failed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "total": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "succeeded",
+                                    "failed",
+                                    "total"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "live",
+                                "record",
+                                "replay"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "successfulProviderUsage": {
+                              "type": "object",
+                              "properties": {
+                                "inputTokens": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "outputTokens": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "cachedTokens": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "inputSeconds": {
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "inputTokens",
+                                "outputTokens",
+                                "cachedTokens",
+                                "inputSeconds"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "operations": {
+                              "type": "object",
+                              "properties": {
+                                "chat": {
+                                  "type": "object",
+                                  "properties": {
+                                    "liveSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "liveFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replaySucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replayFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "liveSucceeded",
+                                    "liveFailed",
+                                    "recordSucceeded",
+                                    "recordFailed",
+                                    "replaySucceeded",
+                                    "replayFailed"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "generateReport": {
+                                  "type": "object",
+                                  "properties": {
+                                    "liveSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "liveFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replaySucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replayFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "liveSucceeded",
+                                    "liveFailed",
+                                    "recordSucceeded",
+                                    "recordFailed",
+                                    "replaySucceeded",
+                                    "replayFailed"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "transcribe": {
+                                  "type": "object",
+                                  "properties": {
+                                    "liveSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "liveFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordSucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "recordFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replaySucceeded": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "replayFailed": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "liveSucceeded",
+                                    "liveFailed",
+                                    "recordSucceeded",
+                                    "recordFailed",
+                                    "replaySucceeded",
+                                    "replayFailed"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "chat",
+                                "generateReport",
+                                "transcribe"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "providers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "provider": {
+                                    "type": "string",
+                                    "enum": [
+                                      "openai",
+                                      "groq",
+                                      "kimi",
+                                      "other"
+                                    ]
+                                  },
+                                  "recordedEventCount": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "calls": {
+                                    "type": "object",
+                                    "properties": {
+                                      "live": {
+                                        "type": "object",
+                                        "properties": {
+                                          "succeeded": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "failed": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "succeeded",
+                                          "failed",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "record": {
+                                        "type": "object",
+                                        "properties": {
+                                          "succeeded": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "failed": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "succeeded",
+                                          "failed",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "replay": {
+                                        "type": "object",
+                                        "properties": {
+                                          "succeeded": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "failed": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "total": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "succeeded",
+                                          "failed",
+                                          "total"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "live",
+                                      "record",
+                                      "replay"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "successfulProviderUsage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "inputTokens": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "outputTokens": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "cachedTokens": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "inputSeconds": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "inputTokens",
+                                      "outputTokens",
+                                      "cachedTokens",
+                                      "inputSeconds"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "lastRecordedAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "provider",
+                                  "recordedEventCount",
+                                  "calls",
+                                  "successfulProviderUsage",
+                                  "lastRecordedAt"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 4
+                            },
+                            "unclassifiedVendorEventCount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "missingInputSecondsEventCount": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "lastRecordedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "unclassified_vendor_events",
+                                  "missing_transcription_duration"
+                                ]
+                              },
+                              "maxItems": 2
+                            }
+                          },
+                          "required": [
+                            "windowStart",
+                            "windowEnd",
+                            "recordedEventCount",
+                            "calls",
+                            "successfulProviderUsage",
+                            "operations",
+                            "providers",
+                            "unclassifiedVendorEventCount",
+                            "missingInputSecondsEventCount",
+                            "lastRecordedAt",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "providerCapacity": {
+                          "type": "object",
+                          "properties": {
+                            "openai": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_observed"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "groq": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_observed"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "kimi": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_observed"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "openai",
+                            "groq",
+                            "kimi"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "caveats": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "best_effort_ledger"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "not_provider_billing"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "replay_not_provider_usage"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "record_mode_calls_provider"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "deleted_history_excluded"
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 5,
+                          "maxItems": 5
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "source",
+                        "monthToDate",
+                        "last24Hours",
+                        "providerCapacity",
+                        "caveats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "observedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "schema_unavailable",
+                            "database_unavailable",
+                            "timeout",
+                            "invalid_response"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "observedAt",
+                        "status",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/operations/fly-inventory": {
       "get": {
         "tags": [

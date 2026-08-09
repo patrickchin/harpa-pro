@@ -360,6 +360,11 @@ collide with and contradictory payloads that must fail closed.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-10** _(R7)_ — Development reported the current migration head
+  while retaining a retired LLM-usage ledger row and legacy table shape. Fix:
+  add conditional forward schema reconciliation, exact-only ledger cleanup,
+  and drift/current Testcontainers coverage.
+  [detail](2026-08-10-llm-usage-head-only-readiness-drift.md)
 - **2026-08-08** — A second application migrator blocked inside
   `pg_advisory_lock` while the lock owner ran `CREATE INDEX CONCURRENTLY`, so
   each session waited for the other. Fix: poll the session lock with

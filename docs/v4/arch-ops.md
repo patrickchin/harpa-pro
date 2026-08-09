@@ -1347,24 +1347,39 @@ otherwise idle Neon compute to suspend when its configured idle threshold
 is shorter than the gap. They do not reduce the continuously billed Fly
 worker cost.
 
-After the first lease-aware deploy completes, the workflow arms a
-one-time 330-second compatibility grace. During the grace, new presigns
-are leased, lease-less registrations from replaced machines remain
-compatible, and account deletion returns `503`. Arming uses
+After the exact production release passes the worker proof below, an
+authorized operator arms a one-time 330-second compatibility grace. During
+the grace, new presigns are leased, lease-less registrations from replaced
+machines remain compatible, and account deletion returns `503`. Arming uses
 `COALESCE(enforce_after, ...)`, so subsequent deploys cannot reopen the
 grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
 seconds is the late-PUT safety window.
 
 `infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
 known exact singleton states, verify at least one Machine has state
-`started` and metadata process group `storage-worker`, then arm by running the
-monotonic rollout command on that exact Machine. Arming uses Fly Machine exec,
-whose per-attempt timeout is 120 seconds, for at most three attempts. A failed
-attempt is retried only after a fresh inventory proves the same worker id is
-still the sole started worker. This is safe when transport fails after the SQL
-commit because the database update uses `COALESCE` and boolean `OR`, so later
-attempts cannot reopen the grace or disable deletion. Success also requires the
-arming script's confirmation marker, not only a zero provider exit code.
+`started` and metadata process group `storage-worker`, then stop. Deployment
+does not arm storage lifecycle or enable account deletion.
+
+Worker proof is a separate observation gate. Require the exact production API
+SHA, the expected active/standby topology, the direct Node worker command, 512
+MB on both worker Machines, a startup memory sample and at least one hourly
+`storage_delete_worker_memory` sample, and no intervening OOM restart or drain
+failure. Re-check the rollout row and durable queue before arming. A short
+post-deploy healthy window is not this proof.
+
+After that proof passes, run the monotonic rollout helper explicitly:
+
+```sh
+bash scripts/ci/arm-storage-lifecycle-rollout.sh harpa-pro-api
+```
+
+The helper uses Fly Machine exec, whose per-attempt timeout is 120 seconds, for
+at most three attempts. A failed attempt is retried only after a fresh
+inventory proves the same worker id is still the sole started worker. This is
+safe when transport fails after the SQL commit because the database update
+uses `COALESCE` and boolean `OR`, so later attempts cannot reopen the grace or
+disable deletion. Success also requires the arming script's confirmation
+marker, not only a zero provider exit code.
 
 The command inherits the app's staged Fly secrets, so neither CI nor manual
 callers need the production `DATABASE_URL`. The GitHub deploy step has a
@@ -1400,12 +1415,12 @@ stopped/no-standby retry starts then verifies the candidate, while an exact
 singleton started/no-standby retry clones it. Id, identity, service, standby, or
 topology drift during any pre-clone re-list or polling fails before cloning.
 
-The verifier remains diagnostic-only. The workflow calls it again after
-repair and before arming. This proves that a running executor exists. It does
-not by itself prove that lifecycle arming finished; rely on the arming
-command's confirmation marker and the rollout table below. If a deployment
-stalls before that marker is reported, treat the rollout state as unknown and
-inspect it before retrying.
+The verifier remains diagnostic-only. Deployment calls it after repair. This
+proves that a running executor exists, but it does not satisfy the observation
+gate or prove that lifecycle arming finished. After the separate arming action,
+rely on the command's confirmation marker and the rollout table below. If the
+action stalls before that marker is reported, treat the rollout state as
+unknown and inspect it before retrying.
 
 The admin storage lifecycle card reads the rollout row and aggregate queue
 state. It does not replace this Fly worker verification. A recorded rollout or

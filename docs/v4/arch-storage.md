@@ -423,9 +423,9 @@ Machine remains an explicit always-on cost.
 
 The first rolling deploy is gated by
 `app.storage_lifecycle_rollout`. Account deletion returns `503` until
-old lease-less presigns have expired. Lease enforcement is armed once,
-330 seconds after a successful deploy, and later deploys never reopen
-the grace. See
+old lease-less presigns have expired. After the exact production worker passes
+its separate observation proof, lease enforcement and account deletion are
+armed with a 330-second grace; later deploys never reopen the grace. See
 [`design-r2-object-lifecycle.md`](design-r2-object-lifecycle.md) for
 the full race analysis and operational queries.
 Local Compose is deliberately different: its migration one-shot arms the

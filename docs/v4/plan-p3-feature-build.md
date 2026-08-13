@@ -422,8 +422,8 @@ token-level usage UI in P3.15.4 — land it before extending
       `GET /files/{id}/url`) already shipped in P2 — wire the mobile
       side.
 - [x] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
-- [x] `CachedImage` + `prefetchImages` implemented for v4
-      (FS cache + BlurHash placeholder).
+- [x] `CachedImage` implemented for v4 (FS cache + BlurHash
+      placeholder).
 - [x] Integration test: image / voice / document each round-trip
       through the queue end-to-end (Pitfall 8).
 - [x] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.

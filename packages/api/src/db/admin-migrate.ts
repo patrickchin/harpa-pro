@@ -97,9 +97,6 @@ export async function migrateAdmin(
   }
 }
 
-/** Backward-compatible descriptive alias for non-CLI callers. */
-export const migrateAdminDatabase = migrateAdmin;
-
 if (import.meta.url === `file://${process.argv[1]}`) {
   const url = process.env.ADMIN_DATABASE_URL;
   if (!url) {

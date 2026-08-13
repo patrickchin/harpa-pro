@@ -456,19 +456,20 @@ There are no mobile HTTP fixtures or MSW layer for usage-limit
 responses. API integration tests create plan and override rows in the
 test database. Mobile component tests pass structured props directly.
 
-Device coverage for an at-limit state needs a deterministic database
-seed before the pending Maestro flow can run.
+Device coverage for an at-limit state still needs a deterministic
+database seed. Add a focused active flow when that seed exists; the
+old blocked placeholder was retired rather than kept as executable
+test inventory.
 
 ## 10. Maestro flows
 
 `.maestro/modules/15-usage.yaml` covers the Usage screen and the
 default free-plan buckets in the normal regression journey.
 
-Two scenarios remain under `.maestro/pending/`:
-
-- `usage-limit-dialog.yaml` needs an at-limit seed.
-- `usage-near-limit-toast.yaml` needs both a warning consumer and a
-  near-limit seed.
+The former at-limit-dialog and near-limit-toast placeholders were
+retired because neither was runnable. Their prerequisites remain an
+at-limit seed, plus a warning consumer and near-limit seed for the
+toast case.
 
 ## 11. Carve-outs
 
@@ -499,10 +500,10 @@ The following are explicit non-goals here and tracked in
   voice-note pipeline. Count + token buckets enforced end-to-end.
 - **Maestro:** `modules/15-usage.yaml` asserts the limits card and the
   default free-plan buckets in the normal regression journey. The
-  blocked scenarios live under `.maestro/pending/`:
-  `usage-limit-dialog.yaml` needs deterministic at-limit seeding, and
-  `usage-near-limit-toast.yaml` needs the `X-Usage-Warning` consumer.
-  Self-serve upgrades remain out of scope.
+  non-runnable at-limit and near-limit placeholders were retired;
+  add focused flows when deterministic seeding and the
+  `X-Usage-Warning` consumer exist. Self-serve upgrades remain out of
+  scope.
 
 ## 12. Historical implementation checklist
 

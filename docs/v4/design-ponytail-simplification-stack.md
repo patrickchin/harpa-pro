@@ -154,8 +154,10 @@ Reduce command boilerplate without changing the command tree or output
 contract.
 
 - Keep `apps/cli/src/lib/render.ts` as the human-output boundary.
-- Move repeated `getEnv()`, `requireToken()`, client creation, idempotency
-  header wiring, and `runRequest()` glue into local helper factories.
+- Make each Commander wrapper delegate to its existing pure command helper
+  instead of duplicating the same request and rendering logic inline.
+- Keep the short `getEnv()`, `requireToken()`, and client setup explicit in
+  each command module; it is configuration, not a new abstraction boundary.
 - Keep auth raw-fetch handling separate where OpenAPI does not apply.
 
 Why fifth: it is independent of the mobile/admin work and should stay isolated

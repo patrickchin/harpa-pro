@@ -154,7 +154,6 @@ describe('canonical mobile ReportBody helpers', () => {
       totalWorkers: 4,
       totalWorkersLabel: '4',
       workerHours: '14.5h total',
-      notes: null,
       hasQualitativeCounts: true,
     });
   });
@@ -169,7 +168,6 @@ describe('canonical mobile ReportBody helpers', () => {
       totalWorkers: null,
       totalWorkersLabel: 'a few',
       workerHours: null,
-      notes: 'Waiting on crew',
       hasQualitativeCounts: true,
     });
   });

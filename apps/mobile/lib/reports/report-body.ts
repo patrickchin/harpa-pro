@@ -40,6 +40,31 @@ export function coerceReportBody(
   if (parsed.success) {
     return { body: parsed.data, malformed: false };
   }
+
+  // Rows written before the meta envelope stored visitDate at the body root.
+  // Keep that narrow compatibility boundary here so every mobile consumer can
+  // use the canonical ReportBody shape without carrying a second view model.
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const legacy = value as Record<string, unknown>;
+    if (!legacy.meta) {
+      const legacyVisitDate =
+        typeof legacy.visitDate === 'string' || legacy.visitDate === null
+          ? legacy.visitDate
+          : fallbackVisitDate;
+      const normalized = reports.reportBody.safeParse({
+        ...legacy,
+        meta: {
+          title: null,
+          summary: null,
+          visitDate: legacyVisitDate,
+        },
+      });
+      if (normalized.success) {
+        return { body: normalized.data, malformed: false };
+      }
+    }
+  }
+
   return {
     body: createEmptyReportBody(fallbackVisitDate),
     malformed: value !== null && value !== undefined,
@@ -99,7 +124,6 @@ export interface WorkerDisplaySummary {
   totalWorkers: number | null;
   totalWorkersLabel: string | null;
   workerHours: string | null;
-  notes: string | null;
   hasQualitativeCounts: boolean;
 }
 
@@ -112,9 +136,6 @@ export function getWorkerDisplaySummaryFromWorkers(
   const qualitativeCounts = workers
     .map((worker) => textOrNull(worker.count))
     .filter((count): count is string => count !== null && toNum(count) === null);
-  const notes = workers
-    .map((worker) => textOrNull(worker.notes))
-    .filter((note): note is string => note !== null);
   const totalHours = workers.reduce((sum, worker) => sum + (toNum(worker.hours) ?? 0), 0);
 
   return {
@@ -124,7 +145,6 @@ export function getWorkerDisplaySummaryFromWorkers(
         ? String(numericCounts.reduce((sum, count) => sum + count, 0))
         : (qualitativeCounts[0] ?? null),
     workerHours: formatTotalHours(totalHours),
-    notes: notes.length > 0 ? Array.from(new Set(notes)).join('\n') : null,
     hasQualitativeCounts: qualitativeCounts.length > 0,
   };
 }

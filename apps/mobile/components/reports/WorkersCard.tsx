@@ -88,9 +88,6 @@ export function WorkersCard({ workers, onEdit, editActionsDisabled = false }: Wo
       {summary.workerHours ? (
         <Text className="mt-4 text-base text-muted-foreground">Hours: {summary.workerHours}</Text>
       ) : null}
-      {summary.notes ? (
-        <Text className="mt-2 text-base text-muted-foreground">{summary.notes}</Text>
-      ) : null}
     </Card>
   );
 }

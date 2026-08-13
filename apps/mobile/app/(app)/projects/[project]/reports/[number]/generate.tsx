@@ -41,6 +41,7 @@ import {
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
 import { useReportBodyAutosave } from '@/lib/reports/use-report-body-autosave';
 import { reportMutationInput } from '@/lib/reports/report-mutation-input';
+import { coerceReportBody } from '@/lib/reports/report-body';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { env } from '@/lib/config/env';
@@ -184,6 +185,7 @@ export default function GenerateReportRoute() {
         notesSinceLastGeneration?: number;
         notesChangedAt?: string | null;
         needsRegeneration?: boolean;
+        visitDate?: string | null;
         generatedAt?: string | null;
         updatedAt?: string;
       }
@@ -384,7 +386,9 @@ export default function GenerateReportRoute() {
     [localReport, placePhotoGroupMutation, reportId, reportNumber, slug, reportRow?.generatedAt],
   );
 
-  const serverBody = reportRow?.body ?? null;
+  const serverBody = reportRow?.body
+    ? coerceReportBody(reportRow.body, reportRow.visitDate ?? null).body
+    : null;
 
   const fallbackReport: reports.ReportBody | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT

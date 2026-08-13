@@ -39,6 +39,7 @@ import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
 import { reportMutationInput } from '@/lib/reports/report-mutation-input';
+import { coerceReportBody } from '@/lib/reports/report-body';
 import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
@@ -99,8 +100,11 @@ export default function SavedReportRoute() {
   const reportStatus = reportRow?.status ?? null;
   const reportId = reportRow?.id ?? null;
 
+  const persistedReport = reportRow?.body
+    ? coerceReportBody(reportRow.body, reportRow.visitDate ?? null).body
+    : null;
   const displayReport =
-    reportRow?.body ?? (env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null);
+    persistedReport ?? (env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null);
 
   // Source-notes timeline for the saved report. Same query used by the
   // generate route — the API returns text + voice + image + document

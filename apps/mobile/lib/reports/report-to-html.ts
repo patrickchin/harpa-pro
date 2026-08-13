@@ -74,7 +74,6 @@ function renderWorkers(
       ${heading ? `<h2>${heading}</h2>` : ''}
       ${summary.totalWorkersLabel ? `<p><strong>Total personnel on site:</strong> ${esc(summary.totalWorkersLabel)}</p>` : ''}
       ${summary.workerHours ? `<p><strong>Worker hours:</strong> ${esc(summary.workerHours)}</p>` : ''}
-      ${summary.notes ? `<p>${esc(summary.notes)}</p>` : ''}
       ${
         rows
           ? `<table><thead><tr><th>Role</th><th class="num">Count</th><th class="num">Hours</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`

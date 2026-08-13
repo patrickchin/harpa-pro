@@ -144,8 +144,8 @@ its own "Close" X button at the top-right that must also be tapped.
 **Cause.** Same package as Pitfall 2 — `expo-dev-menu`'s first-run
 introduction flow.
 
-**Workaround.** A pair of conditional gates in `01-auth.yaml` and
-`core-end-to-end.yaml`:
+**Workaround.** A pair of conditional gates in `01-auth.yaml` and the
+current regression entrypoints:
 
 ```yaml
 - runFlow:

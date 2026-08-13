@@ -2,8 +2,8 @@
 # Wipe the local fixture-mode Postgres so a Maestro flow that starts on
 # sign-up gets a fresh account. Safe to run repeatedly. Does NOT drop
 # tables — just truncates the rows. Seeds:
-#  - Test Two (test2@harpapro.com) so the invite step in
-#    core-end-to-end.yaml has a real target user to add.
+#  - Test Two (test2@harpapro.com) so legacy invite-path smoke coverage
+#    has a real target user to add.
 #  - Test Account (test@harpapro.com, used by p3-report-wiring.yaml) with a
 #    seeded project + draft report + one text note. iOS XCTest cannot
 #    reliably deliver `inputText` to React Native's multiline TextInput

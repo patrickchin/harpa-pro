@@ -4,7 +4,9 @@
 > both `/me/usage` and `/me/limits`. The mobile Usage route currently
 > calls `/me/usage`, `/me/limits`, and `/me/usage/events` separately.
 > The blocked dialog has one `Done` action. Near-limit header parsing
-> exists, but the app does not display a near-limit toast.
+> exists, but the app does not display a near-limit toast; the deleted
+> pending Maestro placeholders were retired rather than kept as runnable
+> coverage.
 
 > Companion: [arch-api-design.md](arch-api-design.md),
 > [arch-database.md](arch-database.md),

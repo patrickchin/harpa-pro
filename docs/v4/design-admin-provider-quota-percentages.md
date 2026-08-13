@@ -186,6 +186,10 @@ The route does not follow a project cursor. A cursor, provider-reported
 unavailable project, deadline exhaustion, or failed detail makes the
 observation partial rather than implying complete organization coverage.
 
+The API's local provider-observer transport helper owns the shared deadline,
+headers, redirect rejection, and JSON parsing. The Neon usage observer retains
+the fixed request plan, status mapping, provider schemas, and calculations.
+
 The organization response must repeat `ADMIN_NEON_ORG_ID` and report the exact
 normalized plan `free`. Any other plan returns `unknown/unsupported_plan`; the
 server must not apply Free-plan references to Launch, Scale, legacy, or an

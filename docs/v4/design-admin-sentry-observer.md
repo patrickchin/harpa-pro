@@ -119,6 +119,10 @@ One configured observation makes exactly two fixed `GET` requests. They run in
 parallel under one 10-second abort budget. They use `redirect: 'error'`, never
 retry, and never follow pagination.
 
+The API's local provider-observer transport helper owns that shared deadline,
+HTTP setup, and bounded JSON reading. This Sentry observer retains the fixed
+URLs, status mapping, response schemas, byte limits, and `Link` interpretation.
+
 Each response body uses a bounded JSON reader. The issue body limit is 1 MiB.
 The session body limit is 256 KiB. A declared or observed body above its limit
 is `invalid_response`. Raw bodies are discarded after parsing.

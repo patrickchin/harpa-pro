@@ -104,6 +104,13 @@ Use the official `https://console.neon.tech/api/v2` origin only:
 - enforce one ten-second overall abort budget, process projects serially, and
   make at most the count and list calls concurrently within one project.
 
+All provider requests use `redirect: 'error'`; the observer never forwards its
+Bearer credential to a redirect target.
+
+The API's local provider-observer transport helper owns the shared deadline,
+headers, redirect rejection, and JSON parsing. This Neon observer retains its
+fixed URLs, serial/per-project concurrency plan, status mapping, and schemas.
+
 Neon's count endpoint does not expose the detail endpoint's `include_deleted`
 selector, so the UI must not imply that the count and active-detail list use
 identical deleted-branch semantics. If Neon returns a project cursor or a

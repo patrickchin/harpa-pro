@@ -1,11 +1,14 @@
 import { operations, type SentryObservation } from '@harpa/api-contract';
 import { z } from 'zod';
 import { env } from '../env.js';
+import {
+  createProviderObservationDeadline,
+  requestProviderJson,
+} from './provider-observer-http.js';
 
 const ISSUES_LIMIT = 100;
 const ISSUE_BODY_LIMIT_BYTES = 1_048_576;
 const SESSION_BODY_LIMIT_BYTES = 262_144;
-const OBSERVATION_TIMEOUT_MS = 10_000;
 const MIN_SESSION_WINDOW_MS = 23 * 60 * 60 * 1_000;
 const MAX_SESSION_WINDOW_MS = 25 * 60 * 60 * 1_000;
 const DNS_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -125,15 +128,11 @@ export async function observeAdminSentry(
   }
 
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), OBSERVATION_TIMEOUT_MS);
-  deadline.unref?.();
-
-  try {
+  return createProviderObservationDeadline().run(async (signal) => {
     const origin = SENTRY_ORIGINS[config.region];
     const [issuesResult, sessionsResult] = await Promise.all([
-      observeIssues({ config, origin, signal: controller.signal, fetchImpl }),
-      observeSessions({ config, origin, signal: controller.signal, fetchImpl }),
+      observeIssues({ config, origin, signal, fetchImpl }),
+      observeSessions({ config, origin, signal, fetchImpl }),
     ]);
 
     if (!issuesResult.ok && !sessionsResult.ok) {
@@ -159,9 +158,7 @@ export async function observeAdminSentry(
       mobileSessions,
       caveats: truncated ? [...BASE_CAVEATS, 'issue_count_truncated'] : [...BASE_CAVEATS],
     });
-  } finally {
-    clearTimeout(deadline);
-  }
+  });
 }
 
 function resolveConfig(options: ObserveAdminSentryOptions): ObserverConfig | null {
@@ -330,93 +327,23 @@ async function getJson(
     bodyLimitBytes: number;
   },
 ): Promise<ProviderResult<{ body: unknown; linkHeader: string | null }>> {
-  let response: Response;
-  try {
-    response = await options.fetchImpl(url, {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        authorization: `Bearer ${options.apiToken}`,
-      },
-      redirect: 'error',
-      signal: options.signal,
-    });
-  } catch (error) {
-    return {
-      ok: false,
-      reason: isAbort(error, options.signal) ? 'timeout' : 'provider_unavailable',
-    };
-  }
-
-  if (!response.ok) return { ok: false, reason: reasonForStatus(response.status) };
-
-  const body = await readBoundedJson(response, options.bodyLimitBytes, options.signal);
-  if (!body.ok) return body;
+  const transport = await requestProviderJson(url, {
+    method: 'GET',
+    apiToken: options.apiToken,
+    signal: options.signal,
+    fetchImpl: options.fetchImpl,
+    reasonForStatus,
+    maxBytes: options.bodyLimitBytes,
+  });
+  if (!transport.ok) return transport;
 
   return {
     ok: true,
     value: {
-      body: body.value,
-      linkHeader: response.headers.get('link'),
+      body: transport.body,
+      linkHeader: transport.headers.get('link'),
     },
   };
-}
-
-async function readBoundedJson(
-  response: Response,
-  limitBytes: number,
-  signal: AbortSignal,
-): Promise<ProviderResult<unknown>> {
-  const declaredLength = response.headers.get('content-length');
-  if (declaredLength !== null) {
-    const normalizedLength = declaredLength.trim();
-    if (!/^(0|[1-9][0-9]*)$/.test(normalizedLength)) {
-      return { ok: false, reason: 'invalid_response' };
-    }
-    const parsedLength = Number(normalizedLength);
-    if (!Number.isSafeInteger(parsedLength) || parsedLength > limitBytes) {
-      return { ok: false, reason: 'invalid_response' };
-    }
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) return { ok: false, reason: 'invalid_response' };
-
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-  try {
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      if (!chunk.value) continue;
-
-      totalBytes += chunk.value.byteLength;
-      if (totalBytes > limitBytes) {
-        await reader.cancel().catch(() => undefined);
-        return { ok: false, reason: 'invalid_response' };
-      }
-      chunks.push(chunk.value);
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      reason: isAbort(error, signal) ? 'timeout' : 'provider_unavailable',
-    };
-  }
-
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  try {
-    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    return { ok: true, value: JSON.parse(text) as unknown };
-  } catch {
-    return { ok: false, reason: 'invalid_response' };
-  }
 }
 
 function parseIssuesPagination(
@@ -488,10 +415,6 @@ function highestPriorityReason(reasons: SentryReason[]): SentryReason {
     if (reasons.includes(reason)) return reason;
   }
   return 'provider_unavailable';
-}
-
-function isAbort(error: unknown, signal: AbortSignal): boolean {
-  return signal.aborted || (error instanceof Error && error.name === 'AbortError');
 }
 
 function isSentryEnvironment(value: unknown): value is SentryEnvironment {

@@ -82,6 +82,15 @@ describe('reportToHtml', () => {
     expect(html).toContain('<td>Contractors</td><td class="num">a few</td>');
   });
 
+  it('renders each worker note once', () => {
+    const report = baseReport();
+    report.workers[0]!.notes = 'Formwork on grid B.';
+
+    const html = reportToHtml(report);
+
+    expect(html.match(/Formwork on grid B\./g)).toHaveLength(1);
+  });
+
   it('omits the "Report Type" row that existed in v3', () => {
     const html = reportToHtml(baseReport());
     expect(html).not.toContain('Report Type');

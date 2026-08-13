@@ -93,6 +93,26 @@ describe('canonical mobile ReportBody helpers', () => {
     expect(coerced.body.workers).toEqual([]);
   });
 
+  it('preserves pre-meta persisted bodies while lifting their legacy visit date', () => {
+    const { meta: _meta, ...legacyBody } = reportBodyFixture;
+    const legacyPersistedBody = {
+      ...legacyBody,
+      visitDate: '2026-07-27T00:00:00.000Z',
+    };
+
+    expect(coerceReportBody(legacyPersistedBody, '2026-07-29T00:00:00.000Z')).toEqual({
+      body: {
+        ...legacyBody,
+        meta: {
+          title: null,
+          summary: null,
+          visitDate: '2026-07-27T00:00:00.000Z',
+        },
+      },
+      malformed: false,
+    });
+  });
+
   it('keeps untouched large-report branches structurally shared while editing', () => {
     const largeBody: reports.ReportBody = {
       ...reportBodyFixture,

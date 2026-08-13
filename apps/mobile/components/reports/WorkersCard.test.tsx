@@ -34,4 +34,22 @@ describe('WorkersCard', () => {
     expect(text).toContain('a few');
     expect(text).not.toContain('NaN');
   });
+
+  it('renders each worker note once', () => {
+    const tree = render(
+      <WorkersCard
+        workers={[
+          {
+            role: 'Carpenter',
+            count: '4',
+            hours: '8',
+            notes: 'Formwork on grid B.',
+          },
+        ]}
+      />,
+    );
+    const text = collectText(tree.toJSON());
+
+    expect(text.match(/Formwork on grid B\./g)).toHaveLength(1);
+  });
 });

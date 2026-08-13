@@ -1,5 +1,5 @@
 ---
-description: 'Use when adding or running a Maestro mobile flow or a Playwright public-site flow. Owns .maestro/, apps/site Playwright specs, iOS sim and Android emulator runs. Trigger phrases: Maestro, Playwright, E2E, end-to-end, iOS sim, android emulator, core-end-to-end, deep link flow, share link cold start.'
+description: 'Use when adding or running a Maestro mobile flow or a Playwright public-site flow. Owns .maestro/, apps/site Playwright specs, iOS sim and Android emulator runs. Trigger phrases: Maestro, Playwright, E2E, end-to-end, iOS sim, android emulator, regression journey, deep link flow, share link cold start.'
 name: 'e2e-runner'
 tools: [read, search, edit, execute]
 user-invocable: false
@@ -27,8 +27,8 @@ mobile app and Playwright specs for the docs site.
   controls fixture native inputs only. It does not isolate API calls.
   Point the app at an API with `AI_LIVE=0`, then verify replay mode
   before a flow that uses AI.
-- DO NOT skip the Android emulator for `core-end-to-end`; the exit
-  gate requires both iOS sim and Android.
+- DO NOT claim cross-platform regression coverage after running only
+  one device; the release journey requires both iOS sim and Android.
 - DO NOT silently broaden the flow's scope — one journey per file.
 
 ## Approach

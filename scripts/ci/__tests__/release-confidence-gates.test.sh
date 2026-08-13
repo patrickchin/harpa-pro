@@ -826,6 +826,18 @@ require_occurrence_before ".maestro/modules/08-text-notes.yaml" \
 require_fixed ".maestro/regression-journey.yaml" \
   "- runFlow: modules/09-voice-notes.yaml" \
   "regression journey keeps the live voice-notes module wired"
+require_adjacent_fixed ".maestro/modules/09-voice-notes.yaml" \
+  "visible:" \
+  'id: "voice-title-.*"' \
+  "voice-note journey waits for the provider-owned title before continuing"
+require_adjacent_fixed ".maestro/modules/09-voice-notes.yaml" \
+  "visible:" \
+  'id: "voice-summary-.*"' \
+  "voice-note journey waits for the provider-owned summary before continuing"
+require_before ".maestro/modules/09-voice-notes.yaml" \
+  'id: "voice-summary-.*"' \
+  'id: "btn-note-options-.*"' \
+  "voice-note journey settles provider output before opening row actions"
 require_fixed ".maestro/modules/10a-photo-notes-draft.yaml" \
   "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
   "draft photo journey waits for route-level auto-regeneration"

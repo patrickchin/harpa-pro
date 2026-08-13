@@ -8,12 +8,12 @@
  * `draft|finalized` (not `final`).
  *
  * The body owns:
- *  - active tab state (Report / Notes / Edit)
+ *  - active tab state (Report / Notes / Review)
  *  - actions-menu visibility
  *  - PDF preview modal visibility
  *  - image preview state
  *  - the "confirm delete" and "confirm unfinalize" dialog visibility
- *  - locally-edited `report` (drives the Edit tab); when the saved
+ *  - locally-edited `report` (drives the per-card edit modal); when the saved
  *    snapshot changes underneath unchanged local edits we adopt it
  *    (the canonical `lastServerJsonRef` reconciliation pattern).
  *
@@ -87,7 +87,7 @@ export type SavedReportStatus = 'draft' | 'finalized';
 export interface SavedReportProps {
   /** Normalized GeneratedSiteReport (or null when not yet resolved). */
   report: GeneratedSiteReport | null;
-  /** Saved-report status — controls Edit tab visibility + read-only chrome. */
+  /** Saved-report status — controls Notes/Review and read-only edit chrome. */
   reportStatus: SavedReportStatus | null;
   /**
    * Server-side report uuid. Threaded into `ReportNotesPane` so the

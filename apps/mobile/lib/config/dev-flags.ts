@@ -2,22 +2,17 @@
  * Developer-only UI flags — persisted in AsyncStorage so toggling
  * survives an app reload.
  *
- * Currently controls visibility of the Debug and Manual-Edit tabs on
- * the Generate Report screen. Both default to OFF — the tabs are
- * developer-facing surfaces that we don't want shipped to end users
- * until they explicitly opt in via the Developer screen.
+ * Currently controls visibility of the Debug tab on the Generate Report
+ * screen. It defaults to OFF because it is a developer-facing surface.
  */
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DEBUG_TAB_KEY = 'harpa.dev_flags.generate_debug_tab.v1';
-const EDIT_TAB_KEY = 'harpa.dev_flags.generate_edit_tab.v1';
 
 export interface UseDeveloperFlagsApi {
   showGenerateDebugTab: boolean;
   setShowGenerateDebugTab: (next: boolean) => void;
-  showGenerateEditTab: boolean;
-  setShowGenerateEditTab: (next: boolean) => void;
   /** True once the AsyncStorage round-trip completes. */
   isLoaded: boolean;
 }
@@ -29,18 +24,13 @@ function parseBool(value: string | null, fallback: boolean): boolean {
 
 export function useDeveloperFlags(): UseDeveloperFlagsApi {
   const [showGenerateDebugTab, setDebug] = useState(false);
-  const [showGenerateEditTab, setEdit] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([
-      AsyncStorage.getItem(DEBUG_TAB_KEY),
-      AsyncStorage.getItem(EDIT_TAB_KEY),
-    ]).then(([debugVal, editVal]) => {
+    void AsyncStorage.getItem(DEBUG_TAB_KEY).then((debugVal) => {
       if (cancelled) return;
       setDebug(parseBool(debugVal, false));
-      setEdit(parseBool(editVal, false));
       setIsLoaded(true);
     });
     return () => {
@@ -53,16 +43,9 @@ export function useDeveloperFlags(): UseDeveloperFlagsApi {
     void AsyncStorage.setItem(DEBUG_TAB_KEY, next ? '1' : '0');
   }, []);
 
-  const setShowGenerateEditTab = useCallback((next: boolean) => {
-    setEdit(next);
-    void AsyncStorage.setItem(EDIT_TAB_KEY, next ? '1' : '0');
-  }, []);
-
   return {
     showGenerateDebugTab,
     setShowGenerateDebugTab,
-    showGenerateEditTab,
-    setShowGenerateEditTab,
     isLoaded,
   };
 }
@@ -74,5 +57,4 @@ export function useDeveloperFlags(): UseDeveloperFlagsApi {
  */
 export const DEV_FLAG_STORAGE_KEYS = {
   debugTab: DEBUG_TAB_KEY,
-  editTab: EDIT_TAB_KEY,
 } as const;

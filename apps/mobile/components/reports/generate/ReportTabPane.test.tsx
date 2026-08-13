@@ -93,8 +93,6 @@ function buildContext(overrides: Record<string, unknown> = {}) {
     tabs: {
       activeTab: 'report' as const,
       setActiveTab: vi.fn(),
-      openEdit: vi.fn(),
-      editManually: vi.fn(),
     },
     timeline: { items: [] },
     generation: {
@@ -115,7 +113,6 @@ function buildContext(overrides: Record<string, unknown> = {}) {
       closeFinalize: vi.fn(),
       isAutoSaving: false,
       isReportWriteBlocked: false,
-      lastSavedAt: null,
     },
     voice: {} as Record<string, unknown>,
     photo: {} as Record<string, unknown>,

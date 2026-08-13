@@ -1,11 +1,10 @@
 /**
- * GenerateReportTabBar — Notes / Report / Edit tab switcher.
+ * GenerateReportTabBar — Notes / Report switcher with optional Debug.
  *
  * Ported from
  * `../haru3-reports/apps/mobile/components/reports/generate/GenerateReportTabBar.tsx`
- * on branch `dev`. v4 drops the canonical `Debug` tab — the report-JSON
- * inspector that shipped in v3 lives behind a feature flag and isn't
- * part of the user-facing surface.
+ * on branch `dev`. The report-JSON inspector remains behind a developer
+ * flag and is not part of the default user-facing surface.
  *
  * Tailwind classes copied verbatim (NativeWind v4, Pitfall 3).
  */

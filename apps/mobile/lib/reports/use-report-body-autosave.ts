@@ -1,5 +1,5 @@
 /**
- * useReportBodyAutosave — debounced PATCH of the Edit-tab's local
+ * useReportBodyAutosave — debounced PATCH of the per-card editor's local
  * `GeneratedSiteReport` back to the server via
  * `useUpdateReportMutation`.
  *
@@ -16,7 +16,7 @@
  * button.
  *
  * Instead, the caller signals `dirty=true` from the same callback
- * `<ReportEditForm>` invokes when the user types. The hook fires a
+ * `ReportEditModal` invokes when the user types. The hook fires a
  * debounced PATCH and, on success, calls `onSaved` so the caller can
  * clear its own dirty flag.
  *
@@ -38,8 +38,7 @@ export interface UseReportBodyAutosaveInput {
   /** Per-project report number from the URL. Autosave disabled when null. */
   number: number | null;
   /**
-   * The current in-memory report. When null we treat the user as not
-   * having opened the Edit tab yet and skip autosave entirely.
+   * The current in-memory report. When null there is nothing to autosave.
    */
   report: GeneratedSiteReport | null;
   /**

@@ -19,6 +19,16 @@ require_file() {
   fi
 }
 
+forbid_file() {
+  local path="$1" description="$2"
+  if [[ ! -e "$REPO_ROOT/$path" ]]; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description (unexpected $path)"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 require_fixed() {
   local path="$1" needle="$2" description="$3"
   if [[ -f "$REPO_ROOT/$path" ]] && grep -Fq -- "$needle" "$REPO_ROOT/$path"; then
@@ -638,12 +648,12 @@ require_before ".maestro/native-input-smoke.yaml" \
 require_fixed "apps/mobile/screens/camera-capture.test.tsx" \
   "keeps the Android shutter disabled until picture-size rebinding is ready" \
   "camera readiness has Android picture-size rebind coverage"
-require_fixed "apps/mobile/components/reports/generate/EditTabPane.tsx" \
-  "collapsable={false}" \
-  "generation opacity keeps a stable Fabric native host"
-require_fixed "apps/mobile/screens/generate-edit-tab.test.tsx" \
-  "keeps the edit form content as a native host across generation updates" \
-  "edit-pane Fabric host stability has transition coverage"
+forbid_file "apps/mobile/components/reports/generate/EditTabPane.tsx" \
+  "removed Generate Edit pane stays deleted"
+forbid_file "apps/mobile/components/reports/ReportEditForm.tsx" \
+  "removed inline Generate Edit form stays deleted"
+forbid_file "apps/mobile/screens/generate-edit-tab.test.tsx" \
+  "removed Generate Edit-only screen tests stay deleted"
 require_fixed ".maestro/native-input-smoke.yaml" \
   "id: 'btn-project-edit|btn-new-project'" \
   "native-input cleanup accepts either valid post-delete navigation target"

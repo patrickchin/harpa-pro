@@ -1,9 +1,6 @@
 /**
- * Shared field primitives for the per-kind edit-modal bodies. Extracted
- * verbatim from `ReportEditForm.tsx` so the visual treatment of inputs
- * stays consistent across the two flows. Once the dev-flagged generate
- * Edit tab is removed, the form file can drop these in favour of these
- * local copies.
+ * Shared field primitives for the per-kind edit-modal bodies. Keeping them
+ * local gives every report section the same input treatment.
  */
 import { type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';

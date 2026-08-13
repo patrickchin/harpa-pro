@@ -20,8 +20,6 @@ appId: ${MAESTRO_APP_ID}
 
 - assertVisible:
     id: 'report-view-.*'
-- assertNotVisible:
-    text: 'Edit'
 
 # --- Summary & meta: dirty cancel, then save -------------------------------
 - scrollUntilVisible:

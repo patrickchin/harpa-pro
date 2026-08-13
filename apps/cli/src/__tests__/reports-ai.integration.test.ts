@@ -1,5 +1,5 @@
 /**
- * CLI.7 — `harpa reports {generate, regenerate, finalize, pdf}` integration tests.
+ * CLI.7 — `harpa reports {generate, regenerate, finalize, unfinalize, pdf}` integration tests.
  *
  * Runs against in-process API with default AI fixture replay + R2 fixture
  * replay. No `AI_LIVE` env, no live calls — pure default-wiring exercise
@@ -19,6 +19,7 @@ import {
   reportsGenerate,
   reportsRegenerate,
   reportsFinalize,
+  reportsUnfinalize,
   reportsPdf,
 } from '../commands/reports-ai.js';
 import { EXIT } from '../lib/error.js';
@@ -116,7 +117,7 @@ beforeEach(() => {
 });
 
 describe('harpa reports AI commands', () => {
-  it('generate → pdf → finalize lifecycle', async () => {
+  it('generate → pdf → finalize → unfinalize lifecycle', async () => {
     const client = makeClient(token);
     const { number } = await createDraft();
 
@@ -145,6 +146,25 @@ describe('harpa reports AI commands', () => {
     // regenerate 409 after finalize.
     exit = await reportsRegenerate({ client, project: projectId, number, stdout, stderr });
     expect(exit).toBe(EXIT.GENERIC); // 409 maps to GENERIC (no specific code)
+
+    // unfinalize returns the report to draft and clears finalizedAt.
+    const unfinalizeOut = new MemoryStream();
+    exit = await reportsUnfinalize({
+      client,
+      project: projectId,
+      number,
+      json: true,
+      stdout: unfinalizeOut,
+      stderr,
+    });
+    expect(exit).toBe(EXIT.OK);
+    const unfinalized = JSON.parse(unfinalizeOut.text);
+    expect(unfinalized.report.status).toBe('draft');
+    expect(unfinalized.report.finalizedAt).toBeNull();
+
+    // second unfinalize 409s when the report is already a draft.
+    exit = await reportsUnfinalize({ client, project: projectId, number, stdout, stderr });
+    expect(exit).toBe(EXIT.GENERIC);
   });
 
   it('regenerate with --fixture replaces body', async () => {

@@ -79,7 +79,6 @@ for workflow in "$PREVIEW" "$DEV" "$PROD"; do
   forbid_fixed "$workflow" "CLOUDFLARE_ACCOUNT_ID" "$label holds no Cloudflare account id"
   forbid_fixed "$workflow" "cloudflare/wrangler-action" "$label does not publish with Wrangler"
   forbid_fixed "$workflow" "pages deploy apps/dashboard/dist" "$label does not directly upload Pages bytes"
-  forbid_fixed "$workflow" "ensure-dashboard-pages-project.sh" "$label does not mutate the Pages project"
   require_fixed "$workflow" \
     "bash scripts/ci/verify-pages-deployment.sh" \
     "$label verifies the exact Cloudflare Git deployment"

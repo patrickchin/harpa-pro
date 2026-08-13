@@ -204,9 +204,6 @@ importers:
       '@harpa/design-tokens':
         specifier: workspace:^
         version: link:../../packages/design-tokens
-      '@harpa/report-core':
-        specifier: workspace:*
-        version: link:../../packages/report-core
       '@headlessui/react':
         specifier: ^2.2.10
         version: 2.2.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -400,9 +397,6 @@ importers:
       expo-updates:
         specifier: ^55.0.24
         version: 55.0.24(expo@55.0.26)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
-      i18n-iso-countries:
-        specifier: ^7.14.0
-        version: 7.14.0
       lucide-react-native:
         specifier: ^1.28.0
         version: 1.28.0(react-native-svg@15.15.3(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -587,10 +581,6 @@ importers:
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.19.18)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(terser@5.47.1)(tsx@4.23.7)(yaml@2.9.0)
 
   packages/ai-fixtures:
-    dependencies:
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.7.5
@@ -622,9 +612,6 @@ importers:
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../api-contract
-      '@harpa/report-core':
-        specifier: workspace:*
-        version: link:../report-core
       '@hono/node-server':
         specifier: 2.1.0
         version: 2.1.0(hono@4.13.0)
@@ -698,9 +685,6 @@ importers:
 
   packages/api-contract:
     dependencies:
-      '@hono/zod-openapi':
-        specifier: ^0.18.3
-        version: 0.18.4(hono@4.13.0)(zod@3.25.76)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -5758,9 +5742,6 @@ packages:
   devtools-protocol@0.0.1608973:
     resolution: {integrity: sha512-Tpm17fxYzt+J7VrGdc1k8YdRqS3YV7se/M6KeemEqvUbq/n7At1rWVuXMxQgpWkdwSdIEKYbU//Bve+Shm4YNQ==}
 
-  diacritics@1.3.0:
-    resolution: {integrity: sha512-wlwEkqcsaxvPJML+rDh/2iS824jbREk6DUMUKkEaSlxdYHeS43cClJtsWglvw2RfeXGm6ohKDqsXteJ5sP5enA==}
-
   didyoumean@1.2.2:
     resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
 
@@ -6918,10 +6899,6 @@ packages:
 
   hyphenate-style-name@1.1.0:
     resolution: {integrity: sha512-WDC/ui2VVRrz3jOVi+XtjqkDjiVjTtFaAGiW37k6b+ohyQ5wYDOGkvCZa8+H0nx3gyvv0+BST9xuOgIyGQ00gw==}
-
-  i18n-iso-countries@7.14.0:
-    resolution: {integrity: sha512-nXHJZYtNrfsi1UQbyRqm3Gou431elgLjKl//CYlnBGt5aTWdRPH1PiS2T/p/n8Q8LnqYqzQJik3Q7mkwvLokeg==}
-    engines: {node: '>= 12'}
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -16370,8 +16347,6 @@ snapshots:
 
   devtools-protocol@0.0.1608973: {}
 
-  diacritics@1.3.0: {}
-
   didyoumean@1.2.2: {}
 
   diff@8.0.4: {}
@@ -17846,10 +17821,6 @@ snapshots:
 
   hyphenate-style-name@1.1.0:
     optional: true
-
-  i18n-iso-countries@7.14.0:
-    dependencies:
-      diacritics: 1.3.0
 
   iconv-lite@0.4.24:
     dependencies:

@@ -18,7 +18,6 @@
   "dependencies": {
     "@harpa/api-contract": "workspace:*",
     "@harpa/design-tokens": "workspace:^",
-    "@harpa/report-core": "workspace:*",
     "@headlessui/react": "^2.2.10",
     "@sentry/react": "^10.53.1",
     "@tanstack/react-query": "^5.100.14",

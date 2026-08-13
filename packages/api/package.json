@@ -35,7 +35,6 @@
     "@better-auth/expo": "1.6.25",
     "@harpa/ai-fixtures": "workspace:*",
     "@harpa/api-contract": "workspace:*",
-    "@harpa/report-core": "workspace:*",
     "@hono/node-server": "2.1.0",
     "@hono/zod-openapi": "^0.18.3",
     "@sentry/hono": "^10.69.0",

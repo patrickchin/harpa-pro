@@ -6,15 +6,16 @@
  */
 import { View, Text } from 'react-native';
 import { Users } from 'lucide-react-native';
-import type { GeneratedReportWorkers } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
+import { getWorkerDisplaySummaryFromWorkers } from '@/lib/reports/report-body';
 
 interface WorkersCardProps {
-  workers: GeneratedReportWorkers | null;
+  workers: reports.ReportBody['workers'];
   onEdit?: () => void;
   editActionsDisabled?: boolean;
 }
@@ -26,18 +27,18 @@ function countNumber(count: string | null): number {
 }
 
 export function WorkersCard({ workers, onEdit, editActionsDisabled = false }: WorkersCardProps) {
-  if (!workers) return null;
+  if (workers.length === 0) return null;
 
-  const hasRoles = workers.roles.length > 0;
-  const maxCount = Math.max(...workers.roles.map((r) => countNumber(r.count)), 1);
+  const summary = getWorkerDisplaySummaryFromWorkers(workers);
+  const maxCount = Math.max(...workers.map((worker) => countNumber(worker.count)), 1);
 
   return (
     <Card variant="default" padding="lg">
       <SectionHeader
         title="Workers"
         subtitle={
-          workers.totalWorkers !== null
-            ? `${workers.totalWorkers} on site.`
+          summary.totalWorkers !== null
+            ? `${summary.totalWorkers} on site.`
             : 'Crew breakdown recorded.'
         }
         icon={<Users size={16} color={colors.foreground} />}
@@ -56,35 +57,39 @@ export function WorkersCard({ workers, onEdit, editActionsDisabled = false }: Wo
         }
       />
 
-      {hasRoles && (
-        <View className="mt-4 gap-3">
-          {workers.roles.map((role, index) => {
-            const count = countNumber(role.count);
-            const countLabel = role.count ?? '—';
-            const pct = Math.round((count / maxCount) * 100);
-            return (
-              <View
-                key={`${role.role}-${index}`}
-                className="gap-1.5 rounded-md bg-surface-muted px-3 py-3"
-              >
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-base text-foreground">{role.role}</Text>
-                  <Text className="text-base font-medium text-muted-foreground">{countLabel}</Text>
-                </View>
-                <View className="h-2 overflow-hidden rounded-full bg-secondary">
-                  <View className="h-2 rounded-full bg-foreground" style={{ width: `${pct}%` }} />
-                </View>
+      <View className="mt-4 gap-3">
+        {workers.map((worker, index) => {
+          const count = countNumber(worker.count);
+          const countLabel = worker.count ?? '—';
+          const pct = Math.max(Math.round((count / maxCount) * 100), countLabel === '—' ? 0 : 12);
+          return (
+            <View
+              key={`${worker.role}-${index}`}
+              className="gap-1.5 rounded-md bg-surface-muted px-3 py-3"
+            >
+              <View className="flex-row items-center justify-between">
+                <Text className="text-base text-foreground">{worker.role}</Text>
+                <Text className="text-base font-medium text-muted-foreground">{countLabel}</Text>
               </View>
-            );
-          })}
-        </View>
-      )}
+              <View className="h-2 overflow-hidden rounded-full bg-secondary">
+                <View className="h-2 rounded-full bg-foreground" style={{ width: `${pct}%` }} />
+              </View>
+              {worker.hours ? (
+                <Text className="text-sm text-muted-foreground">Hours: {worker.hours}</Text>
+              ) : null}
+              {worker.notes ? (
+                <Text className="text-sm text-muted-foreground">{worker.notes}</Text>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
 
-      {workers.workerHours ? (
-        <Text className="mt-4 text-base text-muted-foreground">Hours: {workers.workerHours}</Text>
+      {summary.workerHours ? (
+        <Text className="mt-4 text-base text-muted-foreground">Hours: {summary.workerHours}</Text>
       ) : null}
-      {workers.notes ? (
-        <Text className="mt-2 text-base text-muted-foreground">{workers.notes}</Text>
+      {summary.notes ? (
+        <Text className="mt-2 text-base text-muted-foreground">{summary.notes}</Text>
       ) : null}
     </Card>
   );

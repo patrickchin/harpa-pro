@@ -3,9 +3,7 @@
  * condition, status, notes), with add / remove rows.
  */
 import { Text, TextInput, View } from 'react-native';
-import type { GeneratedReportMaterial } from '@harpa/report-core';
-
-import { blankMaterial } from '@/lib/reports/report-edit-helpers';
+import { reports } from '@harpa/api-contract';
 
 import {
   AddRowButton,
@@ -18,8 +16,19 @@ import {
 } from './fields';
 
 interface Props {
-  value: GeneratedReportMaterial[];
-  onChange: (next: GeneratedReportMaterial[]) => void;
+  value: reports.ReportBody['materials'];
+  onChange: (next: reports.ReportBody['materials']) => void;
+}
+
+function blankMaterial(): reports.ReportBody['materials'][number] {
+  return {
+    name: '',
+    quantity: null,
+    unit: null,
+    condition: null,
+    status: null,
+    notes: null,
+  };
 }
 
 export function EditMaterialsBody({ value, onChange }: Props) {
@@ -59,10 +68,10 @@ export function EditMaterialsBody({ value, onChange }: Props) {
             <Field label="Unit">
               <TextInput
                 className={INPUT_CLASS}
-                value={nullableString(mat.quantityUnit)}
+                value={nullableString(mat.unit)}
                 onChangeText={(v) => {
                   const next = value.slice();
-                  next[idx] = { ...next[idx]!, quantityUnit: nullify(v) };
+                  next[idx] = { ...next[idx]!, unit: nullify(v) };
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} unit`}

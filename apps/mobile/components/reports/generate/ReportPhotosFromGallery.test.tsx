@@ -6,9 +6,7 @@ import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
 import { ReportPhotosFromGallery } from './ReportPhotosFromGallery';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 
 vi.mock('expo-image', () => ({
   Image: (_props: Record<string, unknown>) => null,
@@ -84,13 +82,6 @@ const PHOTOS = [
   },
 ];
 
-const REPORT = {
-  report: {
-    issues: [{ title: 'Cracked support beam', description: '' }],
-    sections: [],
-  },
-} as unknown as GeneratedSiteReport;
-
 describe('ReportPhotosFromGallery', () => {
   beforeEach(() => stubFetch());
   afterEach(() => vi.unstubAllGlobals());
@@ -136,7 +127,6 @@ describe('ReportPhotosFromGallery', () => {
         photos={PHOTOS}
         onOpen={vi.fn()}
         onOpenPlacementSheet={onOpenSheet}
-        report={REPORT}
       />,
     );
     const chip = tree.root.findAllByProps({
@@ -157,7 +147,6 @@ describe('ReportPhotosFromGallery', () => {
         onOpen={vi.fn()}
         onOpenPlacementSheet={onOpenSheet}
         placementActionsDisabled
-        report={REPORT}
       />,
     );
     const chip = tree.root.findByProps({

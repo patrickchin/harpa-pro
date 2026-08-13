@@ -5,7 +5,7 @@
  * Listing strategy:
  *  - Top group: "Issues" — one row per `report.issues[i]` with the
  *    issue title + severity hint.
- *  - Bottom group: "Sections" — one row per `report.sections[i]` with
+ *  - Bottom group: "Sections" — one row per `report.summarySections[i]` with
  *    the section title.
  *  - "Remove placement" footer row appears only when the group has a
  *    current placement, and writes `target: null`.
@@ -19,10 +19,7 @@
  */
 import { ScrollView, Text, View, Pressable } from 'react-native';
 import { AlertTriangle, ClipboardList, MapPinOff } from 'lucide-react-native';
-import type {
-  GeneratedReportIssue,
-  GeneratedReportSection,
-} from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { colors } from '@/lib/design-tokens/colors';
@@ -37,8 +34,8 @@ export interface PhotoGroupPlacementSheetProps {
   /** Photos in the group (used only for the title's "(N photos)" hint). */
   photoCount: number;
   /** Read from the live report so the list always matches what's on screen. */
-  issues: readonly GeneratedReportIssue[];
-  sections: readonly GeneratedReportSection[];
+  issues: reports.ReportBody['issues'];
+  sections: reports.ReportBody['summarySections'];
   /** Currently-stored placement on the parent note. Null = unplaced. */
   current: PhotoPlacement | null;
   /**
@@ -104,7 +101,7 @@ export function PhotoGroupPlacementSheet({
                       />
                     }
                     title={issue.title}
-                    subtitle={issue.severity}
+                    subtitle={issue.severity ?? undefined}
                     selected={
                       current?.kind === 'issue' && current.index === i
                     }

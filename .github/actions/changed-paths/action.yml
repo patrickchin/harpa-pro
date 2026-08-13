@@ -85,7 +85,6 @@ runs:
             - 'scripts/ci/__tests__/prepare-android-emulator.test.sh'
             - 'apps/mobile/**'
             - 'packages/api-contract/**'
-            - 'packages/report-core/**'
             - 'pnpm-lock.yaml'
           site:
             - 'apps/site/**'
@@ -105,7 +104,6 @@ runs:
             - 'apps/dashboard/**'
             - 'packages/api-contract/**'
             - 'packages/design-tokens/**'
-            - 'packages/report-core/**'
             - '.github/actions/changed-paths/**'
             - '.github/actions/setup-monorepo/**'
             - '.github/workflows/dashboard-*.yml'

@@ -13,7 +13,6 @@ on:
     paths:
       - "apps/mobile/**"
       - "packages/api-contract/**"
-      - "packages/report-core/**"
       - ".github/workflows/mobile-ota-prod.yml"
       - "pnpm-lock.yaml"
   workflow_call:
@@ -101,7 +100,7 @@ jobs:
           API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|scripts/journeys/|pnpm-lock\.yaml$|\.github/workflows/api-prod\.yml$)'
           API_WORKFLOW_NAME: api-prod
           EVENT_NAME: ${{ inputs.api_deploy_succeeded == true && 'workflow_call' || github.event_name }}
-          MOBILE_PATH_PATTERN: '^(apps/mobile/|packages/api-contract/|packages/report-core/|pnpm-lock\.yaml$|\.github/workflows/mobile-ota-prod\.yml$)'
+          MOBILE_PATH_PATTERN: '^(apps/mobile/|packages/api-contract/|pnpm-lock\.yaml$|\.github/workflows/mobile-ota-prod\.yml$)'
           PUSH_BEFORE: ${{ github.event.before }}
           REQUESTED_SHA: ${{ inputs.release_sha }}
           RUNTIME_TAG_PREFIX: mobile-production-runtime-v

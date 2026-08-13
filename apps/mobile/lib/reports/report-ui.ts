@@ -7,7 +7,9 @@
  * - `getReportStats` produces the StatBar tiles (workers / materials /
  *   issues) shown at the top of the report view.
  */
-import type { GeneratedReportWorkers, GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
+
+import { getWorkerDisplaySummaryFromWorkers } from './report-body';
 
 export type IssueSeverityTone = 'danger' | 'warning' | 'neutral';
 
@@ -29,20 +31,38 @@ export interface ReportStat {
   tone: 'default' | 'warning';
 }
 
-function workerStatValue(workers: GeneratedReportWorkers | null): string | number {
-  if (!workers) return 0;
-  if (workers.totalWorkers !== null) return workers.totalWorkers;
-  return (
-    workers.roles
-      .map((role) => role.count?.trim())
-      .find((count): count is string => Boolean(count)) ?? 0
-  );
+export function toTitleCase(value: string): string {
+  return value
+    .replace(/[_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-export function getReportStats(report: GeneratedSiteReport): ReportStat[] {
-  const workers = workerStatValue(report.report.workers);
-  const materials = report.report.materials.length;
-  const issues = report.report.issues.length;
+export function getItemMeta(values: Array<string | null | undefined>): string {
+  return values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(' • ');
+}
+
+export function getIssueMeta(
+  issue: reports.ReportBody['issues'][number],
+): string {
+  return getItemMeta([
+    issue.severity ? `${toTitleCase(issue.severity)} severity` : null,
+  ]);
+}
+
+function workerStatValue(workers: reports.ReportBody['workers']): string | number {
+  const summary = getWorkerDisplaySummaryFromWorkers(workers);
+  return summary.totalWorkers ?? summary.totalWorkersLabel ?? 0;
+}
+
+export function getReportStats(report: reports.ReportBody): ReportStat[] {
+  const workers = workerStatValue(report.workers);
+  const materials = report.materials.length;
+  const issues = report.issues.length;
 
   return [
     {

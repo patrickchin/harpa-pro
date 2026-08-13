@@ -3,7 +3,7 @@
  *
  * Ported from `../haru3-reports/apps/mobile/lib/export-report-pdf.ts`
  * on branch `dev` (commit dbaa4c1) and adapted for v4 import paths
- * (`@harpa/report-core`, `lib/reports/report-to-html`). Pipeline:
+ * (persisted report bodies, `lib/reports/report-to-html`). Pipeline:
  *
  *   1. `reportToHtml(report)` → HTML string
  *   2. `expo-print` `printToFileAsync` → temp PDF in OS scratch
@@ -21,8 +21,9 @@ import * as Sharing from 'expo-sharing';
 import { Directory, File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
+import { displayReportTitle } from './report-body';
 import { reportToHtml, type PdfBranding } from './report-to-html';
 
 const reportsDir = new Directory(Paths.cache, 'Harpa Pro', 'reports');
@@ -100,8 +101,8 @@ function getSavedReportFullPath(pdfUri: string): string {
   }
 }
 
-function getReportDatePrefix(report: GeneratedSiteReport): string {
-  const visitDate = report.report.meta.visitDate?.trim();
+function getReportDatePrefix(report: reports.ReportBody): string {
+  const visitDate = report.meta.visitDate?.trim();
 
   if (visitDate && /^\d{4}-\d{2}-\d{2}$/.test(visitDate)) {
     return visitDate;
@@ -185,7 +186,7 @@ export async function shareSavedReportPdf({
 }
 
 async function generateReportPdfArtifacts(
-  report: GeneratedSiteReport,
+  report: reports.ReportBody,
   branding?: PdfBranding,
 ): Promise<GeneratedPdfArtifacts> {
   const html = reportToHtml(report, branding);
@@ -194,7 +195,7 @@ async function generateReportPdfArtifacts(
     base64: false,
   });
 
-  const basename = sanitizeFilename(report.report.meta.title) || 'report';
+  const basename = sanitizeFilename(displayReportTitle(report)) || 'report';
   const datePrefix = getReportDatePrefix(report);
   const filenameBase = `${datePrefix}-${basename}`;
 
@@ -207,10 +208,10 @@ async function generateReportPdfArtifacts(
 }
 
 function getReportSaveTargets(
-  report: GeneratedSiteReport,
+  report: reports.ReportBody,
   options: ExportReportOptions,
 ): ReportSaveTargets {
-  const basename = sanitizeFilename(report.report.meta.title) || 'report';
+  const basename = sanitizeFilename(displayReportTitle(report)) || 'report';
   const datePrefix = getReportDatePrefix(report);
   const filenameBase = `${datePrefix}-${basename}`;
   const pdfFilename = `${filenameBase}.pdf`;
@@ -232,7 +233,7 @@ function getReportSaveTargets(
  * for sharing with other apps. Returns the URIs for both the PDF and HTML files.
  */
 export async function saveReportPdf(
-  report: GeneratedSiteReport,
+  report: reports.ReportBody,
   options: ExportReportOptions,
   branding?: PdfBranding,
 ): Promise<ExportedReport> {
@@ -279,7 +280,7 @@ export async function saveReportPdf(
  * Save a report PDF locally and then open the native share sheet.
  */
 export async function exportReportPdf(
-  report: GeneratedSiteReport,
+  report: reports.ReportBody,
   options: ExportReportOptions,
   branding?: PdfBranding,
 ): Promise<ExportedReport> {
@@ -288,7 +289,7 @@ export async function exportReportPdf(
   try {
     await shareSavedReportPdf({
       pdfUri: result.pdfUri,
-      reportTitle: report.report.meta.title,
+      reportTitle: displayReportTitle(report),
     });
   } catch (error) {
     return {

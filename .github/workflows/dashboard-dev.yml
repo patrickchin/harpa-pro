@@ -10,7 +10,6 @@ on:
       - 'apps/dashboard/**'
       - 'packages/api-contract/**'
       - 'packages/design-tokens/**'
-      - 'packages/report-core/**'
       - '.github/workflows/dashboard-dev.yml'
       - 'scripts/ci/build-cloudflare-pages.sh'
       - 'scripts/ci/verify-api-release.sh'

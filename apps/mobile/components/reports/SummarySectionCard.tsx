@@ -6,7 +6,7 @@
  */
 import { Text, View } from 'react-native';
 import { ClipboardList } from 'lucide-react-native';
-import type { GeneratedReportSection } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
@@ -18,7 +18,7 @@ import { colors } from '@/lib/design-tokens/colors';
 import type { PhotoGroup } from '@/lib/reports/photo-placements';
 
 interface SummarySectionCardProps {
-  section: GeneratedReportSection;
+  section: reports.ReportBody['summarySections'][number];
   reportNumber?: number;
   sectionIndex?: number;
   onEdit?: () => void;
@@ -92,7 +92,7 @@ export function SummarySectionCard({
         className="mt-4 text-base leading-relaxed text-muted-foreground"
         testID={`report-summary-${numStr}-section-${idx}`}
       >
-        {section.content}
+        {section.body}
       </Text>
       {placedGroups && placedGroups.length > 0 ? (
         <PlacedPhotoStrip

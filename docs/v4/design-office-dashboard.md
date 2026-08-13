@@ -7,7 +7,7 @@ production builds remain disabled. Promotion to `main` and activation of
 Primary surface: `app.harpapro.com`
 
 Touches: `apps/dashboard`, `packages/api`, `packages/api-contract`,
-`packages/report-core`, Cloudflare Pages, and browser authentication.
+Cloudflare Pages, and browser authentication.
 
 Companions:
 [`arch-auth-and-rls.md`](arch-auth-and-rls.md),
@@ -428,10 +428,10 @@ Keep:
 - `@harpa/api-contract` as the HTTP source of truth;
 - the canonical `ReportBody` as the saved report model.
 
-Reuse pure formatting/domain helpers from `@harpa/report-core` where they are
-lossless. Do not try to share React Native components with the browser and do
-not create a shared UI package before a second browser product proves it is
-useful.
+Keep report formatting helpers lossless and contract-shaped. Prefer small local
+selectors or formatters over a shared package until a second non-mobile client
+proves a stable extraction point. Do not try to share React Native components
+with the browser and do not create a shared UI package before it is useful.
 
 Dashboard environment variables load through a Zod-parsed
 `apps/dashboard/src/lib/env.ts` at boot.

@@ -9,8 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import React from 'react';
-
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 const mutateSpy = vi.hoisted(() => vi.fn());
 const mutationState = vi.hoisted(() => ({ isPending: false }));
@@ -31,21 +30,19 @@ import {
   type UseReportBodyAutosaveResult,
 } from './use-report-body-autosave';
 
-function makeReport(siteTitle: string): GeneratedSiteReport {
+function makeReport(siteTitle: string): reports.ReportBody {
   return {
-    report: {
-      meta: {
-        title: siteTitle,
-        summary: 'A summary.',
-        visitDate: '2025-01-01',
-      },
-      weather: null,
-      workers: null,
-      materials: [],
-      issues: [],
-      nextSteps: [],
-      sections: [],
+    meta: {
+      title: siteTitle,
+      summary: 'A summary.',
+      visitDate: '2025-01-01T00:00:00.000Z',
     },
+    weather: null,
+    workers: [],
+    materials: [],
+    issues: [],
+    nextSteps: [],
+    summarySections: [],
   };
 }
 
@@ -137,7 +134,7 @@ describe('useReportBodyAutosave', () => {
     expect(mutateSpy).toHaveBeenCalledTimes(1);
     const call = mutateSpy.mock.calls[0]![0]!;
     expect(call.params).toEqual({ project: 'proj', number: 1 });
-    expect(call.body.body.meta.visitDate).toBe('2025-01-01');
+    expect(call.body.body.meta.visitDate).toBe('2025-01-01T00:00:00.000Z');
     expect(call.body.expectedUpdatedAt).toBe(EXPECTED_UPDATED_AT);
   });
 

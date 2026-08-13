@@ -4,16 +4,7 @@
  * so each card only needs an `onEdit` callback that flips the modal on.
  */
 import { useMemo } from 'react';
-import type {
-  GeneratedReportIssue,
-  GeneratedReportMaterial,
-  GeneratedReportSection,
-  GeneratedReportWeather,
-  GeneratedReportWorkers,
-  GeneratedSiteReport,
-} from '@harpa/report-core';
-
-import type { GeneratedReportMeta } from '@/lib/reports/report-edit-helpers';
+import { reports } from '@harpa/api-contract';
 
 import { applyDelete, applyEdit, seedDraft } from './apply';
 import { EditSectionSheet } from './EditSectionSheet';
@@ -29,9 +20,9 @@ import type { ReportEditTarget } from './types';
 export interface ReportEditModalProps {
   /** Target being edited. `null` keeps the modal closed. */
   target: ReportEditTarget | null;
-  report: GeneratedSiteReport;
+  report: reports.ReportBody;
   onClose: () => void;
-  onChange: (next: GeneratedSiteReport) => void;
+  onChange: (next: reports.ReportBody) => void;
 }
 
 const TITLES: Record<ReportEditTarget['kind'], string> = {
@@ -97,28 +88,28 @@ export function ReportEditModal({
       case 'meta':
         return (
           <EditMetaBody
-            value={draft as GeneratedReportMeta}
+            value={draft as reports.ReportBody['meta']}
             onChange={setDraft}
           />
         );
       case 'weather':
         return (
           <EditWeatherBody
-            value={draft as GeneratedReportWeather}
+            value={draft as NonNullable<reports.ReportBody['weather']>}
             onChange={setDraft}
           />
         );
       case 'workers':
         return (
           <EditWorkersBody
-            value={draft as GeneratedReportWorkers}
+            value={draft as reports.ReportBody['workers']}
             onChange={setDraft}
           />
         );
       case 'materials':
         return (
           <EditMaterialsBody
-            value={draft as GeneratedReportMaterial[]}
+            value={draft as reports.ReportBody['materials']}
             onChange={setDraft}
           />
         );
@@ -129,14 +120,14 @@ export function ReportEditModal({
       case 'issue':
         return (
           <EditIssueBody
-            value={draft as GeneratedReportIssue}
+            value={draft as reports.ReportBody['issues'][number]}
             onChange={setDraft}
           />
         );
       case 'section':
         return (
           <EditSectionBody
-            value={draft as GeneratedReportSection}
+            value={draft as reports.ReportBody['summarySections'][number]}
             onChange={setDraft}
           />
         );

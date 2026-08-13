@@ -7,7 +7,7 @@
  * branch `dev`.
  */
 import { View, Text } from 'react-native';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { StatBar } from './StatBar';
 import { WeatherStrip } from './WeatherStrip';
@@ -24,7 +24,7 @@ import type {
 } from '@/lib/reports/photo-placements';
 
 interface ReportViewProps {
-  report: GeneratedSiteReport;
+  report: reports.ReportBody;
   /** Per-project report number — used to build testIDs for Maestro selectors. */
   reportNumber?: number;
   /**
@@ -60,7 +60,7 @@ export function ReportView({
   placementActionsDisabled = false,
   onAddAttachmentToTarget,
 }: ReportViewProps) {
-  const { sections } = report.report;
+  const { summarySections } = report;
   const numStr = reportNumber ?? 'x';
 
   return (
@@ -74,13 +74,13 @@ export function ReportView({
       />
 
       <SummaryLead
-        summary={report.report.meta.summary}
+        summary={report.meta.summary}
         onEdit={onEdit ? () => onEdit({ kind: 'meta' }) : undefined}
         editActionsDisabled={editActionsDisabled}
       />
 
       <IssuesCard
-        issues={report.report.issues}
+        issues={report.issues}
         onEditIssue={
           onEdit ? (index) => onEdit({ kind: 'issue', index }) : undefined
         }
@@ -97,29 +97,29 @@ export function ReportView({
       />
 
       <WorkersCard
-        workers={report.report.workers}
+        workers={report.workers}
         onEdit={onEdit ? () => onEdit({ kind: 'workers' }) : undefined}
         editActionsDisabled={editActionsDisabled}
       />
 
       <MaterialsCard
-        materials={report.report.materials}
+        materials={report.materials}
         onEdit={onEdit ? () => onEdit({ kind: 'materials' }) : undefined}
         editActionsDisabled={editActionsDisabled}
       />
 
       <NextStepsCard
-        steps={report.report.nextSteps}
+        steps={report.nextSteps}
         onEdit={onEdit ? () => onEdit({ kind: 'nextSteps' }) : undefined}
         editActionsDisabled={editActionsDisabled}
       />
 
-      {sections.length > 0 && (
+      {summarySections.length > 0 && (
         <View className="gap-3">
           <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
             Detailed Sections
           </Text>
-          {sections.map((section, i) => (
+          {summarySections.map((section, i) => (
             <SummarySectionCard
               key={`${section.title}-${i}`}
               section={section}

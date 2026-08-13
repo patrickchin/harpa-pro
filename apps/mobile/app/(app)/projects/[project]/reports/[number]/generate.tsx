@@ -44,10 +44,8 @@ import { reportMutationInput } from '@/lib/reports/report-mutation-input';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { env } from '@/lib/config/env';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
 import { reportGenerationStateTestId } from '@/lib/reports/generation-sync';
 import {
   countNonCancelledUploadFailures,
@@ -327,7 +325,7 @@ export default function GenerateReportRoute() {
     [runCreateTextNote],
   );
 
-  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
+  const [localReport, setLocalReport] = useState<reports.ReportBody | null>(null);
   // `userDirty` flips true only when the user edits a field through the
   // per-card report modal — see `handleEditReport` below. Programmatic
   // setLocalReport calls (e.g. seeding from a regenerate response or
@@ -386,17 +384,15 @@ export default function GenerateReportRoute() {
     [localReport, placePhotoGroupMutation, reportId, reportNumber, slug, reportRow?.generatedAt],
   );
 
-  const serverBody: GeneratedSiteReport | null = reportRow?.body
-    ? reportBodyToGeneratedReport(reportRow.body)
-    : null;
+  const serverBody = reportRow?.body ?? null;
 
-  const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
+  const fallbackReport: reports.ReportBody | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT
     : null;
 
   const currentReport = localReport ?? serverBody ?? fallbackReport;
 
-  const handleEditReport = useCallback((next: GeneratedSiteReport) => {
+  const handleEditReport = useCallback((next: reports.ReportBody) => {
     setLocalReport(next);
     setUserDirty(true);
   }, []);
@@ -524,7 +520,7 @@ export default function GenerateReportRoute() {
               | undefined;
             const nextBody = payload?.report?.body ?? null;
             if (nextBody) {
-              setLocalReport(reportBodyToGeneratedReport(nextBody));
+              setLocalReport(nextBody);
             }
             if (payload?.report?.updatedAt) {
               expectedUpdatedAtRef.current = payload.report.updatedAt;

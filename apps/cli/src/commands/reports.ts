@@ -15,7 +15,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderReport, renderReportList } from '../lib/render.js';
 import {
   reportsGenerateCommand,
@@ -72,25 +72,23 @@ export const reportsListCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const query: Record<string, string | number> = {};
-    if (args.cursor) query.cursor = String(args.cursor);
+    let limit: number | undefined;
     if (args.limit) {
       const n = Number(args.limit);
       if (!Number.isFinite(n) || n < 1) {
         process.stderr.write(chalk.red(`Error: --limit must be a positive integer (got ${args.limit})\n`));
         process.exit(2);
       }
-      query.limit = n;
+      limit = n;
     }
-    await runRequest({
+    process.exit(await reportsList({
+      client,
+      projectId: String(args.projectId),
+      cursor: args.cursor ? String(args.cursor) : undefined,
+      limit,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.GET('/projects/{project}/reports', {
-          params: { path: { project: String(args.projectId) }, query },
-        }),
-      format: (data) => renderReportList(data),
-    });
+    }));
   },
 });
 
@@ -130,19 +128,14 @@ export const reportsCreateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { visitDate?: string } = {};
     const visitDate = args['visit-date'];
-    if (typeof visitDate === 'string' && visitDate.length > 0) body.visitDate = visitDate;
-    await runRequest({
+    process.exit(await reportsCreate({
+      client,
+      projectId: String(args.projectId),
+      visitDate: typeof visitDate === 'string' && visitDate.length > 0 ? visitDate : undefined,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/reports', {
-          params: { path: { project: String(args.projectId) } },
-          body,
-        }),
-      format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.id)} (${data.status})`,
-    });
+    }));
   },
 });
 
@@ -179,15 +172,13 @@ export const reportsGetCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    process.exit(await reportsGet({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.GET('/projects/{project}/reports/{number}', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-        }),
-      format: (data) => renderReport(data),
-    });
+    }));
   },
 });
 
@@ -229,19 +220,15 @@ export const reportsUpdateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { visitDate?: string } = {};
     const visitDate = args['visit-date'];
-    if (typeof visitDate === 'string' && visitDate.length > 0) body.visitDate = visitDate;
-    await runRequest({
+    process.exit(await reportsUpdate({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
+      visitDate: typeof visitDate === 'string' && visitDate.length > 0 ? visitDate : undefined,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.PATCH('/projects/{project}/reports/{number}', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-          body,
-        }),
-      format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.id)}`,
-    });
+    }));
   },
 });
 
@@ -279,16 +266,13 @@ export const reportsDeleteCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    process.exit(await reportsDelete({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.DELETE('/projects/{project}/reports/{number}', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-        }),
-      format: () => `${chalk.green('✓')} Deleted report ${args.project}#${args.number}`,
-      formatJson: () => JSON.stringify({ ok: true }, null, 2),
-    });
+    }));
   },
 });
 

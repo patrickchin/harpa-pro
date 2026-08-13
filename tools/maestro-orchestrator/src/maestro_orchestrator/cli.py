@@ -1,9 +1,4 @@
-"""Typer CLI surface for `mo`.
-
-Phase 4.0 scaffold: every subcommand is a stub that prints
-"not implemented" and exits non-zero. Real behaviour lands in
-later phases per docs/v4/design-maestro-orchestrator.md.
-"""
+"""Typer CLI surface for `mo`."""
 
 from __future__ import annotations
 
@@ -30,16 +25,6 @@ app = typer.Typer(
     ),
     add_completion=False,
 )
-
-
-_NOT_IMPLEMENTED_EXIT = 99
-
-
-def _stub(name: str) -> None:
-    """Print a uniform 'not implemented' message and exit non-zero."""
-    typer.echo(f"mo {name}: not implemented", err=True)
-    raise typer.Exit(code=_NOT_IMPLEMENTED_EXIT)
-
 
 @app.callback(invoke_without_command=True)
 def _root(

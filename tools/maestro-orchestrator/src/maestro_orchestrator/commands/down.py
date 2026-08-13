@@ -18,10 +18,10 @@ from typing import Any
 
 import psutil
 from rich.console import Console
-from rich.table import Table
 
 from .. import paths, pidfile
 from ..config import MoConfig
+from ..report_renderer import emit_step_report
 
 EXIT_OK = 0
 EXIT_DOCKER_FAILED = 1
@@ -172,20 +172,6 @@ def run_down(
 
 
 # --- output -------------------------------------------------------------
-_GLYPHS_RICH = {
-    "ok": "[green]OK[/green]",
-    "fail": "[red]FAIL[/red]",
-    "warn": "[yellow]WARN[/yellow]",
-    "skip": "[dim]SKIP[/dim]",
-}
-_GLYPHS_PLAIN = {
-    "ok": "[OK]",
-    "fail": "[FAIL]",
-    "warn": "[WARN]",
-    "skip": "[SKIP]",
-}
-
-
 def _emit(opts: DownOptions, console: Console, report: DownReport) -> int:
     if opts.json_output:
         print(
@@ -196,26 +182,12 @@ def _emit(opts: DownOptions, console: Console, report: DownReport) -> int:
             )
         )
         return report.exit_code
-    use_color = console.is_terminal and not console.no_color
-    table = Table(title="mo down")
-    table.add_column("status", no_wrap=True)
-    table.add_column("step", no_wrap=True)
-    table.add_column("detail", overflow="fold")
-    for step in report.steps:
-        tag = (
-            _GLYPHS_RICH.get(step["status"], step["status"])
-            if use_color
-            else _GLYPHS_PLAIN.get(step["status"], step["status"])
-        )
-        table.add_row(tag, step["name"], step["detail"])
-    console.print(table)
-    if report.exit_code == 0:
-        msg = "down: all steps completed"
-        console.print(f"[green]{msg}[/green]" if use_color else msg)
-    else:
-        console.print(
-            f"[red]down: exit {report.exit_code}[/red]"
-            if use_color
-            else f"down: exit {report.exit_code}"
-        )
+    emit_step_report(
+        console=console,
+        title="mo down",
+        steps=report.steps,
+        success_message="down: all steps completed",
+        failure_message=lambda code, _steps: f"down: exit {code}",
+        exit_code=report.exit_code,
+    )
     return report.exit_code

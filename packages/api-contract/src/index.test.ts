@@ -1,6 +1,11 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { operations } from './index.js';
 import * as schemas from './schemas/index.js';
+
+interface PackageManifest {
+  exports?: Record<string, string>;
+}
 
 describe('api-contract', () => {
   it('exports all resource schema namespaces', () => {
@@ -29,5 +34,16 @@ describe('api-contract', () => {
 
   it('errorEnvelope shape', () => {
     schemas.errorEnvelope.parse({ error: { code: 'X', message: 'y' } });
+  });
+
+  it('only exports files that exist', () => {
+    const packageRoot = new URL('../', import.meta.url);
+    const manifest = JSON.parse(
+      readFileSync(new URL('package.json', packageRoot), 'utf8'),
+    ) as PackageManifest;
+
+    for (const target of Object.values(manifest.exports ?? {})) {
+      expect(existsSync(new URL(target, packageRoot)), target).toBe(true);
+    }
   });
 });

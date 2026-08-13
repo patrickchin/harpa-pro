@@ -14,7 +14,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import type { ExitCode } from '../lib/error.js';
 
 export interface VoiceHandlerOptions {
@@ -69,19 +69,16 @@ export const voiceTranscribeCommand = defineCommand({
     const fileId = String(args['file-id']);
     const fixtureName = args.fixture ? String(args.fixture) : undefined;
     const idempotencyKey = args['idempotency-key'] ? String(args['idempotency-key']) : undefined;
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.POST('/voice/transcribe', {
-          body: {
-            fileId,
-            ...(fixtureName ? { fixtureName } : {}),
-          },
-          ...(idempotencyKey ? { headers: { 'idempotency-key': idempotencyKey } } : {}),
-        }),
-      format: (data) => `${chalk.bold('Transcript:')} ${data.transcript}`,
-    });
+    process.exit(
+      await voiceTranscribe({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        fileId,
+        fixtureName,
+        idempotencyKey,
+      }),
+    );
   },
 });
 
@@ -129,19 +126,16 @@ export const voiceSummarizeCommand = defineCommand({
     const transcript = String(args.transcript);
     const fixtureName = args.fixture ? String(args.fixture) : undefined;
     const idempotencyKey = args['idempotency-key'] ? String(args['idempotency-key']) : undefined;
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.POST('/voice/summarize', {
-          body: {
-            transcript,
-            ...(fixtureName ? { fixtureName } : {}),
-          },
-          ...(idempotencyKey ? { headers: { 'idempotency-key': idempotencyKey } } : {}),
-        }),
-      format: (data) => `${chalk.bold('Summary:')} ${data.summary}`,
-    });
+    process.exit(
+      await voiceSummarize({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        transcript,
+        fixtureName,
+        idempotencyKey,
+      }),
+    );
   },
 });
 

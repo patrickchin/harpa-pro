@@ -16,7 +16,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderProject, renderProjectList } from '../lib/render.js';
 import { membersCommand } from './members.js';
 import type { ExitCode } from '../lib/error.js';
@@ -66,22 +66,19 @@ export const projectsListCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const query: Record<string, string | number> = {};
-    if (args.cursor) query.cursor = String(args.cursor);
+    const cursor = args.cursor ? String(args.cursor) : undefined;
+    let limit: number | undefined;
     if (args.limit) {
       const n = Number(args.limit);
       if (!Number.isFinite(n) || n < 1) {
         process.stderr.write(chalk.red(`Error: --limit must be a positive integer (got ${args.limit})\n`));
         process.exit(2);
       }
-      query.limit = n;
+      limit = n;
     }
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.GET('/projects', { params: { query } }),
-      format: (data) => renderProjectList(data),
-    });
+    process.exit(
+      await projectsList({ client, json: args.json, verbose: args.verbose, cursor, limit }),
+    );
   },
 });
 
@@ -121,17 +118,18 @@ export const projectsCreateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { name: string; clientName?: string; address?: string } = { name: String(args.name) };
     const clientName = args['client-name'];
     const address = args.address;
-    if (typeof clientName === 'string' && clientName.length > 0) body.clientName = clientName;
-    if (typeof address === 'string' && address.length > 0) body.address = address;
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.POST('/projects', { body }),
-      format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.id})`,
-    });
+    process.exit(
+      await projectsCreate({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        name: String(args.name),
+        ...(typeof clientName === 'string' && clientName.length > 0 ? { clientName } : {}),
+        ...(typeof address === 'string' && address.length > 0 ? { address } : {}),
+      }),
+    );
   },
 });
 
@@ -164,13 +162,14 @@ export const projectsGetCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.GET('/projects/{project}', { params: { path: { project: String(args.id) } } }),
-      format: (data) => renderProject(data),
-    });
+    process.exit(
+      await projectsGet({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        id: String(args.id),
+      }),
+    );
   },
 });
 
@@ -217,22 +216,19 @@ export const projectsUpdateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { name?: string; clientName?: string; address?: string } = {};
-    if (typeof args.name === 'string' && args.name.length > 0) body.name = args.name;
     const clientName = args['client-name'];
     const address = args.address;
-    if (typeof clientName === 'string' && clientName.length > 0) body.clientName = clientName;
-    if (typeof address === 'string' && address.length > 0) body.address = address;
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.PATCH('/projects/{project}', {
-          params: { path: { project: String(args.id) } },
-          body,
-        }),
-      format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
-    });
+    process.exit(
+      await projectsUpdate({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        id: String(args.id),
+        ...(typeof args.name === 'string' && args.name.length > 0 ? { name: args.name } : {}),
+        ...(typeof clientName === 'string' && clientName.length > 0 ? { clientName } : {}),
+        ...(typeof address === 'string' && address.length > 0 ? { address } : {}),
+      }),
+    );
   },
 });
 
@@ -266,14 +262,14 @@ export const projectsDeleteCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.DELETE('/projects/{project}', { params: { path: { project: String(args.id) } } }),
-      format: () => `${chalk.green('✓')} Deleted project ${args.id}`,
-      formatJson: () => JSON.stringify({ ok: true }, null, 2),
-    });
+    process.exit(
+      await projectsDelete({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        id: String(args.id),
+      }),
+    );
   },
 });
 

@@ -12,7 +12,7 @@
 import { defineCommand } from 'citty';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderUser, renderUsage } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
@@ -47,12 +47,7 @@ export const meGetCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.GET('/me', {}),
-      format: (data) => renderUser(data.user),
-    });
+    process.exit(await meGet({ client, json: args.json, verbose: args.verbose }));
   },
 });
 
@@ -90,18 +85,17 @@ export const meUpdateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { displayName?: string; companyName?: string } = {};
     const displayName = args['display-name'];
     const companyName = args['company-name'];
-    if (typeof displayName === 'string' && displayName.length > 0) body.displayName = displayName;
-    if (typeof companyName === 'string' && companyName.length > 0) body.companyName = companyName;
-
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.PATCH('/me', { body }),
-      format: (data) => renderUser(data.user),
-    });
+    process.exit(
+      await meUpdate({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        ...(typeof displayName === 'string' && displayName.length > 0 ? { displayName } : {}),
+        ...(typeof companyName === 'string' && companyName.length > 0 ? { companyName } : {}),
+      }),
+    );
   },
 });
 
@@ -128,12 +122,7 @@ export const meUsageCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.GET('/me/usage', {}),
-      format: (data) => renderUsage(data),
-    });
+    process.exit(await meUsage({ client, json: args.json, verbose: args.verbose }));
   },
 });
 

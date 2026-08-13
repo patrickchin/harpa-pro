@@ -12,7 +12,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderNote, renderNoteList } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
@@ -86,29 +86,27 @@ export const notesListCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const query: Record<string, string | number> = {};
-    if (args.cursor) query.cursor = String(args.cursor);
+    const cursor = args.cursor ? String(args.cursor) : undefined;
+    let limit: number | undefined;
     if (args.limit) {
       const n = Number(args.limit);
       if (!Number.isFinite(n) || n < 1) {
         process.stderr.write(chalk.red(`Error: --limit must be a positive integer\n`));
         process.exit(2);
       }
-      query.limit = n;
+      limit = n;
     }
-    const reportId = await resolveReportId(
-      client, String(args.project), Number(args.reportNumber),
-    );
-    if (!reportId) process.exit(4);
-    await runRequest({
+
+    const exit = await notesList({
+      client,
+      project: String(args.project),
+      reportNumber: Number(args.reportNumber),
+      ...(cursor ? { cursor } : {}),
+      ...(limit !== undefined ? { limit } : {}),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.GET('/reports/{report}/notes', {
-          params: { path: { report: reportId }, query },
-        }),
-      format: (data) => renderNoteList(data),
     });
+    process.exit(exit);
   },
 });
 
@@ -171,29 +169,26 @@ export const notesCreateCommand = defineCommand({
       );
       process.exit(2);
     }
-    const reportId = await resolveReportId(
-      client, String(args.project), Number(args.reportNumber),
-    );
-    if (!reportId) process.exit(4);
-    const noteBody: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
-      kind: kind as NoteKind,
-    };
-    if (typeof args.body === 'string' && args.body.length > 0) noteBody.body = args.body;
+    const body = typeof args.body === 'string' && args.body.length > 0
+      ? args.body
+      : undefined;
     const fileId = args['file-id'];
-    if (typeof fileId === 'string' && fileId.length > 0) noteBody.fileId = fileId;
-    if (typeof args.transcript === 'string' && args.transcript.length > 0) {
-      noteBody.transcript = args.transcript;
-    }
-    await runRequest({
+    const transcript = typeof args.transcript === 'string' && args.transcript.length > 0
+      ? args.transcript
+      : undefined;
+
+    const exit = await notesCreate({
+      client,
+      project: String(args.project),
+      reportNumber: Number(args.reportNumber),
+      kind: kind as NoteKind,
+      ...(body !== undefined ? { body } : {}),
+      ...(typeof fileId === 'string' && fileId.length > 0 ? { fileId } : {}),
+      ...(transcript !== undefined ? { transcript } : {}),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/reports/{report}/notes', {
-          params: { path: { report: reportId } },
-          body: noteBody,
-        }),
-      format: (data) => `${chalk.green('✓')} Created note ${chalk.bold(data.id)}`,
     });
+    process.exit(exit);
   },
 });
 
@@ -232,17 +227,14 @@ export const notesUpdateCommand = defineCommand({
     requireToken(env);
     const client = createApiClient(env);
     const newBody = args.body === '' ? null : String(args.body);
-    await runRequest({
+    const exit = await notesUpdate({
+      client,
+      noteId: String(args.noteId),
+      body: newBody,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.PATCH('/notes/{note}', {
-          params: { path: { note: String(args.noteId) } },
-          body: { body: newBody },
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} Updated note ${chalk.bold(data.id)}\n${renderNote(data)}`,
     });
+    process.exit(exit);
   },
 });
 
@@ -278,16 +270,13 @@ export const notesDeleteCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    const exit = await notesDelete({
+      client,
+      noteId: String(args.noteId),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.DELETE('/notes/{note}', {
-          params: { path: { note: String(args.noteId) } },
-        }),
-      format: () => `${chalk.green('✓')} Deleted note ${args.noteId}`,
-      formatJson: () => JSON.stringify({ ok: true }, null, 2),
     });
+    process.exit(exit);
   },
 });
 

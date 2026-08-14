@@ -15,8 +15,9 @@
  *
  * The React state plumbing in `useInlineRecorder` itself is intentionally
  * NOT exercised here — react-test-renderer is broken on React 19.2
- * across the repo. The Maestro flow `p3-15-voice-record.yaml` covers
- * the rendered behaviour end-to-end on a real device/simulator.
+ * across the repo. The active Maestro voice coverage lives in
+ * `modules/09-voice-notes.yaml`, which covers the rendered behaviour
+ * end-to-end on a real device/simulator.
  *
  * Refs: docs/v4/arch-voice-pipeline.md §D4–§D6, pitfalls §13.
  */

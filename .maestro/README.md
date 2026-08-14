@@ -96,60 +96,13 @@ It refuses physical devices rather than persistently suppressing their crash
 dialogs. Physical-device runs retain the semantic Quickstep recovery in the
 flow but do not use this global emulator setting.
 
-The modular regression, legacy core, account-deletion, and store-screenshot
-entrypoints use this helper directly; the standalone photo-placement flow uses
-it through regression auth module 01. The shared-development-deployment flow
-retains its target-specific `127.0.0.1:8082` prelude. Release-confidence policy
-tests keep the native readiness boundary, Quickstep recovery, semantic
-server-row fallback, strict final assertion, and delegation wiring from
-drifting apart.
-
-## `core-end-to-end.yaml` (legacy P3 smoke)
-
-The older P3-exit-gate single-file flow. It still exists as a manual
-smoke target, but the normal full-app Maestro suite is now
-`regression-journey.yaml` plus `.maestro/modules/*`. This flow walks a
-seeded test-account path on the real `(auth)` + `(app)` routes:
-
-- sign-in → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
-- projects list, new project, copy buttons
-- members: invite (editor role), filter buttons, back
-- project edit + save
-- reports list + new report
-- generate report tabs: notes (voice record), report (edit-manually),
-  edit (7 section cards), finalize confirm dialog
-- attachment picker dialog (open + cancel)
-- project delete (cleanup)
-
-**Setup (one-time per box):**
-
-```bash
-docker compose up -d --build
-pnpm --filter @harpa/mobile start --dev-client     # real API mode
-xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
-xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
-```
-
-**Run:**
-
-```bash
-./scripts/maestro/reset-db.sh                      # wipe + seed test users
-maestro test .maestro/core-end-to-end.yaml
-```
-
-If a process watchdog is required, allow at least `gtimeout 7200` for the full
-flow; the fail-closed local launcher budget alone is almost ten minutes on a
-cache-empty build. On a hung XCTest driver, `kill` the leftover
-`maestro-driver-ios` PID and retry. Prefer the modular regression journey for
-current coverage.
-
-The flow uses the password-login test accounts
-(`test@harpapro.com`, `test2@harpapro.com`, `test3@harpapro.com`).
-`helpers/sign-in.yaml` talks to the local auth broker on
-`127.0.0.1:8790`, which keeps the shared password out of Maestro logs.
-The seeded invite target (`test2@harpapro.com`) is reseeded by
-`reset-db.sh` so the invite step always finds a real user. The flow
-deletes the project at the end.
+The modular regression, account-deletion, native-input, release-stress, and
+store-screenshot entrypoints use this helper directly; the standalone
+photo-placement flow uses it through regression auth module 01. The shared
+development-deployment flow retains its target-specific `127.0.0.1:8082`
+prelude. Release-confidence policy tests keep the native readiness boundary,
+Quickstep recovery, semantic server-row fallback, strict final assertion, and
+delegation wiring from drifting apart.
 
 ## `regression-journey.yaml` (overnight full-coverage journey)
 
@@ -431,26 +384,17 @@ deployments retain their separate rolling-deploy arming policy.
 
 ## Archived and pending flows
 
-Top-level `.maestro/*.yaml` files are current entrypoints. Historical
-or blocked scenarios live in explicit subdirectories so broad manual
-runs do not pick them up by accident.
+Top-level `.maestro/*.yaml` files are the current entrypoints. Keep the broad
+pass in `regression-journey.yaml`, the narrow PR smoke in
+`ci-launch-smoke.yaml`, and the focused checks in `account-deletion.yaml`,
+`native-input-smoke.yaml`, `place-photo-on-issue.flow.yml`,
+`release-stress-journey.yaml`, `report-review-comments.yaml`, and
+`store-screenshots.yaml`.
 
-- `.maestro/legacy/p3-15-upload.yaml`: superseded by modules 10a, 10b,
-  and 10c in the normal regression journey. Keep only for debugging the
-  old seeded test-account camera/upload path.
-- `.maestro/legacy/p3-15-voice-record.yaml`: superseded by
-  `modules/09-voice-notes.yaml`. Keep only for debugging the old seeded
-  test-account voice path.
-- `.maestro/pending/usage-limit-dialog.yaml`: blocked until reset
-  tooling can seed the test account at the free-plan limit without spending AI
-  tokens.
-- `.maestro/pending/usage-near-limit-toast.yaml`: blocked until the
-  mobile client surfaces `X-Usage-Warning` as a near-limit toast and
-  reset tooling can seed the near-limit state.
-
-The old P3.14a usage-limits-card flow was folded into
-`modules/15-usage.yaml`, which now asserts the free-plan limits card
-and default buckets as part of `regression-journey.yaml`.
+The old P3 `core-end-to-end.yaml`, the legacy single-purpose flows, and the
+blocked pending usage-limit placeholders were retired once their active guards,
+helpers, and docs moved to the shared regression/focused-flow set. The former
+P3.14a usage-limits-card coverage lives in `modules/15-usage.yaml`.
 
 ## Scroll positioning
 

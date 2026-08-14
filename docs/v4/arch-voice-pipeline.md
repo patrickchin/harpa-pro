@@ -486,9 +486,8 @@ report_id)`.
 - `modules/09-voice-notes.yaml` — boots the app under fixture mode,
   opens a report, taps the mic, sends the fixture recording, and
   asserts the new voice card appears with transcript/playback coverage.
-- `core-end-to-end.yaml` voice step — replace the currently
-  false-green tap with a real assertion that the voice card
-  appears post-record.
+- `regression-journey.yaml` module 09 voice step — keep the assertion
+  that the voice card appears after the real record/upload path.
 
 ## Error envelope mapping
 

@@ -21,7 +21,7 @@
 
 ## Exit gate (`p3-exit-gate.yml`)
 
-- [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
+- [ ] Maestro P3 journey coverage green on iOS + Android.
 - [x] Mobile coverage ≥ 80% lines. (Gate wired via `vitest run
 --coverage` in `apps/mobile/vitest.config.ts`. Baseline:
       lines 81.84%, statements 81.84%, branches 79.41%, functions 73%.
@@ -86,10 +86,10 @@ screens. Do not introduce Unistyles (Pitfall 3). Component locations:
 > ```
 >
 > These per-section flows are deliberately narrow — they are the
-> building blocks that will be collated later into the full
-> `core-end-to-end.yaml` journey (P3.14) and into broader regression
-> suites. Do not reuse an existing flow; do not run the whole suite as
-> the gate. One section → one flow → green before commit.
+> building blocks that were later collated into the retired P3
+> `core-end-to-end` journey and then into broader regression suites.
+> Do not reuse an existing flow; do not run the whole suite as the
+> gate. One section → one flow → green before commit.
 
 ## Tasks (one screen per commit)
 
@@ -130,7 +130,7 @@ P3.10 Saved report + actions + PDF   ✅ shipped
 P3.11 Files screen                   ⊘ no standalone v4 screen (N/A)
 P3.12 Camera                        ✅ shipped
 P3.13 Profile / Account / Usage      ✅ shipped
-P3.14 Maestro full-journey           ✅ shipped (core-end-to-end.yaml)
+P3.14 Maestro full-journey           ✅ shipped, later retired in favor of regression-journey.yaml
 ```
 
 ### P3.1 — Slug-native IDs (✅ shipped)
@@ -338,8 +338,8 @@ its own subsection here. The P3 scope list above is marked accordingly.
 
 ### P3.14 — Maestro full-journey (✅ shipped)
 
-The `core-end-to-end.yaml` flow at `.maestro/core-end-to-end.yaml`
-shipped earlier in P3 (commit `915ede4`). It walks every
+The retired P3 `core-end-to-end` flow shipped earlier in P3 (commit
+`915ede4`). It walked every
 currently-shipped user-visible feature on the real `(auth)` + `(app)`
 routes — sign-up → onboarding → projects list / new / edit / delete →
 members invite + filter → reports list + new → generate tabs
@@ -376,8 +376,8 @@ artifacts before tagging `v0.3.0-features`).
 - **Camera**: capture → session → commit to report. Tested via
   `camera-session-roundtrip.test.ts`.
 - **Report generation**: notes change counter → generate (fixture)
-  → CompletenessCard → finalize → PDF (fixture). Maestro
-  `core-end-to-end` exercises the whole arc.
+  → CompletenessCard → finalize → PDF (fixture). Current Maestro
+  coverage lives in `regression-journey.yaml` plus focused flows.
 
 ### P3.15 — Feature completion & upload wiring
 

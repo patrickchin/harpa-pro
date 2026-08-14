@@ -32,7 +32,7 @@
 > timeline, generates/finalizes that report, creates additional draft
 > reports to exercise a mixed reports list, scrolls across the list,
 > then deletes the project to verify cleanup under accumulated data.
-> **Phase:** P4 hardening (extends [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) `core-end-to-end.yaml`).
+> **Phase:** P4 hardening (extends the retired [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) core journey that preceded `regression-journey.yaml`).
 >
 > Companions:
 > [`arch-testing.md`](arch-testing.md),
@@ -52,7 +52,7 @@
 
 ## 1. Design problem
 
-`core-end-to-end.yaml` (shipped at P3.14) walks the happy-path of the
+The retired P3 `core-end-to-end` journey walked the happy-path of the
 authenticated app on a single account. It does **not** exercise:
 
 1. Two-actor permission semantics on Members (`owner` vs `editor` vs
@@ -396,8 +396,8 @@ currently a local, device-driven suite.
   See §6 for what differs between them.
 - Artifacts: Maestro screen recording per module on failure, full
   device log uploaded.
-- The existing P3 `core-end-to-end.yaml` keeps running as a PR-time
-  smoke check (faster, narrower). The regression journey is **not**
+- The PR-time smoke check stays narrow (`ci-launch-smoke.yaml`). The
+  regression journey is **not**
   required on every PR — it runs on `main`/`dev` push and nightly,
   and gates `v0.4.0-hardening` tag.
 
@@ -437,7 +437,7 @@ Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 | ID  | Question / carve-out                                        | Resolution / owner                                                                                                                                                                                                                                                                                                                            |
 | --- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Q1  | Where does this land in the plan tree?                      | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md).                                                                                                                                                                                                                                             |
-| Q2  | Does the regression journey replace `core-end-to-end.yaml`? | No. `core-end-to-end.yaml` stays as the PR-time smoke flow (≈2 min). The regression journey is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with).                                                                                                                                                                             |
+| Q2  | Does the regression journey replace the old P3 core flow? | Yes. The retired `core-end-to-end` path no longer runs; `ci-launch-smoke.yaml` is the PR-time launch smoke and `regression-journey.yaml` is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with).                                                                                                                                |
 | Q3  | How do test accounts get into the `dev` deployment?         | Use the existing `POST /api/auth/sign-in/email` test-account password bypass, gated by `TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint.            |
 | Q4  | Universal-links cold-tap coverage                           | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links).                                                                                                                                                                                                                                                                                    |
 | Q5  | Token-event timeline (`GET /me/usage/events`)               | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up.                                                                                                                                                                                                                                            |

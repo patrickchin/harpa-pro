@@ -556,9 +556,8 @@ require_before ".maestro/helpers/launch-local-dev-client.yaml" \
 require_fixed ".maestro/modules/01-auth.yaml" \
   "- runFlow: ../helpers/launch-local-dev-client.yaml" \
   "modular local journeys use the shared dev-client launch helper"
-require_fixed ".maestro/core-end-to-end.yaml" \
-  "- runFlow: helpers/launch-local-dev-client.yaml" \
-  "legacy core journey uses the shared dev-client launch helper"
+forbid_file ".maestro/core-end-to-end.yaml" \
+  "superseded core-end-to-end journey stays deleted"
 require_fixed ".maestro/account-deletion.yaml" \
   "- runFlow: helpers/launch-local-dev-client.yaml" \
   "account-deletion journey uses the shared dev-client launch helper"
@@ -804,9 +803,14 @@ require_before ".maestro/helpers/assert-report-generation-write-lock.yaml" \
   "id: 'report-generation-current'" \
   "enabled: true" \
   "manual regeneration waits for the shared current-generation marker"
-require_fixed ".maestro/core-end-to-end.yaml" \
-  "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
-  "legacy core journey waits for route-level auto-regeneration"
+forbid_file ".maestro/legacy/p3-15-upload.yaml" \
+  "superseded legacy photo-upload journey stays deleted"
+forbid_file ".maestro/legacy/p3-15-voice-record.yaml" \
+  "superseded legacy voice-record journey stays deleted"
+forbid_file ".maestro/pending/usage-limit-dialog.yaml" \
+  "blocked pending usage-limit dialog flow stays deleted"
+forbid_file ".maestro/pending/usage-near-limit-toast.yaml" \
+  "blocked pending usage-near-limit flow stays deleted"
 require_before ".maestro/modules/08-text-notes.yaml" \
   "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
   'id: "btn-note-options-.*"' \
@@ -819,10 +823,21 @@ require_occurrence_before ".maestro/modules/08-text-notes.yaml" \
   "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" 2 \
   'id: "btn-draft-options"' 1 \
   "text-note cleanup waits for regeneration before opening draft actions"
-require_before ".maestro/core-end-to-end.yaml" \
-  "id: 'voice-title-.*'" \
-  "- runFlow: helpers/wait-for-auto-regeneration.yaml" \
-  "legacy core journey waits for provider-owned voice processing"
+require_fixed ".maestro/regression-journey.yaml" \
+  "- runFlow: modules/09-voice-notes.yaml" \
+  "regression journey keeps the live voice-notes module wired"
+require_adjacent_fixed ".maestro/modules/09-voice-notes.yaml" \
+  "visible:" \
+  'id: "voice-title-.*"' \
+  "voice-note journey waits for the provider-owned title before continuing"
+require_adjacent_fixed ".maestro/modules/09-voice-notes.yaml" \
+  "visible:" \
+  'id: "voice-summary-.*"' \
+  "voice-note journey waits for the provider-owned summary before continuing"
+require_before ".maestro/modules/09-voice-notes.yaml" \
+  'id: "voice-summary-.*"' \
+  'id: "btn-note-options-.*"' \
+  "voice-note journey settles provider output before opening row actions"
 require_fixed ".maestro/modules/10a-photo-notes-draft.yaml" \
   "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" \
   "draft photo journey waits for route-level auto-regeneration"

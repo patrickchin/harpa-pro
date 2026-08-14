@@ -29,10 +29,10 @@ from typing import Any
 
 import psutil
 from rich.console import Console
-from rich.table import Table
 
 from .. import paths, pidfile, spawn
 from ..config import MoConfig
+from ..report_renderer import emit_step_report
 
 EXIT_OK = 0
 EXIT_ENV_MISSING = 1
@@ -224,20 +224,6 @@ def run_build(
 
 
 # --- output -------------------------------------------------------------
-_GLYPHS_RICH = {
-    "ok": "[green]OK[/green]",
-    "fail": "[red]FAIL[/red]",
-    "warn": "[yellow]WARN[/yellow]",
-    "skip": "[dim]SKIP[/dim]",
-}
-_GLYPHS_PLAIN = {
-    "ok": "[OK]",
-    "fail": "[FAIL]",
-    "warn": "[WARN]",
-    "skip": "[SKIP]",
-}
-
-
 def _emit(opts: BuildOptions, console: Console, report: BuildReport) -> int:
     if opts.json_output:
         print(
@@ -248,30 +234,15 @@ def _emit(opts: BuildOptions, console: Console, report: BuildReport) -> int:
             )
         )
         return report.exit_code
-    use_color = console.is_terminal and not console.no_color
-    table = Table(title="mo build (android)")
-    table.add_column("status", no_wrap=True)
-    table.add_column("step", no_wrap=True)
-    table.add_column("detail", overflow="fold")
-    for step in report.steps:
-        tag = (
-            _GLYPHS_RICH.get(step["status"], step["status"])
-            if use_color
-            else _GLYPHS_PLAIN.get(step["status"], step["status"])
-        )
-        table.add_row(tag, step["name"], step["detail"])
-    console.print(table)
-    if report.exit_code == 0:
-        msg = (
+    emit_step_report(
+        console=console,
+        title="mo build (android)",
+        steps=report.steps,
+        success_message=(
             "build: gradle running detached; tail "
             f"{paths.build_android_log_file(Path.cwd())}"
-        )
-        # ^ purely informational; use cwd as a generic hint
-        console.print(f"[green]{msg}[/green]" if use_color else msg)
-    else:
-        console.print(
-            f"[red]build: exit {report.exit_code}[/red]"
-            if use_color
-            else f"build: exit {report.exit_code}"
-        )
+        ),
+        failure_message=lambda code, _steps: f"build: exit {code}",
+        exit_code=report.exit_code,
+    )
     return report.exit_code

@@ -153,8 +153,6 @@ tags:
 - assertNotVisible:
     id: 'btn-tab-notes'
 - assertNotVisible:
-    id: 'btn-tab-edit'
-- assertNotVisible:
     id: 'btn-edit-meta'
 
 # --- Add a published-report review comment -------------------------------

@@ -1,10 +1,11 @@
 # Design — Generate / Update / Finalize report flow
 
-Status: ✅ **Shipped.** The Edit-tab persistence, AI-update loop, and
+Status: ✅ **Shipped.** Per-card edit persistence, the AI-update loop, and
 `finalize` / `unfinalize` routes described below are live in
 `packages/api/src/routes/reports.ts` and the mobile report screens.
-Phase: P3.x (post-P3.8; refines the Edit-tab persistence + AI update
-loop that P3.7 stubbed)
+The original Edit-tab UI described by this design was later replaced by
+per-card modals and removed. Phase: P3.x (post-P3.8; refines report-edit
+persistence + the AI update loop that P3.7 stubbed)
 Touches: `packages/api`, `packages/api-contract`, `packages/ai-fixtures`,
 `apps/mobile`
 
@@ -20,8 +21,8 @@ Today (post-P3.7):
 
 - `services/ai.ts → generateReport()` only takes `notes` as input. So
   **"Update" regenerates from scratch and clobbers any manual edits**
-  the user made in the Edit tab.
-- The Edit tab persists changes to `localReport` (route component
+  the user made in the report editor.
+- The report editor persists changes to `localReport` (route component
   state) and **never** PATCHes them to the server. If the user edits
   the report, closes the screen, and reopens, the edits are gone. If
   the user edits then taps **Finalize**, the server finalizes whatever

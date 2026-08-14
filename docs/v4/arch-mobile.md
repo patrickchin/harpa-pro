@@ -204,7 +204,7 @@ Snapshots that contain optimistic note IDs do not persist. A sign-out,
 | Better Auth cookie                | SecureStore through `@better-auth/expo`    |
 | Query snapshots                   | User-scoped MMKV keys                      |
 | Upload jobs                       | User-scoped MMKV keys                      |
-| Generate Debug and Edit tab flags | AsyncStorage                               |
+| Generate Debug tab flag           | AsyncStorage                               |
 | Save-to-camera-roll preference    | AsyncStorage                               |
 | Dialogs                           | `DialogSheetProvider` and `AppDialogSheet` |
 | Audio playback                    | `AudioPlaybackProvider`                    |
@@ -292,8 +292,9 @@ code must not use `Alert.alert`.
 
 ## Developer surfaces
 
-The Developer screen controls the optional Generate Debug and Edit
-tabs. Those preferences default off and persist in AsyncStorage.
+The Developer screen controls the optional Generate Debug tab. The
+preference defaults off and persists in AsyncStorage. Draft report edits use
+the per-card edit modal on the Report pane; Generate has no Edit tab.
 
 The Profile route currently shows the Developer section in every app
 variant. This differs from the original dev-only design. Treat the

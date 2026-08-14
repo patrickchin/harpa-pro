@@ -328,8 +328,8 @@ export default function GenerateReportRoute() {
   );
 
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
-  // `userDirty` flips true only when the user edits a field in the
-  // Edit tab — see `handleEditReport` below. Programmatic
+  // `userDirty` flips true only when the user edits a field through the
+  // per-card report modal — see `handleEditReport` below. Programmatic
   // setLocalReport calls (e.g. seeding from a regenerate response or
   // applying a photo placement) do NOT flip it true. The autosave hook
   // listens to this flag instead of trying to JSON-diff the local
@@ -470,7 +470,7 @@ export default function GenerateReportRoute() {
 
   // Stable JSON view of the server-side body was removed — the
   // autosave hook is now driven by `userDirty`, set by
-  // `handleEditReport` only when the user types in the Edit tab. The
+  // `handleEditReport` only when the user types in the per-card editor. The
   // hook no longer needs (and never had a way to reliably compute) a
   // server-shape baseline; the inverse adapter is lossy.
 
@@ -947,7 +947,6 @@ export default function GenerateReportRoute() {
         needsRegeneration={reportRow?.needsRegeneration ?? false}
         isAutoSaving={autosave.isAutoSaving || userDirty}
         isReportWriteBlocked={placementWriteBlocked}
-        lastSavedAt={autosave.lastSavedAt}
         isFinalizing={finalizeMutation.isPending}
         finalizeError={finalizeError}
         onFinalize={handleFinalize}

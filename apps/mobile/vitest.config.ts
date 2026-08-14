@@ -72,11 +72,11 @@ export default defineConfig({
       // Ratchet up only — never lower these numbers without a
       // documented reason.
       //
-      // 2026-06: functions threshold lowered 72→71 after the Generate
-      // Report Edit tab was replaced by the per-card edit modal flow
+      // 2026-06: functions threshold lowered 72→71 as report editing moved
+      // from the inline Generate surface to the per-card modal flow
       // (see docs/superpowers/specs/2026-06-03-report-edit-modal-redesign-design.md).
-      // Removing the Edit tab block / EditTabPane wiring deleted
-      // covered functions, dropping the rate to ~71.9%.
+      // The remaining unreachable Generate Edit code was removed in 2026-08;
+      // the full suite remains above every threshold.
       thresholds: {
         lines: 80,
         statements: 80,
@@ -101,4 +101,3 @@ export default defineConfig({
     exclude: ['node_modules', '.expo', 'dist'],
   },
 });
-

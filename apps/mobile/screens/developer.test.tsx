@@ -49,8 +49,6 @@ const defaults = {
   isLoadingSelection: false,
   showGenerateDebugTab: true,
   onToggleGenerateDebugTab: vi.fn(),
-  showGenerateEditTab: true,
-  onToggleGenerateEditTab: vi.fn(),
 };
 
 describe('Developer', () => {
@@ -108,14 +106,12 @@ describe('Developer', () => {
     expect(summary.props.disabled).toBe(true);
   });
 
-  it('fires the toggle callbacks when the developer flags switches are flipped', () => {
+  it('fires the Debug toggle callback and omits the removed Edit toggle', () => {
     const onToggleGenerateDebugTab = vi.fn();
-    const onToggleGenerateEditTab = vi.fn();
     const tree = render(
       <Developer
         {...defaults}
         onToggleGenerateDebugTab={onToggleGenerateDebugTab}
-        onToggleGenerateEditTab={onToggleGenerateEditTab}
       />,
     );
     act(() =>
@@ -124,11 +120,8 @@ describe('Developer', () => {
         .props.onValueChange(false),
     );
     expect(onToggleGenerateDebugTab).toHaveBeenCalledWith(false);
-    act(() =>
-      tree.root
-        .findByProps({ testID: 'switch-generate-edit-tab' })
-        .props.onValueChange(false),
-    );
-    expect(onToggleGenerateEditTab).toHaveBeenCalledWith(false);
+    expect(
+      tree.root.findAllByProps({ testID: 'switch-generate-edit-tab' }),
+    ).toHaveLength(0);
   });
 });

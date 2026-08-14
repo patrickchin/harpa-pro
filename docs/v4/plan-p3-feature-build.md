@@ -5,6 +5,9 @@
 > below record work that was not closed under the original P3 tag.
 > They are not the current backlog. Use the linked architecture docs,
 > current implementation, and tests for present behavior.
+> The Generate Edit tab described in the historical P3.8 delivery record was
+> removed later. Current draft editing uses per-card controls on the Report
+> pane; Debug remains developer-gated.
 
 > Goal: full feature build across mobile + API — generate, list,
 > view, edit, share reports with voice + photo capture, account /
@@ -41,7 +44,7 @@ maps a screen specification to its v4 destination
 - project home
 - members
 - reports list
-- generate — notes / report / edit tabs (the big one)
+- generate — notes / report tabs, plus developer-gated Debug (the big one)
 - saved report + actions menu + PDF preview
 - files — no standalone screen in the v4 spec (see P3.11), marked N/A
 - camera ✅ shipped (P3.12)
@@ -186,7 +189,7 @@ Vitest coverage per state + smoke; Reanimated mock extended for
 chainable entering presets. Commit:
 `feat(mobile,report-core): P3.7 — Generate Report tab + read-only ReportView`.
 
-### P3.8 — Generate – Edit tab (✅ shipped)
+### P3.8 — Generate – Edit tab (historically shipped; now removed)
 
 Third Generate-screen commit. Fully-controlled inline editor that
 mutates `GeneratedSiteReport` via immutable slice helpers; real
@@ -205,6 +208,10 @@ per call) with 23 test cases. `ReportEditForm.tsx` implemented
   `tabs.editManually()`; dev mirror `(dev)/generate-edit.tsx`; Vitest
   coverage per state + onSetReport propagation + lazy-seed path. Commit:
   `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
+
+This section records the original P3 delivery. The later ponytail
+simplification removed this unreachable tab, form, flag, and test path. Draft
+editing remains available through the Report pane's per-card edit modal.
 
 ### P3.x — Update / Finalize flow polish (✅ shipped)
 

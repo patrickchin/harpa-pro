@@ -140,8 +140,8 @@ When `reportStatus === 'finalized'`:
 - **No** changes to PDF rendering. PDFs already use
   `report.meta.title` directly and the LLM-generated value is fine
   there.
-- **No** new user-editable title field; if a user wants to change the
-  title they edit it via the existing Edit tab → `meta.title` field.
+- **No** new standalone title field; users edit `meta.title` from the
+  existing per-card report edit modal.
 - **No** changes to the Notes route / Actions menu wiring on
   finalized — notes are still reachable via Actions → View notes
   (`saved-report.tsx:297-304`).

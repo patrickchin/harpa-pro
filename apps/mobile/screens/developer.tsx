@@ -50,8 +50,6 @@ export interface DeveloperScreenProps {
   // ── Generate-report tab visibility flags ───────────────────────
   showGenerateDebugTab: boolean;
   onToggleGenerateDebugTab: (next: boolean) => void;
-  showGenerateEditTab: boolean;
-  onToggleGenerateEditTab: (next: boolean) => void;
 }
 
 function formatCost(cost: number): string {
@@ -72,8 +70,6 @@ export function Developer({
   isLoadingSelection,
   showGenerateDebugTab,
   onToggleGenerateDebugTab,
-  showGenerateEditTab,
-  onToggleGenerateEditTab,
 }: DeveloperScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -135,30 +131,11 @@ export function Developer({
           <View className="mb-2 flex-row items-center gap-2">
             <FlaskConical size={16} color={colors.muted.foreground} />
             <Text className="text-label text-muted-foreground">
-              Generate Report Tabs
+              Generate Report
             </Text>
           </View>
 
           <Card className="gap-4">
-            <View
-              testID="row-toggle-generate-edit-tab"
-              className="flex-row items-center gap-3"
-            >
-              <View className="flex-1">
-                <Text className="text-title-sm text-foreground">
-                  Manual edit tab
-                </Text>
-                <Text className="text-body text-muted-foreground">
-                  Show the Edit tab on the Generate Report screen.
-                </Text>
-              </View>
-              <Switch
-                testID="switch-generate-edit-tab"
-                value={showGenerateEditTab}
-                onValueChange={onToggleGenerateEditTab}
-              />
-            </View>
-
             <View
               testID="row-toggle-generate-debug-tab"
               className="flex-row items-center gap-3"

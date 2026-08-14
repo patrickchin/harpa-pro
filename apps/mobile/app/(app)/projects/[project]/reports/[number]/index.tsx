@@ -176,12 +176,11 @@ export default function SavedReportRoute() {
     return toReportNoteRows(items, memberNames);
   }, [notesQuery.data, memberNames]);
 
-  // Saved (finalized) reports are read-only here — the SavedReport
-  // body still wires an onChangeReport prop so the Edit tab renders,
-  // but persistence is intentionally a no-op. To actually mutate a
-  // finalized report the user unfinalizes first, which routes them
-  // back through the generate stack. Autosave wiring for *draft*
-  // reports lives in `generate.tsx`, not on this route.
+  // Saved (finalized) reports are read-only here. The screen still accepts
+  // the shared per-card change callback, but persistence is intentionally a
+  // no-op and edit actions are hidden. To mutate a finalized report the user
+  // unfinalizes first, which routes them back through the generate stack.
+  // Autosave wiring for draft reports lives in `generate.tsx`.
   const [, setLocalReport] = useState<GeneratedSiteReport | null>(null);
 
   const handleExportError = useCallback((_copy: AppDialogCopy & { kind: 'error' }) => {

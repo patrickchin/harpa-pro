@@ -2,15 +2,14 @@
  * Generate Report — Report tab tests.
  *
  * Covers each visible state the canonical Report tab exposes:
- *  - empty (no report, not generating, no error) → CompletenessCard skeleton + Edit manually
+ *  - empty (no report, not generating, no error) → CompletenessCard skeleton
  *  - generating (isGeneratingReport=true, report=null) → shimmer + info notice
  *  - populated (report present) → StatBar / workers / issues / next steps
  *  - generation error → error banner + Retry triggers onRegenerate
  *  - finalize error → finalize error banner alongside the report
- *  - "Edit manually" press triggers the default tab switch
  *
  * Tests use `initialTab="report"` so the Report tab is mounted +
- * visible on first render (the screen also mounts Notes/Edit panes
+ * visible on first render (the screen also mounts Notes/Debug panes
  * via the pager, but assertions live inside `report-tab-pane`).
  *
  * One snapshot covers the populated layout.
@@ -166,6 +165,20 @@ describe('GenerateNotes — Report tab', () => {
     expect(text).toContain('Concrete delivery delay');
     expect(text).toContain('Steel fixer');
     expect(text).toContain('Close east footing pour.');
+  });
+
+  it('keeps per-card report editing on the Report pane', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} report={SAMPLE_GENERATED_REPORT} />,
+    );
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-edit-meta' }).props.onPress();
+    });
+
+    expect(
+      tree.root.findAllByProps({ testID: 'report-edit-modal' }).length,
+    ).toBeGreaterThan(0);
   });
 
   it('keeps report-card edit actions visible but disabled while report generation is in flight', () => {

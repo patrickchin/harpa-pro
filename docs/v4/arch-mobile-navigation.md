@@ -141,8 +141,9 @@ If no valid session exists, the capture route calls `safeBack` with
 ## Developer route gap
 
 The current Profile route always shows its Developer section and
-always links to `/developer`. Generate-screen Debug and Edit tabs are
-still opt-in flags stored in AsyncStorage.
+always links to `/developer`. The Generate-screen Debug tab is an opt-in
+flag stored in AsyncStorage. Generate has no Edit tab; draft report editing
+opens from the Report pane's per-card controls.
 
 This behavior differs from the original rule that required a
 development or fixture gate around all developer surfaces. Treat the

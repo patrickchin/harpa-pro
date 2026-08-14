@@ -5,6 +5,8 @@
 > moves placement from a per-note JSONB annotation to a
 > first-class field inside `report.body.attachments` keyed by note ID.
 > Kept here for historical context — what was actually built and why.
+> References to `ReportEditForm` describe the v1-era UI; current mobile
+> editing uses per-card modals and Generate has no Edit tab.
 
 Cross-links:
 

@@ -10,7 +10,7 @@
  * timeline — so this provider takes that surface as PROPS and exposes
  * it through context.
  *
- * Fields the Report (P3.7) and Edit (P3.8) tabs will need (`generation`,
+ * Fields the Report tab and shared generate surfaces need (`generation`,
  * `draft`, `voice`, `photo`, `preview`, `members`, `menuActions`,
  * `timeline.items` from `useNoteTimeline`) are present as
  * structurally-stable defaults / no-ops with TODO markers so wiring
@@ -20,7 +20,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import type { TabKey } from '@/components/reports/generate/tabs';
-import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
@@ -100,23 +99,16 @@ export interface GenerateReportProviderProps {
   /** Called when the user taps Retry / Regenerate. */
   onRegenerate?: () => void;
   /**
-   * Called when the user taps "Edit manually" on the empty Report
-   * tab. Defaults to switching the active tab to `edit`.
-   */
-  onEditManually?: () => void;
-  /**
-   * Called when the Edit-tab form mutates the report. The provider
-   * has no opinion on persistence — the route wrapper wires this to
-   * a local React state (and eventually `useReportDraftPersistence`).
+   * Called when the per-card report editor mutates the report. The provider
+   * has no opinion on persistence — the route wrapper wires this to local
+   * React state and `useReportBodyAutosave`.
    * When omitted, `generation.setReport` is a no-op (read-only).
    */
   onSetReport?: (next: GeneratedSiteReport) => void;
-  /** True while autosave is in flight. Surfaces in the Edit tab header. */
+  /** True while autosave is in flight. Gates report actions. */
   isAutoSaving?: boolean;
   /** True while another report-body write is pending or needs recovery. */
   isReportWriteBlocked?: boolean;
-  /** Epoch ms of the last successful autosave, or `null` if none. */
-  lastSavedAt?: number | null;
   /** True while finalize is in flight. */
   isFinalizing?: boolean;
   /** Latest finalize error, or `null`. */
@@ -264,18 +256,6 @@ interface NotesSurface {
 interface TabsSurface {
   active: TabKey;
   set: (next: TabKey) => void;
-  /**
-   * Edit tab opener — separate from `set('edit')` because canonical
-   * lazily seeds an empty report when the user opens Edit. Currently
-   * just switches the tab; lazy-seed lands with P3.8.
-   */
-  openEdit: () => void;
-  /**
-   * Called by the Report tab "Edit manually" CTA. Defaults to
-   * `set('edit')` but routes can override (e.g. to seed an empty
-   * report at the same time, matching canonical).
-   */
-  editManually: () => void;
 }
 
 interface TimelineSurface {
@@ -336,12 +316,10 @@ interface DraftSurface {
    * a guard.
    */
   finalize: () => void;
-  /** True while autosave is in flight (Edit-tab header). */
+  /** True while autosave is in flight. */
   isAutoSaving: boolean;
   /** Disables generation/finalize while another report-body write is unresolved. */
   isReportWriteBlocked: boolean;
-  /** Epoch ms of last successful autosave, or `null`. */
-  lastSavedAt: number | null;
 }
 
 interface PreviewSurface {
@@ -474,11 +452,9 @@ export function GenerateReportProvider({
   notesSinceLastGeneration = 0,
   needsRegeneration = notesSinceLastGeneration > 0,
   onRegenerate,
-  onEditManually,
   onSetReport,
   isAutoSaving = false,
   isReportWriteBlocked = false,
-  lastSavedAt = null,
   isFinalizing = false,
   finalizeError = null,
   onFinalize,
@@ -732,15 +708,6 @@ export function GenerateReportProvider({
 
   const closePhoto = useCallback(() => setPhotoPreviewIndex(null), []);
 
-  // Locally-owned empty report seeded when the user opens Edit without
-  // a generated report ("Edit manually" path). Kept separate from
-  // `onSetReport` so the lazy-init never triggers the route's dirty
-  // flag — only typing in the form should count as a user edit.
-  const [localSeed, setLocalSeed] = useState<GeneratedSiteReport | null>(null);
-  // The report visible to the Edit tab: prefer the authoritative
-  // prop (server/AI) then the locally-seeded blank.
-  const effectiveReport = report ?? localSeed;
-
   const addNote = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -783,23 +750,6 @@ export function GenerateReportProvider({
     },
     [notes, onUpdateNote],
   );
-
-  const openEdit = useCallback(() => {
-    if (isGeneratingReport) return;
-    // Lazy-seed locally so the route's dirty flag stays clean.
-    if (!report) setLocalSeed(createEmptyReport());
-    setActiveTab('edit');
-  }, [isGeneratingReport, report]);
-
-  const editManually = useCallback(() => {
-    if (isGeneratingReport) return;
-    if (onEditManually) {
-      onEditManually();
-      return;
-    }
-    if (!report) setLocalSeed(createEmptyReport());
-    setActiveTab('edit');
-  }, [isGeneratingReport, onEditManually, report]);
 
   const setReport = useCallback(
     (next: GeneratedSiteReport) => {
@@ -859,15 +809,13 @@ export function GenerateReportProvider({
       tabs: {
         active: activeTab,
         set: setActiveTab,
-        openEdit,
-        editManually,
       },
       timeline: {
         items: timelineItems,
         isLoading: notesLoading,
       },
       generation: {
-        report: effectiveReport,
+        report,
         setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
@@ -886,7 +834,6 @@ export function GenerateReportProvider({
         finalize: handleFinalize,
         isAutoSaving,
         isReportWriteBlocked,
-        lastSavedAt,
       },
       // Phase H: inline WhatsApp-style recorder lives in the input
       // bar. `start()` arms the recorder (and surfaces the
@@ -952,11 +899,7 @@ export function GenerateReportProvider({
       updateNote,
       onUpdateNote,
       activeTab,
-      openEdit,
-      editManually,
       report,
-      effectiveReport,
-      localSeed,
       setReport,
       isGeneratingReport,
       generationError,
@@ -971,7 +914,6 @@ export function GenerateReportProvider({
       handleFinalize,
       isAutoSaving,
       isReportWriteBlocked,
-      lastSavedAt,
       attachmentSheetVisible,
       fileUploadError,
       inlineRecorder.isRecording,

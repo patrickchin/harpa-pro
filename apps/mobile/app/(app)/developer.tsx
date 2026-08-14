@@ -27,8 +27,6 @@ export default function DeveloperRoute() {
       isLoadingSelection={ai.isLoading}
       showGenerateDebugTab={devFlags.showGenerateDebugTab}
       onToggleGenerateDebugTab={devFlags.setShowGenerateDebugTab}
-      showGenerateEditTab={devFlags.showGenerateEditTab}
-      onToggleGenerateEditTab={devFlags.setShowGenerateEditTab}
     />
   );
 }

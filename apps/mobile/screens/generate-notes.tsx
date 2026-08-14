@@ -6,7 +6,8 @@
  * on branch `dev`. v4 uses `projectSlug` + per-project `number` route
  * params instead of `projectId` / `reportId`. P3.6 ships the Notes
  * pane; P3.7 ports the Report tab (read-only `ReportView` + completeness
- * skeleton + generating/error states); Edit lands in P3.8.
+ * skeleton + generating/error states). Manual editing is available through
+ * the per-card modal on the Report pane.
  *
  * Header / tab bar / pager / dialogs all read from
  * `GenerateReportProvider` via context. Routes inject data (notes,
@@ -38,7 +39,6 @@ import {
 } from '@/lib/reports/report-header-title';
 import { getDeleteDraftDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
-import { EditTabPane } from '@/components/reports/generate/EditTabPane';
 import { GenerateReportActionRow } from '@/components/reports/generate/GenerateReportActionRow';
 import { GenerateReportDialogs } from '@/components/reports/generate/GenerateReportDialogs';
 import { GenerateReportInputBar } from '@/components/reports/generate/GenerateReportInputBar';
@@ -207,8 +207,7 @@ function GenerateNotesLayout({
   // Pager is purely visual for now — tab switching uses the tab bar.
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
-  const activeIndex =
-    tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : tabs.active === 'edit' ? 2 : 3;
+  const activeIndex = tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : 2;
 
   return (
     <>
@@ -269,7 +268,6 @@ function GenerateNotesLayout({
               }
             : {})}
         />
-        <EditTabPane width={windowWidth} />
         <DebugTabPane width={windowWidth} />
       </ScrollView>
 

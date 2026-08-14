@@ -6,8 +6,8 @@ Single source of truth for HTTP shape.
 
 - `src/schemas/*.ts` — Zod schemas, organised by resource
   (projects, reports, notes, files, voice, settings, auth).
-- `src/openapi.ts` — `@hono/zod-openapi` route definitions
-  re-exported so `packages/api` builds its router from them.
+- `packages/api/src/routes/*.ts` — `@hono/zod-openapi` route
+  definitions that import the shared schemas.
 - `src/generated/types.ts` — `openapi-typescript` output. Never
   hand-edit. Regenerated via `pnpm gen:types`.
 - `src/index.ts` — re-exports schemas + types for clients.
@@ -19,8 +19,8 @@ CI gate: `pnpm spec:emit && pnpm gen:types && git diff --exit-code`.
 See [arch-ai-fixtures.md](arch-ai-fixtures.md).
 
 - `src/index.ts` — `createProvider` factory.
-- `src/providers/*.ts` — per-vendor adapters (openai, anthropic,
-  kimi, google, zai, deepseek).
+- `src/providers/*.ts` — the current OpenAI, Kimi, and Groq
+  adapters.
 - `src/fixture-store.ts` — read/write JSON.
 - `src/redact.ts` — PII redaction.
 - `fixtures/*.json` — committed fixtures.

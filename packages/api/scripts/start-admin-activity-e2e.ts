@@ -1,7 +1,7 @@
 import { serve, type ServerType } from '@hono/node-server';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import pg from 'pg';
-import { migrateAdminDatabase } from '../src/db/admin-migrate.js';
+import { migrateAdmin } from '../src/db/admin-migrate.js';
 import { migrate } from '../src/db/migrate.js';
 
 function portFromEnv(name: string, fallback: number): number {
@@ -298,7 +298,7 @@ async function main(): Promise<void> {
   const adminDatabaseUrl = adminContainer.getConnectionUri();
   configureEnvironment(appDatabaseUrl, adminDatabaseUrl);
 
-  await Promise.all([migrate(appDatabaseUrl), migrateAdminDatabase(adminDatabaseUrl)]);
+  await Promise.all([migrate(appDatabaseUrl), migrateAdmin(adminDatabaseUrl)]);
 
   const [dbClient, adminDbClient] = await Promise.all([
     import('../src/db/client.js'),

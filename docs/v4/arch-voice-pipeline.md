@@ -191,22 +191,13 @@ boundaries with platform or fetch substitutes at the external edge.
 `VoiceNoteCard` (`components/notes/VoiceNoteCard.tsx`) renders the
 draft-side voice note:
 
-- Layout matches the marketing-page `PreviousNoteCard`
-  (`apps/site/src/components/VoiceDemo.tsx`) via the shared
-  `VoiceCardShell` primitive: round play button on the left, title +
-  `author · captured-at` meta line + progress bar + duration in the
-  right column, and a 1–2 line summary below with a bold
-  `Summary: ` prefix. Sizes (`text-sm` title, `text-[11px]` meta,
-  `text-xs leading-relaxed` summary) are aligned byte-for-byte with
-  the marketing card.
-- Play / pause + duration via `useAudioPlayback()` (real, single
-  active note — see §D8).
-- Duration formatted as `m:ss` (`formatDuration`); waveform / scrubber
-  visualisation deferred to Phase F polish.
-- Full transcript lives behind a `⋯` kebab in the card header
-  (`btn-voice-menu-{id}`). Tapping toggles an inline transcript
-  panel below the card; the card itself never expands. This keeps
-  the saved row compact and consistent with the marketing aesthetic.
+- Layout matches the text and photo note cards through the shared
+  `NoteCardHeader`: `author · captured-at` metadata and a kebab sit
+  above the title and summary (or a two-line transcript fallback).
+- Play / pause, duration, and the full transcript live in the shared
+  kebab-driven `NoteOptionsSheet`. Playback uses
+  `useAudioPlayback()` (real, single active note — see §D8), and
+  duration uses `formatDuration()`.
 - Inline `Retry` pill rendered on `failed`; calls
   `voice.retry()` on the `GenerateReport` provider surface, which
   hands off to `useVoiceNotePipeline.retry()`.

@@ -51,7 +51,6 @@
     "expo-sharing": "^55.0.18",
     "expo-status-bar": "~55.0.6",
     "expo-updates": "^55.0.24",
-    "i18n-iso-countries": "^7.14.0",
     "lucide-react-native": "^1.28.0",
     "nativewind": "^4.1.23",
     "react": "19.2.0",

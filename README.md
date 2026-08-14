@@ -67,7 +67,6 @@ packages/
   api-contract/    # Zod schemas + generated OpenAPI types
   ai-fixtures/     # record/replay layer for every LLM call
   design-tokens/   # mobile-authored CSS tokens for the dashboard
-  report-core/     # shared report-body Zod schemas + helpers
 infra/
   neon/            # Neon branching scripts
   fly/             # Fly.io deployment config

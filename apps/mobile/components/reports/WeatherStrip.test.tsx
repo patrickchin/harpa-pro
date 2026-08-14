@@ -22,14 +22,11 @@ function collectText(n: any): string {
 
 const EMPTY_WEATHER_REPORT = {
   ...SAMPLE_GENERATED_REPORT,
-  report: {
-    ...SAMPLE_GENERATED_REPORT.report,
-    weather: {
-      conditions: null,
-      temperature: null,
-      wind: null,
-      impact: null,
-    },
+  weather: {
+    condition: null,
+    temperature: null,
+    wind: null,
+    impact: null,
   },
 };
 

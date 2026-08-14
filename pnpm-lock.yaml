@@ -307,9 +307,6 @@ importers:
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
-      '@harpa/report-core':
-        specifier: workspace:*
-        version: link:../../packages/report-core
       '@react-native-async-storage/async-storage':
         specifier: ^2.2.0
         version: 2.2.0(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))
@@ -397,6 +394,9 @@ importers:
       expo-updates:
         specifier: ^55.0.24
         version: 55.0.24(expo@55.0.26)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+      immer:
+        specifier: ^11.1.15
+        version: 11.1.15
       lucide-react-native:
         specifier: ^1.28.0
         version: 1.28.0(react-native-svg@15.15.3(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -703,19 +703,6 @@ importers:
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.19.18)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(terser@5.47.1)(tsx@4.23.7)(yaml@2.9.0)
 
   packages/design-tokens: {}
-
-  packages/report-core:
-    dependencies:
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-    devDependencies:
-      typescript:
-        specifier: ^5.6.2
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.7
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.19.18)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(terser@5.47.1)(tsx@4.23.7)(yaml@2.9.0)
 
 packages:
 

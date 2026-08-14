@@ -18,10 +18,10 @@
  * provider rewrite.
  */
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import type { reports } from '@harpa/api-contract';
 
 import type { TabKey } from '@/components/reports/generate/tabs';
 import type { NoteEntry } from '@/lib/notes/note-entry';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
 import {
   RECORDER_START_FAILED_MESSAGE,
@@ -81,7 +81,7 @@ export interface GenerateReportProviderProps {
    * Generated report payload. `null` until the first generation lands
    * (or while the user hasn't touched manual entry yet).
    */
-  report?: GeneratedSiteReport | null;
+  report?: reports.ReportBody | null;
   /** True while a generation request is in flight. */
   isGeneratingReport?: boolean;
   /** Latest generation error message, or `null`. */
@@ -104,7 +104,7 @@ export interface GenerateReportProviderProps {
    * React state and `useReportBodyAutosave`.
    * When omitted, `generation.setReport` is a no-op (read-only).
    */
-  onSetReport?: (next: GeneratedSiteReport) => void;
+  onSetReport?: (next: reports.ReportBody) => void;
   /** True while autosave is in flight. Gates report actions. */
   isAutoSaving?: boolean;
   /** True while another report-body write is pending or needs recovery. */
@@ -266,13 +266,13 @@ interface TimelineSurface {
 
 interface GenerationSurface {
   /** Generated report payload. `null` until a report exists. */
-  report: GeneratedSiteReport | null;
+  report: reports.ReportBody | null;
   /**
    * Mutator for the report. Calls the parent-provided `onSetReport`
    * if any; otherwise a no-op (read-only). Always defined so consumers
    * can reference it without a guard.
    */
-  setReport: (next: GeneratedSiteReport) => void;
+  setReport: (next: reports.ReportBody) => void;
   /** True while the AI generation request is in flight. */
   isUpdating: boolean;
   /** Latest generation error, or `null`. */
@@ -752,7 +752,7 @@ export function GenerateReportProvider({
   );
 
   const setReport = useCallback(
-    (next: GeneratedSiteReport) => {
+    (next: reports.ReportBody) => {
       if (isGeneratingReport) return;
       onSetReport?.(next);
     },

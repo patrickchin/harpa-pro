@@ -173,8 +173,6 @@ packages/
   api-contract/           # Zod schemas + generated OpenAPI types
   ai-fixtures/            # record/replay/live providers + fixtures
   design-tokens/          # mobile-authored CSS tokens for the dashboard
-  report-core/            # shared report transformation and rendering logic
-
 infra/
   neon/                   # branching scripts (create/delete on PR)
   fly/                    # deploy scripts

@@ -5,7 +5,7 @@
  * the saved report via `useReportQuery`, and renders the props-driven
  * `SavedReport` screen body.
  *
- * Persisted report bodies are always translated for display. Fixture mode
+ * Persisted report bodies are always rendered directly. Fixture mode
  * uses `SAMPLE_GENERATED_REPORT` only while the API row has no body yet, so
  * finalized edits and attachment placements remain observable end-to-end.
  *
@@ -39,14 +39,13 @@ import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
 import { reportMutationInput } from '@/lib/reports/report-mutation-input';
+import { coerceReportBody } from '@/lib/reports/report-body';
 import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import { resolveGeneratedReport } from '@/lib/reports/report-body-adapter';
-import { reports as reportSchemas } from '@harpa/api-contract';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 import type { AppDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
@@ -92,7 +91,7 @@ export default function SavedReportRoute() {
     | {
         id?: string;
         status?: 'draft' | 'finalized';
-        body?: reportSchemas.ReportBody | null;
+        body?: reports.ReportBody | null;
         visitDate?: string | null;
         generatedAt?: string | null;
         updatedAt?: string;
@@ -101,14 +100,11 @@ export default function SavedReportRoute() {
   const reportStatus = reportRow?.status ?? null;
   const reportId = reportRow?.id ?? null;
 
-  // Translate the persisted flat `ReportBody` shape into the wrapped
-  // `GeneratedSiteReport` that the saved-report UI consumes. The static
-  // fixture is a body-absent fallback only; it must never mask persisted
-  // edits or attachment placements.
-  const displayReport: GeneratedSiteReport | null = resolveGeneratedReport(
-    reportRow?.body,
-    env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null,
-  );
+  const persistedReport = reportRow?.body
+    ? coerceReportBody(reportRow.body, reportRow.visitDate ?? null).body
+    : null;
+  const displayReport =
+    persistedReport ?? (env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null);
 
   // Source-notes timeline for the saved report. Same query used by the
   // generate route — the API returns text + voice + image + document
@@ -181,7 +177,7 @@ export default function SavedReportRoute() {
   // no-op and edit actions are hidden. To mutate a finalized report the user
   // unfinalizes first, which routes them back through the generate stack.
   // Autosave wiring for draft reports lives in `generate.tsx`.
-  const [, setLocalReport] = useState<GeneratedSiteReport | null>(null);
+  const [, setLocalReport] = useState<reports.ReportBody | null>(null);
 
   const handleExportError = useCallback((_copy: AppDialogCopy & { kind: 'error' }) => {
     // Export errors currently no-op on the SavedReport route — the

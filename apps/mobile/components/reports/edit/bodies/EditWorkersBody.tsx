@@ -1,12 +1,8 @@
 /**
- * EditWorkersBody — totalWorkers + workerHours + notes + roles list.
- *
- * Whole-list per the design: one pencil edits everything in this card.
+ * EditWorkersBody — worker-role rows only. Derived totals stay derived.
  */
 import { Text, TextInput, View } from 'react-native';
-import type { GeneratedReportWorkers } from '@harpa/report-core';
-
-import { blankRole } from '@/lib/reports/report-edit-helpers';
+import { reports } from '@harpa/api-contract';
 
 import {
   AddRowButton,
@@ -15,65 +11,36 @@ import {
   MULTILINE_CLASS,
   nullableString,
   nullify,
-  numericString,
-  parseNumeric,
   RemoveRowButton,
   ROW_CLASS,
 } from './fields';
 
 interface Props {
-  value: GeneratedReportWorkers;
-  onChange: (next: GeneratedReportWorkers) => void;
+  value: reports.ReportBody['workers'];
+  onChange: (next: reports.ReportBody['workers']) => void;
+}
+
+function blankWorker(): reports.ReportBody['workers'][number] {
+  return { role: '', count: null, hours: null, notes: null };
 }
 
 export function EditWorkersBody({ value, onChange }: Props) {
-  const roles = value.roles;
   return (
     <View className="gap-3">
-      <Field label="Total workers">
-        <TextInput
-          className={INPUT_CLASS}
-          value={numericString(value.totalWorkers)}
-          onChangeText={(v) => onChange({ ...value, totalWorkers: parseNumeric(v) })}
-          keyboardType="numeric"
-          accessibilityLabel="Total workers"
-          testID="input-edit-workers-total"
-        />
-      </Field>
-      <Field label="Worker hours">
-        <TextInput
-          className={INPUT_CLASS}
-          value={nullableString(value.workerHours)}
-          onChangeText={(v) => onChange({ ...value, workerHours: nullify(v) })}
-          accessibilityLabel="Worker hours"
-          testID="input-edit-workers-hours"
-        />
-      </Field>
-      <Field label="Notes">
-        <TextInput
-          className={MULTILINE_CLASS}
-          value={nullableString(value.notes)}
-          onChangeText={(v) => onChange({ ...value, notes: nullify(v) })}
-          multiline
-          accessibilityLabel="Workers notes"
-          testID="input-edit-workers-notes"
-        />
-      </Field>
-
-      <Text className="mt-2 text-sm font-semibold text-foreground">Roles</Text>
-      {roles.length === 0 ? (
-        <Text className="text-sm text-muted-foreground opacity-60">No roles yet</Text>
+      <Text className="text-sm font-semibold text-foreground">Workers</Text>
+      {value.length === 0 ? (
+        <Text className="text-sm text-muted-foreground opacity-60">No workers yet</Text>
       ) : (
-        roles.map((role, idx) => (
+        value.map((worker, idx) => (
           <View key={`role-${idx}`} className={ROW_CLASS} testID={`edit-role-row-${idx}`}>
             <Field label="Role">
               <TextInput
                 className={INPUT_CLASS}
-                value={role.role}
+                value={worker.role}
                 onChangeText={(v) => {
-                  const next = roles.slice();
+                  const next = value.slice();
                   next[idx] = { ...next[idx]!, role: v };
-                  onChange({ ...value, roles: next });
+                  onChange(next);
                 }}
                 accessibilityLabel={`Role ${idx + 1} title`}
                 testID={`input-edit-role-${idx}-title`}
@@ -82,24 +49,37 @@ export function EditWorkersBody({ value, onChange }: Props) {
             <Field label="Count">
               <TextInput
                 className={INPUT_CLASS}
-                value={nullableString(role.count)}
+                value={nullableString(worker.count)}
                 onChangeText={(v) => {
-                  const next = roles.slice();
+                  const next = value.slice();
                   next[idx] = { ...next[idx]!, count: nullify(v) };
-                  onChange({ ...value, roles: next });
+                  onChange(next);
                 }}
                 accessibilityLabel={`Role ${idx + 1} count`}
                 testID={`input-edit-role-${idx}-count`}
               />
             </Field>
+            <Field label="Hours">
+              <TextInput
+                className={INPUT_CLASS}
+                value={nullableString(worker.hours)}
+                onChangeText={(v) => {
+                  const next = value.slice();
+                  next[idx] = { ...next[idx]!, hours: nullify(v) };
+                  onChange(next);
+                }}
+                accessibilityLabel={`Role ${idx + 1} hours`}
+                testID={`input-edit-role-${idx}-hours`}
+              />
+            </Field>
             <Field label="Notes">
               <TextInput
                 className={INPUT_CLASS}
-                value={nullableString(role.notes)}
+                value={nullableString(worker.notes)}
                 onChangeText={(v) => {
-                  const next = roles.slice();
+                  const next = value.slice();
                   next[idx] = { ...next[idx]!, notes: nullify(v) };
-                  onChange({ ...value, roles: next });
+                  onChange(next);
                 }}
                 accessibilityLabel={`Role ${idx + 1} notes`}
                 testID={`input-edit-role-${idx}-notes`}
@@ -109,19 +89,16 @@ export function EditWorkersBody({ value, onChange }: Props) {
               label={`Remove role ${idx + 1}`}
               testID={`btn-edit-role-${idx}-remove`}
               onPress={() =>
-                onChange({
-                  ...value,
-                  roles: roles.filter((_, i) => i !== idx),
-                })
+                onChange(value.filter((_, i) => i !== idx))
               }
             />
           </View>
         ))
       )}
       <AddRowButton
-        label="Add role"
+        label="Add worker"
         testID="btn-edit-workers-add-role"
-        onPress={() => onChange({ ...value, roles: [...roles, blankRole()] })}
+        onPress={() => onChange([...value, blankWorker()])}
       />
     </View>
   );

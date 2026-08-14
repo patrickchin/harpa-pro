@@ -10,7 +10,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, create } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { ReportTabPane } from './ReportTabPane';
 
@@ -32,33 +32,30 @@ function stubFetch() {
   );
 }
 
-const REPORT = {
-  report: {
-    meta: { summary: 'Day on site went fine.' },
-    issues: [
-      {
-        title: 'Cracked beam',
-        severity: 'high',
-        urgency: 'today',
-        category: 'structural',
-        details: '',
-        actionRequired: null,
-        attachments: { images: ['n_issue'] },
-      },
-    ],
-    sections: [
-      { title: 'Foundations', content: 'All good in the foundations.' },
-      {
-        title: 'Roof',
-        content: 'Roof needs work.',
-        attachments: { images: ['n_placed'] },
-      },
-    ],
-    workers: null,
-    materials: [],
-    nextSteps: [],
-  },
-} as unknown as GeneratedSiteReport;
+const REPORT: reports.ReportBody = {
+  meta: { title: null, summary: 'Day on site went fine.', visitDate: null },
+  weather: null,
+  issues: [
+    {
+      title: 'Cracked beam',
+      severity: 'high',
+      description: '',
+      action: null,
+      attachments: { images: ['n_issue'] },
+    },
+  ],
+  summarySections: [
+    { title: 'Foundations', body: 'All good in the foundations.' },
+    {
+      title: 'Roof',
+      body: 'Roof needs work.',
+      attachments: { images: ['n_placed'] },
+    },
+  ],
+  workers: [],
+  materials: [],
+  nextSteps: [],
+};
 
 const PHOTO_PLACED_IN_SECTION = {
   fileId: 'fil_placed',

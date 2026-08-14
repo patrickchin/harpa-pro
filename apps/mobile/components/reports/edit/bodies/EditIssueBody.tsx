@@ -3,13 +3,13 @@
  * row gets its own pencil).
  */
 import { TextInput, View } from 'react-native';
-import type { GeneratedReportIssue } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Field, INPUT_CLASS, MULTILINE_CLASS, nullableString, nullify } from './fields';
 
 interface Props {
-  value: GeneratedReportIssue;
-  onChange: (next: GeneratedReportIssue) => void;
+  value: reports.ReportBody['issues'][number];
+  onChange: (next: reports.ReportBody['issues'][number]) => void;
 }
 
 export function EditIssueBody({ value, onChange }: Props) {
@@ -24,38 +24,20 @@ export function EditIssueBody({ value, onChange }: Props) {
           testID="input-edit-issue-title"
         />
       </Field>
-      <Field label="Category">
-        <TextInput
-          className={INPUT_CLASS}
-          value={value.category}
-          onChangeText={(v) => onChange({ ...value, category: v })}
-          accessibilityLabel="Issue category"
-          testID="input-edit-issue-category"
-        />
-      </Field>
       <Field label="Severity (low/medium/high)">
         <TextInput
           className={INPUT_CLASS}
-          value={value.severity}
-          onChangeText={(v) => onChange({ ...value, severity: v })}
+          value={nullableString(value.severity)}
+          onChangeText={(v) => onChange({ ...value, severity: nullify(v) })}
           accessibilityLabel="Issue severity"
           testID="input-edit-issue-severity"
-        />
-      </Field>
-      <Field label="Status">
-        <TextInput
-          className={INPUT_CLASS}
-          value={value.status}
-          onChangeText={(v) => onChange({ ...value, status: v })}
-          accessibilityLabel="Issue status"
-          testID="input-edit-issue-status"
         />
       </Field>
       <Field label="Details">
         <TextInput
           className={MULTILINE_CLASS}
-          value={value.details}
-          onChangeText={(v) => onChange({ ...value, details: v })}
+          value={nullableString(value.description)}
+          onChangeText={(v) => onChange({ ...value, description: nullify(v) })}
           multiline
           accessibilityLabel="Issue details"
           testID="input-edit-issue-details"
@@ -64,8 +46,8 @@ export function EditIssueBody({ value, onChange }: Props) {
       <Field label="Action required">
         <TextInput
           className={INPUT_CLASS}
-          value={nullableString(value.actionRequired)}
-          onChangeText={(v) => onChange({ ...value, actionRequired: nullify(v) })}
+          value={nullableString(value.action)}
+          onChangeText={(v) => onChange({ ...value, action: nullify(v) })}
           accessibilityLabel="Issue action required"
           testID="input-edit-issue-action-required"
         />

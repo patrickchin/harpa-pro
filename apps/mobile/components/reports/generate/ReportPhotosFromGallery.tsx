@@ -19,7 +19,6 @@ import { PhotoTile } from '@/components/notes/PhotoTile';
 import { PhotoPlacementChip } from '@/components/reports/detail/PhotoPlacementChip';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 
 interface GalleryPhoto {
   fileId: string;
@@ -41,12 +40,6 @@ interface ReportPhotosFromGalleryProps {
   onOpenPlacementSheet?: (noteId: string) => void;
   /** Keeps placement chips visible but non-interactive while backend generation owns report.body. */
   placementActionsDisabled?: boolean;
-  /**
-   * Live report used to resolve a placement's index → display label.
-   * Required when `onOpenPlacementSheet` is set so placed groups can
-   * show "Placed in: <issue title>" instead of a raw index.
-   */
-  report?: GeneratedSiteReport | null;
 }
 
 const COLUMNS = 3;

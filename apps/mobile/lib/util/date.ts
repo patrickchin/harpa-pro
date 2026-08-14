@@ -1,10 +1,8 @@
 /**
  * Date formatting utilities.
  *
- * Mirrors the canonical `formatDate` from
- * `@harpa/report-core/src/report-helpers.ts`. Re-exported here so
- * non-report screens can import dates without depending on the
- * report-core package boundary.
+ * Mirrors the canonical report-date formatting rules. Re-exported
+ * here so non-report screens can share the same formatting helper.
  */
 
 /**

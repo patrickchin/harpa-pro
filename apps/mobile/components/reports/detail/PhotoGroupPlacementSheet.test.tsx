@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Pressable } from 'react-native';
 import { MapPin } from 'lucide-react-native';
-import type { GeneratedReportIssue, GeneratedReportSection } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { PhotoGroupPlacementSheet } from './PhotoGroupPlacementSheet';
 import { PhotoPlacementChip } from './PhotoPlacementChip';
@@ -20,28 +20,24 @@ function render(element: React.ReactElement): TestRenderer.ReactTestRenderer {
   return tree;
 }
 
-const ISSUES: GeneratedReportIssue[] = [
+const ISSUES: reports.ReportBody['issues'] = [
   {
     title: 'Cracked beam',
-    category: 'structural',
     severity: 'high',
-    status: 'open',
-    details: 'Visible crack on left side',
-    actionRequired: 'Engineer review',
+    description: 'Visible crack on left side',
+    action: 'Engineer review',
   },
   {
     title: 'Loose railing',
-    category: 'safety',
     severity: 'medium',
-    status: 'open',
-    details: 'Second floor balcony',
-    actionRequired: null,
+    description: 'Second floor balcony',
+    action: null,
   },
 ];
 
-const SECTIONS: GeneratedReportSection[] = [
-  { title: 'Site Conditions', content: 'Sunny, dry.' },
-  { title: 'Quality Control', content: 'All good.' },
+const SECTIONS: reports.ReportBody['summarySections'] = [
+  { title: 'Site Conditions', body: 'Sunny, dry.' },
+  { title: 'Quality Control', body: 'All good.' },
 ];
 
 describe('PhotoGroupPlacementSheet', () => {

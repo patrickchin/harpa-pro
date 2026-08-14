@@ -3,13 +3,14 @@
  * SummaryLead card pencil per the design spec ("Summary & meta").
  */
 import { TextInput, View } from 'react-native';
+import { reports } from '@harpa/api-contract';
 
-import type { GeneratedReportMeta } from '@/lib/reports/report-edit-helpers';
+import { dateInputValue, isoDateFromInput } from '@/lib/reports/report-body';
 import { Field, INPUT_CLASS, MULTILINE_CLASS, nullableString, nullify } from './fields';
 
 interface Props {
-  value: GeneratedReportMeta;
-  onChange: (next: GeneratedReportMeta) => void;
+  value: reports.ReportBody['meta'];
+  onChange: (next: reports.ReportBody['meta']) => void;
 }
 
 export function EditMetaBody({ value, onChange }: Props) {
@@ -18,8 +19,8 @@ export function EditMetaBody({ value, onChange }: Props) {
       <Field label="Title">
         <TextInput
           className={INPUT_CLASS}
-          value={value.title}
-          onChangeText={(v) => onChange({ ...value, title: v })}
+          value={nullableString(value.title)}
+          onChangeText={(v) => onChange({ ...value, title: nullify(v) })}
           accessibilityLabel="Report title"
           testID="input-edit-meta-title"
         />
@@ -27,8 +28,8 @@ export function EditMetaBody({ value, onChange }: Props) {
       <Field label="Visit date">
         <TextInput
           className={INPUT_CLASS}
-          value={nullableString(value.visitDate)}
-          onChangeText={(v) => onChange({ ...value, visitDate: nullify(v) })}
+          value={dateInputValue(value.visitDate)}
+          onChangeText={(v) => onChange({ ...value, visitDate: isoDateFromInput(v) })}
           placeholder="YYYY-MM-DD"
           accessibilityLabel="Visit date"
           testID="input-edit-meta-visit-date"
@@ -37,8 +38,8 @@ export function EditMetaBody({ value, onChange }: Props) {
       <Field label="Summary">
         <TextInput
           className={MULTILINE_CLASS}
-          value={value.summary}
-          onChangeText={(v) => onChange({ ...value, summary: v })}
+          value={nullableString(value.summary)}
+          onChangeText={(v) => onChange({ ...value, summary: nullify(v) })}
           multiline
           accessibilityLabel="Report summary"
           testID="input-edit-meta-summary"

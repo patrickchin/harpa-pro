@@ -1,8 +1,7 @@
 # Design — Report Title Consistency + Finalized Layout Cleanup
 
-Status: ✅ **Shipped.** `report.meta.title` is now the single canonical
-title surface (verified via `packages/report-core/src/report-helpers.ts`
-and the generated-report tests). Doc retained for design rationale.
+Status: ✅ **Shipped.** `report.meta.title` is the single canonical title
+surface. Doc retained for design rationale.
 
 ## Problem
 

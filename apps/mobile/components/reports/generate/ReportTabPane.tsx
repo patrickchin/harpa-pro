@@ -27,7 +27,7 @@ import { PhotoAttachmentPickerSheet } from '@/components/reports/detail/PhotoAtt
 import { PhotoGroupPlacementSheet } from '@/components/reports/detail/PhotoGroupPlacementSheet';
 import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
-import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
+import { createEmptyReportBody } from '@/lib/reports/report-body';
 import {
   collectPlacedAttachmentIds,
   placementForNoteId,
@@ -56,11 +56,14 @@ export function ReportTabPane({
     placement,
   } = useGenerateReport();
 
-  // Skeleton shown on the "no report yet" empty state. Memoized once
-  // per mount — `createEmptyReport` calls `new Date()`, which would
-  // otherwise change identity every render and force CompletenessCard
-  // to re-render.
-  const emptyReportSkeleton = useMemo(() => createEmptyReport(), []);
+  // Preserve the legacy manual-entry behavior: a brand-new report
+  // starts with today's visit date already seeded, so CompletenessCard
+  // does not regress into warning about a missing date before the user
+  // has touched anything.
+  const emptyReportSkeleton = useMemo(
+    () => createEmptyReportBody(new Date().toISOString()),
+    [],
+  );
 
   const placementsEnabled = !!placement.onPlacePhotoGroup;
   const placementActionsEnabled =
@@ -245,7 +248,6 @@ export function ReportTabPane({
                 placementsEnabled ? handleOpenPlacementSheet : undefined
               }
               placementActionsDisabled={!placementActionsEnabled}
-              report={generation.report}
             />
 
             {draft.finalizeError ? (
@@ -264,8 +266,8 @@ export function ReportTabPane({
       {placementActionsEnabled ? (
         <PhotoGroupPlacementSheet
           visible={placementSheetNoteId !== null}
-          issues={generation.report?.report.issues ?? []}
-          sections={generation.report?.report.sections ?? []}
+          issues={generation.report?.issues ?? []}
+          sections={generation.report?.summarySections ?? []}
           photoCount={
             placementSheetNoteId
               ? photoGroups.find((g) => g.noteId === placementSheetNoteId)

@@ -1,6 +1,6 @@
 /**
  * useReportBodyAutosave — debounced PATCH of the per-card editor's local
- * `GeneratedSiteReport` back to the server via
+ * canonical `reports.ReportBody` back to the server via
  * `useUpdateReportMutation`.
  *
  * See docs/v4/design-p3x-generate-update-finalize.md §3.6.
@@ -27,10 +27,9 @@
  * the dirty flag.
  */
 import { useEffect, useState } from 'react';
+import { reports } from '@harpa/api-contract';
 
 import { useUpdateReportMutation } from '@/lib/api/hooks';
-import { generatedReportToReportBody } from '@/lib/reports/report-body-adapter';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 
 export interface UseReportBodyAutosaveInput {
   /** Project slug from the URL. Autosave disabled when empty. */
@@ -40,7 +39,7 @@ export interface UseReportBodyAutosaveInput {
   /**
    * The current in-memory report. When null there is nothing to autosave.
    */
-  report: GeneratedSiteReport | null;
+  report: reports.ReportBody | null;
   /**
    * Server version the local edit was based on. Autosave remains paused
    * until the report query has supplied this concurrency precondition.
@@ -104,12 +103,11 @@ export function useReportBodyAutosave({
     if (!expectedUpdatedAt) return;
 
     const handle = setTimeout(() => {
-      const body = generatedReportToReportBody(report);
       setError(null);
       mutation.mutate(
         {
           params: { project: slug, number },
-          body: { body, expectedUpdatedAt },
+          body: { body: report, expectedUpdatedAt },
         },
         {
           onSuccess: (saved) => {

@@ -6,54 +6,44 @@
  * against mobile-old samples per docs/v4/plan-p4-hardening.md P4.3.
  */
 import { describe, expect, it } from 'vitest';
-
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { reportToHtml } from './report-to-html';
 
-function baseReport(): GeneratedSiteReport {
+function baseReport(): reports.ReportBody {
   return {
-    report: {
-      meta: {
-        title: 'Daily Progress',
-        summary: 'Summary text',
-        visitDate: '2026-04-20',
-      },
-      weather: {
-        conditions: 'Sunny',
-        temperature: '22C',
-        wind: null,
-        impact: null,
-      },
-      workers: {
-        totalWorkers: 4,
-        workerHours: '32',
-        notes: null,
-        roles: [{ role: 'Electrician', count: '2', notes: null }],
-      },
-      materials: [
-        {
-          name: 'Cement',
-          quantity: '10',
-          quantityUnit: 'bags',
-          condition: null,
-          status: 'delivered',
-          notes: null,
-        },
-      ],
-      issues: [
-        {
-          title: 'Leaky pipe',
-          category: 'plumbing',
-          severity: 'high',
-          status: 'open',
-          details: 'Found in basement',
-          actionRequired: 'Call plumber',
-        },
-      ],
-      nextSteps: ['Order more cement'],
-      sections: [{ title: 'Progress', content: 'Walls up.' }],
+    meta: {
+      title: 'Daily Progress',
+      summary: 'Summary text',
+      visitDate: '2026-04-20',
     },
+    weather: {
+      condition: 'Sunny',
+      temperature: '22C',
+      wind: null,
+      impact: null,
+    },
+    workers: [{ role: 'Electrician', count: '4', hours: '32', notes: null }],
+    materials: [
+      {
+        name: 'Cement',
+        quantity: '10',
+        unit: 'bags',
+        condition: null,
+        status: 'delivered',
+        notes: null,
+      },
+    ],
+    issues: [
+      {
+        title: 'Leaky pipe',
+        severity: 'high',
+        description: 'Found in basement',
+        action: 'Call plumber',
+      },
+    ],
+    nextSteps: ['Order more cement'],
+    summarySections: [{ title: 'Progress', body: 'Walls up.' }],
   };
 }
 
@@ -84,17 +74,21 @@ describe('reportToHtml', () => {
 
   it('renders qualitative worker counts instead of a zero total', () => {
     const report = baseReport();
-    report.report.workers = {
-      totalWorkers: null,
-      workerHours: null,
-      notes: null,
-      roles: [{ role: 'Contractors', count: 'a few', notes: null }],
-    };
+    report.workers = [{ role: 'Contractors', count: 'a few', hours: null, notes: null }];
 
     const html = reportToHtml(report);
 
     expect(html).toContain('Personnel on Site</td><td class="num">a few</td>');
     expect(html).toContain('<td>Contractors</td><td class="num">a few</td>');
+  });
+
+  it('renders each worker note once', () => {
+    const report = baseReport();
+    report.workers[0]!.notes = 'Formwork on grid B.';
+
+    const html = reportToHtml(report);
+
+    expect(html.match(/Formwork on grid B\./g)).toHaveLength(1);
   });
 
   it('omits the "Report Type" row that existed in v3', () => {
@@ -104,27 +98,25 @@ describe('reportToHtml', () => {
 
   it('escapes HTML special characters in user-supplied strings', () => {
     const report = baseReport();
-    report.report.meta.title = '<script>alert(1)</script>';
+    report.meta.title = '<script>alert(1)</script>';
     const html = reportToHtml(report);
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
   });
 
   it('skips optional sections (weather, workers, materials, next steps) when empty', () => {
-    const report: GeneratedSiteReport = {
-      report: {
-        meta: {
-          title: 'Sparse',
-          summary: '',
-          visitDate: null,
-        },
-        weather: null,
-        workers: null,
-        materials: [],
-        issues: [],
-        nextSteps: [],
-        sections: [],
+    const report: reports.ReportBody = {
+      meta: {
+        title: 'Sparse',
+        summary: null,
+        visitDate: null,
       },
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     };
 
     const html = reportToHtml(report);
@@ -142,6 +134,6 @@ describe('reportToHtml', () => {
     });
     expect(html).toContain('Harpa Construction');
     expect(html).toContain('file:///logo.png');
-    expect(html).toContain('Prepared by Harpa Construction.');
+    expect(html).toContain('Prepared By');
   });
 });

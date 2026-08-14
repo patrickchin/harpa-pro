@@ -12,7 +12,6 @@ on:
       - 'packages/api-contract/**'
       - 'packages/ai-fixtures/**'
       - 'packages/design-tokens/**'
-      - 'packages/report-core/**'
       - '.github/actions/changed-paths/**'
       - '.github/actions/setup-monorepo/**'
       - '.github/workflows/dashboard-*.yml'

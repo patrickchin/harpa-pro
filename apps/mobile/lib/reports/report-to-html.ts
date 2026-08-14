@@ -1,17 +1,18 @@
 /**
- * Pure HTML renderer for `GeneratedSiteReport`. Output is fed to
+ * Pure HTML renderer for persisted `ReportBody`. Output is fed to
  * `expo-print`'s `printToFileAsync` to produce the exported PDF.
  *
  * Ported from `../haru3-reports/apps/mobile/lib/report-to-html.ts` on
- * branch `dev` (commit dbaa4c1) and adapted for the v4
- * `@harpa/report-core` schema, which has no `meta.reportType` field.
+ * branch `dev` (commit dbaa4c1) and adapted for the v4 persisted
+ * report contract.
  */
-import type {
-  GeneratedSiteReport,
-  GeneratedReportIssue,
-  GeneratedReportWorkers,
-  GeneratedReportMaterial,
-} from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
+
+import {
+  displayReportTitle,
+  getWorkerDisplaySummaryFromWorkers,
+} from './report-body';
+import { toTitleCase } from './report-ui';
 
 export interface PdfBranding {
   companyName?: string;
@@ -27,14 +28,6 @@ function esc(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function toTitleCase(value: string): string {
-  return value
-    .replace(/[_-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 function formatDate(iso: string | null): string {
@@ -63,54 +56,53 @@ function createCounter() {
 
 // ── Render helpers ─────────────────────────────────────────────
 
-function renderWorkers(workers: GeneratedReportWorkers | null, heading: string | null): string {
-  if (!workers) return '';
-  const rows = workers.roles
+function renderWorkers(
+  workers: reports.ReportBody['workers'],
+  heading: string | null,
+): string {
+  if (workers.length === 0) return '';
+  const summary = getWorkerDisplaySummaryFromWorkers(workers);
+  const rows = workers
     .map(
-      (r) =>
-        `<tr><td>${esc(r.role)}</td><td class="num">${esc(r.count ?? '\u2014')}</td><td>${esc(r.notes ?? '')}</td></tr>`,
+      (worker) =>
+        `<tr><td>${esc(worker.role)}</td><td class="num">${esc(worker.count ?? '\u2014')}</td><td>${esc(worker.hours ?? '\u2014')}</td><td>${esc(worker.notes ?? '')}</td></tr>`,
     )
     .join('');
 
   return `
     <div class="section">
       ${heading ? `<h2>${heading}</h2>` : ''}
-      ${workers.totalWorkers !== null ? `<p><strong>Total personnel on site:</strong> ${workers.totalWorkers}</p>` : ''}
-      ${workers.workerHours ? `<p><strong>Worker hours:</strong> ${esc(workers.workerHours)}</p>` : ''}
-      ${workers.notes ? `<p>${esc(workers.notes)}</p>` : ''}
+      ${summary.totalWorkersLabel ? `<p><strong>Total personnel on site:</strong> ${esc(summary.totalWorkersLabel)}</p>` : ''}
+      ${summary.workerHours ? `<p><strong>Worker hours:</strong> ${esc(summary.workerHours)}</p>` : ''}
       ${
         rows
-          ? `<table><thead><tr><th>Role</th><th class="num">Count</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`
+          ? `<table><thead><tr><th>Role</th><th class="num">Count</th><th class="num">Hours</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`
           : ''
       }
     </div>`;
 }
 
-function workerFigureValue(workers: GeneratedReportWorkers | null): string {
-  if (!workers) return '0';
-  if (workers.totalWorkers !== null) return String(workers.totalWorkers);
-  return (
-    workers.roles
-      .map((role) => role.count?.trim())
-      .find((count): count is string => Boolean(count)) ?? '0'
-  );
+function workerFigureValue(workers: reports.ReportBody['workers']): string {
+  const summary = getWorkerDisplaySummaryFromWorkers(workers);
+  return String(summary.totalWorkers ?? summary.totalWorkersLabel ?? '0');
 }
 
-function renderIssueTable(issues: readonly GeneratedReportIssue[], heading: string | null): string {
+function renderIssueTable(
+  issues: reports.ReportBody['issues'],
+  heading: string | null,
+): string {
   if (issues.length === 0) return '';
   const rows = issues
     .map(
       (issue) => `
         <tr>
           <td>${esc(issue.title)}</td>
-          <td>${toTitleCase(issue.category)}</td>
-          <td class="severity-${issue.severity.toLowerCase()}">${toTitleCase(issue.severity)}</td>
-          <td>${toTitleCase(issue.status)}</td>
+          <td class="severity-${(issue.severity ?? 'low').toLowerCase()}">${esc(issue.severity ? toTitleCase(issue.severity) : '\u2014')}</td>
         </tr>
         <tr class="detail-row">
-          <td colspan="4">
-            ${esc(issue.details)}
-            ${issue.actionRequired ? `<br/><strong>Action Required:</strong> ${esc(issue.actionRequired)}` : ''}
+          <td colspan="2">
+            ${esc(issue.description ?? '')}
+            ${issue.action ? `<br/><strong>Action Required:</strong> ${esc(issue.action)}` : ''}
           </td>
         </tr>`,
     )
@@ -120,20 +112,20 @@ function renderIssueTable(issues: readonly GeneratedReportIssue[], heading: stri
     <div class="section">
       ${heading ? `<h2>${heading}</h2>` : ''}
       <table>
-        <thead><tr><th>Issue</th><th>Category</th><th>Severity</th><th>Status</th></tr></thead>
+        <thead><tr><th>Issue</th><th>Severity</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 }
 
 function renderMaterials(
-  materials: readonly GeneratedReportMaterial[],
+  materials: reports.ReportBody['materials'],
   heading: string | null,
 ): string {
   if (materials.length === 0) return '';
   const rows = materials
     .map((m) => {
-      const qty = [m.quantity, m.quantityUnit].filter(Boolean).join(' ') || '\u2014';
+      const qty = [m.quantity, m.unit].filter(Boolean).join(' ') || '\u2014';
       return `<tr><td>${esc(m.name)}</td><td>${esc(qty)}</td><td>${esc(m.status ? toTitleCase(m.status) : '\u2014')}</td><td>${esc(m.notes ?? '')}</td></tr>`;
     })
     .join('');
@@ -157,7 +149,7 @@ function renderNextSteps(steps: readonly string[], heading: string): string {
 }
 
 function renderSections(
-  sections: GeneratedSiteReport['report']['sections'],
+  sections: reports.ReportBody['summarySections'],
   counter: ReturnType<typeof createCounter>,
 ): string {
   if (sections.length === 0) return '';
@@ -166,7 +158,7 @@ function renderSections(
       (s) => `
       <div class="section">
         <h2>${counter.next()}. ${esc(s.title)}</h2>
-        <p>${esc(s.content)}</p>
+        <p>${esc(s.body)}</p>
       </div>`,
     )
     .join('');
@@ -174,10 +166,11 @@ function renderSections(
 
 // ── Main export ────────────────────────────────────────────────
 
-export function reportToHtml(report: GeneratedSiteReport, branding: PdfBranding = {}): string {
+export function reportToHtml(report: reports.ReportBody, branding: PdfBranding = {}): string {
   const { companyName, logoUrl } = branding;
-  const { meta, weather, workers, materials, issues, nextSteps, sections } = report.report;
+  const { meta, weather, workers, materials, issues, nextSteps, summarySections } = report;
   const counter = createCounter();
+  const reportTitle = displayReportTitle(report);
 
   // ── Title page / header ──────────────────────────────────────
 
@@ -185,7 +178,7 @@ export function reportToHtml(report: GeneratedSiteReport, branding: PdfBranding 
     <header>
       ${logoUrl ? `<img src="${esc(logoUrl)}" class="logo" alt="" />` : ''}
       ${companyName ? `<p class="company">${esc(companyName)}</p>` : ''}
-      <h1>${esc(meta.title)}</h1>
+      <h1>${esc(reportTitle)}</h1>
       <table class="title-meta">
         <tbody>
           ${meta.visitDate ? `<tr><td class="label">Date of Visit</td><td>${formatDate(meta.visitDate)}</td></tr>` : ''}
@@ -221,7 +214,7 @@ export function reportToHtml(report: GeneratedSiteReport, branding: PdfBranding 
   if (weather) {
     const weatherNum = counter.next();
     const weatherRows = [
-      weather.conditions ? ['Conditions', weather.conditions] : null,
+      weather.condition ? ['Conditions', weather.condition] : null,
       weather.temperature ? ['Temperature', weather.temperature] : null,
       weather.wind ? ['Wind', weather.wind] : null,
       weather.impact ? ['Impact on Works', weather.impact] : null,
@@ -250,7 +243,7 @@ export function reportToHtml(report: GeneratedSiteReport, branding: PdfBranding 
 
   // ── Workers ──────────────────────────────────────────────────
 
-  const workersNum = workers ? counter.next() : '';
+  const workersNum = workers.length > 0 ? counter.next() : '';
   const workersHtml = renderWorkers(
     workers,
     workersNum ? `${workersNum}. Personnel Summary` : null,
@@ -271,14 +264,14 @@ export function reportToHtml(report: GeneratedSiteReport, branding: PdfBranding 
 
   // ── Additional Sections ──────────────────────────────────────
 
-  const sectionsHtml = renderSections(sections, counter);
+  const sectionsHtml = renderSections(summarySections, counter);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${esc(meta.title)}</title>
+  <title>${esc(reportTitle)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 

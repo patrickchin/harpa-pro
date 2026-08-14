@@ -21,7 +21,8 @@ import {
   getActionErrorDialogCopy,
   type AppDialogCopy,
 } from '@/lib/dialogs/app-dialog-copy';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { displayReportTitle } from '@/lib/reports/report-body';
+import { reports } from '@harpa/api-contract';
 
 export interface SavedReportSheetState {
   status: 'generating' | 'ready' | 'error';
@@ -32,7 +33,7 @@ export interface SavedReportSheetState {
 }
 
 interface UseReportPdfActionsArgs {
-  displayReport: GeneratedSiteReport | null;
+  displayReport: reports.ReportBody | null;
   siteName: string | null;
   onExportError: (copy: AppDialogCopy & { kind: 'error' }) => void;
 }
@@ -66,7 +67,7 @@ export function useReportPdfActions({
 
     setSavedReportSheet({
       status: 'generating',
-      reportTitle: displayReport.report.meta.title,
+      reportTitle: displayReportTitle(displayReport),
     });
 
     try {
@@ -76,12 +77,12 @@ export function useReportPdfActions({
         locationDescription:
           result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
         pdfUri: result.pdfUri,
-        reportTitle: displayReport.report.meta.title,
+        reportTitle: displayReportTitle(displayReport),
       });
     } catch (e) {
       setSavedReportSheet({
         status: 'error',
-        reportTitle: displayReport.report.meta.title,
+        reportTitle: displayReportTitle(displayReport),
         errorMessage: e instanceof Error ? e.message : "Couldn't generate PDF.",
       });
     }
@@ -141,7 +142,7 @@ export function useReportPdfActions({
           locationDescription:
             result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
           pdfUri: result.pdfUri,
-          reportTitle: displayReport.report.meta.title,
+          reportTitle: displayReportTitle(displayReport),
         });
         setSavedReportSheetError(result.shareErrorMessage);
       }

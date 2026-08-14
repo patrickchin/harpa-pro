@@ -7,15 +7,18 @@
  */
 import { View, Text } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
-import type { GeneratedReportIssue } from '@harpa/report-core';
-import { toTitleCase } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { AddAttachmentsButton } from '@/components/reports/detail/AddAttachmentsButton';
 import { PlacedPhotoStrip } from '@/components/reports/detail/PlacedPhotoStrip';
-import { getIssueSeverityTone } from '@/lib/reports/report-ui';
+import {
+  getIssueMeta,
+  getIssueSeverityTone,
+  toTitleCase,
+} from '@/lib/reports/report-ui';
 import { colors } from '@/lib/design-tokens/colors';
 import type { PhotoGroup } from '@/lib/reports/photo-placements';
 
@@ -45,7 +48,7 @@ function getSeverityStyle(severity: string) {
 }
 
 interface IssuesCardProps {
-  issues: readonly GeneratedReportIssue[];
+  issues: reports.ReportBody['issues'];
   onEditIssue?: (index: number) => void;
   /**
    * Optional map of issue index → placed photo groups. When set, each
@@ -87,7 +90,9 @@ export function IssuesCard({
       />
       <View className="mt-4 gap-4">
         {issues.map((issue, index) => {
-          const style = getSeverityStyle(issue.severity);
+          const severityLabel = issue.severity?.trim() ? toTitleCase(issue.severity) : 'Unknown';
+          const style = getSeverityStyle(issue.severity ?? '');
+          const meta = getIssueMeta(issue);
           return (
             <View
               key={`${issue.title}-${index}`}
@@ -109,7 +114,7 @@ export function IssuesCard({
                       <Text
                         className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}
                       >
-                        {toTitleCase(issue.severity)}
+                        {severityLabel}
                       </Text>
                     </View>
                     {onAddAttachmentsToIssue || onEditIssue ? (
@@ -144,19 +149,18 @@ export function IssuesCard({
                       </View>
                     ) : null}
                   </View>
-                  <Text className="mt-2 text-sm text-muted-foreground">
-                    {[issue.category, issue.status]
-                      .filter(Boolean)
-                      .map(toTitleCase)
-                      .join(' · ')}
-                  </Text>
-                  <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
-                    {issue.details}
-                  </Text>
-                  {issue.actionRequired ? (
+                  {meta ? (
+                    <Text className="mt-2 text-sm text-muted-foreground">{meta}</Text>
+                  ) : null}
+                  {issue.description ? (
+                    <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
+                      {issue.description}
+                    </Text>
+                  ) : null}
+                  {issue.action ? (
                     <View className="mt-4 rounded-md border border-warning-border bg-warning-soft p-3">
                       <Text className="text-base font-medium text-warning-text">
-                        → {issue.actionRequired}
+                        → {issue.action}
                       </Text>
                     </View>
                   ) : null}

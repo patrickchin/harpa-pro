@@ -43,12 +43,12 @@ import {
   type SavedReportProps,
 } from './saved-report';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { reports } from '@harpa/api-contract';
 import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 import {
   AudioPlaybackProvider,
   type PlaybackPlayer,
 } from '@/lib/audio/AudioPlaybackProvider';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 
 // Switching to the Notes tab mounts `ReportNotesPane`, whose voice
 // rows call `useAudioPlayback()` and whose signed-URL chain pulls
@@ -417,8 +417,8 @@ describe('SavedReport', () => {
   it('renders the site-visit number above a descriptive wrapping title', () => {
     const longReport = JSON.parse(
       JSON.stringify(SAMPLE_GENERATED_REPORT),
-    ) as GeneratedSiteReport;
-    longReport.report.meta.title =
+    ) as reports.ReportBody;
+    longReport.meta.title =
       'Site Visit — Highland Tower structural inspection and delivery reconciliation report';
     const tree = render(
       <SavedReport
@@ -680,17 +680,14 @@ const PHOTO_NOTE_ROWS: SavedReportProps['noteRows'] = [
 
 const REPORT_WITH_PLACED_PHOTO = {
   ...SAMPLE_GENERATED_REPORT,
-  report: {
-    ...SAMPLE_GENERATED_REPORT.report,
-    sections: [
-      {
-        ...SAMPLE_GENERATED_REPORT.report.sections[0]!,
-        attachments: { images: ['n_placed'] },
-      },
-      ...SAMPLE_GENERATED_REPORT.report.sections.slice(1),
-    ],
-  },
-} as GeneratedSiteReport;
+  summarySections: [
+    {
+      ...SAMPLE_GENERATED_REPORT.summarySections[0]!,
+      attachments: { images: ['n_placed'] },
+    },
+    ...SAMPLE_GENERATED_REPORT.summarySections.slice(1),
+  ],
+} as reports.ReportBody;
 
 describe('SavedReport — finalized layout', () => {
   it('renders Report and Review tabs when finalized', () => {
@@ -715,10 +712,7 @@ describe('SavedReport — finalized layout', () => {
   it('uses a generic descriptive title when meta.title is empty', () => {
     const blank = {
       ...SAMPLE_GENERATED_REPORT,
-      report: {
-        ...SAMPLE_GENERATED_REPORT.report,
-        meta: { ...SAMPLE_GENERATED_REPORT.report.meta, title: '' },
-      },
+      meta: { ...SAMPLE_GENERATED_REPORT.meta, title: '' },
     };
     const tree = render(
       <SavedReport

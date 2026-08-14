@@ -79,14 +79,14 @@ import {
   splitAttachments,
   type PhotoPlacement,
 } from '@/lib/reports/photo-placements';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
 export type SavedReportStatus = 'draft' | 'finalized';
 
 export interface SavedReportProps {
-  /** Normalized GeneratedSiteReport (or null when not yet resolved). */
-  report: GeneratedSiteReport | null;
+  /** Canonical report body (or null when not yet resolved). */
+  report: reports.ReportBody | null;
   /** Saved-report status — controls Notes/Review and read-only edit chrome. */
   reportStatus: SavedReportStatus | null;
   /**
@@ -122,7 +122,7 @@ export interface SavedReportProps {
   onBackToProjects: () => void;
 
   /** Edit-tab live patch sink (no-op until persistence wires). */
-  onChangeReport: (next: GeneratedSiteReport) => void;
+  onChangeReport: (next: reports.ReportBody) => void;
   isAutoSaving: boolean;
   lastSavedAt: number | null;
 
@@ -234,7 +234,7 @@ export function SavedReport(props: SavedReportProps) {
     title: string;
     message: string;
   } | null>(null);
-  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
+  const [localReport, setLocalReport] = useState<reports.ReportBody | null>(
     null,
   );
   const [activeTab, setActiveTab] = useState<ReportDetailTab>(
@@ -368,7 +368,7 @@ export function SavedReport(props: SavedReportProps) {
     handleSharePdf,
   } = pdfActions;
 
-  const handleEditChange = (next: GeneratedSiteReport) => {
+  const handleEditChange = (next: reports.ReportBody) => {
     setLocalReport(next);
     onChangeReport(next);
   };
@@ -379,7 +379,7 @@ export function SavedReport(props: SavedReportProps) {
     setEditing(target);
   };
 
-  const handleEditModalChange = (next: GeneratedSiteReport) => {
+  const handleEditModalChange = (next: reports.ReportBody) => {
     handleEditChange(next);
   };
 
@@ -772,8 +772,8 @@ export function SavedReport(props: SavedReportProps) {
       {placementActionsEnabled ? (
         <PhotoGroupPlacementSheet
           visible={placementSheetNoteId !== null}
-          issues={displayReport?.report.issues ?? []}
-          sections={displayReport?.report.sections ?? []}
+          issues={displayReport?.issues ?? []}
+          sections={displayReport?.summarySections ?? []}
           photoCount={
             placementSheetNoteId
               ? photoGroups.find((g) => g.noteId === placementSheetNoteId)

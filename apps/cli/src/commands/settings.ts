@@ -13,7 +13,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderAiSettings, type AiSettingsLike } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
@@ -49,12 +49,7 @@ export const settingsAiGetCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.GET('/settings/ai'),
-      format: (data) => renderAiSettings(data as AiSettingsLike),
-    });
+    process.exit(await settingsAiGet({ client, json: args.json, verbose: args.verbose }));
   },
 });
 
@@ -107,9 +102,9 @@ export const settingsAiSetCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    let body: SettingsBody;
+    let settings: Pick<SettingsAiSetArgs, 'clear' | 'vendor' | 'model'>;
     if (args.clear) {
-      body = { vendor: null, model: null };
+      settings = { clear: true };
     } else {
       if (!args.vendor || !args.model) {
         process.stderr.write(
@@ -119,18 +114,14 @@ export const settingsAiSetCommand = defineCommand({
         );
         process.exit(2);
       }
-      body = {
+      settings = {
         vendor: parseVendor(String(args.vendor)),
         model: String(args.model),
       };
     }
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () => client.PATCH('/settings/ai', { body }),
-      format: (data) =>
-        `${chalk.green('✓')} AI settings updated\n${renderAiSettings(data as AiSettingsLike)}`,
-    });
+    process.exit(
+      await settingsAiSet({ client, json: args.json, verbose: args.verbose, ...settings }),
+    );
   },
 });
 

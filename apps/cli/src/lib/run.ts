@@ -1,5 +1,5 @@
 /**
- * Shared helpers used by every command handler.
+ * Shared request execution helpers for CLI commands.
  *
  * `runRequest` wraps an openapi-fetch call so that:
  *   - 2xx responses go through the supplied formatter (human or JSON)
@@ -8,8 +8,8 @@
  *   - thrown errors (network / parse) render via `printTransportError`
  *     and exit 7
  *
- * Every command goes through this helper so the output contract is
- * enforced in one place.
+ * Command cores use `executeRequest`; direct handlers can use `runRequest`.
+ * Both paths enforce the same output contract here.
  */
 import chalk from 'chalk';
 import {
@@ -87,9 +87,9 @@ export async function executeRequest<T>(opts: RunRequestOptions<T>): Promise<Exi
 }
 
 /**
- * Thin wrapper used by every citty command handler: runs `executeRequest`
- * and process.exits with the resulting code. Typed as `never` because the
- * process is gone by the time control would return.
+ * Thin wrapper for direct citty handlers: runs `executeRequest` and exits
+ * with the resulting code. Typed as `never` because the process is gone by
+ * the time control would return.
  */
 export async function runRequest<T>(opts: RunRequestOptions<T>): Promise<never> {
   const code = await executeRequest(opts);

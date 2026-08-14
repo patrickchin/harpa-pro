@@ -13,7 +13,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderMemberList } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
@@ -56,15 +56,14 @@ export const membersListCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.GET('/projects/{project}/members', {
-          params: { path: { project: String(args.projectId) } },
-        }),
-      format: (data) => renderMemberList(data),
-    });
+    process.exit(
+      await membersList({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        projectId: String(args.projectId),
+      }),
+    );
   },
 });
 
@@ -107,9 +106,7 @@ export const membersAddCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { email: string; role?: 'owner' | 'editor' | 'viewer' } = {
-      email: String(args.email),
-    };
+    let role: MembersAddArgs['role'];
     if (typeof args.role === 'string' && args.role.length > 0) {
       if (args.role !== 'owner' && args.role !== 'editor' && args.role !== 'viewer') {
         process.stderr.write(
@@ -117,19 +114,18 @@ export const membersAddCommand = defineCommand({
         );
         process.exit(2);
       }
-      body.role = args.role;
+      role = args.role;
     }
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/members', {
-          params: { path: { project: String(args.projectId) } },
-          body,
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.email)} ${chalk.dim(`<${data.email}>`)} as ${data.role}`,
-    });
+    process.exit(
+      await membersAdd({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        projectId: String(args.projectId),
+        email: String(args.email),
+        role,
+      }),
+    );
   },
 });
 
@@ -183,33 +179,15 @@ export const membersRemoveCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    // Resolve email → userId
-    const listRes = await client.GET('/projects/{project}/members', {
-      params: { path: { project: String(args.projectId) } },
-    });
-    if (listRes.error || !listRes.data) {
-      process.stderr.write(chalk.red(`Error: could not fetch members for project ${args.projectId}\n`));
-      process.exit(1);
-    }
-    const email = String(args.email);
-    const member = listRes.data.items.find((m) => m.email === email);
-    if (!member) {
-      process.stderr.write(chalk.red(`Error: no member with email ${email} in project ${args.projectId}\n`));
-      process.exit(4);
-    }
-    await runRequest({
-      json: args.json,
-      verbose: args.verbose,
-      request: () =>
-        client.DELETE('/projects/{project}/members/{user}', {
-          params: {
-            path: { project: String(args.projectId), user: member.userId },
-          },
-        }),
-      format: () =>
-        `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? email)} ${chalk.dim(`<${email}>`)} from project ${args.projectId}`,
-      formatJson: () => JSON.stringify({ ok: true }, null, 2),
-    });
+    process.exit(
+      await membersRemove({
+        client,
+        json: args.json,
+        verbose: args.verbose,
+        projectId: String(args.projectId),
+        email: String(args.email),
+      }),
+    );
   },
 });
 

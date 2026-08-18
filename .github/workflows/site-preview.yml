@@ -57,8 +57,8 @@ jobs:
       - name: Verify public build excludes admin routes
         run: test ! -e apps/site/dist/admin
 
-      - name: Install Playwright Chromium
-        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium firefox
 
       - name: Browser-test documentation
         run: pnpm --filter @harpa/site test:e2e

@@ -26,7 +26,8 @@ the current shared header does not expose the dashboard.
 - React 19 islands (added in M1/M2)
 - MDX content collections (added in M0.4)
 - Typed product guides under `/docs`
-- Playwright coverage for docs navigation, search, links, and mobile layout
+- Chromium and Firefox Playwright coverage for docs navigation, search, links,
+  and responsive layout
 - Deployed from Git by the `harpa-pro` Cloudflare Pages project. Cloudflare
   runs `scripts/ci/build-cloudflare-pages.sh site`; the
   `@astrojs/cloudflare` adapter is intentionally not installed because every

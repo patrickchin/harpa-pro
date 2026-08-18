@@ -758,11 +758,18 @@
   .docs-screenshot-dialog {
     background: transparent;
     border: 0;
+    box-sizing: border-box;
     color: var(--color-foreground);
     margin: auto;
     max-height: calc(100dvh - 1.5rem);
     max-width: min(62rem, calc(100vw - 1.5rem));
     padding: 0;
+    /*
+     * Every full guide screenshot is a 1290 × 2796 phone portrait. At the
+     * viewport-bound panel height, 46.1373dvh is its aspect-fitted width;
+     * 2.873rem accounts for the fixed header/caption rows and dialog chrome.
+     */
+    width: min(calc(46.1373dvh - 2.873rem), calc(100vw - 1.5rem));
   }
 
   .docs-screenshot-dialog::backdrop {
@@ -775,12 +782,13 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     box-shadow: 0 1.5rem 5rem oklch(0.13 0.03 265 / 0.38);
+    box-sizing: border-box;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: 4.125rem minmax(0, 1fr);
     height: calc(100dvh - 1.5rem);
     max-height: calc(100dvh - 1.5rem);
     overflow: hidden;
-    width: fit-content;
+    width: 100%;
   }
 
   .docs-screenshot-dialog-panel > header {
@@ -790,13 +798,20 @@
     display: flex;
     gap: 1rem;
     justify-content: space-between;
+    min-width: 0;
     padding: 0.75rem 0.85rem 0.75rem 1rem;
   }
 
   .docs-screenshot-dialog-panel h2 {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.35;
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
   }
 
   .docs-screenshot-dialog-close {
@@ -821,7 +836,7 @@
 
   .docs-screenshot-dialog-panel figure {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) 2.5rem;
     min-height: 0;
     overflow: hidden;
   }
@@ -837,6 +852,7 @@
   }
 
   .docs-screenshot-dialog-image img {
+    aspect-ratio: 1290 / 2796;
     display: block;
     height: auto;
     margin: 0 auto;
@@ -850,7 +866,10 @@
     color: var(--color-muted-foreground);
     font-size: 0.78rem;
     line-height: 1.35;
+    overflow: hidden;
     padding: 0.65rem 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .docs-prose h2 {

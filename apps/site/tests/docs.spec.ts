@@ -177,7 +177,7 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   expect(fit.naturalWidth).toBeGreaterThan(0);
   expect(fit.naturalHeight).toBeGreaterThan(0);
   expect(bounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
-    fit.imageWidth + 80,
+    fit.imageWidth + 32,
   );
   expect(fit.regionScrollHeight).toBeLessThanOrEqual(
     fit.regionClientHeight + 1,
@@ -199,9 +199,24 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(trigger).toBeFocused();
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await trigger.click();
+  await expect(fullScreenshot).toBeVisible();
+  const wideBounds = await dialog.boundingBox();
+  const wideImageBounds = await fullScreenshot.boundingBox();
+  expect(wideBounds).not.toBeNull();
+  expect(wideImageBounds).not.toBeNull();
+  expect(wideBounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    (wideImageBounds?.width ?? 0) + 32,
+  );
+  expect(wideImageBounds?.width ?? 0).toBeGreaterThan(fit.imageWidth);
+  await dialog.getByRole("button", { name: "Close full screenshot" }).click();
+  await expect(dialog).not.toBeVisible();
 });
 
 test("keeps modified screenshot clicks as native new-tab links", async ({
+  browserName,
   page,
 }) => {
   await page.goto("/docs/guides/generate-ai-report");
@@ -212,12 +227,30 @@ test("keeps modified screenshot clicks as native new-tab links", async ({
   const screenshotUrl = await trigger.getAttribute("href");
   expect(screenshotUrl).not.toBeNull();
 
-  const modifier: "Meta" | "Control" =
-    process.platform === "darwin" ? "Meta" : "Control";
+  if (browserName === "firefox") {
+    // Playwright's Firefox backend does not open a page for a synthetic
+    // modifier-click. Exercise the application boundary directly instead:
+    // the cancellable link event must remain available to native handling.
+    const wasPrevented = await trigger.evaluate((link) => {
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        ctrlKey: true,
+      });
+      link.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+
+    expect(wasPrevented).toBe(false);
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    return;
+  }
+
   const newPagePromise = page.context().waitForEvent("page", {
-    timeout: 3_000,
+    timeout: 10_000,
   });
-  await trigger.click({ modifiers: [modifier] });
+  await trigger.click({ modifiers: ["ControlOrMeta"] });
   const imagePage = await newPagePromise;
 
   await expect(imagePage).toHaveURL(

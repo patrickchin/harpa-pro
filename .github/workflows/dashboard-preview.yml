@@ -178,7 +178,7 @@ jobs:
 
       - name: Upload live journey failure screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dashboard-live-e2e-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
           path: apps/dashboard/test-results-live/**/*.png

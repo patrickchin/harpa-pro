@@ -28,15 +28,15 @@ describe('site smoke', () => {
       '@astrojs/mdx': '^7.0.5',
       '@astrojs/react': '^6.0.2',
       '@tailwindcss/vite': '^4.3.3',
-      astro: '^7.1.6',
+      astro: '^7.2.2',
       react: '19.2.0',
       'react-dom': '19.2.0',
       tailwindcss: '^4.3.3',
     });
     expect(pkg.devDependencies).toMatchObject({
       '@astrojs/check': '^0.9.10',
-      '@types/react': '^19.2.0',
-      '@types/react-dom': '~19.2.3',
+      '@types/react': '^19.2.18',
+      '@types/react-dom': '~19.2.4',
       cookie: '2.0.1',
       vite: '8.2.0',
     });

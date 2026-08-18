@@ -44,10 +44,10 @@
     "@types/node": "^22.7.5",
     "husky": "^9.1.6",
     "prettier": "^3.9.6",
-    "tsx": "^4.23.7",
-    "turbo": "^2.10.8",
+    "tsx": "^4.23.12",
+    "turbo": "^2.10.9",
     "typescript": "^5.6.2",
-    "wrangler": "^4.119.0"
+    "wrangler": "^4.123.0"
   },
   "pnpm": {
     "patchedDependencies": {

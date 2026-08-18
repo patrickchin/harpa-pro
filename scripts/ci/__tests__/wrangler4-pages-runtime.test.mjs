@@ -65,21 +65,23 @@ for (const relativePath of ['apps/site/wrangler.jsonc', 'apps/admin/wrangler.jso
   );
 }
 
-const { Miniflare } = await import('miniflare');
-const miniflare = new Miniflare({
-  compatibilityDate: '2026-05-01',
-  modules: true,
-  script: `
-    export default {
-      async fetch(request) {
-        return Response.json({
-          method: request.method,
-          pathname: new URL(request.url).pathname,
-        });
-      },
-    };
-  `,
-});
+const { Miniflare, convertV4MiniflareOptions } = await import('miniflare');
+const miniflare = new Miniflare(
+  convertV4MiniflareOptions({
+    compatibilityDate: '2026-05-01',
+    modules: true,
+    script: `
+      export default {
+        async fetch(request) {
+          return Response.json({
+            method: request.method,
+            pathname: new URL(request.url).pathname,
+          });
+        },
+      };
+    `,
+  }),
+);
 
 try {
   const response = await miniflare.dispatchFetch('https://pages.local/runtime-smoke', {

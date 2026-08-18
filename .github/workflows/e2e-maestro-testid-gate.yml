@@ -17,7 +17,7 @@ jobs:
       mobile: ${{ steps.paths.outputs.mobile }}
       workflows: ${{ steps.paths.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paths
         uses: ./.github/actions/changed-paths
 
@@ -32,7 +32,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check Maestro testIDs exist in mobile source
         run: bash scripts/check-maestro-testids.sh
 
@@ -48,7 +48,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - name: Export production-shaped mobile bundle
         run: pnpm --filter @harpa/mobile bundle:smoke
@@ -70,7 +70,7 @@ jobs:
       EXPO_PUBLIC_API_URL: http://localhost:8787
       EXPO_PUBLIC_USE_FIXTURES: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - uses: actions/setup-java@v5
         with:

@@ -19,7 +19,7 @@ jobs:
       api: ${{ steps.paths.outputs.api }}
       workflows: ${{ steps.paths.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paths
         uses: ./.github/actions/changed-paths
 
@@ -36,7 +36,7 @@ jobs:
       AI_FIXTURE_MODE: replay
       TESTCONTAINERS_RYUK_DISABLED: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
       - name: Test API with 90% line coverage

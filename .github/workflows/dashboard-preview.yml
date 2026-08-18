@@ -46,7 +46,7 @@ jobs:
     env:
       API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-monorepo
 
@@ -106,7 +106,7 @@ jobs:
       DASHBOARD_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
       API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 

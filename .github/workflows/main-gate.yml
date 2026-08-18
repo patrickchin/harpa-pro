@@ -32,7 +32,7 @@ jobs:
           echo "::error::Port the dependency update through dev in a coordinated, human-owned PR before promoting it to main." >&2
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event.pull_request.user.login != 'dependabot[bot]'
         with:
           ref: ${{ github.event.pull_request.head.sha }}

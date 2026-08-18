@@ -14,7 +14,7 @@ jobs:
     outputs:
       any-code: ${{ steps.paths.outputs.any-code }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paths
         uses: ./.github/actions/changed-paths
 
@@ -25,7 +25,7 @@ jobs:
     env:
       AI_FIXTURE_MODE: replay
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
       - run: pnpm test

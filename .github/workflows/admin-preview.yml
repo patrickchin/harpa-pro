@@ -39,7 +39,7 @@ jobs:
     env:
       API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-monorepo
 
@@ -97,7 +97,7 @@ jobs:
       ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
       API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verify Cloudflare Git deployment
         run: >-

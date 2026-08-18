@@ -59,7 +59,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_sha || github.sha }}
           fetch-depth: 0
@@ -88,7 +88,7 @@ jobs:
       runtime-ready: ${{ steps.release-policy.outputs.runtime-ready }}
       publish: ${{ steps.release-policy.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_sha || github.sha }}
           fetch-depth: 0
@@ -114,7 +114,7 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.release-policy.outputs.release-sha }}
           fetch-depth: 0

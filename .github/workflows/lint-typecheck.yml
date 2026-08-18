@@ -17,7 +17,7 @@ jobs:
     outputs:
       any-code: ${{ steps.paths.outputs.any-code }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paths
         uses: ./.github/actions/changed-paths
 
@@ -25,7 +25,7 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Node version policy
         run: bash scripts/ci/__tests__/node-version-policy.test.sh
       - uses: ./.github/actions/setup-monorepo

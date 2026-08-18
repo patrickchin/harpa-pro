@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify Cloudflare Git deployment
         run: >-
           bash scripts/ci/verify-pages-deployment.sh

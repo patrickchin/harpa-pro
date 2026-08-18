@@ -42,7 +42,7 @@ describe('admin site smoke', () => {
       '@types/react-dom': '~19.2.4',
       cookie: '2.0.1',
       tailwindcss: '^4.3.3',
-      vite: '8.2.0',
+      vite: '8.2.1',
     });
   });
 

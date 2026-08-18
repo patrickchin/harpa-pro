@@ -216,6 +216,7 @@ test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
 });
 
 test("keeps modified screenshot clicks as native new-tab links", async ({
+  browserName,
   page,
 }) => {
   await page.goto("/docs/guides/generate-ai-report");
@@ -226,12 +227,30 @@ test("keeps modified screenshot clicks as native new-tab links", async ({
   const screenshotUrl = await trigger.getAttribute("href");
   expect(screenshotUrl).not.toBeNull();
 
-  const modifier: "Meta" | "Control" =
-    process.platform === "darwin" ? "Meta" : "Control";
+  if (browserName === "firefox") {
+    // Playwright's Firefox backend does not open a page for a synthetic
+    // modifier-click. Exercise the application boundary directly instead:
+    // the cancellable link event must remain available to native handling.
+    const wasPrevented = await trigger.evaluate((link) => {
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        ctrlKey: true,
+      });
+      link.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+
+    expect(wasPrevented).toBe(false);
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    return;
+  }
+
   const newPagePromise = page.context().waitForEvent("page", {
     timeout: 10_000,
   });
-  await trigger.click({ modifiers: [modifier] });
+  await trigger.click({ modifiers: ["ControlOrMeta"] });
   const imagePage = await newPagePromise;
 
   await expect(imagePage).toHaveURL(

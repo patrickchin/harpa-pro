@@ -414,7 +414,8 @@ provider calls.
 ## Error envelopes
 
 The application error mapper is
-`packages/api/src/middleware/errorMapper.ts`. It returns this shape:
+`packages/api/src/middleware/errorMapper.ts`. It returns one strict wire
+shape for every mapped error:
 
 ```json
 {
@@ -425,6 +426,12 @@ The application error mapper is
   "requestId": "..."
 }
 ```
+
+`requestId` is a required, non-empty, top-level correlation ID. It is never
+nested inside `error`. The shared Zod schema rejects unknown keys at both
+levels so generated OpenAPI clients cannot silently accept a different
+shape. Mobile and dashboard retain read-only compatibility with the retired
+nested shape, but prefer the canonical top-level value if both are present.
 
 Current mapper codes are lowercase:
 
@@ -443,6 +450,17 @@ Current mapper codes are lowercase:
 
 Better Auth owns its route responses. A Better Auth error does not
 necessarily use the application mapper envelope.
+
+The property test in
+`packages/api/src/__tests__/errorMapper.property.test.ts` parses every mapped
+runtime error with this strict contract schema. Every `OpenAPIHono` router is
+constructed with the shared options in `packages/api/src/lib/openapi.ts`, whose
+validation hook throws failed parses through the same mapper. The suite also
+sends malformed input to a registered application route so validator/runtime
+wiring cannot silently drift from generated clients. Its spec-wide assertion
+also requires every documented `4xx`/`5xx` JSON application error to equal the
+canonical schema. Only readiness failures and report-version conflict state
+payloads are explicit non-error-envelope responses.
 
 ## OpenAPI and generated clients
 

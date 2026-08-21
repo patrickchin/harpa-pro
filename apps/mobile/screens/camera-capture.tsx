@@ -36,7 +36,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  InteractionManager,
+  BackHandler,
   Linking,
   Platform,
   Pressable,
@@ -52,7 +52,6 @@ import { runOnJS, useSharedValue } from 'react-native-reanimated';
 import {
   CameraView,
   useCameraPermissions,
-  type CameraCapturedPicture,
   type CameraType,
   type FlashMode,
   type CameraViewType,
@@ -126,8 +125,11 @@ export interface FocusPoint {
 }
 
 export interface CameraCaptureProps {
-  /** Invoked with the committed URI list when the user taps Done. */
-  onCommit: (uris: string[]) => void;
+  /**
+   * Invoked with the committed URI list when the user taps Done. Return true
+   * only after the caller accepts ownership; otherwise the body deletes them.
+   */
+  onCommit: (uris: string[]) => boolean;
   /** Invoked when the user dismisses the screen (cancel / discard). */
   onCancel: () => void;
   /** Cap on photos per session. Defaults to 20 (matching canonical). */
@@ -195,6 +197,7 @@ export function CameraCapture(props: CameraCaptureProps) {
   } = props;
 
   const [hookPermission, requestPermission] = useCameraPermissions({ request: true });
+  const effectivePermission = resolvePermission(permissionOverride, hookPermission);
   const cameraRef = useRef<CameraViewType>(null);
   const cameraGenerationRef = useRef(0);
   const captureAttemptRef = useRef(0);
@@ -205,8 +208,12 @@ export function CameraCapture(props: CameraCaptureProps) {
   const [captures, setCaptures] = useState<CameraCaptureItem[]>(() =>
     initialCaptures ? [...initialCaptures] : [],
   );
+  const capturesRef = useRef(captures);
+  const committedRef = useRef(false);
   const [isCameraReady, setIsCameraReady] = useState(takePicture != null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const isCapturingRef = useRef(false);
+  const captureSessionActiveRef = useRef(true);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [zoom, setZoom] = useState(MIN_ZOOM);
   // `zoomStart` lives on the UI thread so the pinch worklet can read
@@ -288,16 +295,58 @@ export function CameraCapture(props: CameraCaptureProps) {
     },
     [deleteFile],
   );
+  const removeFileRef = useRef(removeFile);
+  removeFileRef.current = removeFile;
+
+  useEffect(() => {
+    captureSessionActiveRef.current = true;
+    return () => {
+      captureSessionActiveRef.current = false;
+      isCapturingRef.current = false;
+      // System Back / native modal dismissal can bypass the explicit
+      // Cancel flow. Completed cache files remain temporary until Done
+      // commits them to the caller, so clean every uncommitted URI here.
+      if (!committedRef.current) {
+        for (const capture of capturesRef.current) {
+          removeFileRef.current(capture.uri);
+        }
+      }
+      capturesRef.current = [];
+    };
+  }, []);
+
+  const appendCapture = useCallback((item: CameraCaptureItem) => {
+    const next = [...capturesRef.current, item];
+    capturesRef.current = next;
+    setCaptures(next);
+  }, []);
+
+  const saveCaptureToRollBestEffort = useCallback(
+    (uri: string) => {
+      if (!saveToCameraRoll || !saveCaptureToCameraRoll) return;
+      // Start from a resolved promise so a synchronous collaborator throw
+      // becomes the same swallowed rejection as an async save failure.
+      void Promise.resolve()
+        .then(() => saveCaptureToCameraRoll(uri))
+        .catch(() => {});
+    },
+    [saveCaptureToCameraRoll, saveToCameraRoll],
+  );
 
   const handleCapture = useCallback(async () => {
-    if (isCapturing) return;
-    if (captures.length >= maxBurst) return;
+    if (!captureSessionActiveRef.current) return;
+    if (isCapturingRef.current) return;
+    if (capturesRef.current.length >= maxBurst) return;
     const captureAttempt = ++captureAttemptRef.current;
     const releaseCaptureLock = () => {
       if (captureAttemptRef.current === captureAttempt) {
-        setIsCapturing(false);
+        isCapturingRef.current = false;
+        if (captureSessionActiveRef.current) {
+          setIsCapturing(false);
+        }
       }
     };
+    isCapturingRef.current = true;
     setIsCapturing(true);
 
     // ── Test / dev-mirror injection path ────────────────────────────
@@ -305,10 +354,12 @@ export function CameraCapture(props: CameraCaptureProps) {
       try {
         const item = await takePicture();
         if (item) {
-          setCaptures((prev) => [...prev, item]);
-          if (saveToCameraRoll && saveCaptureToCameraRoll) {
-            void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(() => {});
+          if (!captureSessionActiveRef.current) {
+            removeFile(item.uri);
+            return;
           }
+          appendCapture(item);
+          saveCaptureToRollBestEffort(item.uri);
         }
       } catch {
         // ignore — bad shot
@@ -320,90 +371,120 @@ export function CameraCapture(props: CameraCaptureProps) {
 
     // ── Default wiring (expo-camera) ────────────────────────────────
     //
-    // `onPictureSaved` lets `takePictureAsync` resolve as soon as the
-    // sensor capture completes, *before* the JPEG is encoded and
-    // written to disk. That JPEG encode is the bulk of the delay the
-    // user feels between shutter presses, so releasing `isCapturing`
-    // on the awaited promise (rather than waiting for the URI) lets
-    // the next press fire ~immediately. The thumbnail / camera-roll
-    // side-effects then run in the callback once the file is ready.
+    // Await ordinary mode instead of Expo's onPictureSaved fast mode.
+    // Expo 55 provides no fast-mode error callback or unregister path:
+    // Android can settle the early promise and then fail JPEG writing
+    // without a callback, while teardown can strand Expo's module-global
+    // callback closure. Serializing through the ordinary promise gives
+    // each shutter one success/rejection terminal and preserves order.
     const ref = cameraRef.current;
     if (!ref) {
       releaseCaptureLock();
       return;
     }
     try {
-      await ref.takePictureAsync({
+      const photo = await ref.takePictureAsync({
         skipProcessing: true,
         exif: false,
         imageType: 'jpg',
-        onPictureSaved: (photo: CameraCapturedPicture) => {
-          // Android can deliver the saved photo while the fast-mode
-          // promise remains pending. Treat either native completion
-          // signal as terminal, but never let an older callback unlock
-          // a newer capture that has already started.
-          releaseCaptureLock();
-          if (!photo?.uri) return;
-          const item: CameraCaptureItem = {
-            uri: photo.uri,
-            width: photo.width,
-            height: photo.height,
-          };
-          // Defer the re-render (which decodes the new thumbnail) so
-          // it doesn't compete with the next shutter press for the
-          // JS thread on slower devices.
-          InteractionManager.runAfterInteractions(() => {
-            setCaptures((prev) => [...prev, item]);
-            if (saveToCameraRoll && saveCaptureToCameraRoll) {
-              void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(() => {});
-            }
-          });
-        },
       });
+      if (!photo?.uri) return;
+      const item: CameraCaptureItem = {
+        uri: photo.uri,
+        width: photo.width,
+        height: photo.height,
+      };
+      if (!captureSessionActiveRef.current) {
+        removeFile(item.uri);
+        return;
+      }
+      appendCapture(item);
+      saveCaptureToRollBestEffort(item.uri);
     } catch {
       // Swallow — a single bad shot shouldn't kill the screen.
     } finally {
-      // Usually resolves ~immediately when `onPictureSaved` is set.
-      // The callback above is the fallback when CameraX saves the JPEG
-      // but the promise does not settle.
       releaseCaptureLock();
     }
-  }, [
-    captures.length,
-    isCapturing,
-    maxBurst,
-    takePicture,
-    saveToCameraRoll,
-    saveCaptureToCameraRoll,
-  ]);
+  }, [maxBurst, takePicture, appendCapture, saveCaptureToRollBestEffort, removeFile]);
 
   const handleRemove = useCallback(
     (uri: string) => {
-      setCaptures((prev) => prev.filter((c) => c.uri !== uri));
+      if (!captureSessionActiveRef.current) return;
+      const next = capturesRef.current.filter((c) => c.uri !== uri);
+      capturesRef.current = next;
+      setCaptures(next);
       removeFile(uri);
     },
     [removeFile],
   );
 
   const handleDone = useCallback(() => {
-    onCommit(captures.map((c) => c.uri));
-  }, [captures, onCommit]);
+    if (
+      !captureSessionActiveRef.current ||
+      isCapturingRef.current ||
+      capturesRef.current.length === 0
+    ) {
+      return;
+    }
+    const capturesToCommit = capturesRef.current;
+    const uris = capturesToCommit.map((capture) => capture.uri);
+    captureSessionActiveRef.current = false;
+    // Mark ownership transferred before invoking the callback because route
+    // navigation can synchronously unmount this screen. Roll the marker back
+    // and reclaim the files if the caller explicitly rejects the handoff or
+    // throws before accepting it.
+    committedRef.current = true;
+    let accepted = false;
+    try {
+      accepted = onCommit(uris) === true;
+    } finally {
+      if (!accepted) {
+        committedRef.current = false;
+        capturesRef.current = [];
+        for (const capture of capturesToCommit) {
+          removeFile(capture.uri);
+        }
+        setCaptures([]);
+      }
+    }
+  }, [onCommit, removeFile]);
 
   const discardAndClose = useCallback(() => {
-    for (const c of captures) {
+    if (!captureSessionActiveRef.current) return;
+    captureSessionActiveRef.current = false;
+    const capturesToDelete = capturesRef.current;
+    capturesRef.current = [];
+    for (const c of capturesToDelete) {
       removeFile(c.uri);
     }
     setConfirmDiscardOpen(false);
     onCancel();
-  }, [captures, onCancel, removeFile]);
+  }, [onCancel, removeFile]);
 
   const handleCancel = useCallback(() => {
-    if (captures.length > 0) {
+    if (!captureSessionActiveRef.current) return;
+    // Permission gates return before rendering the discard dialog. If a
+    // permission transition leaves completed captures behind, reclaim them
+    // directly instead of opening an unreachable sheet and trapping Back.
+    if (effectivePermission.state !== 'granted') {
+      discardAndClose();
+      return;
+    }
+    if (capturesRef.current.length > 0) {
       setConfirmDiscardOpen(true);
       return;
     }
+    captureSessionActiveRef.current = false;
     onCancel();
-  }, [captures.length, onCancel]);
+  }, [discardAndClose, effectivePermission.state, onCancel]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleCancel();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [handleCancel]);
 
   // ── Gestures ────────────────────────────────────────────────────────
   //
@@ -449,8 +530,6 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   // ── Permission gates ────────────────────────────────────────────────
 
-  const effectivePermission = resolvePermission(permissionOverride, hookPermission);
-
   if (effectivePermission.state === 'requesting') {
     return (
       <View
@@ -494,7 +573,7 @@ export function CameraCapture(props: CameraCaptureProps) {
             </Button>
             <Pressable
               accessibilityRole="button"
-              onPress={onCancel}
+              onPress={handleCancel}
               className="py-3 items-center"
               testID="btn-camera-permission-cancel"
             >
@@ -650,6 +729,7 @@ export function CameraCapture(props: CameraCaptureProps) {
           </ScrollView>
           <Pressable
             onPress={() => {
+              if (!captureSessionActiveRef.current || isCapturingRef.current) return;
               if (!takePicture && Platform.OS === 'android') {
                 cameraGenerationRef.current += 1;
                 setIsCameraReady(false);
@@ -659,6 +739,7 @@ export function CameraCapture(props: CameraCaptureProps) {
             accessibilityRole="button"
             accessibilityLabel="Flip camera"
             testID="btn-camera-flip"
+            disabled={isCapturing}
             className="w-11 h-11 rounded-full items-center justify-center ml-auto bg-black/35"
           >
             <RefreshCw size={22} color={colors.primary.foreground} />
@@ -690,7 +771,11 @@ export function CameraCapture(props: CameraCaptureProps) {
               : `${captures.length} photo${captures.length === 1 ? '' : 's'}`}
             {captures.length >= maxBurst ? ' (max)' : ''}
           </Text>
-          <Button onPress={handleDone} disabled={captures.length === 0} testID="btn-camera-done">
+          <Button
+            onPress={handleDone}
+            disabled={captures.length === 0 || isCapturing}
+            testID="btn-camera-done"
+          >
             Done
           </Button>
         </View>

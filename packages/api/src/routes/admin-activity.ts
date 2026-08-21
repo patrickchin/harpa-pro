@@ -1,8 +1,9 @@
-import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { activity as activitySchemas } from '@harpa/api-contract';
+import { activity as activitySchemas, errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { getAdminRateLimiter } from '../lib/adminRateLimiter.js';
 import { adminAuthIpWindow } from '../middleware/admin-rate-limit.js';
 import { withAdminSession } from '../middleware/admin-session.js';
@@ -10,11 +11,6 @@ import { withRateLimit } from '../middleware/rateLimit.js';
 import { listAdminActivity } from '../services/admin-activity.js';
 
 const MINUTE_MS = 60_000;
-
-const errorBody = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-  requestId: z.string().optional(),
-});
 
 function adminActivityRateLimitKey(c: Context<AppEnv>): string {
   const identityId = c.get('adminIdentityId');
@@ -33,7 +29,7 @@ const adminActivityRateLimit = withRateLimit({
   getLimiter: getAdminRateLimiter,
 });
 
-export const adminActivityRoutes = new OpenAPIHono<AppEnv>();
+export const adminActivityRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 adminActivityRoutes.openapi(
   createRoute({
@@ -56,15 +52,15 @@ adminActivityRoutes.openapi(
       },
       400: {
         description: 'Bad request.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),

@@ -30,6 +30,7 @@ import {
   reportNumber,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import {
   requireProjectOwner,
   requireProjectWriter,
@@ -92,7 +93,7 @@ const generateIdempotency = withIdempotency({ name: 'reports.generate' });
 // arch-rate-limiting.md §3.3.
 const aiUserSharedRateLimit = withRateLimit({ name: 'ai.user', limit: 60, windowMs: MIN });
 
-export const reportRoutes = new OpenAPIHono<AppEnv>();
+export const reportRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 /**
  * Shared slug→report lookup. Returns the report row (used by every

@@ -30,8 +30,9 @@ legacy Supabase access with v4 API contract hooks.
 - Build `apps/mobile/lib/api/client.ts`: typed fetch wrapper that
   reads `EXPO_PUBLIC_API_URL` via `lib/env.ts`, attaches the bearer
   token from the auth session (stub the getter for now — real wiring
-  in P2.4), and maps the API error envelope (`{ error: { code, message,
-  requestId } }` from `packages/api`) to a typed `ApiError`.
+  in P2.4), and maps the `packages/api` error envelope to a typed
+  `ApiError`. The canonical wire shape is
+  `{ error: { code, message }, requestId }`.
 - Generate `lib/api/hooks.ts` from the OpenAPI spec at
   `packages/api-contract/openapi.json`. Pick a generator
   (`openapi-react-query-codegen`, `orval`, or `swagger-typescript-api`)

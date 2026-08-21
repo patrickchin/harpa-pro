@@ -61,12 +61,6 @@ export type ProjectHomeProps = {
   copiedKey: string | null;
   onCopy: (value: string, key: string) => void;
   actions?: ReactNode;
-  /**
-   * Gates dev/fixture-only affordances (e.g. saved-report debug menu
-   * threaded down from this screen). When false, those affordances
-   * stay hidden in production builds.
-   */
-  showDeveloperSection?: boolean;
 };
 
 type OverviewAction = {
@@ -91,7 +85,6 @@ export function ProjectHome({
   copiedKey,
   onCopy,
   actions,
-  showDeveloperSection,
 }: ProjectHomeProps) {
   const siteName = project?.name?.trim() || 'Project';
   const stats = project?.stats ?? { totalReports: 0, drafts: 0, lastReportAt: null };

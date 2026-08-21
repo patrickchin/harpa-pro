@@ -470,6 +470,42 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('omits Report Debug when the developer-tools policy is disabled', () => {
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          showDeveloperSection: false,
+          onOpenDebug: vi.fn(),
+        })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-open-report-debug' }),
+    ).toHaveLength(0);
+  });
+
+  it('invokes Report Debug only when the developer-tools policy is enabled', () => {
+    const onOpenDebug = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          showDeveloperSection: true,
+          onOpenDebug,
+        })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-open-report-debug' }).props.onPress();
+    });
+    expect(onOpenDebug).toHaveBeenCalledOnce();
+  });
+
   it('opens the per-card edit modal when a pencil is tapped', () => {
     const onChangeReport = vi.fn();
     const tree = render(

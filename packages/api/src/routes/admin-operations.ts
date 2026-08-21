@@ -1,9 +1,10 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { operations } from '@harpa/api-contract';
+import { errorEnvelope, operations } from '@harpa/api-contract';
 import type { ReportGenerateDiagnosticObservation } from '@harpa/api-contract';
 import type { Context, MiddlewareHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { runAdminReportGenerateDiagnostic } from '../lib/admin-report-diagnostic.js';
 import { ADMIN_CSRF_HEADER, withAdminCsrf } from '../lib/admin-csrf.js';
 import { observeAdminFlyInventory } from '../lib/fly-operations.js';
@@ -21,11 +22,6 @@ import { observeAdminStorageLifecycle } from '../services/admin-storage-lifecycl
 
 const MINUTE_MS = 60_000;
 const FIFTEEN_MINUTES_MS = 15 * MINUTE_MS;
-
-const errorBody = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-  requestId: z.string().optional(),
-});
 
 const adminCsrfHeader = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
@@ -173,7 +169,7 @@ const adminReportDiagnosticRateLimit = withRateLimit({
   getLimiter: getAdminRateLimiter,
 });
 
-export const adminOperationsRoutes = new OpenAPIHono<AppEnv>();
+export const adminOperationsRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 adminOperationsRoutes.openapi(
   createRoute({
@@ -196,11 +192,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -233,15 +229,15 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       403: {
         description: 'Untrusted origin or invalid CSRF token.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -273,11 +269,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -305,11 +301,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -337,11 +333,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -369,11 +365,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -401,11 +397,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -433,11 +429,11 @@ adminOperationsRoutes.openapi(
       },
       401: {
         description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),

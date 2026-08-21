@@ -42,6 +42,7 @@ import { reportMutationInput } from '@/lib/reports/report-mutation-input';
 import { coerceReportBody } from '@/lib/reports/report-body';
 import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
+import { SHOW_DEVELOPER_TOOLS } from '@/lib/config/developer-tools';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
@@ -301,9 +302,9 @@ export default function SavedReportRoute() {
           ? () => router.push(`/(app)/projects/${slug}/reports/${reportNumber}/notes` as Href)
           : undefined
       }
-      showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
+      showDeveloperSection={SHOW_DEVELOPER_TOOLS}
       onOpenDebug={
-        hasValidRouteParams
+        SHOW_DEVELOPER_TOOLS && hasValidRouteParams
           ? () => router.push(`/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href)
           : undefined
       }

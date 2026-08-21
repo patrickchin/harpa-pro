@@ -31,6 +31,7 @@ import {
   useReportDebugQuery,
 } from '@/lib/api/hooks';
 import { useDeveloperFlags } from '@/lib/config/dev-flags';
+import { SHOW_DEVELOPER_TOOLS } from '@/lib/config/developer-tools';
 import {
   useOptimisticCreateNote,
   useOptimisticDeleteNote,
@@ -425,6 +426,7 @@ export default function GenerateReportRoute() {
   // payload is overridden by the in-memory state above as soon as the
   // user (re)generates in this session.
   const { showGenerateDebugTab } = useDeveloperFlags();
+  const showDebugTab = SHOW_DEVELOPER_TOOLS && showGenerateDebugTab;
   const debugQuery = useReportDebugQuery(
     {
       params: {
@@ -433,7 +435,7 @@ export default function GenerateReportRoute() {
       },
     },
     {
-      enabled: showGenerateDebugTab && slug.length > 0 && reportNumber !== null,
+      enabled: showDebugTab && slug.length > 0 && reportNumber !== null,
     },
   );
   const persistedLastGeneration = useMemo<
@@ -942,6 +944,7 @@ export default function GenerateReportRoute() {
         generationErrorActionLabel={canRetryNoteAction ? 'Try again' : undefined}
         onGenerationErrorAction={canRetryNoteAction ? handleRetryNoteActionError : undefined}
         lastGeneration={effectiveLastGeneration}
+        showDebugTab={showDebugTab}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
         needsRegeneration={reportRow?.needsRegeneration ?? false}

@@ -13,8 +13,9 @@
  *      `body` mirrored from `summary` so legacy readers keep working.
  *   3. `Idempotency-Key: voice:<fileId>:<reportId>` deduplicates
  *      retries — same noteId returned and no new usage events created.
- *   4. RLS hides cross-project reports (404) and cross-owner files
- *      (404). Non-voice kinds are rejected with 400.
+ *   4. RLS hides cross-project reports (404), while a route-level
+ *      ownership guard hides member-visible files uploaded by another
+ *      user (404). Non-voice kinds are rejected with 400.
  *
  * Refs: docs/v4/arch-voice-pipeline.md §D1, §D2, §D9 ; pitfalls §13.
  */
@@ -77,7 +78,8 @@ beforeAll(async () => {
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES
        ($1, $2, 'owner'),
-       ($3, $4, 'owner')`,
+       ($3, $4, 'owner'),
+       ($3, $2, 'editor')`,
     [aliceProject, alice, bobProject, bob],
   );
   await admin.query(
@@ -90,20 +92,24 @@ beforeAll(async () => {
     `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type) VALUES
        ($1, $2, 'voice', $3, 2048, 'audio/m4a'),
        ($4, $2, 'image', $5, 1024, 'image/jpeg'),
-       ($6, $7, 'voice', $8, 2048, 'audio/m4a'),
-       ($9, $2, 'voice', $10, 26214401, 'audio/m4a')`,
+       ($6, $2, 'voice', $7, 26214401, 'audio/m4a')`,
     [
       aliceVoiceFile,
       alice,
       `users/${alice}/voice/agg-alice.m4a`,
       aliceImageFile,
       `users/${alice}/image/agg-alice.jpg`,
-      bobVoiceFile,
-      bob,
-      `users/${bob}/voice/agg-bob.m4a`,
       aliceLargeVoiceFile,
       `users/${alice}/voice/agg-alice-large.m4a`,
     ],
+  );
+  // Alice is an editor in Bob's project, so RLS lets her read this row.
+  // The aggregator must still reject it because Bob is the uploader.
+  await admin.query(
+    `INSERT INTO app.files(
+       id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id
+     ) VALUES ($1, $2, 'voice', $3, 2048, 'audio/m4a', $4, $5)`,
+    [bobVoiceFile, bob, `users/${bob}/voice/agg-bob-shared.m4a`, bobProject, bobReport],
   );
   await admin.end();
 }, 120_000);
@@ -315,15 +321,35 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
     expect(res.status).toBe(404);
   });
 
-  it('404 when fileId belongs to another owner (files RLS)', async () => {
+  it('returns the uniform file-not-found 404 for a visible shared-project file owned by another member', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
+    const sharedFileRes = await app.request(`/reports/${bobReport}/notes/voice`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ fileId: bobVoiceFile }),
     });
-    expect(res.status).toBe(404);
+    expect(sharedFileRes.status).toBe(404);
+    const sharedFileBody = (await sharedFileRes.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(sharedFileBody.error).toEqual({
+      code: 'not_found',
+      message: 'File not found.',
+    });
+
+    const missingFileRes = await app.request(`/reports/${bobReport}/notes/voice`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ fileId: makeFileId() }),
+    });
+    expect(missingFileRes.status).toBe(404);
+    const missingFileBody = (await missingFileRes.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(missingFileBody.error).toEqual(sharedFileBody.error);
+    expect(await selectUsageForReport(bobReport)).toEqual([]);
+    expect(await countNotes(bobReport)).toBe(0);
   });
 
   it('400 when file kind is not voice', async () => {

@@ -21,6 +21,7 @@ import {
   resolvers as resolverSchemas,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { withAuth } from '../middleware/auth.js';
 import { resolveProjectSlug } from '../services/projects.js';
 import { resolveReportSlug } from '../services/reports.js';
@@ -32,7 +33,7 @@ const reportParam = z.object({
   report: reportId.openapi({ param: { name: 'report', in: 'path' } }),
 });
 
-export const resolverRoutes = new OpenAPIHono<AppEnv>();
+export const resolverRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 resolverRoutes.openapi(
   createRoute({

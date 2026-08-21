@@ -6,6 +6,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { getAdminPool } from '../db/admin-client.js';
 
 const OkResponse = z.object({
@@ -90,7 +91,7 @@ async function probe(): Promise<ProbeResult> {
   }
 }
 
-export const adminReadyz = new OpenAPIHono<AppEnv>().openapi(
+export const adminReadyz = new OpenAPIHono<AppEnv>(openApiHonoOptions).openapi(
   createRoute({
     method: 'get',
     path: '/admin/readyz',

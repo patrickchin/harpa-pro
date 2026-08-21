@@ -74,6 +74,8 @@ export type GenerateNotesProps = Omit<GenerateReportProviderProps, 'children'> &
   actions?: ReactNode;
   /** Stable route-owned generation marker for end-to-end synchronization. */
   generationStateTestID?: string;
+  /** Route-owned developer policy; false removes the Debug selector and pane. */
+  showDebugTab?: boolean;
 };
 
 export function GenerateNotes({
@@ -83,6 +85,7 @@ export function GenerateNotes({
   isDeletingDraft = false,
   actions,
   generationStateTestID,
+  showDebugTab = false,
   ...providerProps
 }: GenerateNotesProps) {
   return (
@@ -95,6 +98,7 @@ export function GenerateNotes({
             onDeleteDraft={onDeleteDraft}
             isDeletingDraft={isDeletingDraft}
             actions={actions}
+            showDebugTab={showDebugTab}
           />
         </GenerateReportProvider>
       </KeyboardAvoidingView>
@@ -108,6 +112,7 @@ interface LayoutProps {
   onDeleteDraft?: () => void;
   isDeletingDraft: boolean;
   actions?: ReactNode;
+  showDebugTab: boolean;
 }
 
 /**
@@ -121,6 +126,7 @@ function GenerateNotesLayout({
   onDeleteDraft,
   isDeletingDraft,
   actions,
+  showDebugTab,
 }: LayoutProps) {
   const { reportNumber, reportTitle, tabs, generation } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
@@ -136,6 +142,12 @@ function GenerateNotesLayout({
       setEditing(null);
     }
   }, [generation.isUpdating]);
+
+  useEffect(() => {
+    if (!showDebugTab && tabs.active === 'debug') {
+      tabs.set('notes');
+    }
+  }, [showDebugTab, tabs.active, tabs.set]);
 
   const handleEditReport = useCallback(
     (target: ReportEditTarget) => {
@@ -207,7 +219,8 @@ function GenerateNotesLayout({
   // Pager is purely visual for now — tab switching uses the tab bar.
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
-  const activeIndex = tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : 2;
+  const activeTab = !showDebugTab && tabs.active === 'debug' ? 'notes' : tabs.active;
+  const activeIndex = activeTab === 'notes' ? 0 : activeTab === 'report' ? 1 : 2;
 
   return (
     <>
@@ -244,7 +257,7 @@ function GenerateNotesLayout({
 
         {canWrite ? <GenerateReportActionRow /> : null}
 
-        <GenerateReportTabBar />
+        <GenerateReportTabBar showDebugTab={showDebugTab} />
       </Animated.View>
 
       <ScrollView
@@ -268,7 +281,7 @@ function GenerateNotesLayout({
               }
             : {})}
         />
-        <DebugTabPane width={windowWidth} />
+        {showDebugTab ? <DebugTabPane width={windowWidth} /> : null}
       </ScrollView>
 
       {canWrite ? <GenerateReportInputBar /> : null}

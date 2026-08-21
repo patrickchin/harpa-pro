@@ -191,6 +191,32 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Report');
   });
 
+  it('omits the Debug selector and pane unless the route enables them', () => {
+    const tree = render(<GenerateNotes {...baseProps} />);
+    expect(tree.root.findAllByProps({ testID: 'btn-tab-debug' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'debug-tab-pane' })).toHaveLength(0);
+
+    act(() => tree.update(<GenerateNotes {...baseProps} showDebugTab />));
+    expect(tree.root.findByProps({ testID: 'btn-tab-debug' })).toBeTruthy();
+    expect(tree.root.findByProps({ testID: 'debug-tab-pane' })).toBeTruthy();
+  });
+
+  it('returns an active hidden Debug tab to Notes', () => {
+    const tree = render(<GenerateNotes {...baseProps} initialTab="debug" showDebugTab />);
+    expect(tree.root.findByProps({ testID: 'debug-tab-pane' })).toBeTruthy();
+
+    act(() => {
+      tree.update(<GenerateNotes {...baseProps} initialTab="debug" />);
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'debug-tab-pane' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-tab-debug' })).toHaveLength(0);
+    expect(tree.root.findByProps({ testID: 'generate-pager' }).props.contentOffset).toEqual({
+      x: 0,
+      y: 0,
+    });
+  });
+
   it('uses the site-visit number above the report title', () => {
     const tree = render(
       <GenerateNotes {...baseProps} reportTitle="Site Visit — Concrete Pouring" reportNumber={4} />,

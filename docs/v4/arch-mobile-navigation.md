@@ -138,18 +138,22 @@ focus returns and submits the files to the upload queue.
 If no valid session exists, the capture route calls `safeBack` with
 `/` as the fallback.
 
-## Developer route gap
+## Developer route policy
 
-The current Profile route always shows its Developer section and
-always links to `/developer`. The Generate-screen Debug tab is an opt-in
-flag stored in AsyncStorage. Generate has no Edit tab; draft report editing
-opens from the Report pane's per-card controls.
+`lib/config/developer-tools.ts` is the single build-time policy for mobile
+developer surfaces. They are available when `__DEV__` or
+`EXPO_PUBLIC_USE_FIXTURES` is true and hidden from ordinary production
+bundles. Profile, the saved-report actions menu, and the Generate Debug tab
+all consume that policy. The persisted Generate preference is an additional
+opt-in; it cannot override the build policy.
 
-This behavior differs from the original rule that required a
-development or fixture gate around all developer surfaces. Treat the
-route exposure as an open implementation decision. Navigation tests
-must describe the current unconditional link until product code adds a
-gate.
+Direct navigation to `/developer` redirects to Profile when the policy is
+off. Direct navigation to a report-debug route redirects to the saved report,
+or Projects when its route parameters are invalid. Both routes keep every hook
+above the redirect and disable their read queries while hidden. Generate has
+no Edit tab; draft report editing opens from the Report pane's per-card
+controls. See
+[`design-mobile-developer-tools-gate.md`](design-mobile-developer-tools-gate.md).
 
 ## Review checklist
 

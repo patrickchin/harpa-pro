@@ -21,6 +21,7 @@ import {
   userId,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import {
   requireProjectOwner,
   requireProjectWriter,
@@ -49,7 +50,7 @@ const memberPathParams = z.object({
   user: userId.openapi({ param: { name: 'user', in: 'path' } }),
 });
 
-export const projectRoutes = new OpenAPIHono<AppEnv>();
+export const projectRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 // --------- list ----------
 projectRoutes.openapi(

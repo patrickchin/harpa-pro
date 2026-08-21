@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { errorEnvelope } from '@harpa/api-contract';
 import { createApp } from '../app.js';
 import { getAdminPool } from '../db/admin-client.js';
 import { getPool, resetPool } from '../db/client.js';
@@ -210,7 +211,7 @@ describe('dedicated admin browser authentication', () => {
     });
   });
 
-  it('returns the same generic failure for every invalid credential class', async () => {
+  it('returns the same generic error fields for every invalid credential class', async () => {
     const responses = await Promise.all([
       login(ADMIN_EMAIL, 'incorrect password long enough to submit'),
       login('unknown@harpapro.com', ADMIN_PASSWORD),
@@ -218,10 +219,20 @@ describe('dedicated admin browser authentication', () => {
     ]);
 
     expect(responses.map((response) => response.status)).toEqual([401, 401, 401]);
-    const bodies = await Promise.all(responses.map((response) => response.text()));
-    expect(new Set(bodies).size).toBe(1);
-    expect(bodies[0]).not.toContain(ADMIN_EMAIL);
-    expect(bodies[0]).not.toMatch(/unknown|domain|disabled/i);
+    const bodies = await Promise.all(
+      responses.map(async (response) => errorEnvelope.parse(await response.json())),
+    );
+    expect(new Set(bodies.map((body) => JSON.stringify(body.error))).size).toBe(1);
+    for (const [index, body] of bodies.entries()) {
+      expect(body.error).toEqual({
+        code: 'unauthorized',
+        message: 'Invalid email or password.',
+      });
+      expect(body.requestId).toBe(responses[index]!.headers.get('x-request-id'));
+    }
+    const serialized = JSON.stringify(bodies);
+    expect(serialized).not.toContain(ADMIN_EMAIL);
+    expect(serialized).not.toMatch(/unknown|domain|disabled/i);
   });
 
   it('does not create a session from a password verified before rotation', async () => {

@@ -72,6 +72,16 @@ beforeEach(() => {
 });
 
 describe('useAiProvider', () => {
+  it('does not read settings when the caller disables the hook', async () => {
+    const qc = makeClient();
+    const ref = renderHook(() => useAiProvider({ enabled: false }), qc);
+    await flush();
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(ref.current.isLoading).toBe(false);
+    expect(ref.current.selection).toBeNull();
+  });
+
   it('resolves selection from /settings/ai', async () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1-nano' }),

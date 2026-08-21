@@ -33,7 +33,36 @@ describe('api-contract', () => {
   });
 
   it('errorEnvelope shape', () => {
-    schemas.errorEnvelope.parse({ error: { code: 'X', message: 'y' } });
+    expect(
+      schemas.errorEnvelope.parse({
+        error: { code: 'X', message: 'y' },
+        requestId: 'req-contract-1',
+      }),
+    ).toEqual({
+      error: { code: 'X', message: 'y' },
+      requestId: 'req-contract-1',
+    });
+
+    expect(() =>
+      schemas.errorEnvelope.parse({
+        error: { code: 'X', message: 'y' },
+      }),
+    ).toThrow();
+
+    expect(() =>
+      schemas.errorEnvelope.parse({
+        error: { code: 'X', message: 'y', requestId: 'nested-wrongly' },
+        requestId: 'req-contract-1',
+      }),
+    ).toThrow();
+
+    expect(() =>
+      schemas.errorEnvelope.parse({
+        error: { code: 'X', message: 'y' },
+        requestId: 'req-contract-1',
+        unexpected: true,
+      }),
+    ).toThrow();
   });
 
   it('only exports files that exist', () => {

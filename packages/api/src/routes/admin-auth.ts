@@ -3,7 +3,9 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { Context, MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import { errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import {
   clearAdminSessionCookie,
   readAdminSessionToken,
@@ -44,11 +46,6 @@ const authenticatedResponse = z.object({
 
 const signedOutResponse = z.object({
   authenticated: z.literal(false),
-});
-
-const errorBody = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-  requestId: z.string().optional(),
 });
 
 const adminAuthNoStore: MiddlewareHandler<AppEnv> = async (c, next) => {
@@ -127,7 +124,7 @@ async function waitForLoginFailureFloor(startedAt: number): Promise<void> {
   });
 }
 
-export const adminAuthRoutes = new OpenAPIHono<AppEnv>();
+export const adminAuthRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 adminAuthRoutes.openapi(
   createRoute({
@@ -158,23 +155,23 @@ adminAuthRoutes.openapi(
       },
       400: {
         description: 'Bad request.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       401: {
         description: 'Invalid credentials.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       403: {
         description: 'Untrusted browser origin.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       413: {
         description: 'Request body exceeds 8 KiB.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -199,6 +196,7 @@ adminAuthRoutes.openapi(
             code: 'unauthorized',
             message: 'Invalid email or password.',
           },
+          requestId: c.get('requestId'),
         },
         401,
       );
@@ -233,11 +231,11 @@ adminAuthRoutes.openapi(
       },
       401: {
         description: 'No valid admin session.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -277,15 +275,15 @@ adminAuthRoutes.openapi(
       },
       401: {
         description: 'No valid admin session.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       403: {
         description: 'Untrusted browser origin.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),

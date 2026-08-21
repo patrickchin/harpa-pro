@@ -24,6 +24,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { files as fileSchemas, errorEnvelope, fileId } from '@harpa/api-contract';
 import type { AppEnv, ScopedDbAccessor } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import {
@@ -46,7 +47,7 @@ import {
 const fileIdParam = z.object({ id: fileId.openapi({ param: { name: 'id', in: 'path' } }) });
 type ScopedDb = Parameters<Parameters<ScopedDbAccessor>[0]>[0];
 
-export const fileRoutes = new OpenAPIHono<AppEnv>();
+export const fileRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 /**
  * Assert the caller can upload into `projectId`. Viewers can read

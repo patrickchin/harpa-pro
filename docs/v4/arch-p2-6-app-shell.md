@@ -147,16 +147,20 @@ Sign-out, a 401 response, or an anonymous resolution clears persisted
 query snapshots. The upload provider also replaces and clears its
 queue on an identity change.
 
-## Developer surface gap
+## Developer surface policy
 
-The original shell required developer routes to use a development or
-fixture gate. The current Profile route passes `showDeveloperSection`
-without a condition and always links to `/developer`.
+The shell exposes mobile developer surfaces only when the shared
+`SHOW_DEVELOPER_TOOLS` policy is true: either `__DEV__` or
+`EXPO_PUBLIC_USE_FIXTURES`. Profile therefore omits its Developer row in an
+ordinary production bundle. Saved-report Report Debug and the Generate Debug
+tab use the same policy, and the direct developer routes redirect without
+starting their read queries when hidden.
 
-This document records the implementation. It does not redefine the
-surface as production-safe. A later product or security change must
-either add a route and UI gate or declare the surface supported in
-production. Until then, tests and runbooks must not assume a gate.
+Route components call all hooks before evaluating the redirect so a policy
+transition cannot change hook order. The gate is defense in depth for mobile
+navigation, not a new API authorization boundary; the authenticated AI
+settings and member-readable report diagnostics contracts are unchanged. See
+[`design-mobile-developer-tools-gate.md`](design-mobile-developer-tools-gate.md).
 
 ## Verification
 

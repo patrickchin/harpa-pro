@@ -4,17 +4,22 @@
  * since the catalogue currently only contains OpenAI; vendor selection
  * is implicit. See docs/superpowers/plans/2026-05-29-user-model-selection.md.
  */
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 
 import { Developer } from '@/screens/developer';
 import { AI_MODELS, useAiProvider } from '@/lib/ai/useAiProvider';
 import { useDeveloperFlags } from '@/lib/config/dev-flags';
+import { SHOW_DEVELOPER_TOOLS } from '@/lib/config/developer-tools';
 import { safeBack } from '@/lib/nav/safe-back';
 
 export default function DeveloperRoute() {
   const router = useRouter();
-  const ai = useAiProvider();
+  const ai = useAiProvider({ enabled: SHOW_DEVELOPER_TOOLS });
   const devFlags = useDeveloperFlags();
+
+  if (!SHOW_DEVELOPER_TOOLS) {
+    return <Redirect href="/(app)/profile" />;
+  }
 
   return (
     <Developer

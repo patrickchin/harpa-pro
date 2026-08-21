@@ -232,9 +232,9 @@ Each AI-touching route has a test that:
   `.maestro/helpers/wait-for-camera-shutter-ready.yaml` rather than sleeping.
   `CameraCapture` keeps the shutter disabled through size discovery and, on
   Android, through CameraX's picture-size rebind. The enabled state also
-  requires the current capture to complete; either the fast-mode promise or
-  saved-photo callback can release that lock, while attempt ordering prevents
-  a delayed callback from unlocking a newer capture. Android lens flips also
+  requires the ordinary native capture promise to produce a JPEG URI or reject;
+  the ref-backed lock serializes shutters and keeps Done from committing an
+  incomplete list. Android lens flips also
   invalidate pending readiness discovery; iOS retains readiness because its
   device update emits no second ready event. Burst journeys wait again between
   captures, and static policy pins each wait before its matching shutter tap.

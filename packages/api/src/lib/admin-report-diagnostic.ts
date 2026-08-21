@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { email, isoDateTime, operations, reports, usageLimits, userId } from '@harpa/api-contract';
+import {
+  email,
+  errorEnvelope,
+  isoDateTime,
+  operations,
+  reports,
+  usageLimits,
+  userId,
+} from '@harpa/api-contract';
 import type {
   ReportGenerateDiagnosticFailureReason,
   ReportGenerateDiagnosticObservation,
@@ -84,16 +92,15 @@ const limitsResponse = z
     buckets: z.array(strictLimitState).max(10),
   })
   .strict();
-const usageLimitError = z
-  .object({
-    error: z
-      .object({
+const usageLimitError = errorEnvelope
+  .extend({
+    error: errorEnvelope.shape.error
+      .extend({
         code: z.literal('usage_limit_exceeded'),
-        message: z.string(),
         details: usageLimits.limitExceededDetails.strict(),
       })
       .strict(),
-    requestId: z.string().optional(),
+    requestId,
   })
   .strict();
 const databaseClockRow = z.object({ lower_bound: z.union([isoDateTime, z.date()]) }).strict();

@@ -362,6 +362,11 @@ collide with and contradictory payloads that must fail closed.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-24** — Storage-delete integration fixtures used the macOS host
+  clock for a Postgres due-now timestamp, so VM clock skew under full-suite
+  load could leave the job unclaimed and cascade into a duplicate key. Fix:
+  let Postgres assign `now()` unless the test explicitly requests a delay.
+  [detail](2026-08-24-storage-delete-jobs-host-clock-flake.md)
 - **2026-08-21** — Mobile Developer and Report Debug surfaces were reachable in
   ordinary production bundles because local navigation checks never formed one
   enforceable policy. Fix: share a dev-or-fixtures gate across UI, direct

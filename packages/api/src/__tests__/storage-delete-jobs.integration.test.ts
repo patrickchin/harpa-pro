@@ -300,7 +300,7 @@ async function insertExpiredLease(input: {
 
 async function insertDeleteJob(
   jobKind: 'account_delete_initial' | 'account_delete_final',
-  runAfter = new Date(),
+  runAfter?: Date,
 ): Promise<void> {
   await admin.query(
     `INSERT INTO app.storage_delete_jobs(
@@ -312,7 +312,7 @@ async function insertDeleteJob(
      VALUES (
        $1::app.usr_id,
        $2,
-       $3,
+       COALESCE($3::timestamptz, now()),
        jsonb_build_object(
          'userId', ($1::app.usr_id)::text,
          'exactKeys', jsonb_build_array(
@@ -321,7 +321,7 @@ async function insertDeleteJob(
          'sweepPrefixes', jsonb_build_array()
        )
      )`,
-    [userId, jobKind, runAfter],
+    [userId, jobKind, runAfter ?? null],
   );
 }
 

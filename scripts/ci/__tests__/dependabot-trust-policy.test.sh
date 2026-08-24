@@ -126,7 +126,13 @@ require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "better-auth-stack" "- 'auth
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
   "version-update:semver-major" \
   "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
+  "version-update:semver-major" \
+  "Dependabot leaves Better Auth CLI major upgrades to a reviewed stack migration"
 for dependency in "react" "react-dom" "react-test-renderer"; do
+  require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "$dependency" \
+    "dependency-name: '${dependency}'" \
+    "Dependabot defines the Expo-pinned ${dependency} ignore rule"
   forbid_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "$dependency" "update-types:" \
     "Dependabot fully ignores Expo-pinned ${dependency} updates"
 done

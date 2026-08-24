@@ -33,6 +33,17 @@ describe('pg pool error handler', () => {
     expect(pool.listenerCount('error')).toBeGreaterThan(0);
   });
 
+  it('keeps the application profile and singleton contract', () => {
+    const pool = getPool('postgresql://user:pw@127.0.0.1:1/db');
+
+    expect(getPool('postgresql://other:pw@127.0.0.1:2/ignored')).toBe(pool);
+    expect(pool.options).toMatchObject({
+      max: 10,
+      statement_timeout: 5_000,
+    });
+    expect(pool.options).not.toHaveProperty('connectionTimeoutMillis');
+  });
+
   it('forwards a synthetic idle-client error to Sentry without throwing', () => {
     const pool = getPool('postgresql://user:pw@127.0.0.1:1/db');
     const err = Object.assign(new Error('read ETIMEDOUT'), {

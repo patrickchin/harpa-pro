@@ -17,6 +17,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { AppEnv } from '../app.js';
 import { openApiHonoOptions } from '../lib/openapi.js';
 import { getPool } from '../db/client.js';
+import { probeMigrationLedger } from '../lib/migration-ledger.js';
 // NB: do not import `env` for MIGRATIONS_REQUIRED_HEAD — env is parsed once
 // at module load. Reading process.env at probe time lets ops set the var
 // without a full restart (and lets tests cover the mismatch path).
@@ -60,17 +61,11 @@ async function probe(): Promise<{ status: 200; body: Ok } | { status: 503; body:
     };
   }
   try {
-    await pool.query('SELECT 1');
-    const schemaCheck = await pool.query<{ exists: boolean }>(
-      `SELECT to_regclass('app._migrations') IS NOT NULL AS exists`,
-    );
-    if (!schemaCheck.rows[0]?.exists) {
-      return { status: 503, body: { ok: false, db: 'schema-missing' } };
+    const ledger = await probeMigrationLedger({ pool, schema: 'app' });
+    if (!ledger.ok) {
+      return { status: 503, body: ledger };
     }
-    const headRow = await pool.query<{ name: string }>(
-      `SELECT name FROM app._migrations ORDER BY name DESC LIMIT 1`,
-    );
-    const actual = headRow.rows[0]?.name ?? null;
+    const actual = ledger.head;
     const expected = process.env.MIGRATIONS_REQUIRED_HEAD;
     if (expected && actual !== expected) {
       return {

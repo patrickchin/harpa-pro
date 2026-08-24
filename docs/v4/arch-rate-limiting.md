@@ -18,8 +18,9 @@ The application has two backends:
 - `MemoryRateLimiter` stores counters in one process.
 - `PostgresRateLimiter` stores counters in `app.rate_limit_buckets`.
 
-The browser admin has a separate `AdminPostgresRateLimiter`. It stores
-counters in `admin.rate_limit_buckets` in the admin database.
+The browser admin has a separate `AdminPostgresRateLimiter`. It reuses the
+same internal Postgres consume and GC core as `PostgresRateLimiter`, but
+targets `admin.rate_limit_buckets` in the admin database.
 
 `RATE_LIMIT_BACKEND=memory` selects memory. `RATE_LIMIT_BACKEND=postgres`
 selects Postgres. Live-deployment environment validation requires Postgres.
@@ -222,7 +223,8 @@ Migration `0007_rate_limit_buckets.sql` creates
 `0002_admin_rate_limit_buckets.sql` creates the separate admin table.
 
 `PostgresRateLimiter.consume()` uses one atomic upsert. Independent API
-machines therefore increment the same counter.
+machines therefore increment the same counter. `AdminPostgresRateLimiter`
+uses the same internal SQL shape against the admin table.
 
 `src/server.ts` starts cleanup schedulers for both Postgres limiters. Each
 scheduler runs every ten minutes and deletes buckets whose full window ended
@@ -253,7 +255,7 @@ Current tests cover these properties:
 - `__tests__/rate-limiter.postgres.integration.test.ts` proves atomic counts
   across two independent pools and tests garbage collection.
 - `__tests__/admin-rate-limit.integration.test.ts` covers admin login
-  budgets and key selection.
+  budgets, key selection, and admin-table garbage collection.
 - `__tests__/admin-activity.integration.test.ts` covers the activity budget.
 - `__tests__/admin-neon-operations.integration.test.ts` covers the Neon
   inventory identity/session budget and its 12-request limit.

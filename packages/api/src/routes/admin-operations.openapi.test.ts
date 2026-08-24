@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ADMIN_CSRF_HEADER } from '../lib/admin-csrf.js';
 import { adminOperationsRoutes } from './admin-operations.js';
@@ -98,6 +99,15 @@ function expectClosedObjectSchema(schema: unknown, expectedKeys: readonly string
 }
 
 describe('admin operations OpenAPI contract', () => {
+  it('centralizes the common framing for the seven read-only observations', () => {
+    const source = readFileSync(new URL('./admin-operations.ts', import.meta.url), 'utf8');
+
+    expect(source.match(/method: 'get'/g)).toHaveLength(1);
+    expect(
+      source.match(/privateNoStore,\s*adminAuthIpWindow,\s*withAdminSession\(\)/g),
+    ).toHaveLength(1);
+  });
+
   it('publishes Neon Free usage as an admin-session protected read-only GET', () => {
     const doc = adminOperationsRoutes.getOpenAPIDocument(SPEC_DOC_CONFIG);
     const operation = doc.paths?.['/admin/operations/neon-usage']?.get;

@@ -222,9 +222,13 @@ test.describe('dashboard live preview journey', () => {
 
       await editorPage.reload();
       await editorPage.getByRole('tab', { name: 'Review' }).click();
-      await editorPage.getByRole('textbox', { name: 'Add a comment' }).fill(reviewComment);
+      const reviewComposer = editorPage.getByRole('textbox', { name: 'Add a comment' });
+      await reviewComposer.fill(reviewComment);
       await editorPage.getByRole('button', { name: 'Add comment' }).click();
-      await expect(editorPage.getByText(reviewComment)).toBeVisible();
+      await expect(reviewComposer).toHaveValue('');
+      await expect(
+        editorPage.getByRole('article').filter({ hasText: reviewComment }),
+      ).toBeVisible();
 
       await ownerPage.getByRole('button', { name: 'Reopen as draft' }).click();
       await ownerPage

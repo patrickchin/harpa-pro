@@ -28,6 +28,7 @@ import { operations as operationSchemas } from '@harpa/api-contract/schemas';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { adminAuthClient } from '../../lib/admin-auth';
 import type { AdminSession } from '../../lib/admin-auth';
+import { loadAdminObservation } from '../../lib/admin-observation';
 import { getPublicEnv } from '../../lib/env';
 import { calculateQuotaPercentages } from '../../lib/quota-percentages';
 
@@ -814,36 +815,21 @@ function responseFailureReason(status: number): NeonInventoryReason {
 }
 
 async function loadNeonInventory(): Promise<NeonInventoryFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/neon`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return { status: 'ready', observation: unknownNeonObservation('provider_unavailable') };
-  }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownNeonObservation(responseFailureReason(response.status)),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
+  const result = await loadAdminObservation(
+    '/admin/operations/neon',
+    operationSchemas.neonInventoryObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
     return { status: 'ready', observation: unknownNeonObservation('invalid_response') };
   }
-
-  const parsed = operationSchemas.neonInventoryObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success ? parsed.data : unknownNeonObservation('invalid_response'),
+    observation: unknownNeonObservation(
+      result.status === 'http-error'
+        ? responseFailureReason(result.responseStatus)
+        : 'provider_unavailable',
+    ),
   };
 }
 
@@ -917,39 +903,21 @@ function neonUsageResponseFailureReason(status: number): NeonUsageReason {
 }
 
 async function loadNeonUsage(): Promise<NeonUsageFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/neon-usage`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownNeonUsageObservation('provider_unavailable'),
-    };
-  }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownNeonUsageObservation(neonUsageResponseFailureReason(response.status)),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
+  const result = await loadAdminObservation(
+    '/admin/operations/neon-usage',
+    operationSchemas.neonUsageObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
     return { status: 'ready', observation: unknownNeonUsageObservation('invalid_response') };
   }
-
-  const parsed = operationSchemas.neonUsageObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success ? parsed.data : unknownNeonUsageObservation('invalid_response'),
+    observation: unknownNeonUsageObservation(
+      result.status === 'http-error'
+        ? neonUsageResponseFailureReason(result.responseStatus)
+        : 'provider_unavailable',
+    ),
   };
 }
 
@@ -986,39 +954,21 @@ function r2ResponseFailureReason(status: number): R2CapacityReason {
 }
 
 async function loadR2Capacity(): Promise<R2CapacityFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/r2-capacity`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownR2CapacityObservation('provider_unavailable'),
-    };
-  }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownR2CapacityObservation(r2ResponseFailureReason(response.status)),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
+  const result = await loadAdminObservation(
+    '/admin/operations/r2-capacity',
+    operationSchemas.r2CapacityObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
     return { status: 'ready', observation: unknownR2CapacityObservation('invalid_response') };
   }
-
-  const parsed = operationSchemas.r2CapacityObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success ? parsed.data : unknownR2CapacityObservation('invalid_response'),
+    observation: unknownR2CapacityObservation(
+      result.status === 'http-error'
+        ? r2ResponseFailureReason(result.responseStatus)
+        : 'provider_unavailable',
+    ),
   };
 }
 
@@ -1060,39 +1010,21 @@ function sentryResponseFailureReason(status: number): SentryObservationReason {
 }
 
 async function loadSentryObservation(): Promise<SentryFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/sentry`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownSentryObservation('provider_unavailable'),
-    };
-  }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownSentryObservation(sentryResponseFailureReason(response.status)),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
+  const result = await loadAdminObservation(
+    '/admin/operations/sentry',
+    operationSchemas.sentryObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
     return { status: 'ready', observation: unknownSentryObservation('invalid_response') };
   }
-
-  const parsed = operationSchemas.sentryObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success ? parsed.data : unknownSentryObservation('invalid_response'),
+    observation: unknownSentryObservation(
+      result.status === 'http-error'
+        ? sentryResponseFailureReason(result.responseStatus)
+        : 'provider_unavailable',
+    ),
   };
 }
 
@@ -1132,42 +1064,21 @@ function flyResponseFailureReason(status: number): FlyInventoryReason {
 }
 
 async function loadFlyInventory(): Promise<FlyInventoryFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/fly-inventory`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownFlyInventoryObservation('provider_unavailable'),
-    };
+  const result = await loadAdminObservation(
+    '/admin/operations/fly-inventory',
+    operationSchemas.flyInventoryObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
+    return { status: 'ready', observation: unknownFlyInventoryObservation('invalid_response') };
   }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownFlyInventoryObservation(flyResponseFailureReason(response.status)),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownFlyInventoryObservation('invalid_response'),
-    };
-  }
-
-  const parsed = operationSchemas.flyInventoryObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success ? parsed.data : unknownFlyInventoryObservation('invalid_response'),
+    observation: unknownFlyInventoryObservation(
+      result.status === 'http-error'
+        ? flyResponseFailureReason(result.responseStatus)
+        : 'provider_unavailable',
+    ),
   };
 }
 
@@ -1195,46 +1106,25 @@ function storageLifecycleReasonCopy(reason: StorageLifecycleReason): string {
 }
 
 async function loadStorageLifecycle(): Promise<StorageLifecycleFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/storage-lifecycle`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownStorageLifecycleObservation('database_unavailable'),
-    };
-  }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownStorageLifecycleObservation(
-        response.status === 408 || response.status === 504 ? 'timeout' : 'database_unavailable',
-      ),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
+  const result = await loadAdminObservation(
+    '/admin/operations/storage-lifecycle',
+    operationSchemas.storageLifecycleObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
     return {
       status: 'ready',
       observation: unknownStorageLifecycleObservation('invalid_response'),
     };
   }
-
-  const parsed = operationSchemas.storageLifecycleObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success
-      ? parsed.data
-      : unknownStorageLifecycleObservation('invalid_response'),
+    observation: unknownStorageLifecycleObservation(
+      result.status === 'http-error' &&
+        (result.responseStatus === 408 || result.responseStatus === 504)
+        ? 'timeout'
+        : 'database_unavailable',
+    ),
   };
 }
 
@@ -1265,42 +1155,21 @@ function aiUsageResponseFailureReason(status: number): AiUsageReason {
 }
 
 async function loadAiUsage(): Promise<AiUsageFetchResult> {
-  let response: Response;
-  try {
-    response = await fetch(`${getPublicEnv().apiBaseUrl}/admin/operations/ai-usage`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownAiUsageObservation('database_unavailable'),
-    };
+  const result = await loadAdminObservation(
+    '/admin/operations/ai-usage',
+    operationSchemas.aiUsageObservation,
+  );
+  if (result.status === 'ready' || result.status === 'unauthorized') return result;
+  if (result.status === 'invalid-response') {
+    return { status: 'ready', observation: unknownAiUsageObservation('invalid_response') };
   }
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (!response.ok) {
-    return {
-      status: 'ready',
-      observation: unknownAiUsageObservation(aiUsageResponseFailureReason(response.status)),
-    };
-  }
-
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    return {
-      status: 'ready',
-      observation: unknownAiUsageObservation('invalid_response'),
-    };
-  }
-
-  const parsed = operationSchemas.aiUsageObservation.safeParse(body);
   return {
     status: 'ready',
-    observation: parsed.success ? parsed.data : unknownAiUsageObservation('invalid_response'),
+    observation: unknownAiUsageObservation(
+      result.status === 'http-error'
+        ? aiUsageResponseFailureReason(result.responseStatus)
+        : 'database_unavailable',
+    ),
   };
 }
 

@@ -165,16 +165,23 @@ from higher-risk runtime changes.
 
 ### PR 6 — narrow API/admin shared cores
 
-Split the admin operations surface into smaller browser-only modules and keep
-the contract as the only real cross-workspace shared core.
+Share only repeated local mechanics while keeping product policies at their
+existing API and browser boundaries.
 
-- Break `AdminOperations.tsx` into local loaders, presentation helpers, and
-  per-surface modules.
+- Keep the named `AdminOperations` loaders and move only their common browser
+  fetch, cookie, JSON, and schema mechanics into an app-local helper.
+- Use a private typed registration helper for the repeated admin observation
+  GET routes; keep each route's schema, middleware, limiter, and handler local.
+- Share PostgreSQL pool construction while retaining the app and admin pool
+  profiles, singletons, and error tags.
+- Share the sealed PostgreSQL rate-limit storage core while retaining the
+  public app and admin limiter classes and lifecycle policies.
+- Share migration-ledger reads while retaining the two readiness routes'
+  separate caches, required heads, headers, and failure responses.
 - Keep GitHub status fetching in `apps/admin`; do not move it server-side and
   do not add a GitHub token.
 - Keep shared semantics in `packages/api-contract/src/schemas/operations.ts`.
-- Avoid creating a new shared browser package unless at least two browser apps
-  need the same implementation after the split.
+- Do not create a cross-workspace utility package for these local cores.
 
 Why sixth: it narrows a monolith without coupling it to the CLI or mobile
 refactors.
@@ -296,9 +303,10 @@ Each PR needs targeted proof, not one giant final pass.
 
 ### PR 6
 
-- `apps/admin` unit tests stay green.
-- Existing admin browser checks remain green.
-- Redaction and dedicated-cookie tests remain unchanged in behavior.
+- `apps/admin` unit, typecheck, lint, and build lanes stay green.
+- Focused API route, pool, rate-limit, and readiness tests stay green.
+- API integration tests preserve the app/admin database and cookie boundaries.
+- Generated OpenAPI output remains unchanged.
 
 ### PR 7
 

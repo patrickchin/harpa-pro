@@ -393,6 +393,11 @@ Most recent first. One line per bug — open the linked file only for the full r
   audit findings. Fix: raise the direct floor, add range-scoped overrides, and
   pin the resolved graph in CI.
   [detail](2026-08-21-compatible-dependency-advisory-patches.md)
+- **2026-08-14** — The deployed dashboard review journey treated text still in
+  its comment composer as proof that the comment POST had completed, then
+  reopened the report as a draft and raced its own mutation. Fix: wait for the
+  cleared composer and rendered comment article before reopening.
+  [detail](2026-08-14-dashboard-review-comment-race.md)
 - **2026-08-10** _(R7)_ — Development reported the current migration head
   while retaining a retired LLM-usage ledger row and legacy table shape. Fix:
   add conditional forward schema reconciliation, exact-only ledger cleanup,

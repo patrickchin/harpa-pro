@@ -197,6 +197,10 @@ foreign keys to application or Better Auth users. See
   the runtime uses the same URI through a separate pool capped at five
   connections per Fly machine. Admin pool connection establishment and
   queued checkout both time out after five seconds, as does each statement.
+- Both runtime pools use the same local constructor for TLS normalization,
+  the five-second statement limit, and idle-client error reporting. Their
+  singletons, connection caps, connection deadlines, and telemetry tags remain
+  separate profiles.
 - Each migration loader opens its own session connection to its corresponding
   database.
 - Fly release migrations and the application runtime currently use the same

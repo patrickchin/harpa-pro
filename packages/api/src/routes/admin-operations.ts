@@ -1,4 +1,5 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import type { RouteConfig } from '@hono/zod-openapi';
 import { errorEnvelope, operations } from '@harpa/api-contract';
 import type { ReportGenerateDiagnosticObservation } from '@harpa/api-contract';
 import type { Context, MiddlewareHandler } from 'hono';
@@ -171,23 +172,33 @@ const adminReportDiagnosticRateLimit = withRateLimit({
 
 export const adminOperationsRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
-adminOperationsRoutes.openapi(
-  createRoute({
+function registerAdminObservation<
+  const Path extends `/admin/operations/${string}`,
+  Observation extends object,
+>({
+  path,
+  rateLimit,
+  description,
+  schema,
+  observe,
+}: {
+  path: Path;
+  rateLimit: MiddlewareHandler<AppEnv>;
+  description: string;
+  schema: z.ZodType<Observation, z.ZodTypeDef, unknown>;
+  observe: () => Promise<NoInfer<Observation>>;
+}): void {
+  const route: RouteConfig = createRoute({
     method: 'get',
-    path: '/admin/operations/neon',
+    path,
     tags: ['admin'],
     security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminNeonOperationsRateLimit,
-    ] as const,
+    middleware: [privateNoStore, adminAuthIpWindow, withAdminSession(), rateLimit] as const,
     responses: {
       200: {
-        description: 'Bounded, read-only Neon organization inventory.',
+        description,
         content: {
-          'application/json': { schema: operations.neonInventoryObservation },
+          'application/json': { schema },
         },
       },
       401: {
@@ -199,9 +210,20 @@ adminOperationsRoutes.openapi(
         content: { 'application/json': { schema: errorEnvelope } },
       },
     },
-  }),
-  async (c) => c.json(await observeAdminNeonInventory(), 200),
-);
+  });
+
+  adminOperationsRoutes.openapi(route, async (c: Context<AppEnv>): Promise<Response> => {
+    return c.json(await observe(), 200);
+  });
+}
+
+registerAdminObservation({
+  path: '/admin/operations/neon',
+  rateLimit: adminNeonOperationsRateLimit,
+  description: 'Bounded, read-only Neon organization inventory.',
+  schema: operations.neonInventoryObservation,
+  observe: observeAdminNeonInventory,
+});
 
 adminOperationsRoutes.openapi(
   createRoute({
@@ -248,194 +270,50 @@ adminOperationsRoutes.openapi(
   },
 );
 
-adminOperationsRoutes.openapi(
-  createRoute({
-    method: 'get',
-    path: '/admin/operations/neon-usage',
-    tags: ['admin'],
-    security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminNeonUsageRateLimit,
-    ] as const,
-    responses: {
-      200: {
-        description: 'Bounded, read-only Neon Free-plan usage observation.',
-        content: {
-          'application/json': { schema: operations.neonUsageObservation },
-        },
-      },
-      401: {
-        description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-      429: {
-        description: 'Rate limited.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-    },
-  }),
-  async (c) => c.json(await observeAdminNeonUsage(), 200),
-);
+registerAdminObservation({
+  path: '/admin/operations/neon-usage',
+  rateLimit: adminNeonUsageRateLimit,
+  description: 'Bounded, read-only Neon Free-plan usage observation.',
+  schema: operations.neonUsageObservation,
+  observe: observeAdminNeonUsage,
+});
 
-adminOperationsRoutes.openapi(
-  createRoute({
-    method: 'get',
-    path: '/admin/operations/r2-capacity',
-    tags: ['admin'],
-    security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminR2CapacityRateLimit,
-    ] as const,
-    responses: {
-      200: {
-        description: 'Bounded, read-only Cloudflare R2 capacity observation.',
-        content: {
-          'application/json': { schema: operations.r2CapacityObservation },
-        },
-      },
-      401: {
-        description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-      429: {
-        description: 'Rate limited.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-    },
-  }),
-  async (c) => c.json(await observeAdminR2Capacity(), 200),
-);
+registerAdminObservation({
+  path: '/admin/operations/r2-capacity',
+  rateLimit: adminR2CapacityRateLimit,
+  description: 'Bounded, read-only Cloudflare R2 capacity observation.',
+  schema: operations.r2CapacityObservation,
+  observe: observeAdminR2Capacity,
+});
 
-adminOperationsRoutes.openapi(
-  createRoute({
-    method: 'get',
-    path: '/admin/operations/sentry',
-    tags: ['admin'],
-    security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminSentryRateLimit,
-    ] as const,
-    responses: {
-      200: {
-        description: 'Bounded, read-only Sentry aggregate issue and mobile session observation.',
-        content: {
-          'application/json': { schema: operations.sentryObservation },
-        },
-      },
-      401: {
-        description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-      429: {
-        description: 'Rate limited.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-    },
-  }),
-  async (c) => c.json(await observeAdminSentry(), 200),
-);
+registerAdminObservation({
+  path: '/admin/operations/sentry',
+  rateLimit: adminSentryRateLimit,
+  description: 'Bounded, read-only Sentry aggregate issue and mobile session observation.',
+  schema: operations.sentryObservation,
+  observe: observeAdminSentry,
+});
 
-adminOperationsRoutes.openapi(
-  createRoute({
-    method: 'get',
-    path: '/admin/operations/storage-lifecycle',
-    tags: ['admin'],
-    security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminStorageLifecycleRateLimit,
-    ] as const,
-    responses: {
-      200: {
-        description: 'Bounded, read-only application storage lifecycle observation.',
-        content: {
-          'application/json': { schema: operations.storageLifecycleObservation },
-        },
-      },
-      401: {
-        description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-      429: {
-        description: 'Rate limited.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-    },
-  }),
-  async (c) => c.json(await observeAdminStorageLifecycle(), 200),
-);
+registerAdminObservation({
+  path: '/admin/operations/storage-lifecycle',
+  rateLimit: adminStorageLifecycleRateLimit,
+  description: 'Bounded, read-only application storage lifecycle observation.',
+  schema: operations.storageLifecycleObservation,
+  observe: observeAdminStorageLifecycle,
+});
 
-adminOperationsRoutes.openapi(
-  createRoute({
-    method: 'get',
-    path: '/admin/operations/ai-usage',
-    tags: ['admin'],
-    security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminAiUsageRateLimit,
-    ] as const,
-    responses: {
-      200: {
-        description: 'Bounded, read-only Harpa AI usage ledger observation.',
-        content: {
-          'application/json': { schema: operations.aiUsageObservation },
-        },
-      },
-      401: {
-        description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-      429: {
-        description: 'Rate limited.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-    },
-  }),
-  async (c) => c.json(await observeAdminAiUsage(), 200),
-);
+registerAdminObservation({
+  path: '/admin/operations/ai-usage',
+  rateLimit: adminAiUsageRateLimit,
+  description: 'Bounded, read-only Harpa AI usage ledger observation.',
+  schema: operations.aiUsageObservation,
+  observe: observeAdminAiUsage,
+});
 
-adminOperationsRoutes.openapi(
-  createRoute({
-    method: 'get',
-    path: '/admin/operations/fly-inventory',
-    tags: ['admin'],
-    security: [{ adminSession: [] }],
-    middleware: [
-      privateNoStore,
-      adminAuthIpWindow,
-      withAdminSession(),
-      adminFlyInventoryRateLimit,
-    ] as const,
-    responses: {
-      200: {
-        description: 'Bounded, read-only Fly application infrastructure inventory.',
-        content: {
-          'application/json': { schema: operations.flyInventoryObservation },
-        },
-      },
-      401: {
-        description: 'Unauthorized.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-      429: {
-        description: 'Rate limited.',
-        content: { 'application/json': { schema: errorEnvelope } },
-      },
-    },
-  }),
-  async (c) => c.json(await observeAdminFlyInventory(), 200),
-);
+registerAdminObservation({
+  path: '/admin/operations/fly-inventory',
+  rateLimit: adminFlyInventoryRateLimit,
+  description: 'Bounded, read-only Fly application infrastructure inventory.',
+  schema: operations.flyInventoryObservation,
+  observe: observeAdminFlyInventory,
+});

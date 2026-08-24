@@ -8,6 +8,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { AppEnv } from '../app.js';
 import { openApiHonoOptions } from '../lib/openapi.js';
 import { getAdminPool } from '../db/admin-client.js';
+import { probeMigrationLedger } from '../lib/migration-ledger.js';
 
 const OkResponse = z.object({
   ok: z.literal(true),
@@ -40,18 +41,11 @@ export function resetAdminReadyzCache(): void {
 async function runProbe(): Promise<ProbeResult> {
   try {
     const pool = getAdminPool();
-    await pool.query('SELECT 1');
-    const schemaCheck = await pool.query<{ exists: boolean }>(
-      `SELECT to_regclass('admin._migrations') IS NOT NULL AS exists`,
-    );
-    if (!schemaCheck.rows[0]?.exists) {
-      return { status: 503, body: { ok: false, db: 'schema-missing' } };
+    const ledger = await probeMigrationLedger({ pool, schema: 'admin' });
+    if (!ledger.ok) {
+      return { status: 503, body: ledger };
     }
-
-    const headRow = await pool.query<{ name: string }>(
-      `SELECT name FROM admin._migrations ORDER BY name DESC LIMIT 1`,
-    );
-    const actual = headRow.rows[0]?.name ?? null;
+    const actual = ledger.head;
     const expected = process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD;
     if (expected && actual !== expected) {
       return {

@@ -1,15 +1,11 @@
-import pg from 'pg';
+import type pg from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { env } from '../env.js';
-import { captureApiException } from '../telemetry/sentry.js';
-import { parseConnection } from './connection.js';
 import * as adminSchema from './admin-schema.js';
-
-const { Pool } = pg;
+import { createObservedPool } from './pool.js';
 
 /** Bounds both new socket establishment and waits for an exhausted pool. */
 const CONNECTION_TIMEOUT_MS = 5_000;
-const STATEMENT_TIMEOUT_MS = 5_000;
 let adminPool: pg.Pool | null = null;
 
 /**
@@ -24,19 +20,14 @@ export function getAdminPool(connectionString?: string): pg.Pool {
     if (!url) {
       throw new Error('[admin-db] ADMIN_DATABASE_URL is not set; cannot create pool.');
     }
-    adminPool = new Pool({
-      ...parseConnection(url),
+    adminPool = createObservedPool({
+      connectionString: url,
       max: 5,
       connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
-      statement_timeout: STATEMENT_TIMEOUT_MS,
-    });
-    adminPool.on('error', (err) => {
-      captureApiException(err, {
+      idleErrorContext: {
         requestId: 'admin-pool-idle',
-        method: 'DB',
         route: 'pg.admin-pool.idle-client',
-        status: 0,
-      });
+      },
     });
   }
   return adminPool;

@@ -98,6 +98,10 @@ require_count "$LIVE_SPEC" "await revokeSession(request" 4 \
   "successful and failure paths both exercise direct session revocation"
 require_fixed "$LIVE_SPEC" "This report changed on another device" \
   "live journey protects concurrent keyboard edits"
+require_fixed "$LIVE_SPEC" "await expect(reviewComposer).toHaveValue('');" \
+  "live journey waits for the review mutation to clear its composer"
+require_fixed "$LIVE_SPEC" "getByRole('article').filter({ hasText: reviewComment })" \
+  "live journey proves the saved comment before reopening the report"
 require_fixed "$LIVE_SPEC" "Confirm removal" \
   "live journey proves removed-member access loss"
 require_fixed "$LIVE_SPEC" "Reopen as draft" \

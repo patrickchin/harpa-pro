@@ -482,6 +482,10 @@ period is still active.
   - `SELECT to_regclass('app._migrations') IS NOT NULL` — schema bootstrap.
   - `SELECT name FROM app._migrations ORDER BY name DESC LIMIT 1` and
     compare to `env.MIGRATIONS_REQUIRED_HEAD`.
+- The raw SQL/query sequence is shared privately with `/admin/readyz` in
+  `packages/api/src/lib/migration-ledger.ts`. Only the probe mechanics are
+  shared. Each route keeps its own pool source, cache policy, headers, down
+  error body, and required-head env var.
 - Response shape (typed via `@hono/zod-openapi` like `health.ts`):
   - `200 { ok: true, db: 'up', head: <name> }` — all checks pass.
   - `503 { ok: false, db: 'down' | 'schema-missing' | 'head-mismatch', expected, actual }`

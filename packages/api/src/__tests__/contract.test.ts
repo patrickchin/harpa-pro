@@ -27,6 +27,36 @@ const SPEC_DOC_CONFIG = {
   info: { title: 'Harpa Pro API', version: '0.0.0' },
 };
 
+const CANONICAL_ERROR_SCHEMA = {
+  type: 'object',
+  properties: {
+    error: {
+      type: 'object',
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        details: { nullable: true },
+      },
+      required: ['code', 'message'],
+      additionalProperties: false,
+    },
+    requestId: { type: 'string', minLength: 1 },
+  },
+  required: ['error', 'requestId'],
+  additionalProperties: false,
+};
+
+const NON_ERROR_STATUS_RESPONSES = new Set([
+  'GET /readyz 503',
+  'GET /admin/readyz 503',
+  'PATCH /projects/{project}/reports/{number} 409',
+  'PATCH /projects/{project}/reports/{number}/attachments 409',
+  'POST /projects/{project}/reports/{number}/generate 409',
+  'POST /projects/{project}/reports/{number}/regenerate 409',
+  'POST /projects/{project}/reports/{number}/finalize 409',
+  'POST /projects/{project}/reports/{number}/unfinalize 409',
+]);
+
 describe('OpenAPI contract', () => {
   it('runtime spec matches the frozen openapi.json', () => {
     const app = createApp();
@@ -89,5 +119,33 @@ describe('OpenAPI contract', () => {
     // And the scheme is registered at the components level.
     const schemes = doc.components?.securitySchemes ?? {};
     expect(Object.keys(schemes).length).toBeGreaterThan(0);
+  });
+
+  it('uses the canonical envelope for every documented application error', () => {
+    const doc = createApp().getOpenAPIDocument(SPEC_DOC_CONFIG);
+    let checked = 0;
+
+    for (const [path, pathItem] of Object.entries(doc.paths ?? {})) {
+      for (const [method, operation] of Object.entries(pathItem ?? {})) {
+        if (!operation || typeof operation !== 'object' || !('responses' in operation)) continue;
+        for (const [status, response] of Object.entries(operation.responses ?? {})) {
+          if (Number(status) < 400) continue;
+          const key = `${method.toUpperCase()} ${path} ${status}`;
+          if (NON_ERROR_STATUS_RESPONSES.has(key)) continue;
+          const content =
+            response && typeof response === 'object' && 'content' in response
+              ? (response.content as Record<string, { schema?: unknown }> | undefined)
+              : undefined;
+          const schema = content?.['application/json']?.schema;
+          expect(schema, `${key} must document a JSON error schema`).toBeDefined();
+          expect(schema, `${key} must use the canonical application error envelope`).toEqual(
+            CANONICAL_ERROR_SCHEMA,
+          );
+          checked += 1;
+        }
+      }
+    }
+
+    expect(checked).toBeGreaterThan(0);
   });
 });

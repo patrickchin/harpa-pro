@@ -27,6 +27,7 @@ import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
 import { ADMIN_CSRF_HEADER } from './lib/admin-csrf.js';
+import { openApiHonoOptions } from './lib/openapi.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
 
@@ -54,7 +55,7 @@ export type AppEnv = {
 };
 
 export function createApp(): OpenAPIHono<AppEnv> {
-  const app = new OpenAPIHono<AppEnv>();
+  const app = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
   app.use('*', requestId());
   const sentryMiddleware = createSentryMiddleware(app);

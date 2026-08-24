@@ -314,20 +314,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -347,20 +354,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -432,20 +446,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -465,20 +486,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -554,24 +582,31 @@
                       "type": "object",
                       "properties": {
                         "code": {
-                          "type": "string",
-                          "enum": [
-                            "not_configured"
-                          ]
+                          "type": "string"
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -646,24 +681,31 @@
                       "type": "object",
                       "properties": {
                         "code": {
-                          "type": "string",
-                          "enum": [
-                            "not_configured"
-                          ]
+                          "type": "string"
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -745,20 +787,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -778,20 +827,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -892,20 +948,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -925,20 +988,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -958,20 +1028,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1006,20 +1083,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1039,20 +1123,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1072,20 +1163,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1217,20 +1315,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1250,20 +1355,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1535,20 +1647,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1739,20 +1858,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1772,20 +1898,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1896,20 +2029,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2066,20 +2206,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2220,20 +2364,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2256,20 +2404,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2396,20 +2548,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2432,20 +2588,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2594,20 +2754,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2630,20 +2794,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2692,20 +2860,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2728,20 +2900,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2844,20 +3020,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -2880,20 +3060,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3012,20 +3196,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3048,20 +3236,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3084,20 +3276,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3120,20 +3316,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3156,20 +3356,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3292,20 +3496,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3328,20 +3536,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3364,20 +3576,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3400,20 +3616,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3471,20 +3691,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3507,20 +3731,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3543,20 +3771,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3579,20 +3811,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -3998,20 +4234,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4034,20 +4274,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4414,20 +4658,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4450,20 +4698,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4486,20 +4738,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4612,20 +4868,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4648,20 +4908,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4684,20 +4948,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4816,20 +5084,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4852,20 +5124,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4888,20 +5164,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -4924,20 +5204,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -5302,20 +5586,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -5338,20 +5626,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -5958,20 +6250,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -5994,20 +6290,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -6030,20 +6330,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -6376,20 +6680,24 @@
                             },
                             "details": {
                               "nullable": true
-                            },
-                            "requestId": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "code",
                             "message"
-                          ]
+                          ],
+                          "additionalProperties": false
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
-                        "error"
-                      ]
+                        "error",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -6450,20 +6758,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -6486,20 +6798,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -6734,20 +7050,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -6770,20 +7090,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -7225,20 +7549,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -7261,20 +7589,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -7297,20 +7629,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8038,20 +8374,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8074,20 +8414,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8110,20 +8454,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8456,20 +8804,24 @@
                             },
                             "details": {
                               "nullable": true
-                            },
-                            "requestId": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "code",
                             "message"
-                          ]
+                          ],
+                          "additionalProperties": false
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
-                        "error"
-                      ]
+                        "error",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -8494,20 +8846,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8920,20 +9276,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8956,20 +9316,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -8992,20 +9356,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -9338,20 +9706,24 @@
                             },
                             "details": {
                               "nullable": true
-                            },
-                            "requestId": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "code",
                             "message"
-                          ]
+                          ],
+                          "additionalProperties": false
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
-                        "error"
-                      ]
+                        "error",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -9376,20 +9748,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -9777,20 +10153,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -9813,20 +10193,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -9849,20 +10233,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -10195,20 +10583,24 @@
                             },
                             "details": {
                               "nullable": true
-                            },
-                            "requestId": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "code",
                             "message"
-                          ]
+                          ],
+                          "additionalProperties": false
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
-                        "error"
-                      ]
+                        "error",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -10598,20 +10990,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -10634,20 +11030,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -10670,20 +11070,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11016,20 +11420,24 @@
                             },
                             "details": {
                               "nullable": true
-                            },
-                            "requestId": {
-                              "type": "string"
                             }
                           },
                           "required": [
                             "code",
                             "message"
-                          ]
+                          ],
+                          "additionalProperties": false
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
-                        "error"
-                      ]
+                        "error",
+                        "requestId"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -11112,20 +11520,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11148,20 +11560,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11184,20 +11600,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11271,20 +11691,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11307,20 +11731,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11405,20 +11833,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11441,20 +11873,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11700,20 +12136,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -11736,20 +12176,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12040,20 +12484,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12076,20 +12524,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12112,20 +12564,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12259,20 +12715,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12295,20 +12755,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12539,20 +13003,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12575,20 +13043,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12611,20 +13083,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12673,20 +13149,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12709,20 +13189,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12912,20 +13396,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12948,20 +13436,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -12984,20 +13476,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13226,20 +13722,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13262,20 +13762,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13298,20 +13802,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13334,20 +13842,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13427,20 +13939,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13463,20 +13979,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13718,20 +14238,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13754,20 +14278,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13790,20 +14318,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13826,20 +14358,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13862,20 +14398,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13954,20 +14494,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -13990,20 +14534,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14026,20 +14574,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14062,20 +14614,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14154,20 +14710,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14190,20 +14750,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14226,20 +14790,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14303,20 +14871,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14404,20 +14976,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14440,20 +15016,24 @@
                         },
                         "details": {
                           "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14537,20 +15117,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14570,20 +15157,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14603,20 +15197,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14636,20 +15237,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14669,20 +15277,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14746,20 +15361,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14779,20 +15401,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14847,20 +15476,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14880,20 +15516,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -14913,20 +15556,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -15927,20 +16577,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -15960,20 +16617,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -15993,20 +16657,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -16494,20 +17165,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -16527,20 +17205,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -17845,20 +18530,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -17878,20 +18570,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -17911,20 +18610,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -18541,20 +19247,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -18574,20 +19287,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -19452,20 +20172,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -19485,20 +20212,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -19906,20 +20640,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -19939,20 +20680,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -20181,20 +20929,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -20214,20 +20969,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -21393,20 +22155,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -21426,20 +22195,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -22103,20 +22879,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -22136,20 +22919,27 @@
                         },
                         "message": {
                           "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
                         }
                       },
                       "required": [
                         "code",
                         "message"
-                      ]
+                      ],
+                      "additionalProperties": false
                     },
                     "requestId": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "error"
-                  ]
+                    "error",
+                    "requestId"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }

@@ -131,7 +131,7 @@ async function errorFromResponse(response: Response): Promise<ApiError> {
     message: envelope?.error?.message ?? `Request failed with status ${response.status}.`,
     status: response.status,
     details: envelope?.error?.details,
-    requestId: envelope?.error?.requestId ?? envelope?.requestId,
+    requestId: envelope?.requestId ?? envelope?.error?.requestId,
     payload,
   });
 }

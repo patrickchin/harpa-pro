@@ -29,7 +29,9 @@ signed file URL path.
 
 The standalone `/voice/transcribe` and `/voice/summarize` routes remain
 available to other clients. The mobile voice-note flow does not use
-them.
+them. Standalone transcription requires the caller to be the file's original
+uploader; project membership may make an attachment readable but does not
+authorize sending another member's recording to the AI provider.
 
 ## Design decisions
 
@@ -39,7 +41,7 @@ them.
 `language`, optional `durationSec`, and optional `fixtureName`. The
 handler runs these steps:
 
-1. Verify file ownership + that `file.kind === 'voice'`.
+1. Verify `file.ownerId === userId` + that `file.kind === 'voice'`.
 2. Load `getAiSettings(db, userId)` → `aiVendor`.
 3. `transcribe()` against a signed R2 URL.
 4. `chat()` with the canonical summary prompt against the transcript.
@@ -49,6 +51,12 @@ handler runs these steps:
 
 Both AI calls share one `usageContext { db, userId, projectId,
 reportId }` so spend lands attributed.
+
+Project-scoped file RLS grants every current project member read access. That
+visibility is not proof of uploader ownership, so both the aggregator and
+standalone transcription perform the explicit owner comparison before usage
+accounting, signed-URL minting, or AI calls. Missing and member-visible
+non-owner files return the same `404`.
 
 **Why aggregator, not "make mobile orchestrate":**
 
@@ -464,6 +472,11 @@ report_id)`.
 - `voice-aggregator.scope.test.ts` — per-request scope coverage:
   member of report A cannot create a voice note on report B; non-owner
   of `fileId` cannot summon it onto their own report.
+
+- `journeys/cross-member-attachment.journey.integration.test.ts` — real OTP
+  and default fixture wiring prove a project member may fetch the uploader's
+  shared attachment but cannot transcribe it. Observational spies and the
+  usage ledger pin that rejection before signed-URL minting or provider work.
 
 ### Mobile (`apps/mobile/__tests__/` + `features/voice/__tests__/`)
 

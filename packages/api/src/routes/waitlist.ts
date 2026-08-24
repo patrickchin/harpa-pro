@@ -14,12 +14,13 @@
  *
  * See docs/marketing/plan-m1-waitlist.md.
  */
-import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { sql } from 'drizzle-orm';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { waitlist as waitlistSchemas } from '@harpa/api-contract';
+import { waitlist as waitlistSchemas, errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { rawDb } from '../db/client.js';
 import { env } from '../env.js';
 import { validateEmail } from '../lib/email-validation.js';
@@ -29,11 +30,6 @@ import { clientIp } from '../lib/clientIp.js';
 import { renderWaitlistConfirmationEmail } from '../emails/waitlist-confirmation.js';
 import { newId } from '../lib/ids.js';
 import { withRateLimit } from '../middleware/rateLimit.js';
-
-const errorBody = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-  requestId: z.string().optional(),
-});
 
 /**
  * Test seam — production code uses the env-driven default clients,
@@ -103,7 +99,7 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export const waitlistRoutes = new OpenAPIHono<AppEnv>();
+export const waitlistRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 waitlistRoutes.openapi(
   createRoute({
@@ -125,11 +121,11 @@ waitlistRoutes.openapi(
       },
       400: {
         description: 'Bad request.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -241,11 +237,11 @@ waitlistRoutes.openapi(
       },
       400: {
         description: 'Bad token.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),

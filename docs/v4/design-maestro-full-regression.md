@@ -286,11 +286,13 @@ from the LLM" requires a surface that does not currently exist.
 The Report Debug screen and route shipped. Generate-screen Debug and
 Edit tabs remain opt-in developer flags.
 
-The Profile route currently passes `showDeveloperSection`
-unconditionally and always links to `/developer`. This differs from
-the original dev-or-fixture gate below. Treat the production exposure
-as an implementation gap. The regression journey must not be used as
-evidence that the route is gated.
+The shared developer-tools policy now gates Profile, saved-report Report
+Debug, Generate Debug, and both direct routes. Module 12 remains available in
+the fixture-input build because `EXPO_PUBLIC_USE_FIXTURES=true` satisfies that
+policy. Unit route regressions, rather than this fixture journey, prove that a
+normal production build hides the navigation entries, redirects deep links,
+and starts no hidden-route read query. See
+[`design-mobile-developer-tools-gate.md`](design-mobile-developer-tools-gate.md).
 
 API contract (new): `GET /reports/{number}/debug` →
 
@@ -434,16 +436,16 @@ Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 
 ## 5. Open questions / carve-outs
 
-| ID  | Question / carve-out                                        | Resolution / owner                                                                                                                                                                                                                                                                                                                            |
-| --- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q1  | Where does this land in the plan tree?                      | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md).                                                                                                                                                                                                                                             |
+| ID  | Question / carve-out                                      | Resolution / owner                                                                                                                                                                                                                                                                                                                            |
+| --- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | Where does this land in the plan tree?                    | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md).                                                                                                                                                                                                                                             |
 | Q2  | Does the regression journey replace the old P3 core flow? | Yes. The retired `core-end-to-end` path no longer runs; `ci-launch-smoke.yaml` is the PR-time launch smoke and `regression-journey.yaml` is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with).                                                                                                                                |
-| Q3  | How do test accounts get into the `dev` deployment?         | Use the existing `POST /api/auth/sign-in/email` test-account password bypass, gated by `TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint.            |
-| Q4  | Universal-links cold-tap coverage                           | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links).                                                                                                                                                                                                                                                                                    |
-| Q5  | Token-event timeline (`GET /me/usage/events`)               | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up.                                                                                                                                                                                                                                            |
-| Q6  | Android emu LLM-fixture network surface (local mode)        | Verify Android emu can reach the loopback fixture server (`10.0.2.2:<port>`). Surface in step 13.                                                                                                                                                                                                                                             |
-| Q7  | Voice + photo carve-outs — where do they re-enter?          | [§7](#7-future-modules-pickup-pointers). Tracked here, not silently deferred.                                                                                                                                                                                                                                                                 |
-| Q8  | Dev mode runs against real LLMs — cost?                     | `dev` API uses real vendor keys with cost caps in Doppler `dev`. The regression journey runs nightly only on `dev` mode (1×/day × short fixture-friendly prompts) — estimated <$0.05/run. If cost becomes a concern, switch dev-mode to point at fixture-replay too (set `AI_FIXTURE_MODE=replay` on the dev Fly machine for the run window). |
+| Q3  | How do test accounts get into the `dev` deployment?       | Use the existing `POST /api/auth/sign-in/email` test-account password bypass, gated by `TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint.            |
+| Q4  | Universal-links cold-tap coverage                         | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links).                                                                                                                                                                                                                                                                                    |
+| Q5  | Token-event timeline (`GET /me/usage/events`)             | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up.                                                                                                                                                                                                                                            |
+| Q6  | Android emu LLM-fixture network surface (local mode)      | Verify Android emu can reach the loopback fixture server (`10.0.2.2:<port>`). Surface in step 13.                                                                                                                                                                                                                                             |
+| Q7  | Voice + photo carve-outs — where do they re-enter?        | [§7](#7-future-modules-pickup-pointers). Tracked here, not silently deferred.                                                                                                                                                                                                                                                                 |
+| Q8  | Dev mode runs against real LLMs — cost?                   | `dev` API uses real vendor keys with cost caps in Doppler `dev`. The regression journey runs nightly only on `dev` mode (1×/day × short fixture-friendly prompts) — estimated <$0.05/run. If cost becomes a concern, switch dev-mode to point at fixture-replay too (set `AI_FIXTURE_MODE=replay` on the dev Fly machine for the run window). |
 
 ---
 

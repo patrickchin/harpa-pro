@@ -163,8 +163,8 @@ export interface SavedReportProps {
 
   /**
    * P4.8 — show the Report Debug entry in the actions menu. Gated by
-   * the same `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES
-   * or __DEV__) that controls the Profile developer section.
+   * the same `showDeveloperSection` flag (`SHOW_DEVELOPER_TOOLS`) that
+   * controls the Profile developer section.
    */
   showDeveloperSection?: boolean;
   /** Invoked when the user taps the Report Debug entry. */

@@ -16,6 +16,7 @@ import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 import { clearImageCachesOnSignOut } from '@/lib/files/image-cache';
+import { SHOW_DEVELOPER_TOOLS } from '@/lib/config/developer-tools';
 
 const PRIVACY_POLICY_URL = 'https://harpapro.com/privacy';
 
@@ -61,7 +62,7 @@ export default function ProfileRoute() {
           queryClient.refetchQueries({ type: 'active' }),
         ]);
       }}
-      showDeveloperSection
+      showDeveloperSection={SHOW_DEVELOPER_TOOLS}
       actions={<AppHeaderActions />}
     />
   );

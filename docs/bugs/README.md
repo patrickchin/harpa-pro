@@ -273,15 +273,17 @@ domain before serialization. Console-capture tests use sentinel secrets
 and fail if any appear; richer message assertions stay inside the
 in-process fake record.
 
-### R12 — Membership is mistaken for write authorization
+### R12 — Membership is mistaken for action authorization
 
 Project membership answers whether a caller can see a row; it does not answer
-whether the caller may mutate it. A policy or route that checks only
-`app.is_member(project_id)` silently collapses `owner`, `editor`, and `viewer`
-into the same write role. Owner/non-member tests stay green while viewers can
-write. Mitigation: keep membership as the row-visibility boundary, apply one
-central owner/writer role guard at every project-content mutation route, and
-test each operation with owner, editor, and viewer actors.
+whether the caller may mutate it or act as its owner. A policy or route that
+checks only `app.is_member(project_id)` can collapse `owner`, `editor`, and
+`viewer` into the same write role, or mistake a member-visible teammate asset
+for a caller-owned asset. Owner/non-member tests stay green in both cases.
+Mitigation: keep membership as the row-visibility boundary, apply one central
+owner/writer role guard at every project-content mutation route, require an
+explicit owner identity for caller-owned inputs, and test owner, editor,
+viewer, and member-visible non-owner actors as appropriate.
 
 ### R13 — Black-box journey expectations drift after API policy changes
 
@@ -360,6 +362,37 @@ collide with and contradictory payloads that must fail closed.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-24** — Storage-delete integration fixtures used the macOS host
+  clock for a Postgres due-now timestamp, so VM clock skew under full-suite
+  load could leave the job unclaimed and cascade into a duplicate key. Fix:
+  let Postgres assign `now()` unless the test explicitly requests a delay.
+  [detail](2026-08-24-storage-delete-jobs-host-clock-flake.md)
+- **2026-08-21** — Mobile Developer and Report Debug surfaces were reachable in
+  ordinary production bundles because local navigation checks never formed one
+  enforceable policy. Fix: share a dev-or-fixtures gate across UI, direct
+  routes, persisted preferences, and query `enabled` predicates.
+  [detail](2026-08-21-mobile-developer-tools-production-gate.md)
+- **2026-08-21** _(R5)_ — Native camera fast mode treated the early shutter
+  promise as a saved JPEG, so Done could commit a partial list, burst capacity
+  could overflow, and cancelled sessions could orphan late files. Fix: use the
+  ordinary awaited capture terminal, serialize controls, and reclaim every
+  cancelled or rejected handoff.
+  [detail](2026-08-21-camera-native-save-pending-race.md)
+- **2026-08-21** _(R12)_ — Voice aggregation and standalone transcription
+  treated project-member visibility as file ownership, allowing a member to
+  process a teammate's recording. Fix: require uploader ownership before usage
+  accounting, signed URLs, or AI work on both entry points.
+  [detail](2026-08-21-voice-aggregator-file-owner.md)
+- **2026-08-21** — The shared error schema accepted legacy request IDs, route
+  validation bypassed the common mapper, and one client preferred the nested
+  value. Fix: enforce the strict envelope through a shared route hook,
+  regenerate artifacts, and keep legacy parsing only at client boundaries.
+  [detail](2026-08-21-error-envelope-request-id-drift.md)
+- **2026-08-21** — The frozen dependency graph retained compatible patched
+  `nanoid` and `js-yaml` releases, contributing seven of eleven production
+  audit findings. Fix: raise the direct floor, add range-scoped overrides, and
+  pin the resolved graph in CI.
+  [detail](2026-08-21-compatible-dependency-advisory-patches.md)
 - **2026-08-10** _(R7)_ — Development reported the current migration head
   while retaining a retired LLM-usage ledger row and legacy table shape. Fix:
   add conditional forward schema reconciliation, exact-only ledger cleanup,

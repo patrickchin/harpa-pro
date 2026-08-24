@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { buildInfo } from '../lib/build-info.js';
 
 const HealthResponse = z.object({
@@ -10,7 +11,7 @@ const HealthResponse = z.object({
   buildTime: z.string().optional(),
 });
 
-export const health = new OpenAPIHono<AppEnv>().openapi(
+export const health = new OpenAPIHono<AppEnv>(openApiHonoOptions).openapi(
   createRoute({
     method: 'get',
     path: '/healthz',

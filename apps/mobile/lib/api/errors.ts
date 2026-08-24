@@ -5,7 +5,7 @@
  *
  * Wire shape mirrors the API's error envelope (see
  * docs/v4/arch-api-design.md §Errors and packages/api-contract
- * `errorEnvelope` schema): `{ error: { code, message, details?, requestId? } }`.
+ * `errorEnvelope` schema): `{ error: { code, message, details? }, requestId }`.
  */
 
 export type ApiErrorCode =
@@ -24,6 +24,7 @@ export interface ApiErrorEnvelope {
     code: string;
     message: string;
     details?: unknown;
+    /** @deprecated Compatibility with pre-v4/non-standard error producers. */
     requestId?: string;
   };
   requestId?: string;
@@ -78,7 +79,7 @@ export async function apiErrorFromResponse(
       code: env.error.code ?? statusToCode(res.status),
       message: env.error.message ?? `HTTP ${res.status}`,
       status: res.status,
-      requestId: env.error.requestId ?? env.requestId,
+      requestId: env.requestId ?? env.error.requestId,
       details: env.error.details,
     });
   }

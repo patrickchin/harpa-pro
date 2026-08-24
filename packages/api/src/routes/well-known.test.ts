@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { errorEnvelope } from '@harpa/api-contract';
 import { createApp } from '../app.js';
 import { env } from '../env.js';
 
@@ -30,8 +31,9 @@ describe('well-known universal-link manifests', () => {
       const app = createApp();
       const res = await app.request('/.well-known/apple-app-site-association');
       expect(res.status).toBe(404);
-      const body = (await res.json()) as { error: { code: string } };
+      const body = errorEnvelope.parse(await res.json());
       expect(body.error.code).toBe('not_configured');
+      expect(body.requestId).toBe(res.headers.get('x-request-id'));
     });
 
     it('returns a manifest covering /p/* and /r/* for every bundle id', async () => {
@@ -75,8 +77,9 @@ describe('well-known universal-link manifests', () => {
       const app = createApp();
       const res = await app.request('/.well-known/assetlinks.json');
       expect(res.status).toBe(404);
-      const body = (await res.json()) as { error: { code: string; message: string } };
+      const body = errorEnvelope.parse(await res.json());
       expect(body.error.message).toMatch(/equal length/);
+      expect(body.requestId).toBe(res.headers.get('x-request-id'));
     });
 
     it('emits one entry per package, index-aligned with fingerprints', async () => {

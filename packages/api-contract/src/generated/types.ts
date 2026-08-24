@@ -208,8 +208,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -223,8 +224,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -283,8 +285,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -298,8 +301,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -352,10 +356,11 @@ export interface paths {
                     content: {
                         "application/json": {
                             error: {
-                                /** @enum {string} */
-                                code: "not_configured";
+                                code: string;
                                 message: string;
+                                details?: unknown;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -410,10 +415,11 @@ export interface paths {
                     content: {
                         "application/json": {
                             error: {
-                                /** @enum {string} */
-                                code: "not_configured";
+                                code: string;
                                 message: string;
+                                details?: unknown;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -471,8 +477,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -486,8 +493,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -521,8 +529,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -536,8 +545,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -551,8 +561,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -604,8 +615,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -619,8 +631,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -634,8 +647,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -697,8 +711,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -712,8 +727,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -809,8 +825,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -885,8 +902,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -900,8 +918,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -964,8 +983,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -1036,8 +1056,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1096,8 +1116,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1112,8 +1132,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1178,8 +1198,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1194,8 +1214,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1232,8 +1252,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1248,8 +1268,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1311,8 +1331,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1327,8 +1347,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1384,8 +1404,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1400,8 +1420,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1459,8 +1479,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1475,8 +1495,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1491,8 +1511,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1507,8 +1527,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1523,8 +1543,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1576,8 +1596,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1592,8 +1612,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1608,8 +1628,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1624,8 +1644,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1680,8 +1700,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1696,8 +1716,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1712,8 +1732,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1728,8 +1748,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1843,8 +1863,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1859,8 +1879,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1965,8 +1985,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1981,8 +2001,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1997,8 +2017,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2058,8 +2078,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2074,8 +2094,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2090,8 +2110,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2143,8 +2163,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2159,8 +2179,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2175,8 +2195,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2191,8 +2211,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2304,8 +2324,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2320,8 +2340,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2359,8 +2379,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2375,8 +2395,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2530,8 +2550,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2546,8 +2566,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2562,8 +2582,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2641,8 +2661,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2726,8 +2746,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2742,8 +2762,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2881,8 +2901,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2897,8 +2917,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2913,8 +2933,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3112,8 +3132,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3128,8 +3148,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3144,8 +3164,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3223,8 +3243,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3239,8 +3259,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3370,8 +3390,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3386,8 +3406,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3402,8 +3422,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3481,8 +3501,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3497,8 +3517,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3620,8 +3640,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3636,8 +3656,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3652,8 +3672,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3731,8 +3751,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3854,8 +3874,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3870,8 +3890,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3886,8 +3906,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3965,8 +3985,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4023,8 +4043,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4039,8 +4059,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4055,8 +4075,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4110,8 +4130,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4126,8 +4146,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4185,8 +4205,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4201,8 +4221,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4292,8 +4312,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4308,8 +4328,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4401,8 +4421,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4417,8 +4437,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4433,8 +4453,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4503,8 +4523,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4519,8 +4539,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4571,8 +4591,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4587,8 +4607,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4667,8 +4687,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4683,8 +4703,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4699,8 +4719,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4777,8 +4797,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4793,8 +4813,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4809,8 +4829,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4899,8 +4919,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4915,8 +4935,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4931,8 +4951,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4947,8 +4967,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5005,8 +5025,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5021,8 +5041,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5117,8 +5137,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5133,8 +5153,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5149,8 +5169,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5165,8 +5185,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5181,8 +5201,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5241,8 +5261,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5257,8 +5277,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5273,8 +5293,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5289,8 +5309,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5349,8 +5369,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5365,8 +5385,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5381,8 +5401,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5434,8 +5454,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5487,8 +5507,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5503,8 +5523,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5561,8 +5581,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5576,8 +5597,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5591,8 +5613,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5606,8 +5629,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5621,8 +5645,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5674,8 +5699,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5689,8 +5715,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5744,8 +5771,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5759,8 +5787,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5774,8 +5803,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6015,8 +6045,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6030,8 +6061,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6045,8 +6077,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6186,8 +6219,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6201,8 +6235,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6499,8 +6534,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6514,8 +6550,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6529,8 +6566,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6686,8 +6724,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6701,8 +6740,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6914,8 +6954,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -6929,8 +6970,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7049,8 +7091,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7064,8 +7107,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7146,8 +7190,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7161,8 +7206,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7418,8 +7464,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7433,8 +7480,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7602,8 +7650,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -7617,8 +7666,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };

@@ -40,14 +40,32 @@ native-readiness boundary:
 - iOS lens flips preserve readiness because Expo updates the session device
   without emitting another ready callback.
 
-The shutter stays disabled while the camera is unready, while a capture is in
-flight, or after the burst limit is reached.
+The shutter and Done stay disabled while a capture is in flight. The default
+native path deliberately uses ordinary awaited `takePictureAsync` rather than
+Expo fast mode. Expo 55's fast contract has no save-failure callback or callback
+unregister operation: Android can settle the early promise and then fail JPEG
+writing without emitting `onPictureSaved`, and view teardown can leave the
+module-global JavaScript callback registered. Independent saves can also finish
+out of shutter order.
 
-Expo fast mode has two completion signals: the `takePictureAsync` promise and
-the `onPictureSaved` callback. Android may save the JPEG and invoke the callback
-without settling the promise. Either signal therefore releases the capture
-lock. Each capture receives a monotonically increasing attempt id so a delayed
-callback from an older capture cannot unlock a newer one.
+Awaited mode gives each shutter one success/rejection terminal, keeps the
+atomic ref-backed lock until the URI exists, and serializes burst order. Done
+also checks that lock in its handler, so a stale enabled control cannot commit
+an incomplete list. `skipProcessing: true`, the approximately 3 MP picture-size
+cap, cached thumbnails, and fire-and-forget camera-roll copies retain the other
+hot-path optimizations. Reintroduce overlapping native saves only after a
+real-device latency benchmark shows this serialization is unacceptable and the
+installed Expo version exposes success, failure, cancellation, and unregister
+terminals.
+
+The capture session is ref-backed and becomes inactive atomically on Done,
+Cancel, or unmount. Results that resolve after cancellation are deleted.
+System unmount deletes every completed-but-uncommitted cache file, while Done
+preserves URIs only when the session registry accepts their handoff; a missing
+or stale session rejects ownership and the camera deletes those files. Android
+Back uses the same Cancel/Discard flow, and native modal gestures are disabled
+so they cannot bypass confirmation. Permission-gate exits cannot render that
+discard sheet, so they directly reclaim any retained captures before leaving.
 
 ## Maestro contract
 
@@ -58,11 +76,15 @@ No fixed sleep or whole-flow retry is allowed.
 
 ## Verification
 
-Unit coverage will prove Android remains disabled through picture-size
-discovery and enables only after the post-rebind callback. It will also prove
-that a saved-photo callback releases a capture whose promise remains pending,
-without letting a delayed callback unlock a newer capture. Flip coverage will
-prove iOS stays ready and Android ignores stale pre-flip discovery. Static
-policy will require the shared helper before each shutter tap in every current
-consumer. The Android regression journey is the behavioral proof; the complete
-post-merge Maestro inventory remains the release proof.
+Unit coverage proves Android remains disabled through picture-size discovery
+and enables only after the post-rebind callback. Default-wiring regressions
+hold the ordinary native promise and prove the atomic shutter lock rejects a
+same-tick second press, Done cannot commit early, burst order is stable, and
+late results plus completed uncommitted files are cleaned on cancellation or
+unmount. They also prove committed files survive route teardown and hardware
+Back reaches discard confirmation. Regressions cover rejected stale-session
+handoffs and denied/requesting permission exits with retained captures. Flip
+coverage proves iOS stays ready and Android ignores stale pre-flip discovery.
+Static policy requires the shared helper before each shutter tap in every
+current consumer. The Android regression journey is the behavioral proof; the
+complete post-merge Maestro inventory remains the release proof.

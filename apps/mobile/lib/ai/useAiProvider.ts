@@ -41,6 +41,11 @@ export interface UseAiProviderApi {
   isUpdating: boolean;
 }
 
+export interface UseAiProviderOptions {
+  /** Disable the settings read while a build-time route gate redirects. */
+  enabled?: boolean;
+}
+
 /**
  * Convert the server's nullable-pair shape to the client's
  * `AiSelection | null`. The contract enforces both-null-or-both-set
@@ -55,9 +60,11 @@ function toSelection(
   return { vendor: raw.vendor, model: raw.model };
 }
 
-export function useAiProvider(): UseAiProviderApi {
+export function useAiProvider(
+  options: UseAiProviderOptions = {},
+): UseAiProviderApi {
   const qc = useQueryClient();
-  const query = useAiSettingsQuery();
+  const query = useAiSettingsQuery(undefined, { enabled: options.enabled });
   const mutation = useUpdateAiSettingsMutation({
     onSuccess: (data) => {
       // Write through to the cache so the picker reflects the new

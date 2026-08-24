@@ -937,6 +937,7 @@ describe('runAdminReportGenerateDiagnostic live canary', () => {
                   overridden: false,
                 },
               },
+              requestId: REQUEST_ID,
             },
             403,
           ),

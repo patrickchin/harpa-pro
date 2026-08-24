@@ -292,14 +292,15 @@ code must not use `Alert.alert`.
 
 ## Developer surfaces
 
-The Developer screen controls the optional Generate Debug tab. The
-preference defaults off and persists in AsyncStorage. Draft report edits use
-the per-card edit modal on the Report pane; Generate has no Edit tab.
+The shared `SHOW_DEVELOPER_TOOLS` policy exposes Developer surfaces only in
+development or fixture builds. It gates the Profile row, direct Developer and
+report-debug routes, their reads, and both the selector and pane for Generate
+Debug. The Generate Debug preference defaults off and persists in AsyncStorage,
+but cannot override the build policy. See
+[`design-mobile-developer-tools-gate.md`](design-mobile-developer-tools-gate.md).
 
-The Profile route currently shows the Developer section in every app
-variant. This differs from the original dev-only design. Treat the
-exposure as an implementation gap until product code adds a gate or the
-team declares the screen supported in production.
+Draft report edits use the per-card edit modal on the Report pane; Generate has
+no Edit tab.
 
 ## Tests
 

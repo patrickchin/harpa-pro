@@ -45,10 +45,7 @@ function nextId(now: number): string {
 }
 
 /** Create a new session and return its id. */
-export function createCameraSession(
-  init: CameraSessionInit,
-  now: number = Date.now(),
-): string {
+export function createCameraSession(init: CameraSessionInit, now: number = Date.now()): string {
   const id = nextId(now);
   sessions.set(id, { ...init, id, result: null, createdAt: now });
   return id;
@@ -59,11 +56,16 @@ export function getCameraSession(id: string): CameraSession | undefined {
   return sessions.get(id);
 }
 
-/** Camera screen calls this on Done to publish results back to the caller. */
-export function commitCameraSession(id: string, uris: string[]): void {
+/**
+ * Camera screen calls this on Done to publish results back to the caller.
+ * Returns false when the session no longer exists so the camera can delete
+ * cache files that no caller accepted ownership of.
+ */
+export function commitCameraSession(id: string, uris: string[]): boolean {
   const session = sessions.get(id);
-  if (!session) return;
+  if (!session) return false;
   session.result = uris;
+  return true;
 }
 
 /**

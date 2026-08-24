@@ -49,6 +49,7 @@ jobs:
         # honest without spinning up the full integration matrix.
         run: |
           node scripts/ci/__tests__/shell-quote-security-policy.test.cjs
+          node scripts/ci/__tests__/dependency-advisory-policy.test.cjs
           node --test scripts/ci/__tests__/dev-e2e-proxy-security.test.cjs
           bash scripts/ci/__tests__/api-prod-policy.test.sh
           bash scripts/ci/__tests__/stress-viewer-policy.test.sh

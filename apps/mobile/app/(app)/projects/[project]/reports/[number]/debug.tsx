@@ -3,18 +3,18 @@
  *
  * Reads `project` + per-project `number`, fetches the Debug payload
  * via `useReportDebugQuery`, and renders the props-driven
- * `ReportDebug` screen body. Hidden from production builds at the
- * navigation entry (see ReportActionsMenu) — the route itself is
- * always available so deep links from dev tooling work.
+ * `ReportDebug` screen body. The shared developer-tools policy gates
+ * both its navigation entry and direct deep links.
  *
  * See docs/v4/design-maestro-full-regression.md §3.4.
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 
 import { ReportDebug } from '@/screens/report-debug';
 import { useReportDebugQuery } from '@/lib/api/hooks';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
+import { SHOW_DEVELOPER_TOOLS } from '@/lib/config/developer-tools';
 
 type DebugResponse = {
   prompt: { system: string; user: string };
@@ -49,8 +49,9 @@ export default function ReportDebugRoute() {
     number: string;
   }>();
   const slug = project ?? '';
-  const parsedNumber = Number.parseInt(number ?? '', 10);
-  const reportNumber = Number.isFinite(parsedNumber) ? parsedNumber : null;
+  const rawNumber = number ?? '';
+  const parsedNumber = /^[1-9]\d*$/.test(rawNumber) ? Number(rawNumber) : Number.NaN;
+  const reportNumber = Number.isSafeInteger(parsedNumber) && parsedNumber > 0 ? parsedNumber : null;
   const hasValidRouteParams = slug.length > 0 && reportNumber !== null;
 
   const debugQuery = useReportDebugQuery(
@@ -60,10 +61,18 @@ export default function ReportDebugRoute() {
         number: reportNumber ?? 0,
       },
     },
-    { enabled: hasValidRouteParams },
+    { enabled: SHOW_DEVELOPER_TOOLS && hasValidRouteParams },
   );
 
   const data = debugQuery.data as DebugResponse | undefined;
+
+  if (slug.length === 0 || reportNumber === null) {
+    return <Redirect href="/(app)/projects" />;
+  }
+
+  if (!SHOW_DEVELOPER_TOOLS) {
+    return <Redirect href={`/(app)/projects/${slug}/reports/${reportNumber}` as Href} />;
+  }
 
   return (
     <ReportDebug
@@ -73,12 +82,7 @@ export default function ReportDebugRoute() {
       prompt={data?.prompt ?? null}
       notes={data?.notes ?? []}
       lastGeneration={data?.lastGeneration ?? null}
-      onBack={() =>
-        safeBack(
-          router,
-          `/(app)/projects/${slug}/reports/${reportNumber ?? ''}`,
-        )
-      }
+      onBack={() => safeBack(router, `/(app)/projects/${slug}/reports/${reportNumber}`)}
       actions={<AppHeaderActions />}
     />
   );

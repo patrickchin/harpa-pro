@@ -10,12 +10,11 @@
  * supplied audio URL / fileId never reaches a real provider in replay.
  *
  * Security:
- *  - File visibility on /voice/transcribe is enforced via app.files RLS
- *    (`files_member_read`) — `getFileById` returns null for files the
- *    caller can't see (not owner and not a member of the file's project)
- *    so they surface as 404 (mirror of GET /files/:id/url). Voice
- *    uploads are typically `scope: 'project'` (note attachments) but
- *    `scope: 'scratch'` is also accepted — RLS handles both.
+ *  - app.files RLS establishes visibility on /voice/transcribe, then an
+ *    explicit uploader check rejects member-visible recordings owned by
+ *    somebody else. Missing, hidden, and visible-but-non-owned files all
+ *    surface as 404. Both project and scratch uploads are accepted when
+ *    the caller is the uploader.
  *  - Provider errors are wrapped as AiProviderError → errorMapper turns
  *    them into a generic 502 envelope (no fixture name, no provider
  *    detail, no internal URL leaks).
@@ -27,6 +26,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { voice as voiceSchemas, notes as noteSchemas, errorEnvelope, reportId as reportIdSchema } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import { withRateLimit } from '../middleware/rateLimit.js';
@@ -65,7 +65,7 @@ const MAX_VOICE_BYTES = 25 * 1024 * 1024;
 // above so a single voice-only abuser still hits the per-route ceiling.
 const aiUserSharedRateLimit = withRateLimit({ name: 'ai.user', limit: 60, windowMs: MIN });
 
-export const voiceRoutes = new OpenAPIHono<AppEnv>();
+export const voiceRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 // ---------- POST /reports/:report/notes/voice (aggregator) ----------
 //
@@ -124,11 +124,16 @@ voiceRoutes.openapi(
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
     await requireProjectWriter(db, userId, report.projectId);
 
-    // File ownership is enforced by `app.files` RLS; a non-owned file
-    // returns null. Also require `kind='voice'` so the aggregator
-    // can't be tricked into transcribing a PDF or image.
+    // File RLS establishes visibility, not ownership: every member can
+    // read files attached to their project. The aggregator deliberately
+    // accepts only the original uploader's recording, so collapse both a
+    // missing row and a visible-but-non-owned row to the same 404.
+    // Also require `kind='voice'` so the aggregator can't be tricked into
+    // transcribing a PDF or image.
     const file = await db((d) => getFileById(d, body.fileId));
-    if (!file) throw new HTTPException(404, { message: 'File not found.' });
+    if (!file || file.ownerId !== userId) {
+      throw new HTTPException(404, { message: 'File not found.' });
+    }
     if (file.kind !== 'voice') {
       throw new HTTPException(400, { message: 'File is not a voice recording.' });
     }
@@ -242,9 +247,11 @@ voiceRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
-    await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_transcribe' }));
     const row = await db((d) => getFileById(d, body.fileId));
-    if (!row) throw new HTTPException(404, { message: 'File not found.' });
+    if (!row || row.ownerId !== userId) {
+      throw new HTTPException(404, { message: 'File not found.' });
+    }
+    await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_transcribe' }));
     // Mint a real signed URL even in fixture mode — services/ai.ts
     // normalises it away before hashing in replay. In live mode the
     // provider will fetch this URL.

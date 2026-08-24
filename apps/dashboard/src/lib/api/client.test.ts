@@ -104,6 +104,36 @@ describe('createApiClient', () => {
     );
   });
 
+  it('prefers the canonical top-level requestId over the deprecated nested value', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'forbidden',
+            message: 'Owners only.',
+            requestId: 'req_legacy',
+          },
+          requestId: 'req_canonical',
+        }),
+        { status: 403 },
+      ),
+    );
+    const client = createApiClient({
+      baseUrl: 'https://api.harpapro.com',
+      fetch: fetchMock,
+    });
+
+    await expect(client.request('/projects', 'get')).rejects.toEqual(
+      expect.objectContaining<ApiError>({
+        name: 'ApiError',
+        code: 'forbidden',
+        message: 'Owners only.',
+        status: 403,
+        requestId: 'req_canonical',
+      }),
+    );
+  });
+
   it('returns undefined for a successful empty response', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
     const client = createApiClient({

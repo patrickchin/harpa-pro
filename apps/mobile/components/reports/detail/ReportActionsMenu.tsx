@@ -43,9 +43,8 @@ interface ReportActionsMenuProps {
   canDelete?: boolean;
   /**
    * P4.8 — show the "Report Debug" entry. Gated by the same
-   * `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES or __DEV__)
-   * that controls the Profile developer section. Hidden in production
-   * builds.
+   * shared `SHOW_DEVELOPER_TOOLS` flag that controls the Profile
+   * developer section. Hidden in production builds.
    */
   showDeveloperSection?: boolean;
   /** Invoked when the user taps "Report Debug". */

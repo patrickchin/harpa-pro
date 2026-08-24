@@ -21,7 +21,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { errorEnvelope } from '@harpa/api-contract';
-import type { AppEnv } from '../app.js';
+import { createApp, type AppEnv } from '../app.js';
 import { requestId } from '../middleware/requestId.js';
 import { errorMapper } from '../middleware/errorMapper.js';
 import { AiProviderError } from '../services/ai.js';
@@ -38,7 +38,7 @@ function buildApp(thrown: () => never) {
 
 interface Body {
   error: { code: string; message: string; details?: unknown };
-  requestId: unknown;
+  requestId: string;
 }
 
 async function fire(thrown: () => never): Promise<{ status: number; body: Body }> {
@@ -50,12 +50,11 @@ async function fire(thrown: () => never): Promise<{ status: number; body: Body }
 
 function assertEnvelope(body: Body) {
   // Schema invariant from api-contract.
-  const parsed = errorEnvelope.safeParse(body);
-  expect(parsed.success).toBe(true);
+  const parsed = errorEnvelope.parse(body);
   // Runtime invariant: requestId() always populates a non-empty id, and
   // the mapper always echoes it.
-  expect(typeof body.requestId).toBe('string');
-  expect((body.requestId as string).length).toBeGreaterThan(0);
+  expect(parsed.requestId).toBe(body.requestId);
+  expect(body.requestId.length).toBeGreaterThan(0);
 }
 
 describe('errorMapper — property tests', () => {
@@ -186,5 +185,32 @@ describe('errorMapper — property tests', () => {
       }),
       { numRuns: 60 },
     );
+  });
+});
+
+describe('errorMapper — registered OpenAPI route validation', () => {
+  it('maps validator failures through the strict public envelope', async () => {
+    const app = createApp();
+    const res = await app.request('/waitlist', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': 'rid-real-route-validation',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(400);
+    const parsed = errorEnvelope.parse(await res.json());
+    expect(parsed).toEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({
+          code: 'validation_error',
+          message: 'Request did not match schema.',
+        }),
+        requestId: 'rid-real-route-validation',
+      }),
+    );
+    expect(res.headers.get('x-request-id')).toBe(parsed.requestId);
   });
 });

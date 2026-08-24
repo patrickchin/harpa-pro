@@ -20,7 +20,9 @@
  * See docs/v4/plan-p4-hardening.md §P4.6.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { env } from '../env.js';
 
 const AasaResponse = z.object({
@@ -46,10 +48,6 @@ const AssetlinksResponse = z.array(
   }),
 );
 
-const NotFound = z.object({
-  error: z.object({ code: z.literal('not_configured'), message: z.string() }),
-});
-
 /**
  * Paths inside the universal-link routing table. Must mirror the
  * Expo Router `app/(app)/p/[projectSlug].tsx` + `app/(app)/r/[reportSlug].tsx`
@@ -65,7 +63,7 @@ function splitCsv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-export const wellKnownRoutes = new OpenAPIHono<AppEnv>()
+export const wellKnownRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions)
   .openapi(
     createRoute({
       method: 'get',
@@ -78,7 +76,7 @@ export const wellKnownRoutes = new OpenAPIHono<AppEnv>()
         },
         404: {
           description: 'iOS universal links are not configured on this origin.',
-          content: { 'application/json': { schema: NotFound } },
+          content: { 'application/json': { schema: errorEnvelope } },
         },
       },
     }),
@@ -92,6 +90,7 @@ export const wellKnownRoutes = new OpenAPIHono<AppEnv>()
               code: 'not_configured' as const,
               message: 'IOS_APP_ID_PREFIX and IOS_BUNDLE_IDS must be set.',
             },
+            requestId: c.get('requestId'),
           },
           404,
         );
@@ -123,7 +122,7 @@ export const wellKnownRoutes = new OpenAPIHono<AppEnv>()
         },
         404: {
           description: 'Android app links are not configured on this origin.',
-          content: { 'application/json': { schema: NotFound } },
+          content: { 'application/json': { schema: errorEnvelope } },
         },
       },
     }),
@@ -142,6 +141,7 @@ export const wellKnownRoutes = new OpenAPIHono<AppEnv>()
               message:
                 'ANDROID_PACKAGE_NAMES and ANDROID_CERT_FINGERPRINTS_SHA256 must be set and equal length.',
             },
+            requestId: c.get('requestId'),
           },
           404,
         );

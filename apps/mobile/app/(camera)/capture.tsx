@@ -21,15 +21,9 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 
 import { CameraCapture } from '@/screens/camera-capture';
-import {
-  commitCameraSession,
-  getCameraSession,
-} from '@/lib/camera/camera-session-registry';
+import { commitCameraSession, getCameraSession } from '@/lib/camera/camera-session-registry';
 import { safeBack } from '@/lib/nav/safe-back';
-import {
-  readSaveToRollPref,
-  writeSaveToRollPref,
-} from '@/lib/camera/save-to-roll-pref';
+import { readSaveToRollPref, writeSaveToRollPref } from '@/lib/camera/save-to-roll-pref';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 
 export default function CaptureRoute() {
@@ -91,10 +85,9 @@ export default function CaptureRoute() {
 
   const handleCommit = useCallback(
     (uris: string[]) => {
-      if (sessionId) {
-        commitCameraSession(sessionId, uris);
-      }
+      const committed = sessionId ? commitCameraSession(sessionId, uris) : false;
       returnToCaller();
+      return committed;
     },
     [returnToCaller, sessionId],
   );

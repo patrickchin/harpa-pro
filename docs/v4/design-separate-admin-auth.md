@@ -195,7 +195,8 @@ Behavior:
 - canonicalize the email;
 - perform uniform password verification;
 - reject unknown, disabled, wrong-domain, and wrong-password credentials with
-  the same `401` body;
+  the same `401` error code and message; the required top-level `requestId`
+  varies only by request and never by credential class;
 - create a new opaque session and set the admin cookie; and
 - return `{ authenticated: true, email }` with `Cache-Control: no-store`.
 

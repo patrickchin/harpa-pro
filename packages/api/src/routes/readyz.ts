@@ -15,6 +15,7 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { getPool } from '../db/client.js';
 // NB: do not import `env` for MIGRATIONS_REQUIRED_HEAD — env is parsed once
 // at module load. Reading process.env at probe time lets ops set the var
@@ -88,7 +89,7 @@ async function probe(): Promise<{ status: 200; body: Ok } | { status: 503; body:
   }
 }
 
-export const readyz = new OpenAPIHono<AppEnv>().openapi(
+export const readyz = new OpenAPIHono<AppEnv>(openApiHonoOptions).openapi(
   createRoute({
     method: 'get',
     path: '/readyz',

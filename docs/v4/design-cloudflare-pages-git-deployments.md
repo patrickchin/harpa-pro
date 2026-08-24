@@ -101,7 +101,7 @@ proof. The administrator cards show only current browser observations.
 ### Wrangler tooling contract
 
 Cloudflare Git remains the only Pages publisher. Root
-`wrangler@4.123.0` supports the checked-in site and admin
+`wrangler@4.125.0` supports the checked-in site and admin
 `wrangler.jsonc` schemas and local diagnostics; it does not restore direct
 uploads from GitHub Actions. Wrangler 4 requires Node 22 or newer, while this
 repository deliberately runs it on the selected Node 24.19.0 runtime.

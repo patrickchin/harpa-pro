@@ -22,6 +22,7 @@ updates:
         patterns:
           - 'better-auth'
           - '@better-auth/*'
+          - 'auth'
         update-types:
           - 'minor'
           - 'patch'
@@ -84,13 +85,14 @@ updates:
       - dependency-name: 'react-native*'
       - dependency-name: '@react-native/*'
 
+      # Expo SDK 55 owns the Babel major boundary.
+      - dependency-name: '@babel/core'
+        update-types: ['version-update:semver-major']
+
       # Compatibility-stack majors need their own migration plans.
       - dependency-name: 'react'
-        update-types: ['version-update:semver-major']
       - dependency-name: 'react-dom'
-        update-types: ['version-update:semver-major']
       - dependency-name: 'react-test-renderer'
-        update-types: ['version-update:semver-major']
       - dependency-name: '@types/react*'
         update-types: ['version-update:semver-major']
       - dependency-name: 'astro'
@@ -108,6 +110,8 @@ updates:
       - dependency-name: 'better-auth'
         update-types: ['version-update:semver-major']
       - dependency-name: '@better-auth/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'auth'
         update-types: ['version-update:semver-major']
 
   - package-ecosystem: 'github-actions'

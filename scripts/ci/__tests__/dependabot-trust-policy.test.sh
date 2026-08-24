@@ -46,6 +46,51 @@ forbid_fixed() {
   fi
 }
 
+dependabot_group_body() {
+  local path="$1" group="$2"
+  awk -v header="      ${group}:" '
+    $0 == header { in_group = 1 }
+    in_group && $0 ~ /^      [^[:space:]][^:]*:$/ && $0 != header { exit }
+    in_group { print }
+  ' "$REPO_ROOT/$path"
+}
+
+require_dependabot_group_fixed() {
+  local path="$1" group="$2" needle="$3" description="$4"
+  if dependabot_group_body "$path" "$group" | grep -Fq -- "$needle"; then
+    pass "$description"
+  else
+    fail "$description"
+  fi
+}
+
+dependabot_ignore_rule_body() {
+  local path="$1" dependency="$2"
+  awk -v header="      - dependency-name: '${dependency}'" '
+    $0 == header { in_rule = 1 }
+    in_rule && $0 ~ /^      - dependency-name:/ && $0 != header { exit }
+    in_rule { print }
+  ' "$REPO_ROOT/$path"
+}
+
+require_dependabot_ignore_rule_fixed() {
+  local path="$1" dependency="$2" needle="$3" description="$4"
+  if dependabot_ignore_rule_body "$path" "$dependency" | grep -Fq -- "$needle"; then
+    pass "$description"
+  else
+    fail "$description"
+  fi
+}
+
+forbid_dependabot_ignore_rule_fixed() {
+  local path="$1" dependency="$2" needle="$3" description="$4"
+  if dependabot_ignore_rule_body "$path" "$dependency" | grep -Fq -- "$needle"; then
+    fail "$description"
+  else
+    pass "$description"
+  fi
+}
+
 job_body() {
   local path="$1" job="$2"
   awk -v header="  ${job}:" '
@@ -76,6 +121,22 @@ forbid_job_fixed() {
 echo "Dependabot trust policy"
 
 DEPENDABOT_CONFIG=".github/dependabot.yml"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "better-auth-stack" "- 'auth'" \
+  "Better Auth CLI package moves with the Better Auth stack"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
+  "version-update:semver-major" \
+  "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
+  "version-update:semver-major" \
+  "Dependabot leaves Better Auth CLI major upgrades to a reviewed stack migration"
+for dependency in "react" "react-dom" "react-test-renderer"; do
+  require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "$dependency" \
+    "dependency-name: '${dependency}'" \
+    "Dependabot defines the Expo-pinned ${dependency} ignore rule"
+  forbid_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "$dependency" "update-types:" \
+    "Dependabot fully ignores Expo-pinned ${dependency} updates"
+done
+
 for group in \
   better-auth-stack \
   react-stack \

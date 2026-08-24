@@ -361,9 +361,12 @@ the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
 version-update pull requests target `dev`. Compatibility-coupled Better Auth,
 React, Astro/Vite, Drizzle, AWS SDK, and TypeScript-ESLint packages update as
 coordinated stacks. The broad npm production/development groups accept patches
-only, so unrelated minor updates remain focused. Expo and React Native packages
-are ignored here: Expo Doctor and `expo install` own that native compatibility
-graph as a staged SDK migration.
+only, so unrelated minor updates remain focused. The Better Auth CLI package
+`auth` moves with the complete Better Auth stack; its semver-major updates,
+like the other Better Auth packages, require a reviewed stack migration. Expo
+and React Native packages are ignored here: until a reviewed SDK migration
+changes the tested matrix, Expo Doctor and `expo install` own the React
+runtime/renderers and the Babel-major compatibility boundary.
 
 The path-scoped `ruby-security` workflow validates each Ruby dependency change
 with Bundler 2.6.9 on Ruby 3.2.11 (the supported EAS Ruby line) and Ruby 3.4.10

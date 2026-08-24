@@ -5,10 +5,9 @@
  * `https://api.moonshot.cn/v1` — the request/response shape mirrors
  * OpenAI's `/v1/chat/completions`, including `usage.prompt_tokens` /
  * `usage.completion_tokens` and (for cache-eligible accounts)
- * `usage.prompt_tokens_details.cached_tokens`. We model the adapter
- * on `openai.ts` rather than reusing it so that future Moonshot-only
- * quirks (model id rewrites, vendor-specific error shapes, request
- * pricing headers) can land here without touching OpenAI.
+ * `usage.prompt_tokens_details.cached_tokens`. The adapters share only
+ * that HTTP transport; Kimi keeps its own request and response handling
+ * so Moonshot-only quirks can remain local.
  *
  * Transcription is not offered by Moonshot — `transcribe()` throws
  * `LiveAdapterMissingError`. Audio still routes through the Groq
@@ -24,8 +23,8 @@ import {
   type ChatResponse,
   LiveAdapterMissingError,
 } from '../index.js';
-import { stripTrailingSlashes } from './base-url.js';
 import { AdapterError } from './error.js';
+import { createOpenAiCompatibleTransport } from './openai-compatible-transport.js';
 
 export interface KimiAdapterConfig {
   apiKey: string;
@@ -45,8 +44,12 @@ interface ChatCompletionResponse {
 }
 
 export function createKimiProvider(cfg: KimiAdapterConfig): AiProvider {
-  const baseUrl = stripTrailingSlashes(cfg.baseUrl ?? 'https://api.moonshot.cn/v1');
-  const fetchFn = cfg.fetchImpl ?? fetch;
+  const requestChatCompletion = createOpenAiCompatibleTransport({
+    vendor: 'kimi',
+    apiKey: cfg.apiKey,
+    baseUrl: cfg.baseUrl ?? 'https://api.moonshot.cn/v1',
+    ...(cfg.fetchImpl ? { fetchImpl: cfg.fetchImpl } : {}),
+  });
 
   return {
     vendor: 'kimi',
@@ -65,31 +68,7 @@ export function createKimiProvider(cfg: KimiAdapterConfig): AiProvider {
           : {}),
       };
 
-      let res: Response;
-      try {
-        res = await fetchFn(`${baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            authorization: `Bearer ${cfg.apiKey}`,
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        });
-      } catch (err) {
-        throw new AdapterError('kimi', 'network error', err);
-      }
-
-      if (!res.ok) {
-        const detail = await safeText(res);
-        throw new AdapterError('kimi', `HTTP ${res.status}`, detail);
-      }
-
-      let json: ChatCompletionResponse;
-      try {
-        json = (await res.json()) as ChatCompletionResponse;
-      } catch (err) {
-        throw new AdapterError('kimi', 'malformed JSON response', err);
-      }
+      const json = (await requestChatCompletion(body)) as ChatCompletionResponse;
 
       const text = json.choices?.[0]?.message?.content;
       if (typeof text !== 'string') {
@@ -114,12 +93,4 @@ export function createKimiProvider(cfg: KimiAdapterConfig): AiProvider {
       throw new LiveAdapterMissingError('kimi', 'transcribe');
     },
   };
-}
-
-async function safeText(res: Response): Promise<string> {
-  try {
-    return (await res.text()).slice(0, 500);
-  } catch {
-    return '<no body>';
-  }
 }

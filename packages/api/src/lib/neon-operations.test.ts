@@ -168,6 +168,7 @@ describe('observeAdminNeonInventory', () => {
     for (const { init } of calls) {
       expect(init?.method).toBe('GET');
       expect(new Headers(init?.headers).get('authorization')).toBe('Bearer default-viewer-key');
+      expect(init?.redirect).toBe('error');
       expect(init?.signal).toBeInstanceOf(AbortSignal);
     }
     expect(JSON.stringify(result)).not.toMatch(

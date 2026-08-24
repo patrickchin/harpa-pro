@@ -1,12 +1,15 @@
 import { operations, type NeonUsageObservation, type NeonUsageProject } from '@harpa/api-contract';
 import { z } from 'zod';
 import { env } from '../env.js';
+import {
+  createProviderObservationDeadline,
+  requestProviderJson,
+} from './provider-observer-http.js';
 
 const NEON_API_ORIGIN = 'https://console.neon.tech';
 const NEON_API_ROOT = `${NEON_API_ORIGIN}/api/v2`;
 const PROJECT_LIMIT = 20;
 const PROJECT_QUERY_TIMEOUT_MS = 5_000;
-const OBSERVATION_TIMEOUT_MS = 10_000;
 const COMPUTE_ALLOWANCE = 360_000;
 const STORAGE_ALLOWANCE = 500_000_000;
 const TRANSFER_ALLOWANCE = 5_000_000_000;
@@ -120,15 +123,11 @@ export async function observeAdminNeonUsage(
   }
 
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), OBSERVATION_TIMEOUT_MS);
-  deadline.unref?.();
-
-  try {
+  return createProviderObservationDeadline().run(async (signal) => {
     const organizationRequest = await getJson(
       new URL(`${NEON_API_ROOT}/organizations/${encodeURIComponent(orgId)}`),
       apiKey,
-      controller.signal,
+      signal,
       fetchImpl,
     );
     if (!organizationRequest.ok) {
@@ -160,7 +159,7 @@ export async function observeAdminNeonUsage(
     projectListUrl.searchParams.set('limit', String(PROJECT_LIMIT));
     projectListUrl.searchParams.set('timeout', String(PROJECT_QUERY_TIMEOUT_MS));
 
-    const projectListRequest = await getJson(projectListUrl, apiKey, controller.signal, fetchImpl);
+    const projectListRequest = await getJson(projectListUrl, apiKey, signal, fetchImpl);
     if (!projectListRequest.ok) {
       return validateObservation({
         observedAt,
@@ -213,7 +212,7 @@ export async function observeAdminNeonUsage(
 
     const projects: NeonUsageProject[] = [];
     for (const summary of discovery.projects) {
-      if (controller.signal.aborted) {
+      if (signal.aborted) {
         projects.push(unknownProjectFromSummary(summary, 'timeout'));
         continue;
       }
@@ -221,7 +220,7 @@ export async function observeAdminNeonUsage(
       const detailRequest = await getJson(
         new URL(`${NEON_API_ROOT}/projects/${encodeURIComponent(summary.id)}`),
         apiKey,
-        controller.signal,
+        signal,
         fetchImpl,
       );
       if (!detailRequest.ok) {
@@ -322,9 +321,7 @@ export async function observeAdminNeonUsage(
       },
       caveats: CAVEATS,
     });
-  } finally {
-    clearTimeout(deadline);
-  }
+  });
 }
 
 function unknownProjectFromSummary(
@@ -346,37 +343,14 @@ async function getJson(
   signal: AbortSignal,
   fetchImpl: typeof fetch,
 ): Promise<ProviderResult<unknown>> {
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        authorization: `Bearer ${apiKey}`,
-      },
-      redirect: 'error',
-      signal,
-    });
-  } catch (error) {
-    return {
-      ok: false,
-      reason: isAbort(error, signal) ? 'timeout' : 'provider_unavailable',
-    };
-  }
-
-  if (!response.ok) {
-    return { ok: false, reason: topReasonForStatus(response.status) };
-  }
-
-  try {
-    return { ok: true, value: await response.json() };
-  } catch (error) {
-    if (isAbort(error, signal)) return { ok: false, reason: 'timeout' };
-    return {
-      ok: false,
-      reason: error instanceof SyntaxError ? 'invalid_response' : 'provider_unavailable',
-    };
-  }
+  const response = await requestProviderJson(url, {
+    method: 'GET',
+    apiToken: apiKey,
+    signal,
+    fetchImpl,
+    reasonForStatus: topReasonForStatus,
+  });
+  return response.ok ? { ok: true, value: response.body } : response;
 }
 
 function topReasonForStatus(status: number): TopReason {
@@ -398,10 +372,6 @@ function projectReason(reason: TopReason): ProjectReason {
 
 function hasNextPage(value: z.infer<typeof pagination>): boolean {
   return Boolean(value.cursor?.trim() || value.next?.trim());
-}
-
-function isAbort(error: unknown, signal: AbortSignal): boolean {
-  return signal.aborted || (error instanceof Error && error.name === 'AbortError');
 }
 
 function validateObservation(observation: unknown): NeonUsageObservation {

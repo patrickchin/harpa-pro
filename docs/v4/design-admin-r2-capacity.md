@@ -140,6 +140,10 @@ One observation makes at most three provider requests. They share one
 3. `POST https://api.cloudflare.com/client/v4/graphql` containing only the
    documented R2 operations analytics query.
 
+The API's local provider-observer transport helper owns the shared deadline,
+headers, redirect rejection, and JSON parsing. This R2 observer retains the
+three-call plan, exact serialized GraphQL body, status mapping, and schemas.
+
 The GraphQL POST is a read query authenticated by an Analytics Read token. It
 groups the current UTC calendar month's data by `actionType` and
 `actionStatus`. Only `actionStatus=success` contributes to the estimate. The

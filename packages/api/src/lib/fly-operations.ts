@@ -1,13 +1,16 @@
 import { operations, type FlyInventoryObservation } from '@harpa/api-contract';
 import { z } from 'zod';
 import { env } from '../env.js';
+import {
+  createProviderObservationDeadline,
+  requestProviderJson,
+} from './provider-observer-http.js';
 
 const FLY_API_ORIGIN = 'https://api.machines.dev';
 const ORGANIZATION_APP_LIMIT = 1_000;
 const PROVIDER_DETAIL_LIMIT = 1_000;
 const RETURNED_DETAIL_LIMIT = 50;
 const CONFIGURED_APP_LIMIT = 10;
-const OBSERVATION_TIMEOUT_MS = 10_000;
 
 const providerText = z.string().min(1).max(512);
 const providerTimestamp = z.string().datetime({ offset: true });
@@ -149,17 +152,13 @@ export async function observeAdminFlyInventory(
   }
   const configuration = parsedConfiguration.data;
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), OBSERVATION_TIMEOUT_MS);
-  deadline.unref?.();
-
-  try {
+  return createProviderObservationDeadline().run(async (signal) => {
     const discoveryUrl = new URL('/v1/apps', FLY_API_ORIGIN);
     discoveryUrl.searchParams.set('org_slug', configuration.organizationSlug);
     const discoveryResponse = await getJson(
       discoveryUrl,
       configuration.apiToken,
-      controller.signal,
+      signal,
       fetchImpl,
     );
     if (!discoveryResponse.ok) {
@@ -189,7 +188,7 @@ export async function observeAdminFlyInventory(
         continue;
       }
 
-      if (controller.signal.aborted) {
+      if (signal.aborted) {
         unavailableReasons.push('timeout');
         continue;
       }
@@ -198,7 +197,7 @@ export async function observeAdminFlyInventory(
         summary,
         configuration.organizationSlug,
         configuration.apiToken,
-        controller.signal,
+        signal,
         fetchImpl,
       );
       if (observedApp.ok) apps.push(observedApp.value);
@@ -232,9 +231,7 @@ export async function observeAdminFlyInventory(
       unavailableConfiguredAppCount,
       apps,
     });
-  } finally {
-    clearTimeout(deadline);
-  }
+  });
 }
 
 function configurationFromEnv(): AdminFlyInventoryConfiguration | null {
@@ -372,35 +369,14 @@ async function getJson(
   signal: AbortSignal,
   fetchImpl: typeof fetch,
 ): Promise<ProviderResult<unknown>> {
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        authorization: `Bearer ${apiToken}`,
-      },
-      redirect: 'error',
-      signal,
-    });
-  } catch (error) {
-    return {
-      ok: false,
-      reason: isAbort(error, signal) ? 'timeout' : 'provider_unavailable',
-    };
-  }
-
-  if (!response.ok) return { ok: false, reason: reasonForStatus(response.status) };
-
-  try {
-    return { ok: true, value: await response.json() };
-  } catch (error) {
-    if (isAbort(error, signal)) return { ok: false, reason: 'timeout' };
-    return {
-      ok: false,
-      reason: error instanceof SyntaxError ? 'invalid_response' : 'provider_unavailable',
-    };
-  }
+  const response = await requestProviderJson(url, {
+    method: 'GET',
+    apiToken,
+    signal,
+    fetchImpl,
+    reasonForStatus,
+  });
+  return response.ok ? { ok: true, value: response.body } : response;
 }
 
 function reasonForStatus(status: number): FlyReason {
@@ -418,10 +394,6 @@ function highestPriorityReason(reasons: FlyReason[]): FlyReason {
   if (reasons.includes('not_found')) return 'not_found';
   if (reasons.includes('invalid_response')) return 'invalid_response';
   return 'provider_unavailable';
-}
-
-function isAbort(error: unknown, signal: AbortSignal): boolean {
-  return signal.aborted || (error instanceof Error && error.name === 'AbortError');
 }
 
 function addSafeCount(current: number, increment: number): number | null {

@@ -430,6 +430,16 @@ live variants (`.env.local`, `.env.dev`, and `.env.prod`) are gitignored.
 Deployment-resolved values, such as `ADMIN_DATABASE_URL`, do not mirror
 Doppler.
 
+### Provider observer transport boundary
+
+Neon inventory and usage, Cloudflare R2, Sentry, and Fly share one internal
+`packages/api/src/lib/provider-observer-http.ts` helper for their observation-wide
+10-second deadline and low-level JSON HTTP mechanics. The helper rejects
+redirects, makes one attempt, normalizes transport and parse failures, and
+supports the bounded byte reader used only by Sentry. Each observer still owns
+its fixed URLs and request plan, provider-specific status and priority mapping,
+schema validation, pagination decisions, and redacted response contract.
+
 ### Neon inventory observer
 
 `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are an optional paired

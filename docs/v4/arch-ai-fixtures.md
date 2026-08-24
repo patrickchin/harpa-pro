@@ -26,6 +26,7 @@ packages/ai-fixtures/
       openai.ts          # chat / report generation (live + replay)
       groq.ts            # transcription (live + replay)
       kimi.ts            # chat via Moonshot REST (live + replay)
+      openai-compatible-transport.ts # internal chat HTTP transport
       error.ts
       factory-from-env.ts
     fixture-store.ts   # read/write fixtures/<name>.json
@@ -48,6 +49,13 @@ every scenario in replay mode. Current user settings whitelist only
 OpenAI, so ordinary API traffic cannot select the retained Kimi
 adapter. The per-user OpenAI model preference does not steer fixture
 selection.
+
+OpenAI and Kimi keep separate provider adapters, public factories, request
+construction, response validation, and usage extraction. Their one shared
+internal transport posts JSON to `/chat/completions`, applies bearer headers,
+uses the injected or captured global `fetch`, and normalizes vendor-tagged
+network, HTTP, and JSON errors. It deliberately adds no retry, timeout, or
+logging policy. Groq and fixture replay do not use this helper.
 
 ## Modes
 

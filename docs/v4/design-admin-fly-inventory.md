@@ -124,6 +124,11 @@ Apps are processed serially. The three fixed reads for one app may overlap.
 With ten configured apps the absolute ceiling is 31 provider calls. The
 observer does not follow pagination or make an internal GraphQL request.
 
+The API's local provider-observer transport helper owns the shared deadline,
+headers, redirect rejection, and JSON parsing. This Fly observer retains the
+fixed request plan, provider-specific status mapping, schemas, and truncation
+rules.
+
 The existing Machine-list response supplies `config.guest` and the reviewed
 `config.metadata.fly_process_group` value. Process-group presentation adds no
 provider request and does not change the 31-call ceiling.

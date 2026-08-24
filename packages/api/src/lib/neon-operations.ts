@@ -1,13 +1,16 @@
 import { operations, type NeonInventoryObservation } from '@harpa/api-contract';
 import { z } from 'zod';
 import { env } from '../env.js';
+import {
+  createProviderObservationDeadline,
+  requestProviderJson,
+} from './provider-observer-http.js';
 
 const NEON_API_ORIGIN = 'https://console.neon.tech';
 const NEON_API_ROOT = `${NEON_API_ORIGIN}/api/v2`;
 const PROJECT_LIMIT = 20;
 const BRANCH_LIMIT = 100;
 const PROJECT_QUERY_TIMEOUT_MS = 5_000;
-const OBSERVATION_TIMEOUT_MS = 10_000;
 
 const providerId = z.string().regex(/^[a-z0-9-]{1,60}$/);
 const providerTimestamp = z.string().datetime({ offset: true });
@@ -86,17 +89,13 @@ export async function observeAdminNeonInventory(
   }
 
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), OBSERVATION_TIMEOUT_MS);
-  deadline.unref?.();
-
-  try {
+  return createProviderObservationDeadline().run(async (signal) => {
     const projectUrl = new URL(`${NEON_API_ROOT}/projects`);
     projectUrl.searchParams.set('org_id', orgId);
     projectUrl.searchParams.set('limit', String(PROJECT_LIMIT));
     projectUrl.searchParams.set('timeout', String(PROJECT_QUERY_TIMEOUT_MS));
 
-    const projectRequest = await getJson(projectUrl, apiKey, controller.signal, fetchImpl);
+    const projectRequest = await getJson(projectUrl, apiKey, signal, fetchImpl);
     if (!projectRequest.ok) {
       return validateObservation({
         observedAt,
@@ -131,15 +130,15 @@ export async function observeAdminNeonInventory(
       let branchCount: BranchCount;
       let branchDetails: BranchDetails;
 
-      if (controller.signal.aborted) {
+      if (signal.aborted) {
         branchCount = { status: 'unknown', reason: 'timeout' };
         branchDetails = { status: 'unknown', reason: 'timeout' };
       } else {
         // Projects are deliberately serial. Only the two bounded reads for one
         // project may overlap, and both share the observation-wide deadline.
         [branchCount, branchDetails] = await Promise.all([
-          observeBranchCount(project.id, apiKey, controller.signal, fetchImpl),
-          observeBranchDetails(project.id, apiKey, controller.signal, fetchImpl),
+          observeBranchCount(project.id, apiKey, signal, fetchImpl),
+          observeBranchDetails(project.id, apiKey, signal, fetchImpl),
         ]);
       }
 
@@ -185,9 +184,7 @@ export async function observeAdminNeonInventory(
       unavailableProjectCount,
       projects,
     });
-  } finally {
-    clearTimeout(deadline);
-  }
+  });
 }
 
 async function observeBranchCount(
@@ -252,34 +249,14 @@ async function getJson(
   signal: AbortSignal,
   fetchImpl: typeof fetch,
 ): Promise<ProviderResult<unknown>> {
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        authorization: `Bearer ${apiKey}`,
-      },
-      signal,
-    });
-  } catch (error) {
-    return {
-      ok: false,
-      reason: isAbort(error, signal) ? 'timeout' : 'provider_unavailable',
-    };
-  }
-
-  if (!response.ok) return { ok: false, reason: reasonForStatus(response.status) };
-
-  try {
-    return { ok: true, value: await response.json() };
-  } catch (error) {
-    if (isAbort(error, signal)) return { ok: false, reason: 'timeout' };
-    return {
-      ok: false,
-      reason: error instanceof SyntaxError ? 'invalid_response' : 'provider_unavailable',
-    };
-  }
+  const response = await requestProviderJson(url, {
+    method: 'GET',
+    apiToken: apiKey,
+    signal,
+    fetchImpl,
+    reasonForStatus,
+  });
+  return response.ok ? { ok: true, value: response.body } : response;
 }
 
 function reasonForStatus(status: number): InventoryReason {
@@ -288,10 +265,6 @@ function reasonForStatus(status: number): InventoryReason {
   if (status === 408 || status === 504) return 'timeout';
   if (status === 429) return 'rate_limited';
   return 'provider_unavailable';
-}
-
-function isAbort(error: unknown, signal: AbortSignal): boolean {
-  return signal.aborted || (error instanceof Error && error.name === 'AbortError');
 }
 
 function hasNextPage(value: z.infer<typeof pagination>): boolean {

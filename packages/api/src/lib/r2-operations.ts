@@ -1,11 +1,14 @@
 import { operations, type R2CapacityObservation } from '@harpa/api-contract';
 import { z } from 'zod';
 import { env } from '../env.js';
+import {
+  createProviderObservationDeadline,
+  requestProviderJson,
+} from './provider-observer-http.js';
 
 const CLOUDFLARE_API_ORIGIN = 'https://api.cloudflare.com';
 const BUCKET_LIMIT = 100;
 const GRAPHQL_GROUP_LIMIT = 10_000;
-const OBSERVATION_TIMEOUT_MS = 10_000;
 
 const CLASS_A_OPERATIONS = new Set([
   'ListBuckets',
@@ -150,11 +153,7 @@ export async function observeAdminR2Capacity(
   }
 
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), OBSERVATION_TIMEOUT_MS);
-  deadline.unref?.();
-
-  try {
+  return createProviderObservationDeadline().run(async (signal) => {
     const windowStart = new Date(
       Date.UTC(
         new Date(observedAt).getUTCFullYear(),
@@ -168,9 +167,9 @@ export async function observeAdminR2Capacity(
     ).toISOString();
 
     const [bucketsResult, storageResult, operationsResult] = await Promise.all([
-      observeBuckets(accountId, apiToken, controller.signal, fetchImpl),
-      observeStorage(accountId, apiToken, controller.signal, fetchImpl),
-      observeOperations(accountId, apiToken, windowStart, observedAt, controller.signal, fetchImpl),
+      observeBuckets(accountId, apiToken, signal, fetchImpl),
+      observeStorage(accountId, apiToken, signal, fetchImpl),
+      observeOperations(accountId, apiToken, windowStart, observedAt, signal, fetchImpl),
     ]);
 
     const failures = [bucketsResult, storageResult, operationsResult]
@@ -233,9 +232,7 @@ export async function observeAdminR2Capacity(
       operations,
       caveats,
     });
-  } finally {
-    clearTimeout(deadline);
-  }
+  });
 }
 
 async function observeBuckets(
@@ -439,37 +436,24 @@ async function getJson(
     body?: string;
   },
 ): Promise<ProviderResult<unknown>> {
-  let response: Response;
-  try {
-    response = await options.fetchImpl(url, {
-      method: options.method,
-      headers: {
-        accept: 'application/json',
-        authorization: `Bearer ${options.apiToken}`,
-        ...(options.method === 'POST' ? { 'content-type': 'application/json' } : {}),
-      },
-      body: options.body,
-      redirect: 'error',
-      signal: options.signal,
-    });
-  } catch (error) {
-    return {
-      ok: false,
-      reason: isAbort(error, options.signal) ? 'timeout' : 'provider_unavailable',
-    };
-  }
-
-  if (!response.ok) return { ok: false, reason: reasonForStatus(response.status) };
-
-  try {
-    return { ok: true, value: await response.json() };
-  } catch (error) {
-    if (isAbort(error, options.signal)) return { ok: false, reason: 'timeout' };
-    return {
-      ok: false,
-      reason: error instanceof SyntaxError ? 'invalid_response' : 'provider_unavailable',
-    };
-  }
+  const request =
+    options.method === 'POST'
+      ? await requestProviderJson(url, {
+          method: 'POST',
+          apiToken: options.apiToken,
+          signal: options.signal,
+          fetchImpl: options.fetchImpl,
+          reasonForStatus,
+          body: options.body ?? '',
+        })
+      : await requestProviderJson(url, {
+          method: 'GET',
+          apiToken: options.apiToken,
+          signal: options.signal,
+          fetchImpl: options.fetchImpl,
+          reasonForStatus,
+        });
+  return request.ok ? { ok: true, value: request.body } : request;
 }
 
 function reasonForStatus(status: number): R2Reason {
@@ -485,10 +469,6 @@ function highestPriorityReason(reasons: R2Reason[]): R2Reason {
   if (reasons.includes('forbidden')) return 'forbidden';
   if (reasons.includes('invalid_response')) return 'invalid_response';
   return 'provider_unavailable';
-}
-
-function isAbort(error: unknown, signal: AbortSignal): boolean {
-  return signal.aborted || (error instanceof Error && error.name === 'AbortError');
 }
 
 function validateObservation(observation: unknown): R2CapacityObservation {

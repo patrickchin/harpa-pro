@@ -17,8 +17,8 @@ import {
   type ChatResponse,
   LiveAdapterMissingError,
 } from '../index.js';
-import { stripTrailingSlashes } from './base-url.js';
 import { AdapterError } from './error.js';
+import { createOpenAiCompatibleTransport } from './openai-compatible-transport.js';
 
 export interface OpenAiAdapterConfig {
   apiKey: string;
@@ -38,8 +38,12 @@ interface ChatCompletionResponse {
 }
 
 export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
-  const baseUrl = stripTrailingSlashes(cfg.baseUrl ?? 'https://api.openai.com/v1');
-  const fetchFn = cfg.fetchImpl ?? fetch;
+  const requestChatCompletion = createOpenAiCompatibleTransport({
+    vendor: 'openai',
+    apiKey: cfg.apiKey,
+    baseUrl: cfg.baseUrl ?? 'https://api.openai.com/v1',
+    ...(cfg.fetchImpl ? { fetchImpl: cfg.fetchImpl } : {}),
+  });
 
   return {
     vendor: 'openai',
@@ -58,31 +62,7 @@ export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
           : {}),
       };
 
-      let res: Response;
-      try {
-        res = await fetchFn(`${baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            authorization: `Bearer ${cfg.apiKey}`,
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        });
-      } catch (err) {
-        throw new AdapterError('openai', 'network error', err);
-      }
-
-      if (!res.ok) {
-        const detail = await safeText(res);
-        throw new AdapterError('openai', `HTTP ${res.status}`, detail);
-      }
-
-      let json: ChatCompletionResponse;
-      try {
-        json = (await res.json()) as ChatCompletionResponse;
-      } catch (err) {
-        throw new AdapterError('openai', 'malformed JSON response', err);
-      }
+      const json = (await requestChatCompletion(body)) as ChatCompletionResponse;
 
       const text = json.choices?.[0]?.message?.content;
       if (typeof text !== 'string') {
@@ -107,12 +87,4 @@ export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
       throw new LiveAdapterMissingError('openai', 'transcribe');
     },
   };
-}
-
-async function safeText(res: Response): Promise<string> {
-  try {
-    return (await res.text()).slice(0, 500);
-  } catch {
-    return '<no body>';
-  }
 }

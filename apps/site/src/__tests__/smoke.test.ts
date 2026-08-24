@@ -38,7 +38,7 @@ describe('site smoke', () => {
       '@types/react': '^19.2.18',
       '@types/react-dom': '~19.2.4',
       cookie: '2.0.1',
-      vite: '8.2.1',
+      vite: '8.2.2',
     });
     expect(pkg.engines.node).toBe('>=22.12.0');
   });

@@ -226,9 +226,10 @@ Migration `0007_rate_limit_buckets.sql` creates
 machines therefore increment the same counter. `AdminPostgresRateLimiter`
 uses the same internal SQL shape against the admin table.
 
-`src/server.ts` starts cleanup schedulers for both Postgres limiters. Each
-scheduler runs every ten minutes and deletes buckets whose full window ended
-more than one minute earlier. Memory mode does not start a cleanup timer.
+`src/server.ts` starts cleanup schedulers for both Postgres limiters. In the
+current low-traffic mode, each scheduler runs every 24 hours and deletes
+buckets whose full window ended more than one minute earlier. Memory mode does
+not start a cleanup timer.
 
 The application rate-limit table is not user-visible. The API accesses it
 through the unscoped pool. The admin table revokes `PUBLIC` and has RLS

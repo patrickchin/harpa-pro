@@ -6,20 +6,24 @@ import {
 } from '../services/storage-delete-jobs.js';
 import { captureApiException } from '../telemetry/sentry.js';
 import {
+  startStorageWorkerMemorySampling,
   storageWorkerMemorySample,
   type StorageWorkerMemorySampleReason,
 } from './storage-worker-memory.js';
+import {
+  computeStorageWorkerSleepMs,
+  LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE,
+} from './storage-worker-schedule.js';
 
-const MAX_IDLE_POLL_MS = 10 * 60_000;
-const MIN_IDLE_POLL_MS = 1_000;
-const ERROR_POLL_MS = 60_000;
-const MAX_JOBS_PER_PASS = 10;
-const LEASE_PRUNE_INTERVAL_MS = 60 * 60_000;
-const MEMORY_SAMPLE_INTERVAL_MS = 60 * 60_000;
+const {
+  errorPollMs: ERROR_POLL_MS,
+  leasePruneIntervalMs: LEASE_PRUNE_INTERVAL_MS,
+  maxJobsPerPass: MAX_JOBS_PER_PASS,
+  memorySampleIntervalMs: MEMORY_SAMPLE_INTERVAL_MS,
+} = LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE;
 
 let stopping = false;
 let lastLeasePruneAt = 0;
-let lastMemorySampleAt = 0;
 let wakeFromSleep: (() => void) | null = null;
 
 process.once('SIGINT', () => {
@@ -31,19 +35,18 @@ process.once('SIGTERM', () => {
 
 console.log('[storage-delete-worker] started');
 logMemorySample('startup');
+const stopMemorySampling = startStorageWorkerMemorySampling(
+  () => logMemorySample('interval'),
+  MEMORY_SAMPLE_INTERVAL_MS,
+);
 
 while (!stopping) {
-  if (Date.now() - lastMemorySampleAt >= MEMORY_SAMPLE_INTERVAL_MS) {
-    logMemorySample('interval');
-  }
   try {
     const result = await drainStorageDeleteJobs({
       maxJobs: MAX_JOBS_PER_PASS,
     });
     if (result.failed > 0) {
-      const error = new Error(
-        `${result.failed} storage deletion job(s) failed`,
-      );
+      const error = new Error(`${result.failed} storage deletion job(s) failed`);
       console.warn(
         JSON.stringify({
           level: 'warn',
@@ -56,10 +59,7 @@ while (!stopping) {
     if (Date.now() - lastLeasePruneAt >= LEASE_PRUNE_INTERVAL_MS) {
       const pruned = await pruneExpiredFileUploadLeases();
       lastLeasePruneAt = Date.now();
-      if (
-        pruned.consumedLeasesPruned > 0 ||
-        pruned.unconsumedLeasesPruned > 0
-      ) {
+      if (pruned.consumedLeasesPruned > 0 || pruned.unconsumedLeasesPruned > 0) {
         console.log(
           JSON.stringify({
             level: 'info',
@@ -71,20 +71,12 @@ while (!stopping) {
     }
     if (result.claimed === 0) {
       const now = Date.now();
-      const nextJobWakeAt = await getNextStorageDeleteJobWakeAt();
-      const nextJobWaitMs = nextJobWakeAt
-        ? Math.max(MIN_IDLE_POLL_MS, nextJobWakeAt.getTime() - now)
-        : MAX_IDLE_POLL_MS;
-      const nextLeasePruneWaitMs = Math.max(
-        MIN_IDLE_POLL_MS,
-        LEASE_PRUNE_INTERVAL_MS - (now - lastLeasePruneAt),
-      );
       await wait(
-        Math.min(
-          MAX_IDLE_POLL_MS,
-          nextJobWaitMs,
-          nextLeasePruneWaitMs,
-        ),
+        computeStorageWorkerSleepMs({
+          now,
+          lastLeasePruneAt,
+          nextJobWakeAt: await getNextStorageDeleteJobWakeAt(),
+        }),
       );
     }
   } catch (error) {
@@ -94,6 +86,7 @@ while (!stopping) {
   }
 }
 
+stopMemorySampling();
 await resetPool();
 console.log('[storage-delete-worker] stopped');
 
@@ -125,5 +118,4 @@ function reportWorkerException(error: unknown): void {
 
 function logMemorySample(reason: StorageWorkerMemorySampleReason): void {
   console.log(JSON.stringify(storageWorkerMemorySample(reason)));
-  lastMemorySampleAt = Date.now();
 }

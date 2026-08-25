@@ -16,6 +16,16 @@ export interface StorageWorkerMemorySample {
   machineFreeBytes: number;
 }
 
+export function startStorageWorkerMemorySampling(
+  sample: () => void,
+  intervalMs: number,
+): () => void {
+  // Keep operational telemetry independent from the database wake schedule.
+  const timer = setInterval(sample, intervalMs);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
 /**
  * Build the worker's structured memory sample without retaining heap objects.
  * Fly's built-in Machine metrics remain authoritative for saturation; this log

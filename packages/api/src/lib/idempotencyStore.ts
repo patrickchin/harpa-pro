@@ -14,6 +14,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { getPool } from '../db/client.js';
 import { env } from '../env.js';
+import { LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS } from './background-maintenance.js';
 
 export interface CachedResponse {
   status: number;
@@ -285,9 +286,7 @@ export class PostgresIdempotencyStore implements IdempotencyStore {
     }, HEARTBEAT_MS);
     if (typeof heartbeat.unref === 'function') heartbeat.unref();
 
-    let outcome:
-      | { ok: true; value: CachedResponse | null }
-      | { ok: false; error: unknown };
+    let outcome: { ok: true; value: CachedResponse | null } | { ok: false; error: unknown };
     try {
       outcome = { ok: true, value: await producer() };
     } catch (error) {
@@ -328,9 +327,7 @@ export class PostgresIdempotencyStore implements IdempotencyStore {
       [keyHash, ownerToken, LEASE_MS],
     );
     if (rowCount !== 1) {
-      throw new IdempotencyLeaseLostError(
-        'Idempotency lease ownership was lost during renewal.',
-      );
+      throw new IdempotencyLeaseLostError('Idempotency lease ownership was lost during renewal.');
     }
   }
 
@@ -372,9 +369,7 @@ export class PostgresIdempotencyStore implements IdempotencyStore {
       [keyHash, ownerToken],
     );
     if (rowCount !== 1) {
-      throw new IdempotencyLeaseLostError(
-        'Idempotency lease ownership was lost before release.',
-      );
+      throw new IdempotencyLeaseLostError('Idempotency lease ownership was lost before release.');
     }
   }
 
@@ -409,7 +404,7 @@ export function resetIdempotencyStore(): void {
 
 let gcTimer: ReturnType<typeof setInterval> | null = null;
 
-export function startIdempotencyGc(intervalMs = 10 * 60_000): void {
+export function startIdempotencyGc(intervalMs = LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS): void {
   if (gcTimer) return;
   const store = getIdempotencyStore();
   if (!(store instanceof PostgresIdempotencyStore)) return;

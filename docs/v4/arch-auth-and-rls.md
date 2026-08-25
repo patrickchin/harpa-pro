@@ -872,11 +872,12 @@ swept. Storage failures remain durable, emit worker logs/Sentry, and do
 not change the route's `204` because the account deletion already
 committed.
 
-The fast path normally completes immediate cleanup. The worker sleeps until
-the next known due job, capped at a ten-minute idle poll, and prunes expired
-leases hourly. This permits idle gaps for Neon suspension at the cost of up to
-ten minutes of retry latency for a job inserted after sleep begins and up to
-one hour of expired-lease cleanup latency.
+The fast path normally completes immediate cleanup. In the current low-traffic
+mode, the worker sleeps until the next known due job, capped at 24 hours, and
+prunes expired leases on startup and once per 24 hours while running. This
+permits long idle gaps for Neon suspension at the cost of up to one day of
+retry latency for a job inserted after sleep begins and up to one day of
+expired-lease cleanup latency.
 
 The initial lease rollout fails account deletion closed with `503`
 until all URLs minted by old machines have expired. CI arms the

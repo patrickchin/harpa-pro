@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { storageWorkerMemorySample } from './storage-worker-memory.js';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  startStorageWorkerMemorySampling,
+  storageWorkerMemorySample,
+} from './storage-worker-memory.js';
 
 describe('storageWorkerMemorySample', () => {
   it('emits numeric process and Machine fields', () => {
@@ -30,5 +33,26 @@ describe('storageWorkerMemorySample', () => {
       machineTotalBytes: 512,
       machineFreeBytes: 256,
     });
+  });
+
+  it('samples independently until stopped', () => {
+    vi.useFakeTimers();
+    const sample = vi.fn();
+
+    try {
+      const stop = startStorageWorkerMemorySampling(sample, 60 * 60_000);
+
+      vi.advanceTimersByTime(60 * 60_000 - 1);
+      expect(sample).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(sample).toHaveBeenCalledTimes(1);
+
+      stop();
+      vi.advanceTimersByTime(60 * 60_000);
+      expect(sample).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

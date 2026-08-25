@@ -412,14 +412,15 @@ removing the rows. R2 failure rolls the transaction back; concurrent
 registration waits and then receives `409` rather than creating a file
 whose object was deleted.
 
-Idle polling is deliberately bounded for Neon cost. The worker sleeps until
-the next known `run_after`, with a ten-minute maximum so a newly inserted job
-cannot be missed indefinitely, and performs lease pruning at most once per
-hour. `DELETE /me` still drains its immediate job after commit. If that
-fast-path fails just after the worker goes to sleep, durable cleanup can lag by
-up to ten minutes; expired lease/orphan cleanup can lag by up to one hour.
-This leaves idle gaps in which Neon may suspend, while the service-less Fly
-Machine remains an explicit always-on cost.
+Idle polling is deliberately bounded for Neon cost. In the current low-traffic
+mode, the worker sleeps until the next known `run_after`, with a 24-hour
+maximum so a newly inserted job cannot be missed indefinitely. It reconciles
+the queue and prunes leases at startup, then prunes once per 24 hours while the
+process remains running. `DELETE /me` still drains its immediate job after
+commit. If that fast path fails just after the worker goes to sleep, durable
+cleanup and expired lease/orphan cleanup can lag by up to one day. This leaves
+long idle gaps in which Neon may suspend, while the service-less Fly Machine
+remains an explicit always-on cost.
 
 The first rolling deploy is gated by
 `app.storage_lifecycle_rollout`. Account deletion returns `503` until

@@ -22,6 +22,7 @@
 import type pg from 'pg';
 import { env } from '../env.js';
 import { getPool } from '../db/client.js';
+import { LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS } from './background-maintenance.js';
 
 const APP_RATE_LIMIT_BUCKET_TABLE = 'app.rate_limit_buckets';
 const ADMIN_RATE_LIMIT_BUCKET_TABLE = 'admin.rate_limit_buckets';
@@ -157,12 +158,12 @@ export function resetRateLimiter(): void {
 let _gcTimer: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Start a periodic GC sweep (every `intervalMs`, default 10 min) when
+ * Start a periodic GC sweep (every `intervalMs`, default 24 hours) when
  * the active limiter is a PostgresRateLimiter. No-op for memory mode.
  * Idempotent: calling twice does not double-schedule. Exposed so the
  * server entry can start it after the pool is initialised.
  */
-export function startRateLimitGc(intervalMs = 10 * 60_000): void {
+export function startRateLimitGc(intervalMs = LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS): void {
   if (_gcTimer) return;
   const inst = getRateLimiter();
   if (!(inst instanceof PostgresRateLimiter)) return;

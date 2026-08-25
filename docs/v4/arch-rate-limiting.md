@@ -166,6 +166,11 @@ rule: **mounting `withRateLimit({ keyBy: 'user' })` without a prior
 and a 401 in prod (the latter is the right answer for a bug-shaped
 caller anyway).
 
+`src/server.ts` starts cleanup schedulers for both Postgres limiters. In the
+current low-traffic mode, each scheduler runs every 24 hours and deletes
+buckets whose full window ended more than one minute earlier. Memory mode does
+not start a cleanup timer.
+
 ### 3.3 New budgets
 
 > **Update (better-auth migration).** `POST /auth/otp/start`,

@@ -736,7 +736,7 @@ addition to the HTTP `app` group:
 
 - `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
   to suspend at zero;
-- `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
+- `storage-worker`: `shared-cpu-1x`, 512 MB, no service attachment,
   with its active Machine and stopped standby owned by Fly deploys.
 
 The active worker is not eligible for HTTP auto-stop, so both dev and
@@ -745,15 +745,32 @@ stopped standby for deploys and restarts. This cost is required for delayed
 cleanup to run while the API is idle. PR previews do not provision workers;
 their account-deletion gate stays closed.
 
-The worker does not continuously pin Neon with five-second polling. It
-sleeps until the next known job is due, capped at ten minutes to discover
-jobs inserted after the sleep was calculated, and prunes expired upload
-leases hourly. The route remains the immediate-delete fast path. If that
-fast path fails just after a sleep starts, cleanup may lag by ten minutes;
-expired lease/orphan cleanup may lag by one hour. These gaps allow an
-otherwise idle Neon compute to suspend when its configured idle threshold
-is shorter than the gap. They do not reduce the continuously billed Fly
-worker cost.
+The worker process launches Node with the `tsx` loader directly instead of
+keeping `pnpm` and the `tsx` CLI supervisor resident. The 512 MB allocation is
+intentional headroom: the former 256 MB Machine exposed only about 207 MiB to
+the guest and reached roughly 9 MiB available while its durable queue was
+empty, followed by four daily OOM/exit-137 restarts. A structured
+`storage_delete_worker_memory` log records process uptime, Node RSS/heap, and
+guest total/free memory at startup and hourly. Fly's built-in Machine memory
+metric remains the source for whole-VM saturation and should be checked after
+each rollout. Memory sampling has its own local timer and does not query Neon
+or shorten the worker's database sleep.
+
+The worker does not continuously pin Neon with frequent polling. In the
+current low-traffic mode, it sleeps until the next known job is due, capped at
+24 hours to discover jobs inserted after the sleep was calculated, and prunes
+expired upload leases on startup and once per 24 hours while running. A restart
+reconciles sooner because it has already woken the database. The route remains
+the immediate-delete fast path. If that fast path fails just after a sleep
+starts, delayed cleanup and lease/orphan cleanup may lag by up to one day. This
+trade-off is intentional while Harpa has no external users: it allows an idle
+Neon compute to remain suspended instead of repeatedly paying its idle billing
+tail. It does not reduce the continuously billed Fly worker cost.
+
+The application rate-limit, admin rate-limit, and idempotency garbage
+collectors also use a 24-hour default in low-traffic mode. They run only while
+an HTTP `app` Machine is awake and do not keep its event loop alive by
+themselves.
 
 After the first lease-aware deploy completes, the workflow arms a
 one-time 330-second compatibility grace. During the grace, new presigns

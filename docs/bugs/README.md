@@ -289,12 +289,274 @@ without updating the journey, the first semantic failure occurs after merge.
 Mitigation: update black-box assertions and journey docs in the policy PR, then
 pin high-risk authorization expectations with a focused PR-gated policy test.
 
+### R14 — PR verification and privileged publication share a trust decision
+
+A pull request can be safe to compile and test without being authorized to
+deploy, publish, delete infrastructure, comment, or receive service
+credentials. Same-repository branches are not one trust class: Dependabot owns
+same-repository branches while GitHub deliberately withholds ordinary Actions
+secrets from its runs. A maintainer rerun also changes `github.actor` without
+changing who controls the PR branch.
+
+Mitigation: split credential-free verification from privileged jobs. Authorize
+the latter with both a same-repository head and the immutable PR author; keep
+Dependabot out with
+`github.event.pull_request.user.login != 'dependabot[bot]'`. Never recover
+credentials by adding Dependabot secrets or changing the trigger to
+`pull_request_target`.
+
+### R15 — Persisted client state outlives its authenticated principal
+
+A singleton client-side store can survive sign-out, session expiry, or a direct
+account switch even when its server queries are properly authorized. One global
+persistence key also lets the next account hydrate the previous account's
+last-seen data before a refetch corrects it. Mitigation: wait for a stable user
+id before hydration, namespace durable state by that id, withhold descendants
+during identity transitions, and clear both active memory and unattributable
+legacy state on every unauthenticated boundary.
+
+### R16 — Workspace manifests disagree with the resolved peer graph
+
+A root package-manager override can make a workspace install a different
+framework major than its own manifest declares. An undeclared build-tool peer
+then lets the package manager choose that peer from whichever dependency update
+happens to run first. Each install can be internally valid while Dependabot and
+reviewers are reasoning from manifests that describe a different graph.
+
+Mitigation: declare the root-selected React runtime directly in every web
+workspace, align its React types, and pin the Astro-compatible Vite major in
+both workspaces. Keep `tailwindcss` and `@tailwindcss/vite` on the same patch
+line. Workspace smoke tests must parse the manifests and fail when those
+compatibility pins drift. If hoisted build code resolves a transitive package
+through the workspace root, declare that implementation directly in the
+affected workspace rather than relying on the hoister's choice.
+
+### R17 — Fixed timestamps age out of rolling-window tests
+
+An E2E fixture with an absolute timestamp can pass for days or weeks, then fail
+without a code change when a filter such as “Past week” computes its boundary
+from the real clock. The response is correct, but the test's seed data has aged
+out of its own scenario. Seed rolling-window fixtures relative to the database
+clock, preserve only the offsets needed for ordering, and keep the browser test
+on the real relative filter.
+
+### R18 — Display strings masquerade as entity state
+
+A renderer that recognizes deletion by comparing a label with a fallback such
+as `Deleted user` makes that string an undocumented reserved value. A live,
+user-named entity can collide with it and be styled, announced, filtered, and
+exported as unavailable even though the database join succeeded. Keep state in
+an explicit contract field, derive it from row presence, and treat display
+labels as opaque data. Every related identity field must agree with that state:
+a deleted actor cannot retain an email. Regression fixtures must include live
+labels that are exactly equal to every human-readable fallback they could
+collide with and contradictory payloads that must fail closed.
+
+### R19 — Idle polling defeats scale-to-zero
+
+A tiny periodic query can consume far more serverless database allowance than
+its execution time suggests. Every poll wakes the compute, and the provider's
+idle timeout keeps billing after the query finishes. A ten-minute poll against
+a five-minute suspension window therefore keeps a database active roughly half
+the day even when every query returns an empty queue. Count every wake source:
+raising an idle-discovery interval does nothing if an hourly prune still wakes
+the same database. Prefer an immediate or event-driven path plus a
+traffic-appropriate reconciliation sweep, and test the observable elapsed
+schedule rather than only checking configuration text.
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-25** _(R19)_ — Production and development storage workers queried
+  empty cleanup tables every ten minutes and pruned leases hourly, exhausting
+  Neon's monthly compute allowance by August 16 despite zero external users.
+  Fix: preserve immediate deletion and durable retries while moving idle
+  reconciliation, lease pruning, and API database garbage collection to a
+  daily low-traffic cadence. [detail](2026-08-25-idle-polling-neon-compute.md)
+- **2026-08-24** — Storage-delete integration fixtures used the macOS host
+  clock for a Postgres due-now timestamp, so VM clock skew under full-suite
+  load could leave the job unclaimed and cascade into a duplicate key. Fix:
+  let Postgres assign `now()` unless the test explicitly requests a delay.
+  [detail](2026-08-24-storage-delete-jobs-host-clock-flake.md)
+- **2026-08-21** — Mobile Developer and Report Debug surfaces were reachable in
+  ordinary production bundles because local navigation checks never formed one
+  enforceable policy. Fix: share a dev-or-fixtures gate across UI, direct
+  routes, persisted preferences, and query `enabled` predicates.
+  [detail](2026-08-21-mobile-developer-tools-production-gate.md)
+- **2026-08-21** _(R5)_ — Native camera fast mode treated the early shutter
+  promise as a saved JPEG, so Done could commit a partial list, burst capacity
+  could overflow, and cancelled sessions could orphan late files. Fix: use the
+  ordinary awaited capture terminal, serialize controls, and reclaim every
+  cancelled or rejected handoff.
+  [detail](2026-08-21-camera-native-save-pending-race.md)
+- **2026-08-21** _(R12)_ — Voice aggregation and standalone transcription
+  treated project-member visibility as file ownership, allowing a member to
+  process a teammate's recording. Fix: require uploader ownership before usage
+  accounting, signed URLs, or AI work on both entry points.
+  [detail](2026-08-21-voice-aggregator-file-owner.md)
+- **2026-08-21** — The shared error schema accepted legacy request IDs, route
+  validation bypassed the common mapper, and one client preferred the nested
+  value. Fix: enforce the strict envelope through a shared route hook,
+  regenerate artifacts, and keep legacy parsing only at client boundaries.
+  [detail](2026-08-21-error-envelope-request-id-drift.md)
+- **2026-08-21** — The frozen dependency graph retained compatible patched
+  `nanoid` and `js-yaml` releases, contributing seven of eleven production
+  audit findings. Fix: raise the direct floor, add range-scoped overrides, and
+  pin the resolved graph in CI.
+  [detail](2026-08-21-compatible-dependency-advisory-patches.md)
+- **2026-08-14** — The deployed dashboard review journey treated text still in
+  its comment composer as proof that the comment POST had completed, then
+  reopened the report as a draft and raced its own mutation. Fix: wait for the
+  cleared composer and rendered comment article before reopening.
+  [detail](2026-08-14-dashboard-review-comment-race.md)
+- **2026-08-10** _(R7)_ — Development reported the current migration head
+  while retaining a retired LLM-usage ledger row and legacy table shape. Fix:
+  add conditional forward schema reconciliation, exact-only ledger cleanup,
+  and drift/current Testcontainers coverage.
+  [detail](2026-08-10-llm-usage-head-only-readiness-drift.md)
+- **2026-08-08** — A second application migrator blocked inside
+  `pg_advisory_lock` while the lock owner ran `CREATE INDEX CONCURRENTLY`, so
+  each session waited for the other. Fix: poll the session lock with
+  `pg_try_advisory_lock` and finish each unsuccessful statement before the next
+  attempt. [detail](2026-08-08-migration-lock-concurrent-index-deadlock.md)
+- **2026-08-09** — The deployed dashboard journey completed its assertions but
+  failed during cleanup because Playwright's direct sign-out request omitted
+  the trusted Pages `Origin`. Fix: derive the exact dashboard origin for that
+  cleanup request and pin it in the live E2E policy without weakening Better
+  Auth's origin guard.
+  [detail](2026-08-09-dashboard-live-sign-out-origin.md)
+- **2026-08-07** _(R18)_ — Admin activity treated live users and projects named
+  exactly `Deleted user` or `Deleted project` as unavailable because the UI
+  reused fallback label text as deletion state. Fix: add explicit API entity
+  state and collision regressions across contract, API, component, and browser
+  coverage. [detail](2026-08-07-admin-activity-label-state-collision.md)
+- **2026-08-07** — The portrait screenshot dialog stayed almost full-width in
+  Firefox after a Chromium-only `fit-content` repair passed. Fix: size the
+  shared portrait layout in CSS and run the regression in both browsers.
+  [detail](2026-08-07-firefox-screenshot-dialog-intrinsic-width.md)
+- **2026-08-07** — Android Maestro accepted a 37-pixel clipped sliver of the
+  finalized report's outer Photos card as fully visible, then failed because
+  the nested grid remained below the viewport. Fix: scroll to and center a
+  bounded photo tile before asserting the grid.
+  [detail](2026-08-07-maestro-clipped-parent-card.md)
+- **2026-08-07** _(R5)_ — Android camera controls became tappable before
+  CameraX finished picture-size discovery and rebinding, so a burst capture
+  could wedge with one thumbnail and a disabled shutter. Fix: fail closed on
+  native readiness and share an enabled-shutter wait across current Maestro
+  camera flows.
+  [detail](2026-08-07-camera-shutter-native-readiness.md)
+- **2026-08-07** — The loopback Maestro API/R2 bridge accepted absolute or
+  arbitrary outbound targets, hostname substring checks accepted lookalikes,
+  and AI-fixture cleanup used four polynomial regex paths. Fix: pin the API
+  origin, require signed HTTPS R2 allowlists, use linear scans, and exercise the
+  real proxy factories with adversarial regressions.
+  [detail](2026-08-07-dev-e2e-proxy-ssrf.md)
+- **2026-08-06** _(R5)_ — Fresh local Compose databases applied the storage
+  lifecycle migration but never armed its rollout gate, so account deletion
+  deterministically returned 503. Fix: arm the disposable local stack with
+  zero grace after migrations and before seed/API startup.
+  [detail](2026-08-06-local-compose-storage-rollout-unarmed.md)
+- **2026-08-06** — The native recorder/camera smoke passed its hardware checks
+  but cleanup assumed Back after draft deletion always returned to project
+  home. Fix: accept the Projects index and reopen the project before deletion.
+  [detail](2026-08-06-maestro-native-cleanup-project-index.md)
+- **2026-08-06** _(R5)_ — Fixture-mode saved reports always substituted a
+  static sample, hiding persisted edits and photo placements after finalize.
+  Fix: persisted report bodies now win and the sample is an absence-only
+  fallback. [detail](2026-08-06-fixture-saved-report-masked-body.md)
+- **2026-08-06** — Fresh Docker volumes still reused a June migration image,
+  so current photo uploads 500ed on a missing lease table. Fix: rebuild local
+  Compose images after fast-forward, pin the actual migration head, and guard
+  both pins against the newest SQL file.
+  [detail](2026-08-06-maestro-stale-compose-migrations.md)
+  - **2026-08-06** — CI artifacts repeatedly showed ready Harpa or Expo UI behind
+    a recurring Quickstep ANR dialog, while fixed-count dismissals could still
+    race its next appearance. Fix: share a local/CI emulator-only preflight
+    that refuses physical devices and verifies `hide_error_dialogs=1`, retain
+    both semantic fallbacks, and keep the final `input-email` assertion strict.
+    [detail](2026-08-06-quickstep-anr-dialog-recurrence.md)
+  - **2026-08-06** — Photo flows conditionally saw a Generate / Update action,
+    the text-note flow opened row actions while route-level regeneration
+    replaced report panes, and repeated photo capture opened its next native
+    Modal before the prior upload regenerated; a no-overlay rerun also exposed
+    Fabric flattening the Edit pane's opacity wrapper mid-update. Fix: share a
+    bounded stable-state helper, await it between captures, and keep the
+    conditional wrapper as a non-collapsable native host.
+    [detail](2026-08-06-maestro-auto-regeneration-tap-race.md)
+- **2026-08-06** — The first post-merge local regression delivered its Metro
+  link before Expo's controller initialized, then waited on `input-email` while
+  a healthy server row remained on the Development Build picker. Fix: route
+  local clear-state entrypoints through one helper that observes native
+  readiness, selects the semantic server row when needed, and fails closed on
+  app UI. [detail](2026-08-04-expo-dev-launcher-readiness-race.md)
+- **2026-08-05** — Stacked Cloudflare Pages build waves kept an exact-SHA site
+  deployment incomplete beyond 75 minutes and the admin deployment beyond 90.
+  Fix: allow a 120-minute marker poll and 150-minute `dev`/preview jobs, with
+  assertions for every affected job.
+  [detail](2026-08-05-cloudflare-pages-queue-timeout.md)
+- **2026-08-05** _(R5)_ — In-process Hono requests represented a zero-byte JSON
+  POST with a null body, while `@hono/node-server` exposed an empty stream, so
+  deployed finalize/unfinalize returned 400 and hid cross-user 404s. Fix: cache
+  exact empty text as `{}` before validation and test through a real listener.
+  [detail](2026-08-05-node-http-empty-json-finalize.md)
+- **2026-08-05** — The admin Playwright seed used fixed July 29 activity
+  timestamps, so its `Past week` filter began returning zero rows on August 5
+  and blocked every unrelated API/admin PR. Fix: seed activity relative to the
+  database clock while preserving deterministic event order.
+  [detail](2026-08-05-admin-e2e-fixed-time-expiry.md)
+- **2026-08-05** — Attachment placement and PDF registration used direct
+  database timestamps, so `updatedAt` could stay equal at millisecond wire
+  precision or move backward under clock skew. Fix: apply the shared monotonic
+  report-version rule to both writers and pin them with future-timestamp
+  integration tests.
+  [detail](2026-08-05-report-version-millisecond-collision.md)
+- **2026-08-05** — API integration intermittently failed after all 219
+  integration tests passed because two rate-limiter test pools could re-emit
+  PostgreSQL shutdown `57P01` while Testcontainers stopped. Fix: observe
+  only those pools, tolerate that exact code only during teardown, and fail on
+  every other pool error. [detail](2026-08-05-rate-limiter-testcontainers-teardown-57p01.md)
+- **2026-08-05** _(R13)_ — The post-deploy stress journey still expected a
+  server error for empty or malformed sign-in JSON after the API began
+  returning the correct 400 `BAD_REQUEST`, so an unrelated dependency merge
+  left `dev` red despite every product assertion passing. Fix: accept
+  `400|429` for both inputs and enforce the contract in PR-gated CI.
+  [detail](2026-08-05-journey-auth-bad-request-drift.md)
+- **2026-08-05** — The dormant `harpa-pro-dashboard` Pages project built every
+  mirrored `pr-*` ref while `apps/dashboard` existed only in draft PR #211, so
+  unrelated pull requests received a failed external dashboard check. Fix:
+  disable automatic production and preview builds until a refreshed dashboard
+  PR proves its exact head, then broaden previews only after the app lands on
+  `dev`; keep production verification dormant behind an explicit activation
+  variable until its hosts exist. [detail](2026-08-05-dashboard-pages-absent-app-build.md)
+- **2026-08-04** — The 256 MB service-less storage worker OOM-restarted on four consecutive daily briefs even with an empty durable queue; its guest had only about 9 MiB available while resident `pnpm`/`tsx` launchers consumed avoidable headroom. Fix: launch through Node's `tsx` loader directly, allocate 512 MB in prod/dev, and emit hourly structured memory samples. [detail](2026-08-04-storage-worker-runtime-overhead-oom.md)
+- **2026-08-04** — Production release 31 completed and proved its storage worker, but `flyctl ssh console` stalled after printing only its target address; six hours later the cancelled job still had not run lifecycle arming, readiness, journeys, or OTA. Fix: target the exact worker through bounded Machine exec, retry only after proving the worker id is unchanged, require the database confirmation marker, and cap the outer deploy step. [detail](2026-08-04-fly-ssh-arming-hang.md)
+- **2026-08-04** — React Native's `react-devtools-core@6.1.5` allowed
+  `shell-quote@^1.6.1`, but the frozen lockfile retained vulnerable `1.8.3`,
+  leaving the mobile toolchain exposed to critical command injection and
+  high-severity denial-of-service advisories. Fix: narrowly override that edge
+  to current `1.10.0` and enforce the resolved version in CI.
+  [detail](2026-08-04-react-devtools-shell-quote-security.md)
+- **2026-08-04** — API coverage shard failures were opaque because every
+  bounded Vitest process used only the blob reporter. Fix: retain blob files for
+  the merged threshold while also printing the default failure report to the
+  Actions log. [detail](2026-08-04-api-coverage-blob-only-failures.md)
+- **2026-08-04** _(R16)_ — Astro 7 static builds loaded hoisted CommonJS `cookie@0.7.2` instead of Astro's nested ESM `cookie@2.0.1`, so prerendering failed on a missing named export. Fix: pin `cookie@2.0.1` directly in both web workspaces and assert the build graph. [detail](2026-08-04-astro-cookie-hoist-build.md)
+- **2026-08-04** — The PR-time Android smoke first opened its Metro link without a native readiness boundary; the follow-up then exposed `Quickstep isn't responding` intercepting Maestro over a ready Dev Launcher. Fix: recover through the semantic `Wait` action, strictly reassert `Development Build`, and use a bounded post-link wait that can observe a later Quickstep dialog before server/app assertions. [detail](2026-08-04-expo-dev-launcher-readiness-race.md)
+- **2026-08-04** _(R14)_ — Dependabot PRs entered combined preview/deploy, OTA, and production-journey jobs, so GitHub's withheld secrets made useful verification red while same-repo checks still treated bot-controlled branches as publishable. Fix: split read-only verification, gate every privileged job by immutable PR author, and route direct security updates through human-owned `dev` PRs. [detail](2026-08-04-dependabot-privileged-pr-jobs.md)
+- **2026-08-04** _(R16)_ — The site and admin manifests declared React 18 while the root override installed React 19.2.0, and both consumed Vite only as an auto-installed peer. Dependency updates could therefore resolve a different peer graph than the manifests described. Fix: align React runtime and types, pin Vite 6.4.3 directly, and keep Tailwind core/plugin patches paired in both workspaces. [detail](2026-08-04-web-peer-graph-drift.md)
+- **2026-07-31** _(R5)_ — The application PostgreSQL rate limiter implemented
+  periodic stale-bucket cleanup, but `server.ts` never started it, so production
+  rows could grow indefinitely while middleware tests stayed green. Fix: start
+  GC at boot and cover the server entry point plus real-Postgres
+  concurrency/cleanup. [detail](2026-07-31-app-rate-limit-gc-not-started.md)
+- **2026-07-31** — Local, CI, OTA, and Fly processes selected Node 20, 22, or
+  Homebrew's 26, while the admin provisioning CLI timed out under Node 22/24 on
+  dual-stack DNS without usable IPv6. Fix: pin Node 24.19.0 everywhere, enforce
+  the pin in CI, and scope IPv4-first resolution to the one-off CLI.
+  [detail](2026-07-31-node-runtime-admin-cli-timeout.md)
+- **2026-07-30** _(R15)_ — The persisted React Query cache used one global MMKV key and hydrated before auth resolved, so expired sessions or direct account switches could briefly render the previous account's projects and reports. Fix: authenticate first, namespace snapshots by user id, block descendants while clearing memory on identity changes, and discard the legacy blob. [detail](2026-07-30-query-cache-cross-session.md)
 - **2026-07-29** — A manually dispatched API workflow called reusable mobile OTA with inherited `workflow_dispatch` context, so the callee tried blank native registration and could force redundant manual publication. Fix: discriminate successful API calls with their call-only input, skip registration, and evaluate them with effective `workflow_call` policy semantics. [detail](2026-07-29-reusable-ota-dispatch-context.md)
 - **2026-07-29** — The first `api-dev` deploy after PR #205 stopped before lifecycle arming when `storage-worker=1` tried to collapse Fly's active/standby pair; later recovery proved Fly can leave an updated Machine stopped and render the clone's same tagged image as `tag@digest`. Fix: remove broad scaling, explicitly start only the exact stopped/no-standby candidate, and compare a narrowly validated canonical tag, at most one explicit digest, and exact release metadata at every fresh proof. [detail](2026-07-29-fly-worker-scale-confirmation.md)
 - **2026-07-29** — The first `api-dev` push after PR #202 failed before creating any jobs because its reusable OTA caller was capped at `contents: read` while the nested runtime-registration job requested `contents: write`. Fix: grant write only on the reusable-call jobs, preserve the called workflows' read-only default, and add a scoped policy regression. [detail](2026-07-29-reusable-workflow-permission-ceiling.md)

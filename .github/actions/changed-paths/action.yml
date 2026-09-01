@@ -24,7 +24,7 @@ outputs:
     description: True if @harpa/ai-fixtures changed.
     value: ${{ steps.filter.outputs.ai-fixtures }}
   api-migrations:
-    description: True if packages/api migrations or schema changed.
+    description: True if API migrations or trusted preview-gate wiring changed.
     value: ${{ steps.filter.outputs.api-migrations }}
   mobile:
     description: True if apps/mobile, Maestro E2E flows, or the launch runner changed.
@@ -78,6 +78,32 @@ runs:
             - 'packages/api/migrations/**'
             - 'packages/api/admin-migrations/**'
             - 'packages/api/src/db/**'
+            - 'packages/api/src/lib/build-info.ts'
+            - 'packages/api/src/app.ts'
+            - 'packages/api/src/server.ts'
+            - 'packages/api/src/routes/health.ts'
+            - 'packages/api/src/routes/readyz.ts'
+            - 'packages/api/src/routes/admin-readyz.ts'
+            - 'packages/api/scripts/seed-test-account.ts'
+            - 'packages/api/package.json'
+            - '.github/actions/changed-paths/**'
+            - '.github/actions/setup-monorepo/**'
+            - '.github/workflows/api-dev.yml'
+            - '.github/workflows/api-prod.yml'
+            - '.github/workflows/main-gate.yml'
+            - '.github/workflows/pr-preview.yml'
+            - 'infra/fly/Dockerfile'
+            - 'infra/fly/deploy.sh'
+            - 'infra/fly/fly.toml'
+            - 'infra/fly/fly.dev.toml'
+            - 'infra/fly/fly.preview.toml'
+            - 'infra/neon/branch.ts'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'scripts/ci/wait-for-pr-preview.sh'
+            - 'scripts/ci/verify-deployed-sha.sh'
+            - 'scripts/ci/verify-readyz.sh'
+            - 'scripts/journeys/**'
           mobile:
             - '.maestro/**'
             - 'scripts/ci/run-maestro-launch-smoke.sh'

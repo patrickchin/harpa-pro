@@ -28,6 +28,9 @@ primary_region = "fra"
   # aborts the rollout cleanly. No CI-side migrate step for previews;
   # release_command is the single source of truth.
   # See docs/v4/arch-cicd-and-migrations.md.
+  # Doppler dev supplies isolated test-account credentials. Seed them after
+  # migrations so main-targeted previews remain journey-capable without using
+  # production passwords or mutating the source branch.
   release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:migrate:admin && pnpm --filter @harpa/api db:seed-test-account'"
 
 [env]

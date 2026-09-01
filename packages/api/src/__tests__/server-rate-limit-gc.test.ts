@@ -18,7 +18,7 @@ vi.mock('../app.js', () => ({
 }));
 
 vi.mock('../env.js', () => ({
-  env: { PORT: 4321 },
+  env: { PORT: 4321, BACKGROUND_MAINTENANCE_ENABLED: '1' },
 }));
 
 vi.mock('../lib/adminRateLimiter.js', () => ({
@@ -47,6 +47,22 @@ describe('server background maintenance wiring', () => {
     expect(startup.startAdminRateLimitGc).toHaveBeenCalledOnce();
     expect(startup.startIdempotencyGc).toHaveBeenCalledOnce();
     expect(startup.startRateLimitGc).toHaveBeenCalledOnce();
+    expect(startup.serve).toHaveBeenCalledWith(
+      { fetch: startup.app.fetch, port: 4321 },
+      expect.any(Function),
+    );
+  });
+
+  it('skips database-backed cleanup schedulers when background maintenance is disabled', async () => {
+    startup.createApp.mockReturnValue(startup.app);
+    const { env } = await import('../env.js');
+    env.BACKGROUND_MAINTENANCE_ENABLED = '0';
+
+    await import('../server.js');
+
+    expect(startup.startAdminRateLimitGc).not.toHaveBeenCalled();
+    expect(startup.startIdempotencyGc).not.toHaveBeenCalled();
+    expect(startup.startRateLimitGc).not.toHaveBeenCalled();
     expect(startup.serve).toHaveBeenCalledWith(
       { fetch: startup.app.fetch, port: 4321 },
       expect.any(Function),

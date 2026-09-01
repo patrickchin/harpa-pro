@@ -1365,6 +1365,13 @@ collectors also use a 24-hour default in low-traffic mode. They run only while
 an HTTP `app` Machine is awake and do not keep its event loop alive by
 themselves.
 
+As of September 1, 2026, production and dev also set
+`BACKGROUND_MAINTENANCE_ENABLED="0"` in Fly as an emergency pause. With that
+flag off, the worker process remains running for topology stability but does
+not poll Neon, and the API process skips the database-backed GC timers. This
+pauses delayed cleanup and lease pruning until the flag is re-enabled while
+preserving the synchronous `DELETE /me` fast path.
+
 After the exact production release passes the worker proof below, an
 authorized operator arms a one-time 330-second compatibility grace. During
 the grace, new presigns are leased, lease-less registrations from replaced

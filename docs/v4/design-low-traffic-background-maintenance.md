@@ -40,6 +40,12 @@ idle billing tail. Removing reconciliation entirely would require a separate
 durable event-delivery system and would still benefit from an occasional safety
 sweep.
 
+As of September 1, 2026, production and development deploy with an emergency
+override: `BACKGROUND_MAINTENANCE_ENABLED="0"` in Fly. That keeps the worker
+process alive but DB-idle and prevents the API process from starting its
+database-backed garbage collectors. It is an operational pause layered on top
+of this design, not a new steady state.
+
 ## Safety and trade-offs
 
 The worker remains bounded and idempotent. Known work already visible to the

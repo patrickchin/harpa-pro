@@ -15,6 +15,10 @@ describe.each(configs)('storage-worker resource policy in %s', (config) => {
     );
   });
 
+  it('disables background maintenance by default in the Fly deploy config', () => {
+    expect(contents).toContain('BACKGROUND_MAINTENANCE_ENABLED = "0"');
+  });
+
   it('reserves 512 MB for the storage worker', () => {
     expect(contents).toMatch(
       /\[\[vm\]\]\s+processes = \["storage-worker"\]\s+size = "shared-cpu-1x"\s+memory = "512mb"/,

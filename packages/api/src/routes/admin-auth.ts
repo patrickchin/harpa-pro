@@ -3,10 +3,17 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { Context, MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import { errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
-import { env } from '../env.js';
-import { clearAdminSessionCookie, setAdminSessionCookie } from '../lib/admin-cookie.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
+import {
+  clearAdminSessionCookie,
+  readAdminSessionToken,
+  setAdminSessionCookie,
+} from '../lib/admin-cookie.js';
+import { createAdminCsrfToken } from '../lib/admin-csrf.js';
 import { getAdminRateLimiter } from '../lib/adminRateLimiter.js';
+import { withTrustedAdminOrigin } from '../middleware/admin-origin.js';
 import { adminAuthIpWindow, adminClientIp } from '../middleware/admin-rate-limit.js';
 import { withAdminSession } from '../middleware/admin-session.js';
 import {
@@ -34,33 +41,17 @@ const loginRequest = z.object({
 const authenticatedResponse = z.object({
   authenticated: z.literal(true),
   email: z.string(),
+  csrfToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
 });
 
 const signedOutResponse = z.object({
   authenticated: z.literal(false),
 });
 
-const errorBody = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-  requestId: z.string().optional(),
-});
-
-const trustedAdminOrigins = new Set(
-  env.ADMIN_CORS_ORIGINS.split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-);
-
-function withTrustedAdminOrigin(): MiddlewareHandler<AppEnv> {
-  return async (c, next) => {
-    const origin = c.req.header('origin');
-    if (!origin || !trustedAdminOrigins.has(origin)) {
-      audit(c, 'origin_rejected');
-      throw new HTTPException(403, { message: 'Forbidden.' });
-    }
-    await next();
-  };
-}
+const adminAuthNoStore: MiddlewareHandler<AppEnv> = async (c, next) => {
+  c.header('Cache-Control', 'private, no-store');
+  await next();
+};
 
 async function canonicalEmailRateLimitKey(c: Context<AppEnv>): Promise<string> {
   try {
@@ -133,7 +124,7 @@ async function waitForLoginFailureFloor(startedAt: number): Promise<void> {
   });
 }
 
-export const adminAuthRoutes = new OpenAPIHono<AppEnv>();
+export const adminAuthRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 adminAuthRoutes.openapi(
   createRoute({
@@ -141,6 +132,7 @@ adminAuthRoutes.openapi(
     path: '/admin/auth/login',
     tags: ['admin-auth'],
     middleware: [
+      adminAuthNoStore,
       withTrustedAdminOrigin(),
       adminLoginBodyLimit,
       adminAuthIpWindow,
@@ -163,23 +155,23 @@ adminAuthRoutes.openapi(
       },
       400: {
         description: 'Bad request.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       401: {
         description: 'Invalid credentials.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       403: {
         description: 'Untrusted browser origin.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       413: {
         description: 'Request body exceeds 8 KiB.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
@@ -204,6 +196,7 @@ adminAuthRoutes.openapi(
             code: 'unauthorized',
             message: 'Invalid email or password.',
           },
+          requestId: c.get('requestId'),
         },
         401,
       );
@@ -215,6 +208,7 @@ adminAuthRoutes.openapi(
       {
         authenticated: true as const,
         email: session.email,
+        csrfToken: createAdminCsrfToken(session.token),
       },
       200,
     );
@@ -227,7 +221,7 @@ adminAuthRoutes.openapi(
     path: '/admin/auth/session',
     tags: ['admin-auth'],
     security: [{ adminSession: [] }],
-    middleware: [adminAuthIpWindow, withAdminSession()] as const,
+    middleware: [adminAuthNoStore, adminAuthIpWindow, withAdminSession()] as const,
     responses: {
       200: {
         description: 'Current dedicated admin session.',
@@ -237,20 +231,23 @@ adminAuthRoutes.openapi(
       },
       401: {
         description: 'No valid admin session.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),
   (c) => {
     c.header('Cache-Control', 'private, no-store');
+    const sessionToken = readAdminSessionToken(c);
+    if (!sessionToken) throw new HTTPException(401, { message: 'Unauthorized.' });
     return c.json(
       {
         authenticated: true as const,
         email: c.get('adminEmail')!,
+        csrfToken: createAdminCsrfToken(sessionToken),
       },
       200,
     );
@@ -263,7 +260,12 @@ adminAuthRoutes.openapi(
     path: '/admin/auth/logout',
     tags: ['admin-auth'],
     security: [{ adminSession: [] }],
-    middleware: [withTrustedAdminOrigin(), adminAuthIpWindow, withAdminSession()] as const,
+    middleware: [
+      adminAuthNoStore,
+      withTrustedAdminOrigin(),
+      adminAuthIpWindow,
+      withAdminSession(),
+    ] as const,
     responses: {
       200: {
         description: 'Admin session revoked.',
@@ -273,15 +275,15 @@ adminAuthRoutes.openapi(
       },
       401: {
         description: 'No valid admin session.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       403: {
         description: 'Untrusted browser origin.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
       429: {
         description: 'Rate limited.',
-        content: { 'application/json': { schema: errorBody } },
+        content: { 'application/json': { schema: errorEnvelope } },
       },
     },
   }),

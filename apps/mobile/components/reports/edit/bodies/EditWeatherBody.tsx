@@ -1,14 +1,14 @@
 /**
- * EditWeatherBody — conditions, temperature, wind, impact.
+ * EditWeatherBody — condition, temperature, wind, impact.
  */
 import { TextInput, View } from 'react-native';
-import type { GeneratedReportWeather } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Field, INPUT_CLASS, MULTILINE_CLASS, nullableString, nullify } from './fields';
 
 interface Props {
-  value: GeneratedReportWeather;
-  onChange: (next: GeneratedReportWeather) => void;
+  value: NonNullable<reports.ReportBody['weather']>;
+  onChange: (next: NonNullable<reports.ReportBody['weather']>) => void;
 }
 
 export function EditWeatherBody({ value, onChange }: Props) {
@@ -17,8 +17,8 @@ export function EditWeatherBody({ value, onChange }: Props) {
       <Field label="Conditions">
         <TextInput
           className={INPUT_CLASS}
-          value={nullableString(value.conditions)}
-          onChangeText={(v) => onChange({ ...value, conditions: nullify(v) })}
+          value={nullableString(value.condition)}
+          onChangeText={(v) => onChange({ ...value, condition: nullify(v) })}
           accessibilityLabel="Weather conditions"
           testID="input-edit-weather-conditions"
         />

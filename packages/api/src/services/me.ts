@@ -12,9 +12,8 @@
  * `is_admin` / `plan` are read-only from the app role's POV (see the
  * `user_self_update` policy in migration 0014).
  */
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { sql } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 
 type Db = NodePgDatabase<typeof schema>;
@@ -54,14 +53,14 @@ export async function updateUser(
   userId: string,
   input: UpdateUserInput,
 ): Promise<PublicUser | null> {
-  await db.execute(sql`
-    UPDATE public."user"
-    SET
-      display_name = COALESCE(${input.displayName ?? null}, display_name),
-      company_name = COALESCE(${input.companyName ?? null}, company_name),
-      updated_at = now()
-    WHERE id = ${userId}
-  `);
+  await db
+    .update(schema.users)
+    .set({
+      ...(input.displayName != null ? { displayName: input.displayName } : {}),
+      ...(input.companyName != null ? { companyName: input.companyName } : {}),
+      updatedAt: sql`now()`,
+    })
+    .where(eq(schema.users.id, userId));
   return fetchUser(db, userId);
 }
 

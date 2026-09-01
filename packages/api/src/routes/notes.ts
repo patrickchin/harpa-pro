@@ -15,6 +15,7 @@ import {
   noteId,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import { recordActivityEvent } from '../services/activity-events.js';
@@ -38,7 +39,7 @@ const NOTE_CREATED_EVENT_TYPES = {
   document: 'note.document_created',
 } as const;
 
-export const noteRoutes = new OpenAPIHono<AppEnv>();
+export const noteRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 async function requireWritableOwnNote(
   db: NonNullable<AppEnv['Variables']['db']>,

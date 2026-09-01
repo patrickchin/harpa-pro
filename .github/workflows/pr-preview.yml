@@ -9,6 +9,7 @@ name: pr-preview
 #     ├─ admin-neon-create  → admin Neon `pr-<n>`
 #     └─ fly-preview        → Fly app `harpa-pro-api-pr-<n>` (create + deploy)
 #                       └─ release_command migrates both isolated branches
+#                          and seeds configured test/demo password accounts
 #                       └─ /readyz verified after deploy
 #                       └─ /admin/readyz verified separately after deploy
 #                       └─ both DB branches expire automatically after 7 days
@@ -19,13 +20,15 @@ name: pr-preview
 #     ├─ neon-destroy       → app Neon branch deleted (after fly-destroy)
 #     └─ admin-neon-destroy → admin Neon branch deleted (after fly-destroy)
 #
-# Optimisation: run for PRs that touch API code/migrations or the standalone
-# admin site. Admin changes need an exact-origin API preview for browser auth.
-# Docs / marketing / mobile-only PRs skip Neon and Fly. Close events always
-# run so we never orphan resources created earlier in the PR's life.
+# Optimisation: run for PRs that touch API code/migrations, the standalone
+# admin site, or the office dashboard. Browser-app previews need an isolated
+# API/Neon target for credentialed auth and live journeys. Docs / marketing /
+# mobile-only PRs skip Neon and Fly. Close events always run so we never orphan
+# resources created earlier in the PR's life.
 #
-# Forks are deliberately skipped (no FLY_API_TOKEN / DOPPLER_TOKEN_DEV /
-# NEON_API_KEY available to fork PRs). Same-repo PRs only.
+# Changed-path and migration guards are credential-free. Privileged preview
+# lifecycle jobs skip forks and Dependabot (no control-plane credentials are
+# exposed to dependency-controlled code).
 
 on:
   pull_request:
@@ -44,32 +47,31 @@ jobs:
     outputs:
       api: ${{ steps.paths.outputs.api }}
       admin: ${{ steps.paths.outputs.admin }}
+      dashboard: ${{ steps.paths.outputs.dashboard }}
       api-migrations: ${{ steps.paths.outputs.api-migrations }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paths
         uses: ./.github/actions/changed-paths
 
-  # Migration-filename lint. Cheap; runs whenever an API or admin-site change
-  # needs a preview so typos are caught at PR time, not prod time.
+  # Migration-filename lint and focused-main trust guard. Run it for preview
+  # inputs and trusted gate wiring so a forbidden direct-main change fails
+  # explicitly instead of leaving main-gate waiting for a preview that cannot
+  # be provisioned.
   guard:
     needs: changes
     if: >-
       github.event.action != 'closed' &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true')
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true' || needs.changes.outputs.dashboard == 'true' || needs.changes.outputs.api-migrations == 'true')
     runs-on: ubuntu-latest
     permissions: { contents: read }
     steps:
-      - uses: actions/checkout@v4
-      # PR 360 is the one-time bootstrap of this exact-SHA preview gate. PR
-      # numbers cannot be reused, so its exception is dead after that PR merges;
-      # a normal dev-to-main promotion can remove the dead clause later.
+      - uses: actions/checkout@v7
       - name: Reject database changes from focused main hotfixes
         if: >-
           github.event.pull_request.base.ref == 'main' &&
           github.event.pull_request.head.ref != 'dev' &&
-          needs.changes.outputs.api-migrations == 'true' &&
-          github.event.pull_request.number != 360
+          needs.changes.outputs.api-migrations == 'true'
         run: |
           echo "::error::Focused main hotfixes cannot change database migrations or trusted preview-gate wiring; land through dev and use the normal dev-to-main promotion path."
           exit 1
@@ -125,11 +127,12 @@ jobs:
     needs: [changes, guard]
     if: |
       github.event.action != 'closed' &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true' || needs.changes.outputs.dashboard == 'true') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - name: Create Neon branch
         env:
@@ -159,11 +162,12 @@ jobs:
     needs: [changes, guard]
     if: |
       github.event.action != 'closed' &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true' || needs.changes.outputs.dashboard == 'true') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - name: Create admin Neon branch
         env:
@@ -190,7 +194,8 @@ jobs:
     needs: [guard, neon-create, admin-neon-create]
     if: |
       github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -198,7 +203,7 @@ jobs:
     env:
       APP_NAME: harpa-pro-api-pr-${{ github.event.pull_request.number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         # Pull-request checkouts otherwise default to the synthetic merge ref.
         # The image marker must match the immutable PR head used by main-gate.
         with:
@@ -247,19 +252,30 @@ jobs:
           echo "::add-mask::$URI"
           echo "ADMIN_DATABASE_URL=$URI" >> "$GITHUB_ENV"
 
-      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - name: Ensure Fly app exists
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        # `flyctl status` exits non-zero if the app doesn't exist; create it
-        # in that case. Idempotent across PR re-pushes.
+        # `flyctl status` exits non-zero if the app doesn't exist. A cancelled
+        # first deploy can leave the app present but without ingress addresses,
+        # so provision both address families explicitly and idempotently before
+        # deploy instead of relying on flyctl's first-deploy auto-allocation.
         run: |
+          set -euo pipefail
           if ! flyctl status -a "$APP_NAME" >/dev/null 2>&1; then
             flyctl apps create "$APP_NAME" --org personal
           fi
+          IPS_JSON=$(flyctl ips list --app "$APP_NAME" --json)
+          if ! jq -e 'any(.[]; .Type == "v6")' <<< "$IPS_JSON" >/dev/null; then
+            flyctl ips allocate-v6 --app "$APP_NAME"
+          fi
+          IPS_JSON=$(flyctl ips list --app "$APP_NAME" --json)
+          if ! jq -e 'any(.[]; .Type == "shared_v4" or .Type == "v4")' <<< "$IPS_JSON" >/dev/null; then
+            flyctl ips allocate-v4 --shared --yes --app "$APP_NAME"
+          fi
 
-      - uses: dopplerhq/cli-action@v3
+      - uses: dopplerhq/cli-action@v4
 
       - name: Stage Fly secrets from Doppler (with PR-specific URLs)
         # Same filter as api-dev.yml; replace database and auth URLs from
@@ -329,7 +345,7 @@ jobs:
         run: bash scripts/ci/verify-readyz.sh
 
       - name: Post preview URL as sticky PR comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: fly-preview
           message: |
@@ -339,8 +355,10 @@ jobs:
             - Readyz: <https://${{ env.APP_NAME }}.fly.dev/readyz>
             - Admin readyz: <https://${{ env.APP_NAME }}.fly.dev/admin/readyz>
             - Admin origin: <https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev>
+            - Dashboard origin: <https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev>
             - App DB: Neon branch `pr-${{ github.event.pull_request.number }}`
             - Admin DB: Neon branch `pr-${{ github.event.pull_request.number }}`
+            - Password accounts: configured test/demo groups seeded by the release command
             - Commit: `${{ github.event.pull_request.head.sha }}`
 
             To point a dev/preview mobile build at this preview, call
@@ -356,10 +374,11 @@ jobs:
   fly-destroy:
     if: |
       github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - uses: superfly/flyctl-actions/setup-flyctl@1.6
       - name: Destroy Fly preview app
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -375,10 +394,11 @@ jobs:
     if: |
       always() &&
       github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - name: Delete Neon branch
         env:
@@ -393,10 +413,11 @@ jobs:
     if: |
       always() &&
       github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - name: Delete admin Neon branch
         env:

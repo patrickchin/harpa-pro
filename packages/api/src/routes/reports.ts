@@ -18,6 +18,7 @@
  * docs/v4/design-p30-ids-slugs.md §4 and arch-ids-and-urls.md.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import type { MiddlewareHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import {
   reports as reportSchemas,
@@ -29,6 +30,7 @@ import {
   reportNumber,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import {
   requireProjectOwner,
   requireProjectWriter,
@@ -91,7 +93,7 @@ const generateIdempotency = withIdempotency({ name: 'reports.generate' });
 // arch-rate-limiting.md §3.3.
 const aiUserSharedRateLimit = withRateLimit({ name: 'ai.user', limit: 60, windowMs: MIN });
 
-export const reportRoutes = new OpenAPIHono<AppEnv>();
+export const reportRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 /**
  * Shared slug→report lookup. Returns the report row (used by every
@@ -109,6 +111,38 @@ async function loadReport(
   return report;
 }
 
+function reportHasChanged(
+  report: ReportRow,
+  expectedUpdatedAt: string | undefined,
+): boolean {
+  return expectedUpdatedAt !== undefined
+    && report.updatedAt !== expectedUpdatedAt;
+}
+
+function reportConflict(report: ReportRow) {
+  return { report: toReportResponse(report) };
+}
+
+/**
+ * Older mobile callers send `content-type: application/json` with no body on
+ * finalize/unfinalize. Read through Hono because the Node adapter represents a
+ * zero-byte POST as an empty stream rather than `Request.body === null`. Only
+ * replace an exactly empty cached body; non-empty and malformed JSON must keep
+ * the validator's normal semantics.
+ */
+const allowEmptyJsonBody: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (c.req.header('content-type')?.startsWith('application/json')) {
+    const text = await c.req.text();
+    if (text.length === 0) {
+      // Hono stores promises here at runtime, although its public BodyCache
+      // type describes the resolved values.
+      const bodyCache = c.req.bodyCache as unknown as { text?: Promise<string> };
+      bodyCache.text = Promise.resolve('{}');
+    }
+  }
+  await next();
+};
+
 // --------- list under project ----------
 reportRoutes.openapi(
   createRoute({
@@ -119,7 +153,11 @@ reportRoutes.openapi(
     middleware: [withAuth()] as const,
     request: {
       params: projectParam,
-      query: z.object({ cursor: cursor.optional(), limit: limit.optional() }),
+      query: z.object({
+        cursor: cursor.optional(),
+        limit: limit.optional(),
+        status: reportSchemas.reportStatus.optional(),
+      }),
     },
     responses: {
       200: { description: 'Page of reports.', content: { 'application/json': { schema: paginated(reportSchemas.report) } } },
@@ -135,7 +173,12 @@ reportRoutes.openapi(
     const q = c.req.valid('query');
     const project = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
-    const out = await db((d) => listReports(d, { projectId: project.id, cursor: q.cursor, limit: q.limit ?? 20 }));
+    const out = await db((d) => listReports(d, {
+      projectId: project.id,
+      cursor: q.cursor,
+      limit: q.limit ?? 20,
+      status: q.status,
+    }));
     return c.json({ ...out, items: out.items.map(toReportResponse) }, 200);
   },
 );
@@ -335,7 +378,14 @@ reportRoutes.openapi(
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Report is finalized.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: {
+        description: 'Report is finalized or changed elsewhere.',
+        content: {
+          'application/json': {
+            schema: reportSchemas.reportMutationConflictResponse,
+          },
+        },
+      },
     },
   }),
   async (c) => {
@@ -344,16 +394,25 @@ reportRoutes.openapi(
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
+    const { expectedUpdatedAt, ...patch } = body;
     await requireProjectWriter(db, userId, slug);
     const existing = await loadReport(db, slug, number);
+    if (reportHasChanged(existing, expectedUpdatedAt)) {
+      return c.json(reportConflict(existing), 409);
+    }
     // Finalized reports are locked: PATCH would silently overwrite the
     // body the user finalized, which is the opposite of what "finalize"
     // means. Surface 409 — matches /generate, /regenerate, /finalize.
     if (existing.status === 'finalized') {
       throw new HTTPException(409, { message: 'Report is finalized.' });
     }
-    const report = await db((d) => updateReport(d, existing.id, body));
-    if (!report) throw new HTTPException(404, { message: 'Report not found.' });
+    const report = await db((d) =>
+      updateReport(d, existing.id, patch, expectedUpdatedAt),
+    );
+    if (!report) {
+      const current = await loadReport(db, slug, number);
+      return c.json(reportConflict(current), 409);
+    }
     return c.json(toReportResponse(report), 200);
   },
 );
@@ -375,7 +434,7 @@ reportRoutes.openapi(
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Stale report body version.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
+      409: { description: 'Report is finalized or has a stale body version.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
     },
   }),
   async (c) => {
@@ -387,6 +446,9 @@ reportRoutes.openapi(
 
     await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
+    if (report.status === 'finalized') {
+      return c.json({ report: toReportResponse(report) }, 409);
+    }
     const result = await db((d) =>
       placeNoteInReport(
         d,
@@ -456,7 +518,14 @@ const generateResponses = {
   400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
   401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
   404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
-  409: { description: 'Conflict.', content: { 'application/json': { schema: errorEnvelope } } },
+  409: {
+    description: 'Conflict.',
+    content: {
+      'application/json': {
+        schema: reportSchemas.reportMutationConflictResponse,
+      },
+    },
+  },
   502: { description: 'Upstream AI provider error.', content: { 'application/json': { schema: errorEnvelope } } },
 };
 
@@ -481,6 +550,7 @@ async function runGenerate(
   userId: string,
   report: ReportRow,
   fixtureName: string | undefined,
+  expectedUpdatedAt: string | undefined,
   userVendor: Parameters<typeof aiGenerateReport>[0]['userVendor'],
   userModel: Parameters<typeof aiGenerateReport>[0]['userModel'],
 ) {
@@ -523,9 +593,17 @@ async function runGenerate(
     usage: null,
   };
   const updated = await db((d) =>
-    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs, payload.currentBody),
+    setReportBody(
+      d,
+      report.id,
+      out.body,
+      lastGeneration,
+      snapshotTs,
+      payload.currentBody,
+      expectedUpdatedAt,
+    ),
   );
-  if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
+  if (!updated) return null;
   return {
     report: updated,
     debug: {
@@ -559,8 +637,23 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
+    if (reportHasChanged(report, body.expectedUpdatedAt)) {
+      return c.json(reportConflict(report), 409);
+    }
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
+    const result = await runGenerate(
+      db,
+      userId,
+      report,
+      body.fixtureName,
+      body.expectedUpdatedAt,
+      settings.vendor,
+      settings.model,
+    );
+    if (!result) {
+      const current = await loadReport(db, slug, number);
+      return c.json(reportConflict(current), 409);
+    }
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
@@ -587,8 +680,23 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
+    if (reportHasChanged(report, body.expectedUpdatedAt)) {
+      return c.json(reportConflict(report), 409);
+    }
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
+    const result = await runGenerate(
+      db,
+      userId,
+      report,
+      body.fixtureName,
+      body.expectedUpdatedAt,
+      settings.vendor,
+      settings.model,
+    );
+    if (!result) {
+      const current = await loadReport(db, slug, number);
+      return c.json(reportConflict(current), 409);
+    }
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
@@ -601,13 +709,31 @@ reportRoutes.openapi(
     path: '/projects/{project}/reports/{number}/finalize',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
-    request: { params: reportPathParam },
+    middleware: [withAuth(), allowEmptyJsonBody] as const,
+    request: {
+      params: reportPathParam,
+      body: {
+        required: false,
+        content: {
+          'application/json': {
+            schema: reportSchemas.finalizeReportRequest,
+          },
+        },
+      },
+    },
     responses: {
       200: { description: 'Finalized.', content: { 'application/json': { schema: reportSchemas.finalizeReportResponse } } },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Conflict.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: {
+        description: 'Conflict.',
+        content: {
+          'application/json': {
+            schema: reportSchemas.reportMutationConflictResponse,
+          },
+        },
+      },
     },
   }),
   async (c) => {
@@ -615,14 +741,32 @@ reportRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
+    const body = c.req.valid('json');
 
     await requireProjectOwner(db, userId, slug);
     const report = await loadReport(db, slug, number);
+    if (reportHasChanged(report, body.expectedUpdatedAt)) {
+      return c.json(reportConflict(report), 409);
+    }
     if (!report.body) {
       throw new HTTPException(409, { message: 'Report has no body to finalize.' });
     }
-    const updated = await db((d) => finalizeReport(d, report.id));
-    if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
+    if (report.status === 'finalized') {
+      return c.json({ report: toReportResponse(report) }, 200);
+    }
+    const updated = await db((d) =>
+      finalizeReport(d, report.id, body.expectedUpdatedAt),
+    );
+    if (!updated) {
+      const current = await loadReport(db, slug, number);
+      if (
+        current.status === 'finalized'
+        && !reportHasChanged(current, body.expectedUpdatedAt)
+      ) {
+        return c.json({ report: toReportResponse(current) }, 200);
+      }
+      return c.json(reportConflict(current), 409);
+    }
     return c.json({ report: toReportResponse(updated) }, 200);
   },
 );
@@ -640,13 +784,31 @@ reportRoutes.openapi(
     path: '/projects/{project}/reports/{number}/unfinalize',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
-    request: { params: reportPathParam },
+    middleware: [withAuth(), allowEmptyJsonBody] as const,
+    request: {
+      params: reportPathParam,
+      body: {
+        required: false,
+        content: {
+          'application/json': {
+            schema: reportSchemas.unfinalizeReportRequest,
+          },
+        },
+      },
+    },
     responses: {
       200: { description: 'Unfinalized.', content: { 'application/json': { schema: reportSchemas.unfinalizeReportResponse } } },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Conflict.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: {
+        description: 'Conflict.',
+        content: {
+          'application/json': {
+            schema: reportSchemas.reportMutationConflictResponse,
+          },
+        },
+      },
     },
   }),
   async (c) => {
@@ -654,14 +816,23 @@ reportRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
+    const body = c.req.valid('json');
 
     await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
+    if (reportHasChanged(report, body.expectedUpdatedAt)) {
+      return c.json(reportConflict(report), 409);
+    }
     if (report.status !== 'finalized') {
       throw new HTTPException(409, { message: 'Report is not finalized.' });
     }
-    const updated = await db((d) => unfinalizeReport(d, report.id));
-    if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
+    const updated = await db((d) =>
+      unfinalizeReport(d, report.id, body.expectedUpdatedAt),
+    );
+    if (!updated) {
+      const current = await loadReport(db, slug, number);
+      return c.json(reportConflict(current), 409);
+    }
     return c.json({ report: toReportResponse(updated) }, 200);
   },
 );

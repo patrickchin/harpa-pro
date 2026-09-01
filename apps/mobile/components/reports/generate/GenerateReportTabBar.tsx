@@ -1,11 +1,10 @@
 /**
- * GenerateReportTabBar — Notes / Report / Edit tab switcher.
+ * GenerateReportTabBar — Notes / Report switcher with optional Debug.
  *
  * Ported from
  * `../haru3-reports/apps/mobile/components/reports/generate/GenerateReportTabBar.tsx`
- * on branch `dev`. v4 drops the canonical `Debug` tab — the report-JSON
- * inspector that shipped in v3 lives behind a feature flag and isn't
- * part of the user-facing surface.
+ * on branch `dev`. The report-JSON inspector remains behind a developer
+ * flag and is not part of the default user-facing surface.
  *
  * Tailwind classes copied verbatim (NativeWind v4, Pitfall 3).
  */
@@ -16,12 +15,15 @@ import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import type { TabKey } from './tabs';
 import { colors } from '@/lib/design-tokens/colors';
 import { getGenerateReportTabLabel } from '@/lib/reports/generate-report-ui';
-import { useDeveloperFlags } from '@/lib/config/dev-flags';
 
-export function GenerateReportTabBar() {
+interface GenerateReportTabBarProps {
+  showDebugTab?: boolean;
+}
+
+export function GenerateReportTabBar({ showDebugTab = false }: GenerateReportTabBarProps) {
   const { tabs, notes, generation } = useGenerateReport();
   const notesCount = notes.totalCount;
-  const { showGenerateDebugTab } = useDeveloperFlags();
+  const activeTab = !showDebugTab && tabs.active === 'debug' ? 'notes' : tabs.active;
 
   const select = (tab: TabKey) => {
     Keyboard.dismiss();
@@ -34,17 +36,17 @@ export function GenerateReportTabBar() {
         testID="btn-tab-notes"
         onPress={() => select('notes')}
         className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-          tabs.active === 'notes' ? 'bg-secondary border-b-2 border-accent' : ''
+          activeTab === 'notes' ? 'bg-secondary border-b-2 border-accent' : ''
         }`}
       >
         <MessageSquare
           size={16}
-          color={tabs.active === 'notes' ? colors.foreground : colors.muted.foreground}
+          color={activeTab === 'notes' ? colors.foreground : colors.muted.foreground}
           style={{ marginTop: 1 }}
         />
         <Text
           className={`text-sm font-semibold ${
-            tabs.active === 'notes' ? 'text-foreground' : 'text-muted-foreground'
+            activeTab === 'notes' ? 'text-foreground' : 'text-muted-foreground'
           }`}
         >
           {getGenerateReportTabLabel('notes', notesCount)}
@@ -54,17 +56,17 @@ export function GenerateReportTabBar() {
         testID="btn-tab-report"
         onPress={() => select('report')}
         className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-          tabs.active === 'report' ? 'bg-secondary border-b-2 border-accent' : ''
+          activeTab === 'report' ? 'bg-secondary border-b-2 border-accent' : ''
         }`}
       >
         <FileText
           size={16}
-          color={tabs.active === 'report' ? colors.foreground : colors.muted.foreground}
+          color={activeTab === 'report' ? colors.foreground : colors.muted.foreground}
           style={{ marginTop: 1 }}
         />
         <Text
           className={`text-sm font-semibold ${
-            tabs.active === 'report' ? 'text-foreground' : 'text-muted-foreground'
+            activeTab === 'report' ? 'text-foreground' : 'text-muted-foreground'
           }`}
         >
           {getGenerateReportTabLabel('report', notesCount)}
@@ -73,22 +75,22 @@ export function GenerateReportTabBar() {
           <ActivityIndicator size="small" color={colors.foreground} />
         ) : null}
       </Pressable>
-      {showGenerateDebugTab ? (
+      {showDebugTab ? (
         <Pressable
           testID="btn-tab-debug"
           onPress={() => select('debug')}
           className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-            tabs.active === 'debug' ? 'bg-secondary border-b-2 border-accent' : ''
+            activeTab === 'debug' ? 'bg-secondary border-b-2 border-accent' : ''
           }`}
         >
           <Bug
             size={16}
-            color={tabs.active === 'debug' ? colors.foreground : colors.muted.foreground}
+            color={activeTab === 'debug' ? colors.foreground : colors.muted.foreground}
             style={{ marginTop: 1 }}
           />
           <Text
             className={`text-sm font-semibold ${
-              tabs.active === 'debug' ? 'text-foreground' : 'text-muted-foreground'
+              activeTab === 'debug' ? 'text-foreground' : 'text-muted-foreground'
             }`}
           >
             {getGenerateReportTabLabel('debug', notesCount)}

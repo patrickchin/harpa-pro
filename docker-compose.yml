@@ -4,12 +4,14 @@
 #
 # Brings up:
 #   pg       Postgres 16 on host :5433 (volume-backed, survives restarts).
-#   migrate  Runs `pnpm --filter @harpa/api db:migrate` once against pg,
-#            exits 0. Re-runs on every `compose up` (drizzle migrations
-#            are idempotent).
+#   migrate  Applies migrations, then immediately arms storage-lifecycle
+#            enforcement for this isolated local stack. Re-runs on every
+#            `compose up` (both operations are monotonic/idempotent).
 #   seed-test-accounts
 #            Seeds password-login accounts from TEST_ACCOUNT_EMAILS.
-#   api     `tsx watch src/server.ts` on :8787, fixture-mode (no real
+#   storage-worker
+#            Drains durable immediate/delayed MinIO deletion jobs and retries.
+#   api      `tsx watch src/server.ts` on :8787, fixture-mode (no real
 #            Twilio / AI / R2). Source dirs are bind-mounted so edits
 #            on the host trigger a server restart inside the container.
 #
@@ -26,9 +28,9 @@ services:
       POSTGRES_PASSWORD: pg
       POSTGRES_DB: harpa
     ports:
-      - "5433:5432"
+      - '5433:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d harpa"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d harpa']
       interval: 2s
       timeout: 2s
       retries: 15
@@ -46,7 +48,7 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: pg
     ports:
-      - "8080:8080"
+      - '8080:8080'
 
   # S3-compatible storage for local dev. Replaces FixtureStorage when
   # R2_FIXTURE_MODE=live so `harpa files upload` can PUT real bytes and
@@ -55,15 +57,15 @@ services:
   minio:
     image: minio/minio:latest
     container_name: harpa-pro-minio
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: ['server', '/data', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio-dev-secret
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ['CMD', 'mc', 'ready', 'local']
       interval: 2s
       timeout: 2s
       retries: 30
@@ -75,13 +77,13 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ['/bin/sh', '-c']
     command:
       - |
         mc alias set local http://minio:9000 minio minio-dev-secret &&
         mc mb -p local/harpa-pro &&
         echo "bucket harpa-pro ready"
-    restart: "no"
+    restart: 'no'
 
   migrate:
     build:
@@ -92,8 +94,17 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
-    command: ["pnpm", "--filter", "@harpa/api", "db:migrate"]
-    restart: "no"
+      # No old API machines or outstanding presigns exist in this disposable
+      # local stack, so production's rolling-deploy grace is unnecessary.
+      STORAGE_LEASE_ROLLOUT_GRACE_SEC: '0'
+      STORAGE_ACCOUNT_DELETE_ENABLED: 'true'
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        pnpm --filter @harpa/api db:migrate &&
+        pnpm --filter @harpa/api storage:arm-leases
+    restart: 'no'
 
   seed-test-accounts:
     build:
@@ -107,14 +118,39 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex when seed scripts import the shared env parser.
       # Pin to the current local migration head. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0025_activity_event_dedupe_redaction.sql
+      MIGRATIONS_REQUIRED_HEAD: 0031_remove_retired_llm_usage_ledger.sql
+      ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       BETTER_AUTH_SECRET: dev-only-secret-do-not-use-in-prod
       BETTER_AUTH_URL: http://localhost:8787
       TEST_ACCOUNT_EMAILS: ${TEST_ACCOUNT_EMAILS:-test@harpapro.com,test2@harpapro.com,test3@harpapro.com}
       TEST_ACCOUNT_PASSWORD: ${TEST_ACCOUNT_PASSWORD:?TEST_ACCOUNT_PASSWORD must be set (>=16 chars) for local E2E}
-    command: ["pnpm", "--filter", "@harpa/api", "db:seed-test-account"]
-    restart: "no"
+    command: ['pnpm', '--filter', '@harpa/api', 'db:seed-test-account']
+    restart: 'no'
+
+  storage-worker:
+    build:
+      context: .
+      dockerfile: infra/fly/Dockerfile
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: development
+      # The image bakes empty migration-head args, which are invalid when the
+      # shared env parser loads. Pin the same local heads as the API service.
+      MIGRATIONS_REQUIRED_HEAD: 0031_remove_retired_llm_usage_ledger.sql
+      ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
+      DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
+      R2_FIXTURE_MODE: live
+      R2_ENDPOINT: http://minio:9000
+      R2_BUCKET: harpa-pro
+      R2_ACCESS_KEY_ID: minio
+      R2_SECRET_ACCESS_KEY: minio-dev-secret
+    command: ['pnpm', '--filter', '@harpa/api', 'storage:worker']
+    restart: unless-stopped
 
   api:
     build:
@@ -125,6 +161,8 @@ services:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
+      storage-worker:
+        condition: service_started
     environment:
       # Override Dockerfile's NODE_ENV=production so env.ts doesn't
       # require MIGRATIONS_REQUIRED_HEAD inside the local compose stack.
@@ -132,7 +170,8 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex on boot. Pin to the current head so the API
       # starts cleanly in the compose stack. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0025_activity_event_dedupe_redaction.sql
+      MIGRATIONS_REQUIRED_HEAD: 0031_remove_retired_llm_usage_ledger.sql
+      ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       # Live storage backed by MinIO (in-network). R2_PUBLIC_ENDPOINT
       # is what the host-side CLI/browser sees in presigned URLs.
@@ -160,16 +199,16 @@ services:
       WAITLIST_CONFIRM_BASE_URL: http://localhost:3002/confirm
       # tsx watch needs polling inside Docker on macOS/Windows where
       # native fs events don't propagate across the VM boundary.
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "300"
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '300'
       # E2E/Maestro: disable per-route rate limits so multi-module
       # journeys can sign the same test accounts in/out many times. The
       # middleware is gated on this env var; it is OFF by default and
       # is only set here in the local compose stack (NODE_ENV=development).
-      DISABLE_RATE_LIMIT: "1"
+      DISABLE_RATE_LIMIT: '1'
     # `tsx watch` restarts the server on edits to bind-mounted sources.
     # `pnpm dev` would also work but adds an extra process layer.
-    command: ["pnpm", "--filter", "@harpa/api", "exec", "tsx", "watch", "src/server.ts"]
+    command: ['pnpm', '--filter', '@harpa/api', 'exec', 'tsx', 'watch', 'src/server.ts']
     # Bind-mount only the source dirs we want hot-reloaded. node_modules
     # (hoisted at /app/node_modules by the image) is intentionally NOT
     # overlaid so the container keeps its installed deps.
@@ -179,7 +218,7 @@ services:
       - ./packages/ai-fixtures/src:/app/packages/ai-fixtures/src
       - ./packages/ai-fixtures/fixtures:/app/packages/ai-fixtures/fixtures
     ports:
-      - "8787:8787"
+      - '8787:8787'
 
 volumes:
   harpa-pg:

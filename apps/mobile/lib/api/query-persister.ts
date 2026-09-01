@@ -3,8 +3,9 @@
  *
  * Goal: cold start renders the last-seen data instantly, then
  * revalidates in the background. The in-memory `QueryClient` is
- * snapshot-serialised to MMKV on every cache mutation (throttled),
- * and restored before children mount via `PersistQueryClientProvider`.
+ * snapshot-serialised to a user-scoped MMKV key on every cache
+ * mutation (throttled), and restored only after auth resolves via
+ * `SessionQueryProvider`.
  *
  * Storage choice: MMKV via `react-native-mmkv` — synchronous,
  * extremely fast, and already used by the upload-queue persistence
@@ -22,9 +23,12 @@
  *     prefixed `not_opt`). Those don't exist server-side yet and the
  *     in-flight mutation owns them; the next mount refetches.
  *
+ * Cache namespace: authenticated user id. Each account has a separate
+ * key, so a cold restore can never hydrate another account's data.
+ *
  * Cache buster: app version. Bumping `app.config.ts` `version`
- * invalidates the persisted blob automatically (the persister drops
- * any cache whose `buster` differs).
+ * invalidates each persisted snapshot automatically (the persister
+ * drops any cache whose `buster` differs).
  */
 import Constants from 'expo-constants';
 import { createMMKV } from 'react-native-mmkv';
@@ -43,7 +47,8 @@ interface AsyncStorageLike {
 }
 
 const STORAGE_ID = 'rq-cache';
-const STORAGE_KEY = 'rq-cache-v1';
+const LEGACY_STORAGE_KEY = 'rq-cache-v1';
+const STORAGE_KEY_PREFIX = 'rq-cache-v2';
 const MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 const THROTTLE_MS = 1_000;
 
@@ -122,21 +127,34 @@ export interface QueryPersister {
 }
 
 /**
- * Build the persister. Module-scoped so the same instance is reused
- * by the `PersistQueryClientProvider` and by `resetQueryCache` (logout
- * / 401 paths).
+ * Build a persister for exactly one authenticated user. The legacy
+ * unscoped key is discarded because its owner cannot be established
+ * safely after an upgrade.
  */
-export function createQueryPersister(): QueryPersister {
+export function createQueryPersister(userId: string): QueryPersister {
+  if (userId.length === 0) {
+    throw new Error('createQueryPersister requires a user id');
+  }
   const storage = createMmkvAsyncStorage();
+  void storage.removeItem(LEGACY_STORAGE_KEY);
   const persister = createAsyncStoragePersister({
     storage: storage as unknown as Parameters<
       typeof createAsyncStoragePersister
     >[0]['storage'],
-    key: STORAGE_KEY,
+    key: `${STORAGE_KEY_PREFIX}:${encodeURIComponent(userId)}`,
     throttleTime: THROTTLE_MS,
   });
   // Read app version lazily so test environments without
   // `Constants.expoConfig` still load this module.
   const buster = Constants.expoConfig?.version ?? '0.0.0';
   return { persister, buster, maxAge: MAX_AGE_MS };
+}
+
+/**
+ * Clear every user-scoped snapshot plus the unattributable legacy
+ * snapshot. Used when auth resolves to no user, on explicit sign-out,
+ * and after any API 401.
+ */
+export function clearPersistedQueryCaches(): void {
+  createMMKV({ id: STORAGE_ID }).clearAll();
 }

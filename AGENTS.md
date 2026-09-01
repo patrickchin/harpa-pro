@@ -7,8 +7,8 @@ project context. When the user shares preferences, decisions, or facts worth
 retaining across sessions, call `memory:create_entities` / `memory:add_observations`
 to persist them. Check memory before asking the user to re-explain something.
 
-v4 rewrite of the harpa-pro mobile app and API. This repository is the
-source of truth for current product behaviour. For a screen port or
+v4 rewrite of the Harpa Pro mobile app, office dashboard, and API. This
+repository is the source of truth for current product behaviour. For a screen port or
 feature specification, use the relevant `docs/v4/design-*.md` or
 `docs/v4/plan-*.md` file. If neither exists, use the current
 implementation and its tests as the baseline. Add a task-specific
@@ -25,6 +25,9 @@ when you fix a recurring bug.
 - **Monorepo:** pnpm + Turbo. Workspaces under `apps/*` and `packages/*`.
 - **Mobile:** React Native (Expo, dev-client + EAS) with Expo Router.
   Styling: **NativeWind v4** (Tailwind for RN).
+- **Office dashboard:** React + Vite SPA at `apps/dashboard`, deployed to its
+  own Cloudflare Pages project. It shares API contracts, report logic, and
+  mobile-authored CSS tokens from `packages/design-tokens`.
 - **API:** Hono REST API at `packages/api`, deployed to Fly.io.
   Drizzle ORM, Zod validation, OpenAPI-typed contract at
   `packages/api-contract`.
@@ -34,21 +37,27 @@ when you fix a recurring bug.
   [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
 - **Auth:** [better-auth](https://www.better-auth.com) inside the
   Hono API — email-OTP via Resend, `@better-auth/expo` on mobile,
-  `emailAndPassword` for a test-account smoke-test bypass.
+  browser cookies on the dashboard, and `emailAndPassword` for test/demo
+  account access.
   SIWA + Google Sign-In are next. See
   [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
 - **File storage:** Cloudflare R2 (S3-compatible). API mints signed
   URLs; mobile uploads direct to R2.
-- **AI providers:** Kimi, OpenAI, Anthropic, Google, Z.AI, DeepSeek.
-  All calls routed through `packages/ai-fixtures` for record/replay.
+- **AI providers:** OpenAI handles chat and report generation. Groq
+  handles transcription. A Kimi adapter exists, but user settings
+  currently expose OpenAI only. All provider calls route through
+  `packages/ai-fixtures` for replay or live execution.
 - **Tests:** Vitest (unit + integration), Testcontainers for the API,
-  Maestro for mobile E2E, Playwright for the docs site.
+  Maestro for mobile E2E, and Playwright for the site, admin, and dashboard
+  browser apps.
 
 ## Hard rules (enforced by review + CI)
 
-1. **Env vars asserted at boot.** Read env via `lib/env.ts`
-   (Zod-parsed at app boot, fails fast on missing vars). Never use
-   `process.env.EXPO_PUBLIC_*!` — enforced by lint.
+1. **Env vars asserted at boot.** Mobile reads env through
+   `apps/mobile/lib/config/env.ts`. The API uses
+   `packages/api/src/env.ts`, and the dashboard uses
+   `apps/dashboard/src/lib/env.ts`. All three parse with Zod and fail early.
+   Never use `process.env.EXPO_PUBLIC_*!` — enforced by lint.
 2. **Conventional Commits, kept concise.**
    `feat|fix|chore|test|docs|refactor(scope): subject`. Default branch
    is `main`; pushes to `main` deploy production. Pushes to `dev`
@@ -68,7 +77,7 @@ when you fix a recurring bug.
 4. **No `Alert.alert` for in-app dialogs.** Use `AppDialogSheet` or
    another themed primitive.
 5. **Test the default wiring.** Every collaborator factory
-   (`createTurnstileClient`, `createR2Client`, `createTwilioClient`,
+   (`createTurnstileClient`, `createR2Client`, `createResendClient`,
    …) needs at least one integration test that exercises the route
    without stubbing it, asserting the real side-effect. DI stubs are
    for negative-path branches only. See

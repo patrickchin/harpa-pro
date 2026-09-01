@@ -1,8 +1,8 @@
 name: admin-preview
 
-# Build, browser-test, and deploy the standalone admin console for a pull
-# request. The PR number is the single identifier shared by the Pages branch,
-# Fly app, and both Neon branches, so browser auth can use an exact origin.
+# Build and browser-test the standalone admin console for every pull request.
+# Cloudflare Git publishes the mirrored pr-N branch. The PR number remains the
+# single identifier shared by Pages, Fly, and both Neon branches.
 
 on:
   pull_request:
@@ -17,11 +17,14 @@ on:
       - '.github/actions/changed-paths/**'
       - '.github/actions/setup-monorepo/**'
       - '.github/workflows/admin-preview.yml'
+      - '.github/workflows/pages-preview-ref.yml'
       - '.github/workflows/pr-preview.yml'
       - 'infra/fly/fly.preview.toml'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
       - 'tsconfig.base.json'
 
 concurrency:
@@ -29,19 +32,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      deployments: write
     env:
-      ADMIN_BRANCH: pr-${{ github.event.pull_request.number }}
-      ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
       API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-monorepo
 
@@ -62,7 +60,7 @@ jobs:
 
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: admin-playwright-artifacts
           path: |
@@ -85,59 +83,27 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy admin preview to Cloudflare Pages
-        id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: >-
-            pages deploy apps/admin/dist
-            --project-name=harpa-pro-admin
-            --branch=${{ env.ADMIN_BRANCH }}
-            --commit-dirty=true
+  deployment:
+    needs: verify
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    env:
+      ADMIN_BRANCH: pr-${{ github.event.pull_request.number }}
+      ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+    steps:
+      - uses: actions/checkout@v7
 
-      - name: Verify stable admin preview URL
+      - name: Verify Cloudflare Git deployment
         run: >-
-          curl --fail --silent --show-error
-          --retry 24 --retry-all-errors --retry-delay 5 --retry-max-time 180
-          "${ADMIN_PREVIEW_ORIGIN}/" > /dev/null
-
-      - name: Verify missing admin preview route
-        run: |
-          deadline=$((SECONDS + 180))
-          status=000
-          while true; do
-            if status="$(
-              curl --silent --show-error \
-                --connect-timeout 10 --max-time 30 \
-                --output /dev/null \
-                --write-out '%{http_code}' \
-                "${ADMIN_PREVIEW_ORIGIN}/__missing_admin_route__"
-            )" && [[ "$status" == "404" ]]; then
-              exit 0
-            fi
-            if (( SECONDS >= deadline )); then
-              break
-            fi
-            sleep 5
-          done
-          echo "::error::Unexpected missing-route status: $status" >&2
-          exit 1
-
-      - name: Comment admin preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: admin-preview
-          message: |
-            ### Admin console preview
-
-            **Preview URL:** ${{ env.ADMIN_PREVIEW_ORIGIN }}
-
-            - API: ${{ env.API_PREVIEW_ORIGIN }}
-            - Pages branch: `${{ env.ADMIN_BRANCH }}`
-            - Commit: `${{ github.event.pull_request.head.sha }}`
-
-            The matching `pr-preview` workflow provisions the Fly app and
-            isolated app/admin Neon branches. Browser authentication accepts
-            only the stable Pages branch origin linked above.
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "$ADMIN_PREVIEW_ORIGIN"
+          --commit "${{ github.event.pull_request.head.sha }}"
+          --branch "$ADMIN_BRANCH"
+          --title 'Business activity — Harpa Pro Admin'
+          --missing-route /__missing_admin_route__

@@ -3,13 +3,13 @@
  * Per-item.
  */
 import { TextInput, View } from 'react-native';
-import type { GeneratedReportSection } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Field, INPUT_CLASS, MULTILINE_CLASS } from './fields';
 
 interface Props {
-  value: GeneratedReportSection;
-  onChange: (next: GeneratedReportSection) => void;
+  value: reports.ReportBody['summarySections'][number];
+  onChange: (next: reports.ReportBody['summarySections'][number]) => void;
 }
 
 export function EditSectionBody({ value, onChange }: Props) {
@@ -27,8 +27,8 @@ export function EditSectionBody({ value, onChange }: Props) {
       <Field label="Body">
         <TextInput
           className={MULTILINE_CLASS}
-          value={value.content}
-          onChangeText={(v) => onChange({ ...value, content: v })}
+          value={value.body}
+          onChangeText={(v) => onChange({ ...value, body: v })}
           multiline
           accessibilityLabel="Section body"
           testID="input-edit-section-body"

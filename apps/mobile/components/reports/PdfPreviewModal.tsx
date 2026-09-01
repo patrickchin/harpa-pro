@@ -5,7 +5,7 @@
  * Ported from
  * `../haru3-reports/apps/mobile/components/reports/PdfPreviewModal.tsx`
  * on branch `dev` (commit dbaa4c1) and adapted for v4 import paths
- * (`@harpa/report-core`, `@/components/primitives/*`). iOS uses
+ * (persisted report bodies, `@/components/primitives/*`). iOS uses
  * `react-native-webview` to render the local PDF; Android can't
  * render local PDFs in WebView, so it uses `react-native-pdf` with
  * an "Open externally" fallback.
@@ -30,11 +30,12 @@ import {
   type ExportedReport,
 } from '@/lib/reports/export-report-pdf';
 import { colors } from '@/lib/design-tokens/colors';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { displayReportTitle } from '@/lib/reports/report-body';
+import { reports } from '@harpa/api-contract';
 
 interface PdfPreviewModalProps {
   visible: boolean;
-  report: GeneratedSiteReport | undefined;
+  report: reports.ReportBody | undefined;
   siteName?: string | null;
   onClose: () => void;
 }
@@ -91,7 +92,7 @@ export function PdfPreviewModal({
     try {
       await shareSavedReportPdf({
         pdfUri: pdfResult.pdfUri,
-        reportTitle: report.report.meta.title,
+        reportTitle: displayReportTitle(report),
       });
     } catch (err) {
       setErrorMessage(

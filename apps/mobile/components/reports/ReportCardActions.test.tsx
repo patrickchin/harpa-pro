@@ -1,10 +1,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import type {
-  GeneratedReportIssue,
-  GeneratedReportSection,
-} from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { IssuesCard } from './IssuesCard';
 import { SummarySectionCard } from './SummarySectionCard';
@@ -31,18 +28,16 @@ function expectHeaderActionButton(
   expect(String(button.props.className)).toContain('border border-border bg-card');
 }
 
-const SECTION: GeneratedReportSection = {
+const SECTION: reports.ReportBody['summarySections'][number] = {
   title: 'Roof',
-  content: 'Roof anchors need confirmation.',
+  body: 'Roof anchors need confirmation.',
 };
 
-const ISSUE: GeneratedReportIssue = {
+const ISSUE: reports.ReportBody['issues'][number] = {
   title: 'Loose edge protection',
-  category: 'safety',
   severity: 'high',
-  status: 'open',
-  details: 'Temporary guardrails need another pass.',
-  actionRequired: null,
+  description: 'Temporary guardrails need another pass.',
+  action: null,
 };
 
 describe('report card header actions', () => {

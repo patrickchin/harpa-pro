@@ -10,11 +10,21 @@ in the repository's Git history and tags.
 
 ## [Unreleased]
 
+### Added
+
+- Added the office dashboard for project/member management and keyboard-first
+  report editing against the same mobile report model.
+- Added a protected administration service-status view.
+
 ### Changed
 
 - Separated the private administration console from the public website so it
   can be deployed and verified independently before the
   `admin.harpapro.com` cutover.
+
+### Fixed
+
+- Persisted mobile query data is now isolated by signed-in account.
 
 ## [0.1.65] - 2026-07-31
 

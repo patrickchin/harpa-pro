@@ -1,7 +1,7 @@
 # Public site and documentation design
 
-Status: approved on 2026-07-03; guide hierarchy and screenshot revision
-approved on 2026-07-03.
+Status: implemented. Guide content and all nine release screenshots were
+reverified on 2026-08-04.
 
 ## Context
 
@@ -57,8 +57,7 @@ The documentation uses an Astro content collection rooted at
 - tier and display order;
 - search keywords;
 - last-verified date;
-- optional related-guide slugs;
-- a reviewed hero screenshot and useful alt text.
+- optional related-guide slugs.
 
 `/docs` is the searchable guide index. Individual guides use
 `/docs/guides/<slug>`. The hierarchy follows the original documentation site
@@ -103,7 +102,9 @@ The docs reuse the public site's warm-paper, navy, and orange design tokens,
 Inter typography, wordmark, header, footer, focus treatment, and responsive
 conventions. The index restores the original task-first presentation:
 
-- the heading **What do you want to do?** with a current app screenshot;
+- the heading **What do you want to do?** with local guide search;
+- a shallow three-stage visual strip for capture, report review, and PDF
+  sharing;
 - two large core-workflow cards;
 - smaller everyday-task cards;
 - de-emphasized setup and account links;
@@ -116,7 +117,25 @@ The documentation layout adds:
 - breadcrumbs;
 - previous and next guide links;
 - related guides;
-- numbered step cards and phone-framed screenshots.
+- numbered step cards and contextual screenshot crops.
+
+Guide headings are text-only at every breakpoint. They do not reserve a
+second column for a full-height phone screenshot, so the first task starts
+immediately after the title and description.
+
+The docs index presents screenshots as three shallow cards beneath the intro
+and search. The cards represent **Capture updates**, **Review the report**, and
+**Share a PDF**. They form one horizontal strip on wider screens and stack as
+compact cards on narrow screens. The strip supports the task hierarchy; it
+does not replace or delay the core workflow links.
+
+When a guide step benefits from an image, the screenshot appears beside or
+below that step as a wide crop focused on the relevant control or content.
+Each crop links to the complete portrait capture with contextual accessible
+text. The link remains usable without JavaScript. With JavaScript available,
+the complete capture opens in the accessible dialog defined by
+[Documentation screenshot dialog](design-docs-screenshot-dialog.md) so the
+reader keeps their place in the guide. The docs do not add a carousel.
 
 The core content and navigation work without JavaScript. Search is a small
 client-side enhancement over a static build-time index. Search terms stay in
@@ -125,29 +144,31 @@ categories or contacting support.
 
 Only reviewed screenshots from the current v4 app may ship. The initial
 revision reuses the checked-in App Store screenshots and copies them into the
-site's public assets so the public-site build does not depend on another
-workspace at deploy time. New task-specific captures are deferred until an
-important screen is missing. Old H3/v3 screenshots and generated mockups are
-excluded.
+site's asset graph so the public-site build does not depend on another
+workspace at deploy time. A central screenshot registry owns the focal point
+used for each crop so MDX guides do not carry layout coordinates. New
+task-specific captures are deferred until an important screen or crop is
+missing. Old H3/v3 screenshots and generated mockups are excluded.
 
 The initial screenshot map is:
 
-| Guide or surface | Screenshot |
-| --- | --- |
-| Docs index | Generated report or notes capture |
-| Generate an AI report | Projects, voice/notes, generated report |
-| Export and share a PDF | PDF preview |
-| Create and manage projects | Projects list |
-| Capture notes, photos, and voice notes | Voice/notes capture |
-| Add members to a project | Members list |
-| Edit a report manually | Closest current generated-report view |
-| Browse and reopen saved reports | Reports list |
-| Getting started | Projects list |
-| Your account | Usage history |
+| Guide step or surface                  | Screenshot                                            |
+| -------------------------------------- | ----------------------------------------------------- |
+| Docs index strip                       | Voice/notes capture, generated report, PDF preview    |
+| Generate an AI report                  | Reports, voice/notes, generated report, member review |
+| Export and share a PDF                 | PDF preview                                           |
+| Create and manage projects             | Projects list                                         |
+| Capture notes, photos, and voice notes | Voice/notes capture                                   |
+| Add members to a project               | Members list                                          |
+| Edit a report manually                 | Closest current generated-report view                 |
+| Browse and reopen saved reports        | Reports list                                          |
+| Getting started                        | Projects list                                         |
+| Your account                           | Usage history                                         |
 
 Every image has descriptive alt text, explicit dimensions, and lazy loading
-below the fold. A missing referenced image fails the content contract instead
-of silently rendering a placeholder.
+below the fold. Every guide crop has a contextual full-capture link. A missing
+referenced image or crop focus fails the content contract instead of silently
+rendering a placeholder.
 
 ## Routes, metadata, and compatibility
 

@@ -19,10 +19,9 @@ apps/mobile/android
 apps/mobile/.expo
 apps/mobile/.expo-shared
 
-# Astro / Next build caches
-apps/marketing/.astro
-apps/marketing/.wrangler
-apps/docs/.next
+# Astro build caches
+**/.astro
+**/.wrangler
 
 # Editor / OS / VCS
 .git

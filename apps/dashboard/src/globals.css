@@ -1,0 +1,134 @@
+@import "@harpa/design-tokens/tokens.css";
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-emphasis: var(--surface-emphasis);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-alpha-30: var(--primary-alpha-30);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-disabled: var(--muted-disabled);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-ink: var(--accent-ink);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-text: var(--success-text);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-text: var(--warning-text);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-text: var(--danger-text);
+  --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-text: var(--info-text);
+  --color-info-border: var(--info-border);
+
+  --font-app: var(--font-sans);
+  --text-display: var(--font-size-display);
+  --text-display--line-height: var(--line-height-display);
+  --text-display--font-weight: 700;
+  --text-title: var(--font-size-title);
+  --text-title--line-height: var(--line-height-title);
+  --text-title--font-weight: 700;
+  --text-title-sm: var(--font-size-title-sm);
+  --text-title-sm--line-height: var(--line-height-title-sm);
+  --text-title-sm--font-weight: 700;
+  --text-metric: var(--font-size-metric);
+  --text-metric--line-height: var(--line-height-metric);
+  --text-metric--font-weight: 700;
+  --text-body-lg: var(--font-size-body-lg);
+  --text-body-lg--line-height: var(--line-height-body-lg);
+  --text-body: var(--font-size-body);
+  --text-body--line-height: var(--line-height-body);
+  --text-meta: var(--font-size-meta);
+  --text-meta--line-height: var(--line-height-meta);
+  --text-label: var(--font-size-label);
+  --text-label--line-height: var(--line-height-label);
+  --text-label--letter-spacing: var(--letter-spacing-label);
+  --text-label--font-weight: 700;
+  --tracking-label: var(--letter-spacing-label);
+
+  --radius-control-ui: var(--radius-control);
+  --radius-card-ui: var(--radius-card);
+  --radius-panel-ui: var(--radius-xl);
+  --shadow-raised-ui: var(--shadow-raised);
+  --shadow-floating-ui: var(--shadow-floating);
+  --container-reading: var(--reading-max);
+  --container-content: var(--content-max);
+  --container-app: var(--app-max);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    font-family: var(--font-sans);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    min-width: 0;
+    background: var(--background);
+  }
+
+  body {
+    min-width: 0;
+    min-height: 100vh;
+    color: var(--foreground);
+    background: var(--background);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a {
+    text-underline-offset: 0.18em;
+  }
+
+  :focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

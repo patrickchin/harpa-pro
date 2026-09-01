@@ -7,10 +7,11 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { settings as settingsSchemas, errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { withAuth } from '../middleware/auth.js';
 import { getAiSettings, updateAiSettings } from '../services/settings.js';
 
-export const settingsRoutes = new OpenAPIHono<AppEnv>();
+export const settingsRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 settingsRoutes.openapi(
   createRoute({

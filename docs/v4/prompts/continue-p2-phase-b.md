@@ -30,8 +30,9 @@ legacy Supabase access with v4 API contract hooks.
 - Build `apps/mobile/lib/api/client.ts`: typed fetch wrapper that
   reads `EXPO_PUBLIC_API_URL` via `lib/env.ts`, attaches the bearer
   token from the auth session (stub the getter for now — real wiring
-  in P2.4), and maps the API error envelope (`{ error: { code, message,
-  requestId } }` from `packages/api`) to a typed `ApiError`.
+  in P2.4), and maps the `packages/api` error envelope to a typed
+  `ApiError`. The canonical wire shape is
+  `{ error: { code, message }, requestId }`.
 - Generate `lib/api/hooks.ts` from the OpenAPI spec at
   `packages/api-contract/openapi.json`. Pick a generator
   (`openapi-react-query-codegen`, `orval`, or `swagger-typescript-api`)
@@ -105,14 +106,12 @@ For each screen, follow [`page-template.md`](page-template.md):
    implementation and tests are the baseline. A design change needs
    a task-specific design doc. Do not use historical realignment
    docs, screenshots, or source dumps.
-2. **No Supabase imports** — `check-no-supabase.sh` must stay green.
-3. **NativeWind only** — no Unistyles, ever.
-4. **No `Alert.alert`** — use `AppDialogSheet`.
-5. **Env via `lib/env.ts`** — never `process.env.EXPO_PUBLIC_*!`.
-6. **Conventional Commits**, default branch `main` (pushes deploy to prod).
-7. **No real LLM calls in tests** — fixtures only (P2.3 hooks are
+2. **No `Alert.alert`** — use `AppDialogSheet`.
+3. **Env via `lib/env.ts`** — never `process.env.EXPO_PUBLIC_*!`.
+4. **Conventional Commits**, default branch `main` (pushes deploy to prod).
+5. **No real LLM calls in tests** — fixtures only (P2.3 hooks are
    thin client wrappers; the API itself enforces this).
-8. **Docs in the same PR** — any architectural change updates the
+6. **Docs in the same PR** — any architectural change updates the
    matching `docs/v4/arch-*.md` in the same commit.
 
 ## Pause points

@@ -24,6 +24,16 @@ import { env } from '../env.js';
 import { getPool } from '../db/client.js';
 import { LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS } from './background-maintenance.js';
 
+const APP_RATE_LIMIT_BUCKET_TABLE = 'app.rate_limit_buckets';
+const ADMIN_RATE_LIMIT_BUCKET_TABLE = 'admin.rate_limit_buckets';
+
+const RATE_LIMIT_BUCKET_TABLES = {
+  app: APP_RATE_LIMIT_BUCKET_TABLE,
+  admin: ADMIN_RATE_LIMIT_BUCKET_TABLE,
+} as const;
+
+type RateLimitBucketStore = keyof typeof RATE_LIMIT_BUCKET_TABLES;
+
 export interface RateLimiterResult {
   /** True if the request is within budget (was just consumed). */
   success: boolean;
@@ -90,16 +100,22 @@ export class MemoryRateLimiter implements RateLimiter {
 export class PostgresRateLimiter implements RateLimiter {
   constructor(private readonly pool: pg.Pool) {}
 
+  /** Fixed store selector for the internal SQL core; subclasses cannot inject identifiers. */
+  protected get bucketStore(): RateLimitBucketStore {
+    return 'app';
+  }
+
   async consume(key: string, limit: number, windowMs: number): Promise<RateLimiterResult> {
     const now = Date.now();
     const windowStart = Math.floor(now / windowMs) * windowMs;
     const resetAt = windowStart + windowMs;
     const bucketKey = `${key}|${windowStart}`;
+    const bucketTable = RATE_LIMIT_BUCKET_TABLES[this.bucketStore];
     const { rows } = await this.pool.query<{ count: number }>(
-      `INSERT INTO app.rate_limit_buckets (bucket_key, window_end, count)
+      `INSERT INTO ${bucketTable} (bucket_key, window_end, count)
        VALUES ($1, to_timestamp($2 / 1000.0), 1)
        ON CONFLICT (bucket_key) DO UPDATE
-         SET count = app.rate_limit_buckets.count + 1
+         SET count = ${bucketTable}.count + 1
        RETURNING count`,
       [bucketKey, resetAt],
     );
@@ -111,10 +127,10 @@ export class PostgresRateLimiter implements RateLimiter {
   /** Delete rows whose window has fully elapsed. Safe to call from any machine. */
   async gc(now: number = Date.now()): Promise<number> {
     const cutoff = new Date(now - 60_000).toISOString();
-    const { rowCount } = await this.pool.query(
-      `DELETE FROM app.rate_limit_buckets WHERE window_end < $1`,
-      [cutoff],
-    );
+    const bucketTable = RATE_LIMIT_BUCKET_TABLES[this.bucketStore];
+    const { rowCount } = await this.pool.query(`DELETE FROM ${bucketTable} WHERE window_end < $1`, [
+      cutoff,
+    ]);
     return rowCount ?? 0;
   }
 }
@@ -142,14 +158,12 @@ export function resetRateLimiter(): void {
 let _gcTimer: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Start a periodic GC sweep (every `intervalMs`, default daily) when
+ * Start a periodic GC sweep (every `intervalMs`, default 24 hours) when
  * the active limiter is a PostgresRateLimiter. No-op for memory mode.
  * Idempotent: calling twice does not double-schedule. Exposed so the
  * server entry can start it after the pool is initialised.
  */
-export function startRateLimitGc(
-  intervalMs = LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS,
-): void {
+export function startRateLimitGc(intervalMs = LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS): void {
   if (_gcTimer) return;
   const inst = getRateLimiter();
   if (!(inst instanceof PostgresRateLimiter)) return;

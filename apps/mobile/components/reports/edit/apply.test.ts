@@ -1,193 +1,216 @@
 /**
  * Unit tests for the per-target apply/delete/seed mappers used by the
- * report edit modal. These wrap `lib/reports/report-edit-helpers.ts`
- * so the modal owns no schema knowledge.
+ * report edit modal. These keep the modal ignorant of report-body
+ * mutation details.
  */
 import { describe, expect, it } from 'vitest';
-
-import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { reports } from '@harpa/api-contract';
 
 import { applyDelete, applyEdit, seedDraft } from './apply';
+
+const SAMPLE_REPORT_BODY: reports.ReportBody = {
+  meta: {
+    title: 'Highland Tower — Visit 1',
+    summary: 'Steady progress.',
+    visitDate: '2026-05-12T00:00:00.000Z',
+  },
+  weather: {
+    condition: 'Cloudy with afternoon showers',
+    temperature: '14°C',
+    wind: '12 km/h SW',
+    impact: 'Light rain shifted pour window.',
+  },
+  workers: [
+    { role: 'Steel fixer', count: '3', hours: '24', notes: 'East footing rebar' },
+    { role: 'Carpenter', count: '2', hours: '16', notes: 'Formwork prep' },
+  ],
+  materials: [
+    {
+      name: 'Concrete C30',
+      quantity: '12',
+      unit: 'm³',
+      status: 'Delivered',
+      condition: 'OK',
+      notes: 'Delivery 30 min late.',
+    },
+  ],
+  issues: [
+    {
+      title: 'Concrete delivery delay',
+      severity: 'medium',
+      description: 'Delivery 30 min late; pour pushed back.',
+      action: 'Confirm tomorrow’s delivery slot with supplier.',
+    },
+  ],
+  nextSteps: ['Close east footing pour.'],
+  summarySections: [{ title: 'Site Conditions', body: 'Access road wet but passable.' }],
+};
 
 describe('apply.ts', () => {
   describe('seedDraft', () => {
     it('returns the meta slice', () => {
-      const seeded = seedDraft(SAMPLE_GENERATED_REPORT, { kind: 'meta' });
-      expect(seeded).toEqual(SAMPLE_GENERATED_REPORT.report.meta);
+      const seeded = seedDraft(SAMPLE_REPORT_BODY, { kind: 'meta' });
+      expect(seeded).toEqual(SAMPLE_REPORT_BODY.meta);
     });
 
     it('returns a default weather shape when weather is null', () => {
       const blank = {
-        ...SAMPLE_GENERATED_REPORT,
-        report: { ...SAMPLE_GENERATED_REPORT.report, weather: null },
+        ...SAMPLE_REPORT_BODY,
+        weather: null,
       };
       expect(seedDraft(blank, { kind: 'weather' })).toEqual({
-        conditions: null,
+        condition: null,
         temperature: null,
         wind: null,
         impact: null,
       });
     });
 
-    it('returns a default workers shape when workers is null', () => {
+    it('returns an empty workers list when workers are absent', () => {
       const blank = {
-        ...SAMPLE_GENERATED_REPORT,
-        report: { ...SAMPLE_GENERATED_REPORT.report, workers: null },
+        ...SAMPLE_REPORT_BODY,
+        workers: [],
       };
-      expect(seedDraft(blank, { kind: 'workers' })).toEqual({
-        totalWorkers: null,
-        workerHours: null,
-        notes: null,
-        roles: [],
-      });
+      expect(seedDraft(blank, { kind: 'workers' })).toEqual([]);
     });
 
     it('returns shallow copies for list slices', () => {
-      const materials = seedDraft(SAMPLE_GENERATED_REPORT, {
+      const materials = seedDraft(SAMPLE_REPORT_BODY, {
         kind: 'materials',
       });
-      expect(materials).toEqual(SAMPLE_GENERATED_REPORT.report.materials);
-      expect(materials).not.toBe(SAMPLE_GENERATED_REPORT.report.materials);
+      expect(materials).toEqual(SAMPLE_REPORT_BODY.materials);
+      expect(materials).not.toBe(SAMPLE_REPORT_BODY.materials);
 
-      const nextSteps = seedDraft(SAMPLE_GENERATED_REPORT, {
+      const nextSteps = seedDraft(SAMPLE_REPORT_BODY, {
         kind: 'nextSteps',
       });
-      expect(nextSteps).toEqual(SAMPLE_GENERATED_REPORT.report.nextSteps);
-      expect(nextSteps).not.toBe(SAMPLE_GENERATED_REPORT.report.nextSteps);
+      expect(nextSteps).toEqual(SAMPLE_REPORT_BODY.nextSteps);
+      expect(nextSteps).not.toBe(SAMPLE_REPORT_BODY.nextSteps);
     });
 
     it('returns the addressed issue and section by index', () => {
-      const issue = seedDraft(SAMPLE_GENERATED_REPORT, {
+      const issue = seedDraft(SAMPLE_REPORT_BODY, {
         kind: 'issue',
         index: 0,
       });
-      expect(issue).toBe(SAMPLE_GENERATED_REPORT.report.issues[0]);
+      expect(issue).toBe(SAMPLE_REPORT_BODY.issues[0]);
 
-      const section = seedDraft(SAMPLE_GENERATED_REPORT, {
+      const section = seedDraft(SAMPLE_REPORT_BODY, {
         kind: 'section',
         index: 0,
       });
-      expect(section).toBe(SAMPLE_GENERATED_REPORT.report.sections[0]);
+      expect(section).toBe(SAMPLE_REPORT_BODY.summarySections[0]);
     });
   });
 
   describe('applyEdit', () => {
     it('updates meta in-place', () => {
       const next = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'meta' },
         {
-          ...SAMPLE_GENERATED_REPORT.report.meta,
+          ...SAMPLE_REPORT_BODY.meta,
           title: 'New title',
         },
       );
-      expect(next.report.meta.title).toBe('New title');
-      expect(next).not.toBe(SAMPLE_GENERATED_REPORT);
+      expect(next.meta.title).toBe('New title');
+      expect(next).not.toBe(SAMPLE_REPORT_BODY);
     });
 
     it('replaces materials wholesale', () => {
       const next = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'materials' },
         [
           {
             name: 'Steel rebar',
             quantity: '100',
-            quantityUnit: 'pcs',
+            unit: 'pcs',
             condition: null,
             status: null,
             notes: null,
           },
         ],
       );
-      expect(next.report.materials).toHaveLength(1);
-      expect(next.report.materials[0]?.name).toBe('Steel rebar');
+      expect(next.materials).toHaveLength(1);
+      expect(next.materials[0]?.name).toBe('Steel rebar');
     });
 
     it('replaces nextSteps wholesale', () => {
       const next = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'nextSteps' },
         ['Pour foundation tomorrow'],
       );
-      expect(next.report.nextSteps).toEqual(['Pour foundation tomorrow']);
+      expect(next.nextSteps).toEqual(['Pour foundation tomorrow']);
     });
 
     it('updates a single issue by index', () => {
-      const original = SAMPLE_GENERATED_REPORT.report.issues[0]!;
+      const original = SAMPLE_REPORT_BODY.issues[0]!;
       const next = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'issue', index: 0 },
         { ...original, title: 'Edited issue title' },
       );
-      expect(next.report.issues[0]?.title).toBe('Edited issue title');
-      expect(next.report.issues.length).toBe(
-        SAMPLE_GENERATED_REPORT.report.issues.length,
-      );
+      expect(next.issues[0]?.title).toBe('Edited issue title');
+      expect(next.issues.length).toBe(SAMPLE_REPORT_BODY.issues.length);
     });
 
     it('updates a single section by index', () => {
-      const original = SAMPLE_GENERATED_REPORT.report.sections[0]!;
+      const original = SAMPLE_REPORT_BODY.summarySections[0]!;
       const next = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'section', index: 0 },
         { ...original, title: 'Edited section title' },
       );
-      expect(next.report.sections[0]?.title).toBe('Edited section title');
-      expect(next.report.sections.length).toBe(
-        SAMPLE_GENERATED_REPORT.report.sections.length,
-      );
+      expect(next.summarySections[0]?.title).toBe('Edited section title');
+      expect(next.summarySections.length).toBe(SAMPLE_REPORT_BODY.summarySections.length);
     });
 
     it('updates weather and workers slices', () => {
       const w = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'weather' },
         {
-          conditions: 'Rainy',
+          condition: 'Rainy',
           temperature: '15°C',
           wind: null,
           impact: null,
         },
       );
-      expect(w.report.weather?.conditions).toBe('Rainy');
+      expect(w.weather?.condition).toBe('Rainy');
 
       const wk = applyEdit(
-        SAMPLE_GENERATED_REPORT,
+        SAMPLE_REPORT_BODY,
         { kind: 'workers' },
-        {
-          totalWorkers: 12,
-          workerHours: '96',
-          notes: null,
-          roles: [],
-        },
+        [{ role: 'Electrician', count: '12', hours: '96', notes: null }],
       );
-      expect(wk.report.workers?.totalWorkers).toBe(12);
+      expect(wk.workers[0]?.count).toBe('12');
     });
   });
 
   describe('applyDelete', () => {
     it('removes an issue by index', () => {
-      const before = SAMPLE_GENERATED_REPORT.report.issues.length;
-      const next = applyDelete(SAMPLE_GENERATED_REPORT, {
+      const before = SAMPLE_REPORT_BODY.issues.length;
+      const next = applyDelete(SAMPLE_REPORT_BODY, {
         kind: 'issue',
         index: 0,
       });
-      expect(next.report.issues.length).toBe(before - 1);
+      expect(next.issues.length).toBe(before - 1);
     });
 
     it('removes a section by index', () => {
-      const before = SAMPLE_GENERATED_REPORT.report.sections.length;
-      const next = applyDelete(SAMPLE_GENERATED_REPORT, {
+      const before = SAMPLE_REPORT_BODY.summarySections.length;
+      const next = applyDelete(SAMPLE_REPORT_BODY, {
         kind: 'section',
         index: 0,
       });
-      expect(next.report.sections.length).toBe(before - 1);
+      expect(next.summarySections.length).toBe(before - 1);
     });
 
     it('returns the report unchanged for non-per-item targets', () => {
-      const next = applyDelete(SAMPLE_GENERATED_REPORT, { kind: 'meta' });
-      expect(next).toBe(SAMPLE_GENERATED_REPORT);
+      const next = applyDelete(SAMPLE_REPORT_BODY, { kind: 'meta' });
+      expect(next).toBe(SAMPLE_REPORT_BODY);
     });
   });
 });

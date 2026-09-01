@@ -208,8 +208,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -223,8 +224,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -283,8 +285,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -298,8 +301,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -352,10 +356,11 @@ export interface paths {
                     content: {
                         "application/json": {
                             error: {
-                                /** @enum {string} */
-                                code: "not_configured";
+                                code: string;
                                 message: string;
+                                details?: unknown;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -410,10 +415,11 @@ export interface paths {
                     content: {
                         "application/json": {
                             error: {
-                                /** @enum {string} */
-                                code: "not_configured";
+                                code: string;
                                 message: string;
+                                details?: unknown;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -471,8 +477,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -486,8 +493,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -521,8 +529,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -536,8 +545,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -551,8 +561,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -604,8 +615,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -619,8 +631,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -634,8 +647,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -697,8 +711,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -712,8 +727,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -809,8 +825,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -885,8 +902,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -900,8 +918,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -964,8 +983,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -1036,8 +1056,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1096,8 +1116,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1112,8 +1132,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1178,8 +1198,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1194,8 +1214,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1232,8 +1252,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1248,8 +1268,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1311,8 +1331,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1327,8 +1347,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1384,8 +1404,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1400,8 +1420,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1459,8 +1479,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1475,8 +1495,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1491,8 +1511,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1507,8 +1527,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1523,8 +1543,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1576,8 +1596,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1592,8 +1612,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1608,8 +1628,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1624,8 +1644,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1680,8 +1700,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1696,8 +1716,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1712,8 +1732,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1728,8 +1748,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1749,6 +1769,7 @@ export interface paths {
                 query?: {
                     cursor?: string;
                     limit?: number;
+                    status?: "draft" | "finalized";
                 };
                 header?: never;
                 path: {
@@ -1842,8 +1863,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1858,8 +1879,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1964,8 +1985,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1980,8 +2001,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -1996,8 +2017,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2057,8 +2078,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2073,8 +2094,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2089,8 +2110,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2142,8 +2163,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2158,8 +2179,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2174,8 +2195,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2190,8 +2211,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2303,8 +2324,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2319,8 +2340,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2358,8 +2379,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2374,8 +2395,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2443,6 +2464,7 @@ export interface paths {
                                 };
                             }[];
                         } | null;
+                        expectedUpdatedAt?: string;
                     };
                 };
             };
@@ -2528,8 +2550,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2544,8 +2566,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2560,24 +2582,87 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
-                /** @description Report is finalized. */
+                /** @description Report is finalized or changed elsewhere. */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        } | {
                             error: {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2661,8 +2746,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2677,8 +2762,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2816,8 +2901,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2832,8 +2917,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -2848,12 +2933,12 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
-                /** @description Stale report body version. */
+                /** @description Report is finalized or has a stale body version. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2952,6 +3037,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         fixtureName?: string;
+                        expectedUpdatedAt?: string;
                     };
                 };
             };
@@ -3046,8 +3132,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3062,8 +3148,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3078,8 +3164,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3090,12 +3176,75 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        } | {
                             error: {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3110,8 +3259,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3146,6 +3295,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         fixtureName?: string;
+                        expectedUpdatedAt?: string;
                     };
                 };
             };
@@ -3240,8 +3390,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3256,8 +3406,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3272,8 +3422,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3284,12 +3434,75 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        } | {
                             error: {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3304,8 +3517,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3336,7 +3549,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        expectedUpdatedAt?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Finalized. */
                 200: {
@@ -3410,6 +3629,22 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
                 /** @description Unauthorized. */
                 401: {
                     headers: {
@@ -3421,8 +3656,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3437,8 +3672,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3449,12 +3684,75 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        } | {
                             error: {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3485,7 +3783,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        expectedUpdatedAt?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Unfinalized. */
                 200: {
@@ -3559,6 +3863,22 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
                 /** @description Unauthorized. */
                 401: {
                     headers: {
@@ -3570,8 +3890,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3586,8 +3906,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3598,12 +3918,75 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        } | {
                             error: {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3660,8 +4043,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3676,8 +4059,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3692,8 +4075,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3747,8 +4130,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3763,8 +4146,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3822,8 +4205,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3838,8 +4221,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3929,8 +4312,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -3945,8 +4328,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4038,8 +4421,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4054,8 +4437,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4070,8 +4453,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4140,8 +4523,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4156,8 +4539,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4208,8 +4591,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4224,8 +4607,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4304,8 +4687,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4320,8 +4703,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4336,8 +4719,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4414,8 +4797,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4430,8 +4813,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4446,8 +4829,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4536,8 +4919,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4552,8 +4935,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4568,8 +4951,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4584,8 +4967,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4642,8 +5025,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4658,8 +5041,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4754,8 +5137,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4770,8 +5153,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4786,8 +5169,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4802,8 +5185,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4818,8 +5201,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4878,8 +5261,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4894,8 +5277,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4910,8 +5293,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4926,8 +5309,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -4986,8 +5369,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5002,8 +5385,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5018,8 +5401,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5071,8 +5454,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5124,8 +5507,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5140,8 +5523,8 @@ export interface paths {
                                 code: string;
                                 message: string;
                                 details?: unknown;
-                                requestId?: string;
                             };
+                            requestId: string;
                         };
                     };
                 };
@@ -5184,6 +5567,7 @@ export interface paths {
                             /** @enum {boolean} */
                             authenticated: true;
                             email: string;
+                            csrfToken: string;
                         };
                     };
                 };
@@ -5197,8 +5581,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5212,8 +5597,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5227,8 +5613,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5242,8 +5629,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5257,8 +5645,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5296,6 +5685,7 @@ export interface paths {
                             /** @enum {boolean} */
                             authenticated: true;
                             email: string;
+                            csrfToken: string;
                         };
                     };
                 };
@@ -5309,8 +5699,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5324,8 +5715,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5379,8 +5771,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5394,8 +5787,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5409,8 +5803,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5459,11 +5854,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "milestone";
@@ -5481,11 +5882,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "milestone";
@@ -5500,11 +5907,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "milestone";
@@ -5521,11 +5934,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5540,11 +5959,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5559,11 +5984,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5578,11 +6009,17 @@ export interface paths {
                                 id: string;
                                 occurredAt: string;
                                 actorUserId: string | null;
-                                actorLabel: string;
+                                actorLabel: string | null;
                                 /** Format: email */
                                 actorEmail: string | null;
-                                subjectLabel: string;
+                                /** @enum {string} */
+                                actorState: "available" | "deleted";
+                                subjectLabel: string | null;
+                                /** @enum {string} */
+                                subjectState: "available" | "deleted";
                                 projectLabel: string | null;
+                                /** @enum {string} */
+                                projectState: "none" | "available" | "deleted";
                                 requestId: string | null;
                                 /** @enum {string} */
                                 level: "detail";
@@ -5608,8 +6045,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5623,8 +6061,9 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
                         };
                     };
                 };
@@ -5638,8 +6077,1598 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
+                                details?: unknown;
                             };
-                            requestId?: string;
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/neon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Neon organization inventory. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            /** @enum {boolean} */
+                            projectsTruncated: false;
+                            /** @enum {number} */
+                            unavailableProjectCount: 0;
+                            projects: {
+                                id: string;
+                                name: string;
+                                regionId: string;
+                                pgVersion: number;
+                                createdAt: string;
+                                updatedAt: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                branchCount: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    count: number;
+                                };
+                                branchDetails: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    branches: {
+                                        id: string;
+                                        name: string;
+                                        parentId: string | null;
+                                        currentState: string;
+                                        default: boolean;
+                                        protected: boolean;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            projectsTruncated: boolean;
+                            unavailableProjectCount: number;
+                            projects: {
+                                id: string;
+                                name: string;
+                                regionId: string;
+                                pgVersion: number;
+                                createdAt: string;
+                                updatedAt: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                branchCount: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    count: number;
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                                branchDetails: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    branches: {
+                                        id: string;
+                                        name: string;
+                                        parentId: string | null;
+                                        currentState: string;
+                                        default: boolean;
+                                        protected: boolean;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/report-generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Admin-CSRF": string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded live canary report-generation observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "not_enabled";
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "pass";
+                            durationMs: number;
+                            target: {
+                                /** Format: email */
+                                accountEmail: string;
+                                projectId: string;
+                                reportId: string;
+                                reportNumber: number;
+                            };
+                            generation: {
+                                /** @enum {number} */
+                                httpStatus: 200;
+                                requestId: string | null;
+                                durationMs: number;
+                                requestedAt: string;
+                                finishedAt: string;
+                                reportUpdatedAt: string;
+                                generatedAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live";
+                                /** @enum {boolean} */
+                                idempotentReplay: false;
+                            };
+                            preview: {
+                                /** @enum {boolean} */
+                                schemaValid: true;
+                                sample: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                    }[];
+                                };
+                                counts: {
+                                    workers: number;
+                                    materials: number;
+                                    issues: number;
+                                    nextSteps: number;
+                                    summarySections: number;
+                                    imageAttachments: number;
+                                    documentAttachments: number;
+                                };
+                                truncated: boolean;
+                                bodySha256: string;
+                            };
+                            usage: {
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                latencyMs: number;
+                                /** @enum {boolean} */
+                                matched: true;
+                            };
+                            limits: {
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                reportGenerate: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiInputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiOutputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                            };
+                            /** @enum {string} */
+                            cleanup: "succeeded";
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "warning";
+                            durationMs: number;
+                            target: {
+                                /** Format: email */
+                                accountEmail: string;
+                                projectId: string;
+                                reportId: string;
+                                reportNumber: number;
+                            };
+                            generation: {
+                                /** @enum {number} */
+                                httpStatus: 200;
+                                requestId: string | null;
+                                durationMs: number;
+                                requestedAt: string;
+                                finishedAt: string;
+                                reportUpdatedAt: string;
+                                generatedAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live";
+                                /** @enum {boolean} */
+                                idempotentReplay: false;
+                            };
+                            preview: {
+                                /** @enum {boolean} */
+                                schemaValid: true;
+                                sample: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                    }[];
+                                };
+                                counts: {
+                                    workers: number;
+                                    materials: number;
+                                    issues: number;
+                                    nextSteps: number;
+                                    summarySections: number;
+                                    imageAttachments: number;
+                                    documentAttachments: number;
+                                };
+                                truncated: boolean;
+                                bodySha256: string;
+                            };
+                            usage: {
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                latencyMs: number;
+                                /** @enum {boolean} */
+                                matched: true;
+                            };
+                            limits: {
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                reportGenerate: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiInputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                                aiOutputTokens: {
+                                    limit: number | null;
+                                    used: number;
+                                    remaining: number | null;
+                                    resetAt: string;
+                                    overridden: boolean;
+                                };
+                            } | null;
+                            /** @enum {string} */
+                            cleanup: "succeeded" | "failed";
+                            warnings: ("limits_unavailable" | "sign_out_failed")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "fail";
+                            durationMs: number;
+                            /** @enum {string} */
+                            phase: "sign_in" | "target_read" | "mode_gate" | "generate" | "proof_read" | "usage_window" | "usage_proof" | "preview" | "limits" | "sign_out";
+                            /** @enum {string} */
+                            reason: "sign_in_failed" | "target_not_found" | "target_not_draft" | "conflict" | "live_mode_required" | "live_proof_failed" | "usage_proof_missing" | "usage_proof_ambiguous" | "preview_invalid" | "usage_limit_exceeded" | "rate_limited" | "provider_error" | "timeout" | "invalid_response" | "upstream_unavailable";
+                            /** @enum {string} */
+                            cleanup: "not_started" | "succeeded" | "failed";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Untrusted origin or invalid CSRF token. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/neon-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Neon Free-plan usage observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            organizationId: string;
+                            /** @enum {string} */
+                            plan: "free";
+                            /** @enum {boolean} */
+                            projectsTruncated: false;
+                            /** @enum {number} */
+                            unavailableProjectCount: 0;
+                            projects: {
+                                /** @enum {string} */
+                                status: "available";
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                periodStart: string;
+                                periodEnd: string;
+                                compute: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 360000;
+                                    /** @enum {string} */
+                                    unit: "cu_seconds";
+                                };
+                                storage: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 500000000;
+                                    /** @enum {string} */
+                                    unit: "bytes";
+                                };
+                                transferBytes: number;
+                            }[];
+                            organizationTransfer: {
+                                /** @enum {string} */
+                                status: "available";
+                                periodStart: string;
+                                periodEnd: string;
+                                used: number;
+                                /** @enum {number} */
+                                allowance: 5000000000;
+                                /** @enum {string} */
+                                unit: "bytes";
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "no_projects";
+                            };
+                            caveats: ("provider_values_may_lag" | "free_plan_published_reference" | "storage_uses_published_reference" | "transfer_requires_complete_project_coverage" | "not_invoice_or_credit_balance" | "published_allowances_can_change")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            organizationId: string;
+                            /** @enum {string} */
+                            plan: "free";
+                            projectsTruncated: boolean;
+                            unavailableProjectCount: number;
+                            projects: ({
+                                /** @enum {string} */
+                                status: "available";
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                periodStart: string;
+                                periodEnd: string;
+                                compute: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 360000;
+                                    /** @enum {string} */
+                                    unit: "cu_seconds";
+                                };
+                                storage: {
+                                    used: number;
+                                    /** @enum {number} */
+                                    allowance: 500000000;
+                                    /** @enum {string} */
+                                    unit: "bytes";
+                                };
+                                transferBytes: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                id: string;
+                                name: string;
+                                /** @enum {string} */
+                                effectivePermission: "VIEWER";
+                                /** @enum {string} */
+                                reason: "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                            })[];
+                            organizationTransfer: {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "incomplete_project_coverage" | "period_mismatch" | "invalid_response";
+                            };
+                            caveats: ("provider_values_may_lag" | "free_plan_published_reference" | "storage_uses_published_reference" | "transfer_requires_complete_project_coverage" | "not_invoice_or_credit_balance" | "published_allowances_can_change")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "unsupported_plan" | "unsafe_permissions" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/r2-capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Cloudflare R2 capacity observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            freeTierReference: {
+                                /** @enum {number} */
+                                storageGbMonth: 10;
+                                /** @enum {number} */
+                                classAOperations: 1000000;
+                                /** @enum {number} */
+                                classBOperations: 10000000;
+                                /** @enum {string} */
+                                appliesTo: "standard_only";
+                            };
+                            buckets: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {boolean} */
+                                truncated: false;
+                                items: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    jurisdiction: "default" | "eu" | "fedramp" | "unknown";
+                                    /** @enum {string|null} */
+                                    location: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc" | null;
+                                    /** @enum {string} */
+                                    defaultStorageClass: "standard" | "infrequent_access" | "unknown";
+                                    createdAt: string | null;
+                                }[];
+                            };
+                            storage: {
+                                /** @enum {string} */
+                                status: "available";
+                                standard: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                                infrequentAccess: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                            };
+                            operations: {
+                                /** @enum {string} */
+                                status: "available";
+                                windowStart: string;
+                                windowEnd: string;
+                                classA: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 1000000;
+                                    estimatedRemaining: number;
+                                };
+                                classB: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 10000000;
+                                    estimatedRemaining: number;
+                                };
+                                freeRequests: number;
+                                /** @enum {number} */
+                                unclassifiedRequests: 0;
+                            };
+                            caveats: ("storage_snapshot_not_gb_month" | "storage_metrics_may_lag" | "infrequent_access_not_covered_by_free_tier" | "operations_estimated_from_analytics" | "unclassified_operations_excluded" | "bucket_inventory_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            freeTierReference: {
+                                /** @enum {number} */
+                                storageGbMonth: 10;
+                                /** @enum {number} */
+                                classAOperations: 1000000;
+                                /** @enum {number} */
+                                classBOperations: 10000000;
+                                /** @enum {string} */
+                                appliesTo: "standard_only";
+                            };
+                            buckets: {
+                                /** @enum {string} */
+                                status: "available";
+                                truncated: boolean;
+                                items: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    jurisdiction: "default" | "eu" | "fedramp" | "unknown";
+                                    /** @enum {string|null} */
+                                    location: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc" | null;
+                                    /** @enum {string} */
+                                    defaultStorageClass: "standard" | "infrequent_access" | "unknown";
+                                    createdAt: string | null;
+                                }[];
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            storage: {
+                                /** @enum {string} */
+                                status: "available";
+                                standard: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                                infrequentAccess: {
+                                    publishedPayloadBytes: number;
+                                    publishedMetadataBytes: number;
+                                    publishedObjects: number;
+                                    uploadingPayloadBytes: number;
+                                    uploadingMetadataBytes: number;
+                                    uploadingObjects: number;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            operations: {
+                                /** @enum {string} */
+                                status: "available";
+                                windowStart: string;
+                                windowEnd: string;
+                                classA: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 1000000;
+                                    estimatedRemaining: number;
+                                };
+                                classB: {
+                                    estimatedUsed: number;
+                                    /** @enum {number} */
+                                    publishedAllowance: 10000000;
+                                    estimatedRemaining: number;
+                                };
+                                freeRequests: number;
+                                unclassifiedRequests: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                            };
+                            caveats: ("storage_snapshot_not_gb_month" | "storage_metrics_may_lag" | "infrequent_access_not_covered_by_free_tier" | "operations_estimated_from_analytics" | "unclassified_operations_excluded" | "bucket_inventory_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/sentry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Sentry aggregate issue and mobile session observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            unresolvedErrors: {
+                                /** @enum {string} */
+                                status: "available";
+                                count: number;
+                                /** @enum {string} */
+                                countKind: "exact" | "lower_bound";
+                                /** @enum {number} */
+                                cap: 100;
+                            };
+                            mobileSessions: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {string} */
+                                window: "last_24_hours";
+                                windowStart: string;
+                                windowEnd: string;
+                                totalSessions: number;
+                                healthySessions: number;
+                                erroredSessions: number;
+                                abnormalSessions: number;
+                                crashedSessions: number;
+                            };
+                            caveats: ("issue_groups_not_events" | "mobile_sessions_only" | "telemetry_coverage_applies" | "issue_count_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            unresolvedErrors: {
+                                /** @enum {string} */
+                                status: "available";
+                                count: number;
+                                /** @enum {string} */
+                                countKind: "exact" | "lower_bound";
+                                /** @enum {number} */
+                                cap: 100;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "forbidden" | "not_found" | "rate_limited" | "timeout" | "invalid_response" | "provider_unavailable" | "no_session_data";
+                            };
+                            mobileSessions: {
+                                /** @enum {string} */
+                                status: "available";
+                                /** @enum {string} */
+                                window: "last_24_hours";
+                                windowStart: string;
+                                windowEnd: string;
+                                totalSessions: number;
+                                healthySessions: number;
+                                erroredSessions: number;
+                                abnormalSessions: number;
+                                crashedSessions: number;
+                            } | {
+                                /** @enum {string} */
+                                status: "unknown";
+                                /** @enum {string} */
+                                reason: "not_configured" | "forbidden" | "not_found" | "rate_limited" | "timeout" | "invalid_response" | "provider_unavailable" | "no_session_data";
+                            };
+                            caveats: ("issue_groups_not_events" | "mobile_sessions_only" | "telemetry_coverage_applies" | "issue_count_truncated")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "forbidden" | "not_found" | "rate_limited" | "timeout" | "invalid_response" | "provider_unavailable" | "no_session_data";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/storage-lifecycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only application storage lifecycle observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            rollout: {
+                                armedAt: string | null;
+                                enforceAfter: string | null;
+                                accountDeleteEnabled: boolean;
+                                leaseEnforcementActive: boolean;
+                                accountDeletionAvailable: boolean;
+                                updatedAt: string;
+                            };
+                            jobs: {
+                                total: number;
+                                initial: number;
+                                final: number;
+                                dueNow: number;
+                                scheduled: number;
+                                activeClaims: number;
+                                staleClaims: number;
+                                retrying: number;
+                                maxAttemptCount: number;
+                                oldestDueAt: string | null;
+                                nextRunAfter: string | null;
+                            };
+                            caveats: ("db_state_not_worker_liveness" | "queue_counts_not_provider_health" | "empty_queue_not_execution_proof")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "rollout_state_missing" | "timeout" | "database_unavailable" | "invalid_response";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Harpa AI usage ledger observation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            /** @enum {string} */
+                            source: "harpa_usage_ledger";
+                            monthToDate: {
+                                windowStart: string;
+                                windowEnd: string;
+                                recordedEventCount: number;
+                                calls: {
+                                    live: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    record: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    replay: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                };
+                                successfulProviderUsage: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cachedTokens: number;
+                                    inputSeconds: number;
+                                };
+                                operations: {
+                                    chat: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    generateReport: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    transcribe: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                };
+                                providers: {
+                                    /** @enum {string} */
+                                    provider: "openai" | "groq" | "kimi" | "other";
+                                    recordedEventCount: number;
+                                    calls: {
+                                        live: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        record: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        replay: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                    };
+                                    successfulProviderUsage: {
+                                        inputTokens: number;
+                                        outputTokens: number;
+                                        cachedTokens: number;
+                                        inputSeconds: number;
+                                    };
+                                    lastRecordedAt: string;
+                                }[];
+                                unclassifiedVendorEventCount: number;
+                                missingInputSecondsEventCount: number;
+                                lastRecordedAt: string | null;
+                                warnings: ("unclassified_vendor_events" | "missing_transcription_duration")[];
+                            };
+                            last24Hours: {
+                                windowStart: string;
+                                windowEnd: string;
+                                recordedEventCount: number;
+                                calls: {
+                                    live: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    record: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                    replay: {
+                                        succeeded: number;
+                                        failed: number;
+                                        total: number;
+                                    };
+                                };
+                                successfulProviderUsage: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cachedTokens: number;
+                                    inputSeconds: number;
+                                };
+                                operations: {
+                                    chat: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    generateReport: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                    transcribe: {
+                                        liveSucceeded: number;
+                                        liveFailed: number;
+                                        recordSucceeded: number;
+                                        recordFailed: number;
+                                        replaySucceeded: number;
+                                        replayFailed: number;
+                                    };
+                                };
+                                providers: {
+                                    /** @enum {string} */
+                                    provider: "openai" | "groq" | "kimi" | "other";
+                                    recordedEventCount: number;
+                                    calls: {
+                                        live: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        record: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                        replay: {
+                                            succeeded: number;
+                                            failed: number;
+                                            total: number;
+                                        };
+                                    };
+                                    successfulProviderUsage: {
+                                        inputTokens: number;
+                                        outputTokens: number;
+                                        cachedTokens: number;
+                                        inputSeconds: number;
+                                    };
+                                    lastRecordedAt: string;
+                                }[];
+                                unclassifiedVendorEventCount: number;
+                                missingInputSecondsEventCount: number;
+                                lastRecordedAt: string | null;
+                                warnings: ("unclassified_vendor_events" | "missing_transcription_duration")[];
+                            };
+                            providerCapacity: {
+                                openai: {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_observed";
+                                };
+                                groq: {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_observed";
+                                };
+                                kimi: {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_observed";
+                                };
+                            };
+                            caveats: ("best_effort_ledger" | "not_provider_billing" | "replay_not_provider_usage" | "record_mode_calls_provider" | "deleted_history_excluded")[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "schema_unavailable" | "database_unavailable" | "timeout" | "invalid_response";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/operations/fly-inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bounded, read-only Fly application infrastructure inventory. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                            organizationSlug: string;
+                            configuredAppCount: number;
+                            /** @enum {number} */
+                            unavailableConfiguredAppCount: 0;
+                            apps: {
+                                id: string;
+                                name: string;
+                                status: string;
+                                network: string | null;
+                                reportedMachineCount: number;
+                                reportedVolumeCount: number;
+                                machines: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        processGroup: string | null;
+                                        region: string;
+                                        cpuKind: string;
+                                        cpus: number;
+                                        memoryMb: number;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                };
+                                volumes: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    /** @enum {boolean} */
+                                    truncated: false;
+                                    returnedAllocatedGb: number;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        sizeGb: number;
+                                        region: string;
+                                        encrypted: boolean;
+                                        attachedMachineId: string | null;
+                                        createdAt: string;
+                                        snapshotRetentionDays: number | null;
+                                        autoBackupEnabled: boolean | null;
+                                    }[];
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "partial";
+                            organizationSlug: string;
+                            configuredAppCount: number;
+                            unavailableConfiguredAppCount: number;
+                            apps: {
+                                id: string;
+                                name: string;
+                                status: string;
+                                network: string | null;
+                                reportedMachineCount: number;
+                                reportedVolumeCount: number;
+                                machines: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        processGroup: string | null;
+                                        region: string;
+                                        cpuKind: string;
+                                        cpus: number;
+                                        memoryMb: number;
+                                        createdAt: string;
+                                        updatedAt: string;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                                volumes: {
+                                    /** @enum {string} */
+                                    status: "available";
+                                    truncated: boolean;
+                                    returnedAllocatedGb: number;
+                                    items: {
+                                        id: string;
+                                        name: string;
+                                        state: string;
+                                        sizeGb: number;
+                                        region: string;
+                                        encrypted: boolean;
+                                        attachedMachineId: string | null;
+                                        createdAt: string;
+                                        snapshotRetentionDays: number | null;
+                                        autoBackupEnabled: boolean | null;
+                                    }[];
+                                } | {
+                                    /** @enum {string} */
+                                    status: "unknown";
+                                    /** @enum {string} */
+                                    reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                                };
+                            }[];
+                        } | {
+                            observedAt: string;
+                            /** @enum {string} */
+                            status: "unknown";
+                            /** @enum {string} */
+                            reason: "not_configured" | "timeout" | "rate_limited" | "forbidden" | "not_found" | "invalid_response" | "provider_unavailable";
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                            requestId: string;
                         };
                     };
                 };

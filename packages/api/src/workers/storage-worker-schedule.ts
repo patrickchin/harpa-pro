@@ -5,6 +5,7 @@ export const LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE = {
   minIdlePollMs: 1_000,
   errorPollMs: 60_000,
   leasePruneIntervalMs: DAY_MS,
+  memorySampleIntervalMs: 60 * 60_000,
   maxJobsPerPass: 10,
 } as const;
 

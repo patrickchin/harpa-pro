@@ -1,7 +1,7 @@
 name: Detect changed paths
 description: >
   Compute boolean outputs for each top-level area of the monorepo
-  (api, mobile, site, admin, cli, etc.) so heavy CI jobs can
+  (api, mobile, site, admin, dashboard, cli, etc.) so heavy CI jobs can
   short-circuit on PRs that don't touch their code. Required-check
   jobs gate downstream steps on these outputs instead of using
   workflow-level `paths:` filters (which would report the workflow as
@@ -27,7 +27,7 @@ outputs:
     description: True if API migrations or trusted preview-gate wiring changed.
     value: ${{ steps.filter.outputs.api-migrations }}
   mobile:
-    description: True if apps/mobile or Maestro E2E flows changed.
+    description: True if apps/mobile, Maestro E2E flows, or the launch runner changed.
     value: ${{ steps.filter.outputs.mobile }}
   site:
     description: True if apps/site changed.
@@ -35,6 +35,9 @@ outputs:
   admin:
     description: True if the standalone admin site or its preview wiring changed.
     value: ${{ steps.filter.outputs.admin }}
+  dashboard:
+    description: True if the office dashboard or its preview wiring changed.
+    value: ${{ steps.filter.outputs.dashboard }}
   cli:
     description: True if apps/cli changed.
     value: ${{ steps.filter.outputs.cli }}
@@ -58,6 +61,7 @@ runs:
             - 'pnpm-workspace.yaml'
             - 'turbo.json'
             - 'tsconfig*.json'
+            - '.github/dependabot.yml'
             - '.github/workflows/**'
             - '.github/actions/**'
           api:
@@ -102,9 +106,11 @@ runs:
             - 'scripts/journeys/**'
           mobile:
             - '.maestro/**'
+            - 'scripts/ci/run-maestro-launch-smoke.sh'
+            - 'scripts/maestro/prepare-android-emulator.sh'
+            - 'scripts/ci/__tests__/prepare-android-emulator.test.sh'
             - 'apps/mobile/**'
             - 'packages/api-contract/**'
-            - 'packages/report-core/**'
             - 'pnpm-lock.yaml'
           site:
             - 'apps/site/**'
@@ -120,6 +126,29 @@ runs:
             - 'pnpm-lock.yaml'
             - 'pnpm-workspace.yaml'
             - 'tsconfig.base.json'
+          dashboard:
+            - 'apps/dashboard/**'
+            - 'packages/api-contract/**'
+            - 'packages/design-tokens/**'
+            - '.github/actions/changed-paths/**'
+            - '.github/actions/setup-monorepo/**'
+            - '.github/workflows/dashboard-*.yml'
+            - '.github/workflows/pages-preview-ref.yml'
+            - '.github/workflows/pr-preview.yml'
+            - 'infra/fly/fly.preview.toml'
+            - 'scripts/ci/build-cloudflare-pages.sh'
+            - 'scripts/ci/verify-pages-deployment.sh'
+            - 'scripts/ci/verify-dashboard-pages.sh'
+            - 'scripts/ci/__tests__/cloudflare-pages-build.test.sh'
+            - 'scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh'
+            - 'scripts/ci/__tests__/dashboard-*.test.sh'
+            - 'scripts/ci/__tests__/verify-pages-deployment.test.sh'
+            - 'scripts/ci/__tests__/verify-dashboard-pages.test.sh'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'pnpm-workspace.yaml'
+            - 'turbo.json'
+            - 'tsconfig*.json'
           cli:
             - 'apps/cli/**'
             - 'packages/api-contract/**'

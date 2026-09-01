@@ -3,8 +3,7 @@
  *
  * Ported from
  * `../haru3-reports/apps/mobile/lib/export-report-pdf.test.ts` on
- * branch `dev` and adapted for the v4 `@harpa/report-core` schema
- * (no `meta.reportType` field).
+ * branch `dev` and adapted for the v4 persisted report contract.
  *
  * Strategy: stub the native modules (`expo-print`, `expo-sharing`,
  * `expo-linking`, `expo-file-system`, `react-native`) at module
@@ -12,7 +11,7 @@
  * pure node without dragging in native bindings.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 const {
   fileContents,
@@ -134,21 +133,19 @@ import {
   shareSavedReportPdf,
 } from './export-report-pdf';
 
-function makeReport(title: string): GeneratedSiteReport {
+function makeReport(title: string): reports.ReportBody {
   return {
-    report: {
-      meta: {
-        title,
-        summary: 'Summary',
-        visitDate: '2026-04-20',
-      },
-      weather: null,
-      workers: null,
-      materials: [],
-      issues: [],
-      nextSteps: [],
-      sections: [],
+    meta: {
+      title,
+      summary: 'Summary',
+      visitDate: '2026-04-20',
     },
+    weather: null,
+    workers: [],
+    materials: [],
+    issues: [],
+    nextSteps: [],
+    summarySections: [],
   };
 }
 

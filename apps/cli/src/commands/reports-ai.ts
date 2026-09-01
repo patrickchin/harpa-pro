@@ -18,7 +18,7 @@ import { defineCommand } from 'citty';
 import chalk from 'chalk';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { renderReport } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
@@ -76,25 +76,16 @@ export const reportsGenerateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { fixtureName?: string } = {};
-    if (typeof args.fixture === 'string' && args.fixture.length > 0) body.fixtureName = args.fixture;
     const idemKey = args['idempotency-key'];
-    const headers =
-      typeof idemKey === 'string' && idemKey.length > 0
-        ? { 'idempotency-key': idemKey }
-        : undefined;
-    await runRequest({
+    process.exit(await reportsGenerate({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
+      fixtureName: typeof args.fixture === 'string' && args.fixture.length > 0 ? args.fixture : undefined,
+      idempotencyKey: typeof idemKey === 'string' && idemKey.length > 0 ? idemKey : undefined,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/reports/{number}/generate', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-          body,
-          ...(headers ? { headers } : {}),
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
-    });
+    }));
   },
 });
 
@@ -138,25 +129,16 @@ export const reportsRegenerateCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { fixtureName?: string } = {};
-    if (typeof args.fixture === 'string' && args.fixture.length > 0) body.fixtureName = args.fixture;
     const idemKey = args['idempotency-key'];
-    const headers =
-      typeof idemKey === 'string' && idemKey.length > 0
-        ? { 'idempotency-key': idemKey }
-        : undefined;
-    await runRequest({
+    process.exit(await reportsRegenerate({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
+      fixtureName: typeof args.fixture === 'string' && args.fixture.length > 0 ? args.fixture : undefined,
+      idempotencyKey: typeof idemKey === 'string' && idemKey.length > 0 ? idemKey : undefined,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/reports/{number}/regenerate', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-          body,
-          ...(headers ? { headers } : {}),
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
-    });
+    }));
   },
 });
 
@@ -192,16 +174,13 @@ export const reportsFinalizeCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    process.exit(await reportsFinalize({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/reports/{number}/finalize', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
-    });
+    }));
   },
 });
 
@@ -237,16 +216,13 @@ export const reportsUnfinalizeCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    process.exit(await reportsUnfinalize({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/reports/{number}/unfinalize', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} Unfinalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
-    });
+    }));
   },
 });
 
@@ -282,15 +258,12 @@ export const reportsPdfCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    process.exit(await reportsPdf({
+      client,
+      project: String(args.project),
+      number: Number(args.number),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/projects/{project}/reports/{number}/pdf', {
-          params: { path: { project: String(args.project), number: Number(args.number) } },
-        }),
-      format: (data) =>
-        `${chalk.green('✓')} PDF ready\n  URL:        ${data.url}\n  Expires at: ${data.expiresAt}`,
-    });
+    }));
   },
 });

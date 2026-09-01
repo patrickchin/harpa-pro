@@ -1,5 +1,9 @@
 # Fastlane Release Tooling Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
@@ -24,22 +28,23 @@ Markdown docs.
 
 ## File map
 
-| File | Change | Responsibility |
-| --- | --- | --- |
-| `Gemfile` | create | Pin Fastlane through Bundler so every machine uses the same release tooling. |
-| `Gemfile.lock` | create | Generated dependency lockfile from `bundle install`. |
-| `apps/mobile/eas.json` | modify | Add named `preview` submit profile and make production submit intent explicit. |
-| `apps/mobile/fastlane/Fastfile` | create | Define Fastlane lanes for doctor, metadata, EAS build, EAS submit, beta, and release. |
-| `apps/mobile/fastlane/metadata/ios/en-US/*.txt` | create | App Store metadata source files managed by Fastlane `deliver`. |
-| `apps/mobile/fastlane/metadata/android/en-US/*.txt` | create | Play Store metadata source files managed by Fastlane `supply`. |
-| `docs/v4/arch-ops.md` | modify | Document Fastlane metadata ownership and EAS build/submit ownership. |
-| `docs/v4/plan-p5-beta-ga.md` | modify | Record the completed Fastlane release-tooling setup under P5.1. |
+| File                                                | Change | Responsibility                                                                        |
+| --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------- |
+| `Gemfile`                                           | create | Pin Fastlane through Bundler so every machine uses the same release tooling.          |
+| `Gemfile.lock`                                      | create | Generated dependency lockfile from `bundle install`.                                  |
+| `apps/mobile/eas.json`                              | modify | Add named `preview` submit profile and make production submit intent explicit.        |
+| `apps/mobile/fastlane/Fastfile`                     | create | Define Fastlane lanes for doctor, metadata, EAS build, EAS submit, beta, and release. |
+| `apps/mobile/fastlane/metadata/ios/en-US/*.txt`     | create | App Store metadata source files managed by Fastlane `deliver`.                        |
+| `apps/mobile/fastlane/metadata/android/en-US/*.txt` | create | Play Store metadata source files managed by Fastlane `supply`.                        |
+| `docs/v4/arch-ops.md`                               | modify | Document Fastlane metadata ownership and EAS build/submit ownership.                  |
+| `docs/v4/plan-p5-beta-ga.md`                        | modify | Record the completed Fastlane release-tooling setup under P5.1.                       |
 
 ---
 
 ## Task 1: Install Fastlane with Bundler
 
 **Files:**
+
 - Create: `Gemfile`
 - Create: `Gemfile.lock`
 
@@ -103,6 +108,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 2: Add EAS submit profiles
 
 **Files:**
+
 - Modify: `apps/mobile/eas.json`
 
 - [ ] **Step 1: Replace the submit section**
@@ -158,6 +164,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3: Add checked-in store metadata
 
 **Files:**
+
 - Create: `apps/mobile/fastlane/metadata/ios/en-US/name.txt`
 - Create: `apps/mobile/fastlane/metadata/ios/en-US/subtitle.txt`
 - Create: `apps/mobile/fastlane/metadata/ios/en-US/description.txt`
@@ -331,6 +338,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4: Add Fastlane lanes
 
 **Files:**
+
 - Create: `apps/mobile/fastlane/Fastfile`
 
 - [ ] **Step 1: Create the Fastfile**
@@ -570,6 +578,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 5: Document the release workflow
 
 **Files:**
+
 - Modify: `docs/v4/arch-ops.md`
 - Modify: `docs/v4/plan-p5-beta-ga.md`
 
@@ -592,23 +601,23 @@ In `docs/v4/arch-ops.md`, after the mobile build-profile bullets and before
 `- **Docs site**`, add:
 
 ````md
-  Release operators run Fastlane from the repo root:
+Release operators run Fastlane from the repo root:
 
-  ```sh
-  bundle install --path vendor/bundle
-  bundle exec fastlane doctor
-  bundle exec fastlane beta
-  bundle exec fastlane release
-  ```
+```sh
+bundle install --path vendor/bundle
+bundle exec fastlane doctor
+bundle exec fastlane beta
+bundle exec fastlane release
+```
 
-  `doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
-  and metadata files, then prints the EAS commands without uploading
-  metadata, starting a build, or submitting a binary. `beta` pushes
-  preview/internal store metadata, then starts the `preview` EAS build
-  with `--auto-submit-with-profile preview` so EAS submits the binaries
-  produced by that build. `release` does the same for production. Store,
-  Expo, Apple, and Google credentials stay outside git and come from the
-  authenticated local tools or environment variables.
+`doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
+and metadata files, then prints the EAS commands without uploading
+metadata, starting a build, or submitting a binary. `beta` pushes
+preview/internal store metadata, then starts the `preview` EAS build
+with `--auto-submit-with-profile preview` so EAS submits the binaries
+produced by that build. `release` does the same for production. Store,
+Expo, Apple, and Google credentials stay outside git and come from the
+authenticated local tools or environment variables.
 ````
 
 - [ ] **Step 3: Update the deployment flow lines**
@@ -616,25 +625,25 @@ In `docs/v4/arch-ops.md`, after the mobile build-profile bullets and before
 In `docs/v4/arch-ops.md`, replace:
 
 ```md
-  ↳ EAS staging build (TestFlight internal — planned)
+↳ EAS staging build (TestFlight internal — planned)
 ```
 
 with:
 
 ```md
-  ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
+↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 ```
 
 Replace:
 
 ```md
-  ↳ EAS production build (manual approve — planned)
+↳ EAS production build (manual approve — planned)
 ```
 
 with:
 
 ```md
-  ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
+↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
 
 - [ ] **Step 4: Record the completed P5.1 setup item**
@@ -660,6 +669,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6: Final validation and review
 
 **Files:**
+
 - Validate only.
 
 - [ ] **Step 1: Re-run the safe lane**

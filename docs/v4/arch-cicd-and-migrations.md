@@ -1,45 +1,46 @@
-# CI/CD & Migrations
+# CI/CD and migrations
 
 > Companion: [arch-database.md](arch-database.md), [arch-ops.md](arch-ops.md),
 > [pitfalls.md](pitfalls.md).
 >
-> **Status**: live. The Fly `release_command` migration steps, advisory-lock
-> loaders, application `/readyz` check, separate `/admin/readyz` check, and
-> expand-contract rules described below are all implemented. Updates land
-> here when behaviour changes.
+> **Status:** live and audited on 2026-08-04. Fly release commands, migration
+> locks, readiness checks, and pre-deploy branches are implemented. The limits
+> in this document are part of the operating contract.
+
+The application `.notx.sql` required-head parser, AI usage index, and migration
+lock polling below are an unmerged draft stack.
 
 ## Why this doc exists
 
-Production was returning `200 OK` on `/healthz` while every DB-backed route
-500'd with `relation "app.…" does not exist`. The Neon prod branch had never
-had a migration applied. CI/CD on `main` just ran `flyctl deploy`. There was
-no migration step on the prod path, and `/healthz` did not touch the DB.
+Before the current pipeline, production returned `200 OK` on `/healthz` while
+database routes failed with `relation "app.…" does not exist`. The production
+branch had no applied migrations. The old pipeline only ran `flyctl deploy`.
 
 Two independent failures combined:
 
-1. **No migration step on the prod path.** `pr-preview.yml` runs
-   `pnpm --filter @harpa/api db:migrate`; `api-prod.yml` does not.
-2. **Liveness ≠ readiness.** `/healthz` was a static literal — it could not
-   distinguish "process is up" from "process is up _and_ able to serve traffic
-   against the current schema". Fly's health check was therefore green.
+1. The old production path had no migration step.
+2. `/healthz` checked process liveness, not database readiness.
 
-Both failure modes get a fix. Neither one alone is enough.
+The current pipeline addresses both failures. Neither control is sufficient
+by itself.
 
 ---
 
 ## Decision
 
-**Hybrid: Fly `release_command` for the apply, CI guard for the visibility,
-build-time manifest for the readiness check.**
+Fly owns production migration application. CI checks filenames and creates
+recovery points. The image contains the required migration heads.
 
 - **Apply.** The application and admin migration streams run serially inside
   the Fly release machine via `db:migrate` and `db:migrate:admin`. They use
   independent `DATABASE_URL` and `ADMIN_DATABASE_URL` secrets, ledgers, and
-  advisory locks. Fly only promotes the new image if both commands exit 0.
-- **Guard.** CI does **not** apply migrations to prod itself, but it does
-  refuse to deploy if the build contains new migration files whose
-  pre-conditions look wrong (see "CI guard" below). This is cheap insurance
-  against silently-skipped migrations.
+  session-level advisory locks. The application migrator polls
+  `pg_try_advisory_lock` because it can run `.notx.sql` concurrent index work.
+  Each unsuccessful poll statement finishes before the next attempt. Fly only
+  promotes the new image if both commands exit 0.
+- **Guard.** CI does not apply production migrations. It checks filename
+  syntax, duplicate numeric prefixes, and the presence of both migration
+  streams. It does not detect edits, renames, or deletions of applied files.
 - **Verify.** `/readyz` opens a real application DB connection and checks
   that the latest filename in `packages/api/migrations/` (captured into the
   image at build time as `MIGRATIONS_REQUIRED_HEAD`) is present in
@@ -59,23 +60,28 @@ private `pr-N` child from `main` with no compute, adds a disabled endpoint,
 replaces every inherited database and role with a new empty per-PR database
 owned by a child-only role, and enables or exposes no connection URI until that
 sanitation is proved. No production rows or parent-valid passwords remain in
-the public preview. Production snapshots and scheduled pruning run
+the public preview. Production recovery branches and scheduled pruning run
 independently in both Neon projects.
 
-Hosted PR browser admin login is intentionally disabled: Cloudflare's dynamic
-Pages preview origins cannot satisfy the exact-origin cookie policy without
-cross-workflow coordination. The PR gate instead runs the full admin browser
-flow locally against two independent Testcontainers databases. Shared
-development is the first hosted environment for browser verification.
+Hosted admin previews keep the exact-origin cookie policy. A credential-free
+workflow mirrors an eligible pull request head to Git branch `pr-N`;
+Cloudflare Git builds the stable `pr-N.harpa-pro-admin.pages.dev` alias against
+`harpa-pro-api-pr-N.fly.dev`. The PR gate also runs the full admin browser flow
+locally against two independent Testcontainers databases.
+
+The dashboard uses the same exact head-SHA `pr-N` Pages contract. Cloudflare
+connected the existing project to `patrickchin/harpa-pro` in place on
+2026-08-05. Its live browser lane runs on the stable branch alias. The matching
+Fly preview separately verifies the same immutable pull-request head SHA first.
 
 ### Alternatives rejected
 
-| Option                                                    | Why rejected                                                                                                                                                                                                                                                                                                                                            |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **CI-only migrate before `flyctl deploy`.**               | Requires the prod `DATABASE_URL` in GitHub Actions secrets, broadens the blast radius for a leaked workflow token, and decouples the migration from the rollout. If migrate succeeds but deploy fails, prod is on a schema the running code doesn't expect. If deploy succeeds but a later commit forgets the CI step, we are back to today's incident. |
-| **Release-command-only, no CI guard, no manifest check.** | Loses the cross-check. If a developer deletes a migration file or renames one after it's already applied to prod, `db:migrate` is silently a no-op and the symptom is the same as today. The manifest check on `/readyz` catches "code ahead of schema"; the CI guard catches "migration file renamed/removed".                                         |
-| **Drizzle-kit journal-managed migrator.**                 | Our migrator is intentionally bespoke (plain SQL + `app._migrations`). Adopting Drizzle's journal is orthogonal scope — captured as an open question, not a blocker.                                                                                                                                                                                    |
-| **Down migrations / rollback scripts.**                   | Project stance is forward-only, expand-contract. Rollback is "deploy the previous image"; the previous image must remain compatible with the newer schema. See §"Expand-contract rules".                                                                                                                                                                |
+| Option                                       | Why rejected                                                                                                                                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CI-only migrate before `flyctl deploy`.**  | Requires the production URL in GitHub Actions and separates the migration from the rollout. A migration can succeed before a failed deploy.                                              |
+| **Release-command-only, no filename guard.** | A malformed name can change lexical order or make the image fail its readiness contract. The current guard catches names and duplicate prefixes only.                                    |
+| **Drizzle-kit journal-managed migrator.**    | The current loader uses plain SQL and `app._migrations`. It has no checksum drift check.                                                                                                 |
+| **Down migrations / rollback scripts.**      | Project stance is forward-only, expand-contract. Rollback is "deploy the previous image"; the previous image must remain compatible with the newer schema. See §"Expand-contract rules". |
 
 ---
 
@@ -83,9 +89,10 @@ development is the first hosted environment for browser verification.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  API-changing PR opened / synchronized                                 │
+│  API or browser-app PR opened / synchronized                           │
 │   • App Neon pr-<n> created from app dev                               │
 │   • Admin Neon pr-<n> created from admin dev                           │
+│   • Eligible focused main hotfixes use sanitized empty main children   │
 │   • Fly app harpa-pro-api-pr-<n> created/deployed                      │
 │       └─ release_command applies app then admin migrations             │
 │       └─ /readyz and /admin/readyz verified post-deploy                │
@@ -93,55 +100,58 @@ development is the first hosted environment for browser verification.
 │   • Sticky PR comment posts the preview URL                            │
 └────────────────────────────────────────────────────────────────────────┘
                                   │
-                            merge to main
+                             merge to dev
                                   ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│  api-prod.yml                                                          │
+│  api-dev.yml                                                           │
 │                                                                        │
-│   1. CI guard job                                                      │
-│      • verifies every file in packages/api/migrations/ matches         │
-│        ^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$ (sequential numeric prefix)   │
-│      • applies the same filename checks to admin-migrations/            │
-│      • verifies the set of files is a strict superset of the previous  │
-│        green main build (no rename, no delete) — uses                  │
-│        actions/cache keyed on "migrations-manifest-prod"               │
-│      • computes both required migration heads                          │
-│      • fails build if any check fails                                  │
-│                                                                        │
-│   2. Blocking pre-deploy snapshots                                     │
-│      • creates snapshot-<first-12-of-sha> in both Neon projects        │
-│      • failure or missing Neon credentials aborts before migrations    │
-│                                                                        │
-│   3. flyctl deploy with both migration-head build arguments            │
+│   1. Apply both migrations from GitHub Actions                         │
+│   2. flyctl deploy with both migration-head build arguments            │
 │      └─ Fly builds image                                               │
 │      └─ Fly starts a release machine                                   │
 │           └─ release_command runs db:migrate then db:migrate:admin      │
-│               • each migrator acquires its own advisory lock           │
+│               • each migrator acquires its own session advisory lock   │
 │               • each applies pending files in lexical order            │
 │               • exits non-zero on first failure → Fly aborts rollout   │
-│      └─ Fly rolls new image onto app machines one at a time            │
+│      └─ Fly rolls the image onto app and storage-worker Machines       │
 │           └─ each new machine must pass GET /readyz                    │
 │               • opens real DB connection                               │
 │               • SELECT to_regclass('app._migrations') is non-null      │
-│               • SELECT name FROM app._migrations ORDER BY applied_at   │
-│                 DESC LIMIT 1 = MIGRATIONS_REQUIRED_HEAD                │
+│               • SELECT name FROM app._migrations ORDER BY name DESC    │
+│                 LIMIT 1 = MIGRATIONS_REQUIRED_HEAD                     │
 │               • 200 only if all checks pass                            │
-│           └─ Fly auto-rollback if /readyz fails grace period           │
+│           └─ Fly halts the rollout when new Machines stay unhealthy   │
 │                                                                        │
-│   4. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
-│      https://harpa-pro-api.fly.dev/readyz; override via repo var)      │
-│      and /admin/readyz; fail the workflow if either is not 200.         │
+│   3. Repair and verify storage-worker topology, then arm leases         │
+│   4. Verify /readyz, /admin/readyz, and post-deploy journeys            │
+└────────────────────────────────────────────────────────────────────────┘
+                                  │
+                     open dev-to-main promotion PR
+                                  ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  main-gate.yml                                                         │
+│   • dev /healthz.gitCommit must equal the PR head SHA                  │
+│   • production journeys run against that exact dev deployment         │
+└────────────────────────────────────────────────────────────────────────┘
+                                  │
+                             merge to main
+                                  ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  api-prod.yml                                                          │
+│   1. Check migration filenames and duplicate prefixes                  │
+│   2. Prune and create app and admin pre-deploy branches                │
+│   3. Deploy through infra/fly/deploy.sh                                 │
+│   4. Verify both readiness routes and production journeys              │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Backend previews, dev, and prod use the **same** migration mechanism:
-Fly's `release_command` runs both migration streams inside the release
-machine, against the staged `DATABASE_URL` and `ADMIN_DATABASE_URL`. The
-blocking application and admin snapshots are production-only; both must
-succeed before prod can enter that shared deploy path. Before applying any
-admin DDL, the admin loader rejects a matching direct/pooler endpoint and
-then probes the connected database for `app._migrations`. Finding the
-application ledger aborts the release without creating the `admin` schema.
+Preview and production deployments apply both streams in Fly's release
+machine. Development first applies both streams from GitHub Actions. Its Fly
+release command then confirms that no work remains. Production alone creates
+blocking recovery branches before deployment.
+
+The admin loader rejects a database endpoint that matches the application
+endpoint. It also rejects a database that contains `app._migrations`.
 
 ---
 
@@ -155,25 +165,61 @@ post-merge-only column is a blind spot: a regression in code/scripts
 exclusively exercised by those workflows ships to the target
 environment and only surfaces when the deploy fires.
 
-| Workflow                      |   PR-gated    | Push (dev / main)     | What it catches                                                                                                            |
-| ----------------------------- | :-----------: | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `lint-typecheck.yml`          |       ✓       | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell policy tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
-| `unit.yml`                    |       ✓       | dev + main            | Vitest unit suites for every package                                                                                       |
-| `api-integration.yml`         |       ✓       | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold                                             |
-| `cli.yml`                     |       ✓       | dev + main            | `apps/cli` typecheck + tests                                                                                               |
-| `e2e-maestro-testid-gate.yml` |       ✓       | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke                                              |
-| `pr-preview.yml`              |       ✓       | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify                                                        |
-| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Per-PR Expo OTA preview                                                                                                    |
-| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Tests + Cloudflare Pages preview for the public site                                                                       |
-| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target before journeys: shared dev for `dev → main`, isolated PR preview for focused main hotfixes   |
-| `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                                    |
-| `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                                       |
-| `site-dev.yml`                |       ✗       | dev                   | Cloudflare Pages `dev` branch deploy                                                                                       |
-| `site-prod.yml`               |       ✗       | main                  | Cloudflare Pages prod deploy                                                                                               |
-| `mobile-ota-dev.yml`          |       ✗       | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy                                                     |
-| `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                                                 |
-| `ai-live.yml`                 |       ✗       | dev + main + dispatch | Live AI provider smoke (no fixtures)                                                                                       |
-| `neon-snapshot-prune.yml`     |       ✗       | (cron 04:17 UTC)      | Prune stale Neon branches                                                                                                  |
+| Workflow                      |   PR-gated    | Push (dev / main)     | What it catches                                                                           |
+| ----------------------------- | :-----------: | --------------------- | ----------------------------------------------------------------------------------------- |
+| `lint-typecheck.yml`          |       ✓       | dev + main            | ESLint, TypeScript, repository policy gates, CI policy tests, and shellcheck              |
+| `unit.yml`                    |       ✓       | dev + main            | Vitest unit suites for every package                                                      |
+| `api-integration.yml`         |       ✓       | dev + main            | Combined API unit and Testcontainers run with a hard 90% line-coverage threshold          |
+| `cli.yml`                     |       ✓       | dev + main            | CLI typecheck, lint, tests, help drift, and integration journeys                          |
+| `e2e-maestro-testid-gate.yml` |       ✓       | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke             |
+| `dependency-review.yml`       |       ✓       | —                     | Reject newly introduced high or critical dependency vulnerabilities                       |
+| `pr-preview.yml`              |       ✓       | (PR-only)             | Credential-free path/migration guards; human-owned Neon/Fly preview lifecycle             |
+| `pages-preview-ref.yml`       |       ✓       | (PR-only)             | Tokenless exact `pr-N` Git-ref lifecycle for native Cloudflare previews                   |
+| `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Human-owned same-repository PR Expo OTA preview                                           |
+| `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin checks plus exact-SHA native Pages preview verification             |
+| `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public checks plus exact-SHA native Pages preview verification            |
+| `dashboard-preview.yml`       | ✓ (→dev/main) | (PR-only)             | Exact head-SHA Git preview plus fast and deployed live browser checks on the stable alias |
+| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target before journeys: shared dev for promotions, isolated preview for focused hotfixes |
+| `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`   |
+| `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`      |
+| `site-dev.yml`                |       ✗       | dev                   | Verify the exact SHA served by the native Pages `dev` deployment                          |
+| `site-prod.yml`               |       ✗       | main                  | Verify the exact SHA on the Pages hostname and public custom domains                      |
+| `admin-dev.yml`               |       ✗       | dev                   | Verify the exact SHA and static routing on the native admin `dev` deployment              |
+| `admin-prod.yml`              |       ✗       | main                  | Verify the exact SHA and static routing on both admin production hostnames                |
+| `dashboard-dev.yml`           |       ✗       | dev                   | Verify the exact SHA and SPA routes on the native dashboard `dev` deployment              |
+| `dashboard-prod.yml`          |       ✗       | main (guarded)        | Verify the exact SHA and SPA routes on approved dashboard production hostnames            |
+| `mobile-ota-dev.yml`          |       ✗       | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy                    |
+| `mobile-ota-prod.yml`         |       ✗       | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy                |
+| `ai-live.yml`                 |       ✓       | dev + main + dispatch | Path-filtered live AI provider smoke for same-repository PRs and pushes                   |
+| `neon-snapshot-prune.yml`     |       ✗       | (cron 04:17 UTC)      | Prune stale Neon branches                                                                 |
+
+The dashboard preview/dev/production workflows include
+`packages/design-tokens/**` in their path filters. A dashboard token change
+therefore rebuilds that browser surface even when `apps/dashboard` itself does
+not change. Cloudflare publishes the resulting artifact from the connected
+project. The public site keeps its independent visual system.
+
+### Pull-request automation trust boundary
+
+Dependabot controls a same-repository branch, but GitHub deliberately withholds
+ordinary Actions secrets from its pull-request workflows. Same-repository
+membership is therefore not sufficient authorization for a privileged job.
+
+Credential-free verification remains available to Dependabot: lint, tests,
+typechecks, local browser checks, static builds, changed-path detection, and
+migration filename guards. The Pages ref workflow holds only scoped GitHub
+`contents: write`, never checks out pull request code, and uses no Cloudflare
+credential. Neon, Fly, EAS, cleanup, and PR-comment jobs additionally require
+`github.event.pull_request.user.login != 'dependabot[bot]'`. This must use the
+PR author rather than `github.actor`, because a maintainer rerun changes the
+actor without transferring branch ownership.
+
+Do not add deployment credentials to Dependabot secrets, and do not use
+`pull_request_target`: checking out dependency-controlled code in a base-branch
+privileged context crosses the trust boundary. Direct Dependabot security PRs
+to `main` fail `main-gate` with instructions to port the coordinated update
+through a human-owned `dev` PR; live journeys never receive the test-account
+password on that bot path.
 
 ### Closing post-merge blind spots
 
@@ -293,6 +339,12 @@ to `main` continue through the normal `dev → main` promotion path.
 - Compute and pass `ADMIN_MIGRATIONS_REQUIRED_HEAD` independently.
 - Compute the full `git rev-parse HEAD` value and pass it as the
   `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
+- Always target `harpa-pro-api` through `infra/fly/fly.toml`. The script does
+  not read `FLY_APP` and cannot deploy development.
+- The script does not check for a dirty tree or an unpushed commit. Use the
+  GitHub workflow for trusted provenance. If an owner approves a manual
+  production deploy, first prove that the tree is clean and that `HEAD` equals
+  `origin/main`.
 - After deploy, run the shared storage-worker topology repair. It is a no-op
   only for exactly one current-release active worker plus exactly one
   current-release stopped, service-less standby watching that active Machine.
@@ -318,27 +370,50 @@ to `main` continue through the normal `dev → main` promotion path.
   and empty standbys. If clearing succeeds but later work fails, exact singleton
   stopped/no-standby and started/no-standby states are retry-safe; all other
   drift fails closed.
-- Run the read-only started-worker verifier again, then arm the monotonic
-  upload-lease rollout inside that process group. Arming inherits Fly's staged
-  `DATABASE_URL`, so the production URL remains out of GitHub Actions and
-  manual operator environments. Manual production deploys use the same
-  deploy-to-repair-to-verify-to-arm path as CI.
+- Run the read-only started-worker verifier again, then stop. Production deploy
+  does not arm lifecycle or enable account deletion. CI and manual deploys use
+  the same deploy-to-repair-to-verify path. The GitHub deploy step has a
+  30-minute outer timeout.
+- After the exact production SHA and worker have passed the separate worker
+  proof in `arch-ops.md`, run
+  `bash scripts/ci/arm-storage-lifecycle-rollout.sh harpa-pro-api` as an
+  explicit authorized action. It selects the exact sole started worker from a
+  fresh inventory and arms the monotonic upload-lease rollout through
+  `flyctl machine exec`. Each of at most three attempts has a 120-second
+  provider timeout. Before a retry, another fresh inventory must prove the
+  worker id has not changed; success requires the command's database
+  confirmation marker. A transport failure after commit is retry-safe because
+  the SQL cannot reopen the grace or turn account deletion back off. Arming
+  inherits Fly's staged `DATABASE_URL`, so the production URL remains out of
+  GitHub Actions and manual operator environments.
+
+```sql
+SELECT armed_at, enforce_after, account_delete_enabled, updated_at
+FROM app.storage_lifecycle_rollout
+WHERE singleton;
+```
+
+Before the separate arming action, production may intentionally have null
+`armed_at` and `enforce_after` with `account_delete_enabled = false`. After
+arming, require non-null `armed_at` and `enforce_after`, plus
+`account_delete_enabled = true`. A future `enforce_after` means the grace
+period is still active.
 
 ### `.github/workflows/api-prod.yml`
 
-- Add a `guard` job that runs before `prod`:
+- A `guard` job runs before `prod` and:
   - lints migration filenames
     (`^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$` — sequential numeric prefix,
     optional `.notx` suffix for files that must run outside a tx),
-  - compares the file set against a cached manifest from the last green
-    `main` build; fails on rename/delete of an already-shipped file,
   - applies the filename and duplicate-prefix checks to the admin migration
     stream,
   - prints both computed heads.
+- The guard does not compare file contents or a prior manifest. Review must
+  prevent edits, renames, and deletions of applied migrations.
 - The `prod` job depends on `guard`. The app `DATABASE_URL` remains a staged
   Fly secret; CI resolves a direct admin-main URI through the existing Neon
   API credential and stages it only as `ADMIN_DATABASE_URL`.
-- Create blocking snapshots in both Neon projects before `flyctl deploy`.
+- Create blocking recovery branches in both Neon projects before `flyctl deploy`.
   Either failure stops the workflow before Fly can apply a migration.
 - Do not run `db:migrate` from GitHub Actions. Production migration
   ownership stays with Fly's `release_command`.
@@ -359,6 +434,10 @@ to `main` continue through the normal `dev → main` promotion path.
     from Doppler `dev` with both database URLs overridden to the matching
     direct PR-branch URIs,
     and `flyctl deploy`s using [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
+    Before deployment it idempotently proves or allocates public IPv6 and
+    shared IPv4 ingress. This covers a cancelled first deployment that leaves
+    the Fly app present without DNS-backed addresses, which a later deploy does
+    not repair automatically.
     Its release command migrates both isolated databases and idempotently seeds
     the dev journey accounts before verifying both readiness endpoints and
     posting a sticky PR comment.
@@ -371,17 +450,17 @@ cannot include app/admin migrations, database code, API migration-script
 wiring, Fly release commands, or the workflow/scripts that constitute the
 trusted exact-SHA preview gate. Those changes must land on `dev` and use the
 normal promotion path, where the data-bearing `dev` clone exercises the upgrade
-against realistic nonproduction rows. PR 360 is the one-time bootstrap
-exception for introducing this gate; GitHub never reuses PR numbers, so the
-exception is dead after that PR merges and a later normal promotion can remove
-the clause.
+against realistic nonproduction rows.
 
 The trusted preview gate includes the API code that emits the proof consumed by
 `main-gate`: `/healthz`, `/readyz`, `/admin/readyz`, the build-info helper that
 surfaces the immutable Git SHA, their app/server mounting path, the locked
 dependency graph, and the deploy-time test-account seeder used by the journey
 suite. Focused `main` hotfixes may change product logic, but they cannot change
-those proof surfaces outside the one-time PR 360 bootstrap.
+those proof surfaces directly. The credential-free preview guard also runs when
+only trusted gate wiring changed, so it rejects the PR explicitly and lets the
+main-gate provenance wait fail promptly instead of waiting for an impossible
+preview. Such changes land through `dev` and the normal promotion path.
 
 For an eligible hotfix, both create jobs make a private child of `main` without
 a compute or connection URI. The helper then adds a disabled read-write
@@ -400,19 +479,31 @@ the expected branch is missing. The sanitized child branches retain the same
 seven-day expiry and explicit PR-close deletion as ordinary previews.
 
 - `guard` job: same filename checks for both migration streams (no manifest
-  diff because previews are ephemeral).
-- Forks are skipped (no `FLY_API_TOKEN` / `DOPPLER_TOKEN_DEV` /
-  `NEON_API_KEY` available to fork PRs).
-- Path filter: `neon-create`, `fly-preview`, and `guard` run only for PRs
-  that change API inputs (`packages/api`, `packages/api-contract`,
-  `packages/ai-fixtures`, lockfile, or TS config). Frontend-only PRs use
-  the shared dev API from mobile OTA bundles instead of creating a
-  Fly/Neon preview.
+  diff because previews are ephemeral), plus the focused-main trust boundary.
+  It runs for API, admin, dashboard, migration, and trusted-gate inputs even
+  when the latter do not otherwise need a preview.
+- Credential-free `changes` and `guard` jobs run for Dependabot. Preview create,
+  deploy, comment, and teardown jobs skip forks and Dependabot because they
+  require `FLY_API_TOKEN`, `DOPPLER_TOKEN_DEV`, or `NEON_API_KEY`.
+- Path filter: `neon-create` and `fly-preview` run for API, admin, or dashboard
+  preview inputs. `guard` additionally runs for migration and trusted-gate
+  inputs so forbidden direct-main changes fail explicitly. Other frontend-only
+  PRs use the shared dev API instead of creating a Fly/Neon preview.
 
 ### `packages/api/src/db/migrate.ts`
 
-- Wrap the apply loop in `pg_advisory_lock(<constant key>)` /
-  `pg_advisory_unlock`. Key is a fixed bigint (documented inline).
+- Poll `pg_try_advisory_lock(<constant key>)` until the application migrator
+  gets its session-level lock. The key is a fixed bigint documented inline.
+- A false result completes its database statement before the migrator waits
+  100 milliseconds in JavaScript. The next poll starts a new statement.
+- Keep the lock across the full apply loop, including `.notx.sql` files. This
+  preserves one-writer serialization for `CREATE INDEX CONCURRENTLY`.
+- Release the lock with `pg_advisory_unlock` in the existing `finally` block.
+  A query error or an invalid lock result fails the migration.
+- This polling prevents a contender from holding a blocking lock-wait
+  statement while concurrent index work waits for older transaction snapshots.
+  See the
+  [migration-lock deadlock entry](../bugs/2026-08-08-migration-lock-concurrent-index-deadlock.md).
 - Log `applying <file>` to stdout _before_ each `client.query(sql)`, so a
   hang or crash names the offender. Log `applied <file> in <ms>ms` after.
 - On error, log the file name + first SQL line of the failing statement and
@@ -421,16 +512,39 @@ seven-day expiry and explicit PR-close deletion as ordinary previews.
   statements (e.g. `CREATE INDEX CONCURRENTLY`) must be named
   `*.notx.sql` and the loader runs them outside a transaction. Documented
   in §"Failure & rollback".
+- Normal transactional migrations must not contain top-level transaction
+  control. The loader owns `BEGIN`/`COMMIT`, rejects new files that try to
+  manage their own transaction, and strips the legacy outer wrapper from the
+  known historical files `0014_better_auth_init.sql`,
+  `0019_account_deletion.sql`, and `0022_r2_object_lifecycle.sql` so their
+  body and `app._migrations` ledger write remain atomic.
+- A `*.notx.sql` file must not manage transactions either. Put any
+  transactional preparation in an earlier normal migration; keep the
+  non-transactional file limited to statements that cannot run in the
+  loader-owned transaction and document its cleanup/retry procedure.
 - Export the computed head (last filename) so a future health check or
   diagnostic can reuse it without re-globbing.
+- Draft migration `0029_llm_usage_events_created_at.notx.sql` uses
+  `CREATE INDEX CONCURRENTLY` without `IF NOT EXISTS`. It adds
+  `llm_usage_events_created_at_idx` on `app.llm_usage_events (created_at DESC)`.
+  The index supports the fixed global AI usage windows. The runner records the
+  filename only after the concurrent build succeeds.
+- An interrupted concurrent build can leave an invalid same-name index. A
+  rerun then fails closed instead of recording the migration. Verify
+  `pg_index.indisvalid = false`, drop that exact index concurrently, and rerun
+  the migration. Verify `pg_index.indisvalid = true` after the rerun.
 
-### `packages/api/src/routes/readyz.ts` (new)
+### `packages/api/src/routes/readyz.ts`
 
 - `GET /readyz` opens a connection (via the existing pool), runs:
   - `SELECT 1` — basic DB reachability.
   - `SELECT to_regclass('app._migrations') IS NOT NULL` — schema bootstrap.
   - `SELECT name FROM app._migrations ORDER BY name DESC LIMIT 1` and
     compare to `env.MIGRATIONS_REQUIRED_HEAD`.
+- The raw SQL/query sequence is shared privately with `/admin/readyz` in
+  `packages/api/src/lib/migration-ledger.ts`. Only the probe mechanics are
+  shared. Each route keeps its own pool source, cache policy, headers, down
+  error body, and required-head env var.
 - Response shape (typed via `@hono/zod-openapi` like `health.ts`):
   - `200 { ok: true, db: 'up', head: <name> }` — all checks pass.
   - `503 { ok: false, db: 'down' | 'schema-missing' | 'head-mismatch', expected, actual }`
@@ -438,19 +552,21 @@ seven-day expiry and explicit PR-close deletion as ordinary previews.
     than a bug.
 - Caches the "green" result for ~2s to avoid hammering the pool on Fly's
   30s interval × N machines. Errors are never cached.
-- `/healthz` stays as the static literal — Fly's liveness path if we keep
-  one, and a fast curl target for humans.
+- `/healthz` remains database-independent and returns build identity for fast
+  liveness and provenance checks.
 
 ### `packages/api/src/env.ts`
 
-- Add `MIGRATIONS_REQUIRED_HEAD: z.string().regex(/^[0-9]{12}_[a-z0-9_]+\.sql$/).optional()`.
+- Parse `MIGRATIONS_REQUIRED_HEAD` as `<digits>_<slug>.sql` or
+  `<digits>_<slug>.notx.sql`, matching the migration runner and deployment
+  guard. Preserve the exact filename for `/readyz` comparison.
 - When `NODE_ENV === 'production'`, `MIGRATIONS_REQUIRED_HEAD` is required
   (Zod refinement). In dev/test it's optional and `/readyz` skips the head
   check if it's unset (so local dev doesn't have to set it).
 
 ### Tests (binding — Pitfall 13)
 
-Under `packages/api/src/__tests__/integration/`:
+Under `packages/api/src/__tests__/`:
 
 - `readyz.integration.test.ts` — boots the API against a fresh
   Testcontainers Postgres (no manual migration) and asserts:
@@ -461,9 +577,27 @@ Under `packages/api/src/__tests__/integration/`:
      returns **503 `head-mismatch`** with `expected`/`actual` populated.
   4. With DB unreachable (close the container), `GET /readyz` returns
      **503 `db: 'down'`** within the 5s timeout.
-- `migrate.advisory-lock.integration.test.ts` — two concurrent
-  `migrate(url)` calls against the same Testcontainers DB; assert no
-  duplicate `app._migrations` rows, no SQL error, both return clean.
+  5. With `MIGRATIONS_REQUIRED_HEAD` set to the exact
+     `0029_llm_usage_events_created_at.notx.sql` filename, environment parsing
+     succeeds and `/readyz` reports that full expected name against the 0031
+     actual head without stripping the suffix.
+- `admin-ai-usage-migration.integration.test.ts` — applies the draft
+  non-transactional head through the real loader and verifies its ledger row.
+  It checks `llm_usage_events_created_at_idx` on `created_at DESC` and requires
+  `pg_index.indisvalid = true`. It also proves that a same-name invalid index
+  makes the no-`IF NOT EXISTS` rerun fail without a ledger row.
+- `llm-usage-migration-drift.integration.test.ts` — starts from the 0029
+  schema, recreates the retired development table shape and ledger identity,
+  then applies 0030 and 0031 through the real loader. It proves row
+  preservation, the exact current column/index/policy contract, exact-only
+  ledger cleanup, a no-op schema path for an already-current production
+  shape, and fail-closed rollback when nullable latency data is present.
+- `migrate.advisory-lock.integration.test.ts` — run two concurrent
+  `migrate(url)` calls against the same Testcontainers DB. A dedicated fixture
+  holds a write transaction open while the first migrator runs
+  `CREATE INDEX CONCURRENTLY`. It proves that the second session polls without
+  an ungranted advisory-lock waiter, then both calls finish. The full migration
+  set also runs concurrently with no deadlock or duplicate ledger row.
 - `migrate.failing-file.integration.test.ts` — point the migrator at a
   fixture dir whose third file is invalid SQL; assert process exits non-zero,
   stderr names the failing file, `app._migrations` has rows 1 and 2 only.
@@ -476,90 +610,87 @@ Under `packages/api/src/__tests__/integration/`:
 
 ### Code rollback (no data change)
 
-Most regressions are code-only — the schema is forward-compatible
-(expand-contract) and the previous image already tolerates the
-current schema. Roll back by re-deploying the previous SHA:
+Use a revert through the protected branch flow when production can wait.
 
-```bash
-# Find the previous successful deploy
-fly releases -a harpa-pro-api | head -10
-# Roll back (Fly will re-pull and re-promote the prior image)
-fly deploy --image registry.fly.io/harpa-pro-api:deployment-<old> -a harpa-pro-api
-# OR redeploy a prior commit from CI:
-gh workflow run api-prod.yml --ref <old-sha>
-```
+1. Create a revert commit from current `dev`.
+2. Open a pull request to `dev`.
+3. Wait for required checks and the development deployment.
+4. Open the `dev` to `main` promotion pull request.
+5. Make sure `main-gate` verifies the exact development SHA.
+6. Merge the promotion pull request.
+7. Verify `/healthz`, `/readyz`, and `/admin/readyz`.
 
-The post-deploy `/readyz` curl proves the rollback served traffic.
-No DB touch required.
+Do not run `gh workflow run api-prod.yml --ref <sha>`. The `--ref` option
+accepts a branch or tag, not a raw commit SHA. An old tag also runs the old
+workflow file, which can omit current safeguards.
+
+An emergency image rollback bypasses the protected Git flow. It requires
+explicit owner approval. Select the exact prior image with
+`flyctl releases --image --app harpa-pro-api`. Deploy it with the current Fly
+configuration and `--skip-release-command`. Then run the current topology
+repair, worker verification, lifecycle arming, and both readiness checks.
+Record the image digest and resulting release ID in the incident log.
 
 ### Data rollback (bad migration or corrupting code)
 
-If a deploy lands a destructive migration, or a regression writes
-bad data, **redeploying the previous image is not enough** — the DB
-state needs to come back too. We have two layered safety nets,
-both via Neon's copy-on-write branching:
+The production workflow creates a recovery branch in each Neon project before
+each deploy. The branch name is `snapshot-<first-12-of-sha>`. These are
+compute-less Neon branches, not Neon Snapshot API objects.
 
-1. **Per-deploy snapshot** (preferred — bounded, named).
-   `api-prod.yml` calls `pnpm db:branch:snapshot $GITHUB_SHA`
-   as a blocking gate before `flyctl deploy`, creating
-   `snapshot-<first-12-of-sha>` off the prod parent. Fly's
-   `release_command` is the only production migration owner, so no
-   migration can run before this snapshot succeeds. Snapshots are
-   pruned after 30 days by `neon-snapshot-prune.yml`.
-2. **Point-in-time recovery** (fallback — any timestamp in retention).
-   Neon retains a continuous history (7 days on Free, 30 on
-   Launch/Scale). Use this when the bad state predates the most
-   recent snapshot or you need finer-grained timing.
+The prune workflow retains at most three recovery branches per project. It
+also deletes branches older than 30 days. The count limit usually removes a
+branch before the age limit.
 
-**Procedure** (~5 min wall time, assuming snapshot exists):
+Point-in-time recovery depends on each Neon project's configured restore
+window. Current plan maximums are six hours for Free, seven days for Launch,
+and 30 days for Scale. New paid projects can default to one day. Verify both
+projects in Neon before an incident. See [Neon pricing](https://neon.com/pricing)
+and [project restore-window settings](https://neon.com/docs/manage/projects).
 
-```bash
-# 1. Identify the snapshot to restore from (Neon console → Branches,
-#    OR `curl https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches`).
-SNAP=snapshot-abc123def456
+The application and admin projects have independent recovery timelines.
+Restore only the affected project. Restore both when one deployment corrupted
+both databases.
 
-# 2. Promote it to a temporary endpoint and capture the URI
-#    (Neon console → snapshot branch → "Add compute" → copy URI).
-NEW_URL='postgres://...neon.tech/neondb'
+1. Stop the release process.
+2. Record the bad release SHA and incident timestamp.
+3. Identify the last known-good code image.
+4. Identify the matching recovery branch in each affected Neon project.
+5. Use point-in-time recovery if no suitable recovery branch exists.
+6. Inspect the selected state on a temporary branch.
+7. Check critical rows and both migration ledgers.
+8. Restore the selected state to the affected `main` branch in Neon.
+9. Wait for all Neon restore operations to finish.
+10. Deploy the compatible code image with the emergency procedure above.
+11. Verify `/healthz`, `/readyz`, and `/admin/readyz`.
+12. Test one known application read and one administrator read.
+13. Keep Neon's pre-restore branch until incident sign-off.
+14. Record the recovered timestamp and expected data loss.
 
-# 3. Point prod at the new URL. Use --stage so the activation is
-#    atomic when we flip in step 4. The new URL must use the
-#    -pooler hostname (see arch-ops.md §Scaling).
-fly secrets set DATABASE_URL="$NEW_URL" --stage -a harpa-pro-api
-doppler secrets set DATABASE_URL="$NEW_URL" --project harpa-pro --config prd
+Use Neon's in-place restore option when it is available. It keeps the existing
+connection string. A branch swap requires coordinated Fly and Doppler changes.
+It also conflicts with workflows that resolve the branch named `main`.
 
-# 4. Roll the previous (compatible) image with the new DATABASE_URL.
-#    Both env + image must change together.
-fly deploy --image registry.fly.io/harpa-pro-api:deployment-<good> -a harpa-pro-api
-
-# 5. Verify via /readyz + a known-good DB-backed route.
-curl -fsS https://harpa-pro-api.fly.dev/readyz
-
-# 6. Once stable, in Neon console: promote the temp branch to the
-#    new prod parent (or rename it), retire the corrupted parent.
-```
-
-**Why not just `pg_restore`?** Neon's branching is faster (seconds,
-not minutes) and avoids the temptation to run a long-running
-restore against a live compute. Branch-and-swap is the native idiom.
+This process does not restore R2 objects. Database rows can refer to objects
+that a later lifecycle job already deleted. Inspect affected uploads after any
+database restore.
 
 ### Scenario matrix
 
-| Scenario                                                                  | What happens                                                                                                                                                                                               | Manual step                                                                                                                                                  |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pre-deploy snapshot fails                                                 | `api-prod.yml` exits before `flyctl deploy`; Fly never starts the release machine, so no migration runs and prod is unchanged.                                                                             | Fix Neon credentials or service availability, then re-run the workflow. Do not bypass the snapshot gate.                                                     |
-| Migration syntax error in file N                                          | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema). | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back.                                                   |
-| Non-transactional file (`*.notx.sql`) fails mid-way                       | Loader has NOT recorded it in `app._migrations`. Partial side-effects (e.g. half-built index) may exist. Release machine exits non-zero, Fly aborts rollout.                                               | Manual: drop the partial object, fix the SQL, re-deploy. Documented inline in the offending file's header comment. Discouraged — prefer transactional files. |
-| Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly's rolling deploy fails the new machine, auto-rollback to previous image. Previous image MUST be schema-compatible — that's the expand-contract guarantee.                                              | Investigate the runtime bug. Schema is already forward — keep it; ship a fix-forward.                                                                        |
-| `/readyz` reports `head-mismatch` on a running prod machine               | Means schema was modified out-of-band (someone ran a migration manually) OR an older image is still running. Page on-call.                                                                                 | Re-deploy the current `main` SHA. If the head moved beyond `main`, audit who ran what against prod.                                                          |
-| Concurrent deploys race the migrator                                      | `pg_advisory_lock` serialises them; the second waits, then no-ops (all files already applied).                                                                                                             | None.                                                                                                                                                        |
-| Need to revert a feature (code only)                                      | See "Code rollback" above.                                                                                                                                                                                 | None at the DB layer.                                                                                                                                        |
-| Bad data shipped (corrupting migration, regression writing garbage)       | Both code AND DB need to roll back. Use the per-deploy snapshot procedure above.                                                                                                                           | Pre-deploy snapshot is automatic; promotion is manual.                                                                                                       |
-| Snapshot missing or older than needed                                     | Fall back to Neon PITR — branch at the precise timestamp from the Neon console, then follow the same promote-and-swap procedure as steps 2-5 above.                                                        | None — built into Neon's retention window.                                                                                                                   |
+| Scenario                                                                  | What happens                                                                                                                                                                                                  | Manual step                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pre-deploy recovery branch fails                                          | `api-prod.yml` exits before `flyctl deploy`. Production remains unchanged.                                                                                                                                    | Fix Neon credentials or availability. Then rerun the workflow. Do not bypass the gate.                                                                       |
+| Migration syntax error in file N                                          | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema).    | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back.                                                   |
+| Non-transactional file (`*.notx.sql`) fails mid-way                       | Loader has NOT recorded it in `app._migrations`. Partial side-effects (e.g. half-built index) may exist. Release machine exits non-zero, Fly aborts rollout.                                                  | Manual: drop the partial object, fix the SQL, re-deploy. Documented inline in the offending file's header comment. Discouraged — prefer transactional files. |
+| Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly halts the unhealthy rollout. The previous image must remain schema-compatible.                                                                                                                            | Inspect Machine state before any retry. Keep the forward schema and ship a fix-forward.                                                                      |
+| `/readyz` reports `head-mismatch` on a running prod machine               | The image and application migration ledger do not agree.                                                                                                                                                      | Stop. Compare the image SHA, expected head, and ledger before any deploy.                                                                                    |
+| Concurrent deploys race the application migrator                          | One migrator holds the session advisory lock. A contender polls with `pg_try_advisory_lock`; each false-result statement finishes before its next attempt. After acquisition, it reads the ledger and no-ops. | None.                                                                                                                                                        |
+| Need to revert a feature (code only)                                      | See "Code rollback" above.                                                                                                                                                                                    | None at the DB layer.                                                                                                                                        |
+| Bad data shipped (corrupting migration, regression writing garbage)       | Code and each affected database need a coordinated rollback.                                                                                                                                                  | Use the data rollback procedure above.                                                                                                                       |
+| Recovery branch missing or older than needed                              | Recovery depends on the configured Neon restore window.                                                                                                                                                       | Verify the window. Then select an exact timestamp in Neon.                                                                                                   |
+| Production lifecycle arming stalls                                        | The deployment state is unknown. Account deletion can remain disabled.                                                                                                                                        | Query `app.storage_lifecycle_rollout`. Retry only after recording its current values.                                                                        |
 
-**No `down` migrations.** Confirmed by `arch-database.md` (forward-only,
-files in `migrations/` are append-only). This doc upgrades that from
-"convention" to "the rollback strategy depends on it".
+There are no down migrations. Migration files are append-only by convention.
+The current CI guard does not enforce that convention.
 
 ---
 
@@ -579,124 +710,57 @@ For any schema change, in this order, across **separate PRs**:
 Renames are split into add-new + dual-write + switch-read + drop-old. Never
 a single `ALTER TABLE … RENAME`.
 
-### Renumbering an applied migration
+### Applied migration files
 
-If a migration file was already applied to a long-lived Neon branch
-(e.g. dev) and then renamed in a later commit — typically to break a
-duplicate numeric prefix collision — the migrator on that branch will
-see the new filename as an unapplied file and re-run it. There is no
-built-in way to rename a row in `app._migrations`.
+Never edit, rename, or delete an application or admin migration after it lands
+on `dev`. The ledger identifies a migration by its full filename. A rename
+makes the loader treat the same SQL as new work.
 
-Recovery procedure (run against the affected branch only — never prod
-unless prod also applied the file under its old name):
+The filename guard rejects duplicate numeric prefixes. It does not compare the
+file set or file hashes with an earlier release.
 
-1. Make the SQL idempotent. Add `IF NOT EXISTS` to the `ADD COLUMN` /
-   `CREATE INDEX` / `CREATE TABLE` so a re-run is a harmless no-op.
-   This is the safety net if step 2 is skipped — the migrator will
-   succeed and `INSERT` the new row, leaving a duplicate "applied"
-   entry but no schema damage.
-2. Patch `app._migrations` out-of-band via `psql`:
+If an applied file changes, stop the promotion. Restore the original path and
+bytes from Git history. Do not patch a production migration ledger during a
+normal release. Treat any existing ledger drift as a database incident.
 
-   ```sql
-   BEGIN;
-   DO $$
-   BEGIN
-     IF NOT EXISTS (SELECT 1 FROM app._migrations WHERE name = '<old>.sql') THEN
-       RAISE EXCEPTION 'old row missing — wrong DB?';
-     END IF;
-     IF EXISTS (SELECT 1 FROM app._migrations WHERE name = '<new>.sql') THEN
-       RAISE EXCEPTION 'new row already present — already patched?';
-     END IF;
-   END$$;
-   UPDATE app._migrations
-      SET name = '<new>.sql'
-    WHERE name = '<old>.sql';
-   COMMIT;
-   ```
+The 2026-08-10 development incident is repaired only through forward
+migrations. `0030_reconcile_llm_usage_events_schema.sql` conditionally
+converts the retired `0003_llm_usage_events.sql` table shape to the current
+`0005_llm_usage_events.sql` contract. It validates every value before DDL,
+uses bounded lock and statement timeouts, preserves rows, and performs no DDL
+when the schema is already current. The separate data-only migration
+`0031_remove_retired_llm_usage_ledger.sql` deletes only the retired filename;
+it does not touch `0003_report_last_generation.sql`.
 
-3. Re-run the deploy. The migrator finds `<new>.sql` already recorded
-   and treats it as applied.
-
-The `Lint migration filenames` CI guard rejects duplicate numeric
-prefixes at PR time, so this should be rare. It exists for the case
-where the duplicate slipped through earlier.
-
-The CI guard's "manifest superset" check enforces that an already-shipped
-migration cannot be renamed or deleted — it can only be superseded by a
-later file.
-
-Reference incident: today's prod 500s. Even with the new pipeline, an
-author who ships a `DROP COLUMN` in the same PR that introduces the new
-column will cause a brief window where the old running machine 500s. The
-expand-contract rule prevents that. Pipeline cannot.
+`/readyz` compares only the newest lexical ledger filename. A green head is
+not proof that every older filename or table definition matches the checkout.
+For suspected drift, compare the full ledger and relevant PostgreSQL catalog
+shape. Do not run the 0031 `DELETE` manually or treat it as a generic ledger
+repair procedure.
 
 ---
 
-## Pitfalls addressed
+## Safety properties
 
 - **Pitfall 5 (env handling brittle)** — `MIGRATIONS_REQUIRED_HEAD` flows
   through `packages/api/src/env.ts` Zod parse with a production-only
-  refinement. No `process.env.X!`.
+  refinement and the same optional `.notx` suffix as the migration guard. No
+  `process.env.X!`.
 - **Pitfall 6 (per-request scope late, untested)** — `/readyz` uses the
   default pool (admin/system role), not a scoped role; documented inline.
   The scope wrapper continues to be the only path used by user routes.
-- **Pitfall 10 (defer tests/docs)** — this doc lands with the
-  implementation PR; the test list above is binding.
+- **Pitfall 10 (defer tests/docs)** — documentation updates ship in the same
+  pull request as the workflow and migration changes they describe.
 - **Pitfall 13 / R5 (DI stubs become the spec)** — all readyz + migrator
   tests run against real Postgres via Testcontainers, no DB stub.
 
 ---
 
-## Implementation checklist (one item ≈ one commit)
+## Known gaps
 
-1. `feat(api): /readyz route with DB + schema-head check` — adds
-   `routes/readyz.ts`, wires into `app.ts`, adds `MIGRATIONS_REQUIRED_HEAD`
-   to `env.ts`, adds `readyz.integration.test.ts`.
-2. `feat(api): advisory lock + per-file logging in migrator` — updates
-   `db/migrate.ts`, adds `migrate.advisory-lock.integration.test.ts` and
-   `migrate.failing-file.integration.test.ts`.
-3. `chore(fly): release_command runs db:migrate; health check on /readyz` —
-   updates `infra/fly/fly.toml`, `infra/fly/Dockerfile`
-   (`ARG MIGRATIONS_REQUIRED_HEAD`), `infra/fly/deploy.sh` (compute +
-   pass build arg).
-4. `ci(api-prod): guard job + post-deploy /readyz smoke` — updates
-   `.github/workflows/api-prod.yml`, adds the manifest-cache step.
-5. `ci(pr-preview): align with prod guard + filename lint` — updates
-   `.github/workflows/pr-preview.yml`.
-6. `docs(bugs): log prod migration-skip incident under R-new` — adds an
-   entry to `docs/bugs/README.md` referencing this design.
-
-Each commit ships its own test + doc updates per Pitfall 10. The
-implementation PR cites this doc in its description and links the new
-recurring-bug entry.
-
----
-
-## Open questions / carve-outs
-
-- **Drizzle-kit journal.** Should we replace the bespoke loader with
-  `drizzle-orm/node-postgres/migrator`? It would give us a checksum-based
-  drift check for free. Out of scope for this doc — see `arch-database.md`,
-  which currently _says_ we use it but we don't. Resolve in a follow-up
-  ADR; either adopt drizzle-kit or fix the doc.
-- **Preview Fly machines.** Implemented — see `pr-preview.yml` jobs
-  `fly-preview` / `fly-destroy` and [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
-  Migration application now lives exclusively in `release_command` (preview,
-  dev, and prod all use the same mechanism). Open follow-ups: cron sweep
-  for orphan preview apps if a `closed` webhook is missed; automated
-  mobile preview builds pinned to the PR's API URL.
-- **Destructive-migration approval gate.** Should `DROP TABLE` /
-  `DROP COLUMN` require a manual GitHub Environment approval before
-  `flyctl deploy`? Probably yes, but needs product sign-off on the friction.
-  Recommend: CI guard greps for `DROP TABLE|DROP COLUMN|TRUNCATE` in new
-  migration files and labels the PR `migration:destructive`; the
-  `production` GitHub Environment requires reviewer approval for any deploy
-  carrying that label. Carved out for a follow-up.
-- **Liveness vs readiness on Fly.** If Fly's HTTP check supports only one
-  endpoint, we pick `/readyz` (this design assumes that). If it supports
-  separate liveness + readiness, route `/healthz` to liveness and `/readyz`
-  to readiness. Confirm with `flyctl` docs at implementation time.
-- **`app._migrations` ordering.** We currently order by `name` (lexical
-  filename). Confirm that no historical filename violates the
-  `YYYYMMDDHHmm_*` convention before flipping the head check to "max(name)".
-  All six current files do.
+- CI has no immutable migration manifest or checksum gate.
+- Lifecycle arming still needs a rollout-table check before any retry if a
+  deployment stops before the confirmation marker is reported.
+- `infra/fly/deploy.sh` does not verify a clean, pushed checkout.
+- The pipeline has no destructive-SQL approval gate.
+- The repository has no automated production restore drill.

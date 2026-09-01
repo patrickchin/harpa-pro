@@ -5,10 +5,9 @@
  * the saved report via `useReportQuery`, and renders the props-driven
  * `SavedReport` screen body.
  *
- * In fixture mode we seed `SAMPLE_GENERATED_REPORT` so the screen
- * renders end-to-end; otherwise we pass the report body through and
- * fall through to the empty/error state if the API hasn't finished
- * the body → `GeneratedSiteReport` translation yet.
+ * Persisted report bodies are always rendered directly. Fixture mode
+ * uses `SAMPLE_GENERATED_REPORT` only while the API row has no body yet, so
+ * finalized edits and attachment placements remain observable end-to-end.
  *
  * Delete + Unfinalize mutations are wired through the saved-report
  * confirm dialogs. Failures bubble back to the screen so the user gets
@@ -39,14 +38,15 @@ import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane'
 import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
+import { reportMutationInput } from '@/lib/reports/report-mutation-input';
+import { coerceReportBody } from '@/lib/reports/report-body';
 import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
+import { SHOW_DEVELOPER_TOOLS } from '@/lib/config/developer-tools';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
-import { reports as reportSchemas } from '@harpa/api-contract';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 import type { AppDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
@@ -83,10 +83,7 @@ export default function SavedReportRoute() {
       // row immediately when navigated from `/projects/{slug}/reports`.
       // Background refetch still fires because `initialDataUpdatedAt`
       // reflects how stale the list snapshot is.
-      initialData:
-        reportNumber !== null
-          ? reportInitialData(qc, slug, reportNumber)
-          : undefined,
+      initialData: reportNumber !== null ? reportInitialData(qc, slug, reportNumber) : undefined,
       initialDataUpdatedAt: reportInitialDataUpdatedAt(qc, slug),
     },
   );
@@ -95,24 +92,20 @@ export default function SavedReportRoute() {
     | {
         id?: string;
         status?: 'draft' | 'finalized';
-        body?: reportSchemas.ReportBody | null;
+        body?: reports.ReportBody | null;
         visitDate?: string | null;
         generatedAt?: string | null;
+        updatedAt?: string;
       }
     | undefined;
   const reportStatus = reportRow?.status ?? null;
   const reportId = reportRow?.id ?? null;
 
-  // Translate the persisted flat `ReportBody` shape into the wrapped
-  // `GeneratedSiteReport` that the saved-report UI consumes. Fixture
-  // mode short-circuits to the sample. The adapter lives in
-  // `lib/reports/report-body-adapter.ts` and is the same one used by the
-  // generate route.
-  const displayReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
-    ? SAMPLE_GENERATED_REPORT
-    : reportRow?.body
-      ? reportBodyToGeneratedReport(reportRow.body)
-      : null;
+  const persistedReport = reportRow?.body
+    ? coerceReportBody(reportRow.body, reportRow.visitDate ?? null).body
+    : null;
+  const displayReport =
+    persistedReport ?? (env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null);
 
   // Source-notes timeline for the saved report. Same query used by the
   // generate route — the API returns text + voice + image + document
@@ -132,9 +125,11 @@ export default function SavedReportRoute() {
     { enabled: slug.length > 0 },
   );
   const memberNames = useMemo(() => {
-    const items = (membersQuery.data as
-      | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
-      | undefined)?.items;
+    const items = (
+      membersQuery.data as
+        | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
+        | undefined
+    )?.items;
     const map = new Map<string, string>();
     if (!items) return map;
     for (const m of items) {
@@ -146,54 +141,52 @@ export default function SavedReportRoute() {
   const { refreshing, onRefresh } = useRefresh([
     () => reportQuery.refetch(),
     () => notesQuery.refetch(),
-    () => reportStatus === 'finalized' ? commentsQuery.refetch() : Promise.resolve(),
+    () => (reportStatus === 'finalized' ? commentsQuery.refetch() : Promise.resolve()),
   ]);
   const noteRows = useMemo<ReadonlyArray<ReportNoteRow>>(() => {
-    const items = (notesQuery.data as
-      | {
-          items?: ReadonlyArray<{
-            id: string;
-            authorId?: string;
-            kind: 'text' | 'voice' | 'image' | 'document';
-            body: string | null;
-            transcript: string | null;
-            title?: string | null;
-            summary?: string | null;
-            durationSec?: number | null;
-            fileId: string | null;
-            thumbnailFileId?: string | null;
-            files?: ReadonlyArray<{
+    const items = (
+      notesQuery.data as
+        | {
+            items?: ReadonlyArray<{
               id: string;
-              fileId: string;
-              thumbnailFileId: string | null;
-              position: number;
-              caption: string | null;
+              authorId?: string;
+              kind: 'text' | 'voice' | 'image' | 'document';
+              body: string | null;
+              transcript: string | null;
+              title?: string | null;
+              summary?: string | null;
+              durationSec?: number | null;
+              fileId: string | null;
+              thumbnailFileId?: string | null;
+              files?: ReadonlyArray<{
+                id: string;
+                fileId: string;
+                thumbnailFileId: string | null;
+                position: number;
+                caption: string | null;
+              }>;
+              createdAt: string;
             }>;
-            createdAt: string;
-          }>;
-        }
-      | undefined)?.items;
+          }
+        | undefined
+    )?.items;
     return toReportNoteRows(items, memberNames);
   }, [notesQuery.data, memberNames]);
 
-  // Saved (finalized) reports are read-only here — the SavedReport
-  // body still wires an onChangeReport prop so the Edit tab renders,
-  // but persistence is intentionally a no-op. To actually mutate a
-  // finalized report the user unfinalizes first, which routes them
-  // back through the generate stack. Autosave wiring for *draft*
-  // reports lives in `generate.tsx`, not on this route.
-  const [, setLocalReport] = useState<GeneratedSiteReport | null>(null);
+  // Saved (finalized) reports are read-only here. The screen still accepts
+  // the shared per-card change callback, but persistence is intentionally a
+  // no-op and edit actions are hidden. To mutate a finalized report the user
+  // unfinalizes first, which routes them back through the generate stack.
+  // Autosave wiring for draft reports lives in `generate.tsx`.
+  const [, setLocalReport] = useState<reports.ReportBody | null>(null);
 
-  const handleExportError = useCallback(
-    (_copy: AppDialogCopy & { kind: 'error' }) => {
-      // Export errors currently no-op on the SavedReport route — the
-      // `useReportPdfActions` hook surfaces success/failure inline in
-      // the PDF action sheet. The shared AppDialogSheet error router
-      // (delete / unfinalize / export) lands with the action-error
-      // surface tracked in plan-p4-hardening.md P4.3.
-    },
-    [],
-  );
+  const handleExportError = useCallback((_copy: AppDialogCopy & { kind: 'error' }) => {
+    // Export errors currently no-op on the SavedReport route — the
+    // `useReportPdfActions` hook surfaces success/failure inline in
+    // the PDF action sheet. The shared AppDialogSheet error router
+    // (delete / unfinalize / export) lands with the action-error
+    // surface tracked in plan-p4-hardening.md P4.3.
+  }, []);
 
   const pdfActions = useReportPdfActions({
     displayReport,
@@ -204,13 +197,16 @@ export default function SavedReportRoute() {
   const deleteMutation = useDeleteReportMutation();
   const createCommentMutation = useCreateReportCommentMutation();
 
-  const handleAddReviewComment = useCallback(async (body: string) => {
-    if (!slug || reportNumber === null) return;
-    await createCommentMutation.mutateAsync({
-      params: { project: slug, number: reportNumber },
-      body: { body },
-    });
-  }, [createCommentMutation, reportNumber, slug]);
+  const handleAddReviewComment = useCallback(
+    async (body: string) => {
+      if (!slug || reportNumber === null) return;
+      await createCommentMutation.mutateAsync({
+        params: { project: slug, number: reportNumber },
+        body: { body },
+      });
+    },
+    [createCommentMutation, reportNumber, slug],
+  );
 
   const handleConfirmDelete = useCallback(async () => {
     if (!slug || reportNumber === null) return;
@@ -227,10 +223,12 @@ export default function SavedReportRoute() {
 
   const handleConfirmUnfinalize = useCallback(async () => {
     if (!slug || reportNumber === null) return;
-    await unfinalizeMutation.mutateAsync({
-      params: { project: slug, number: reportNumber },
-    });
-  }, [slug, reportNumber, unfinalizeMutation]);
+    const expectedUpdatedAt = reportRow?.updatedAt;
+    if (!expectedUpdatedAt) return;
+    await unfinalizeMutation.mutateAsync(
+      reportMutationInput(slug, reportNumber, expectedUpdatedAt),
+    );
+  }, [slug, reportNumber, reportRow?.updatedAt, unfinalizeMutation]);
 
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';
@@ -275,7 +273,9 @@ export default function SavedReportRoute() {
       reviewCommentsLoading={commentsQuery.isLoading}
       reviewCommentsError={commentsQuery.error ?? null}
       isAddingReviewComment={createCommentMutation.isPending}
-      onRetryReviewComments={() => { void commentsQuery.refetch(); }}
+      onRetryReviewComments={() => {
+        void commentsQuery.refetch();
+      }}
       onAddReviewComment={handleAddReviewComment}
       loadError={reportQuery.error ?? null}
       hasValidRouteParams={hasValidRouteParams}
@@ -299,24 +299,16 @@ export default function SavedReportRoute() {
       actions={<AppHeaderActions />}
       onViewNotes={
         hasValidRouteParams && reportStatus === 'finalized'
-          ? () =>
-              router.push(
-                `/(app)/projects/${slug}/reports/${reportNumber}/notes` as Href,
-              )
+          ? () => router.push(`/(app)/projects/${slug}/reports/${reportNumber}/notes` as Href)
           : undefined
       }
-      showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
+      showDeveloperSection={SHOW_DEVELOPER_TOOLS}
       onOpenDebug={
-        hasValidRouteParams
-          ? () =>
-              router.push(
-                `/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href,
-              )
+        SHOW_DEVELOPER_TOOLS && hasValidRouteParams
+          ? () => router.push(`/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href)
           : undefined
       }
-      onPlacePhotoGroup={
-        canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
-      }
+      onPlacePhotoGroup={canWrite && reportId !== null ? handlePlacePhotoGroup : undefined}
     />
   );
 }

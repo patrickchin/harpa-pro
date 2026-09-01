@@ -5,8 +5,14 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
-import { auth as authSchemas, usageLimits as usageLimitsSchemas, cursor as cursorSchema } from '@harpa/api-contract';
+import {
+  auth as authSchemas,
+  usageLimits as usageLimitsSchemas,
+  cursor as cursorSchema,
+  errorEnvelope,
+} from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { openApiHonoOptions } from '../lib/openapi.js';
 import { withAuth } from '../middleware/auth.js';
 import { fetchUser, updateUser, fetchUsage, listUsageEvents } from '../services/me.js';
 import { getEffectiveLimits } from '../services/usage-limits.js';
@@ -16,13 +22,9 @@ import {
 } from '../services/account-deletion.js';
 import { drainStorageDeleteJobs } from '../services/storage-delete-jobs.js';
 import { captureApiException } from '../telemetry/sentry.js';
+import { getPgError } from '../lib/pg-error.js';
 
-const errorBody = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-  requestId: z.string().optional(),
-});
-
-export const meRoutes = new OpenAPIHono<AppEnv>();
+export const meRoutes = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
 meRoutes.openapi(
   createRoute({
@@ -33,8 +35,8 @@ meRoutes.openapi(
     middleware: [withAuth()] as const,
     responses: {
       200: { description: 'Current user.', content: { 'application/json': { schema: authSchemas.meResponse } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
-      404: { description: 'User not found.', content: { 'application/json': { schema: errorBody } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'User not found.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -59,9 +61,9 @@ meRoutes.openapi(
     },
     responses: {
       200: { description: 'Updated.', content: { 'application/json': { schema: authSchemas.meResponse } } },
-      400: { description: 'Bad request.', content: { 'application/json': { schema: errorBody } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
-      404: { description: 'Not found.', content: { 'application/json': { schema: errorBody } } },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -87,8 +89,8 @@ meRoutes.openapi(
         description: 'Account deletion consequences for the signed-in user.',
         content: { 'application/json': { schema: authSchemas.accountDeletionPreviewResponse } },
       },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
-      404: { description: 'User not found.', content: { 'application/json': { schema: errorBody } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'User not found.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -110,9 +112,9 @@ meRoutes.openapi(
     middleware: [withAuth()] as const,
     responses: {
       204: { description: 'Account deleted.' },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
-      404: { description: 'User not found.', content: { 'application/json': { schema: errorBody } } },
-      503: { description: 'Deletion temporarily unavailable during storage-lifecycle rollout.', content: { 'application/json': { schema: errorBody } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'User not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      503: { description: 'Deletion temporarily unavailable during storage-lifecycle rollout.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -122,14 +124,13 @@ meRoutes.openapi(
     try {
       await db((d) => deleteCurrentAccount(d));
     } catch (err) {
-      if ((err as { code?: string })?.code === 'P0002') {
+      const pgError = getPgError(err);
+      if (pgError?.code === 'P0002') {
         throw new HTTPException(404, { message: 'User not found.' });
       }
       if (
-        (err as { code?: string; message?: string })?.code === '55000' &&
-        /file_upload_lease_rollout_pending/.test(
-          (err as { message?: string }).message ?? '',
-        )
+        pgError?.code === '55000' &&
+        /file_upload_lease_rollout_pending/.test(pgError.message ?? '')
       ) {
         throw new HTTPException(503, {
           message: 'Account deletion is temporarily unavailable.',
@@ -179,7 +180,7 @@ meRoutes.openapi(
     middleware: [withAuth()] as const,
     responses: {
       200: { description: 'Usage summary.', content: { 'application/json': { schema: authSchemas.usageResponse } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -242,8 +243,8 @@ meRoutes.openapi(
         description: 'Paginated raw LLM usage events, newest first.',
         content: { 'application/json': { schema: authSchemas.usageEventsResponse } },
       },
-      400: { description: 'Bad request.', content: { 'application/json': { schema: errorBody } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -279,7 +280,7 @@ meRoutes.openapi(
     middleware: [withAuth()] as const,
     responses: {
       200: { description: 'Effective limits.', content: { 'application/json': { schema: usageLimitsSchemas.limitsResponse } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {

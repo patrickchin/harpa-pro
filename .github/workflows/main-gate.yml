@@ -9,10 +9,9 @@ name: main-gate
 # Required check on `main`'s branch protection — see
 # docs/v4/arch-cicd-and-migrations.md.
 #
-# Why dev, not a fresh ephemeral env: journeys exercise live AI providers,
-# Twilio Verify (bypassed via test accounts), and R2 — all configured on
-# the dev Fly app. Spinning a parallel env per PR would 10x our infra
-# surface for one check.
+# Normal promotions reuse dev's already-proved deployment. Focused hotfixes use
+# one isolated preview so the exact PR head can be tested without exposing
+# production data or pointing older code at dev's newer schema.
 
 on:
   pull_request:
@@ -30,13 +29,21 @@ jobs:
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Reject direct Dependabot production promotions
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: |
+          echo "::error::Port the dependency update through dev in a coordinated, human-owned PR before promoting it to main." >&2
+          exit 1
+
+      - uses: actions/checkout@v7
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           lfs: true # voice samples for core/extended journeys
 
       - name: Resolve exact-SHA journey target
         id: target
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           DEV_HEALTH_URL: ${{ vars.API_HEALTH_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/healthz' }}
@@ -51,19 +58,23 @@ jobs:
           echo "base_url=$base_url" >> "$GITHUB_OUTPUT"
 
       - name: Wait for exact-SHA preview provenance
-        if: github.event.pull_request.head.ref != 'dev'
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          github.event.pull_request.head.ref != 'dev'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/ci/wait-for-pr-preview.sh
 
       - name: Verify deployed SHA
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           HEALTH_URL: ${{ steps.target.outputs.base_url }}/healthz
           EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/ci/verify-deployed-sha.sh
 
       - name: Run journeys against verified target
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # The target was SHA-bound above, whether it is shared dev or an
         # isolated focused-hotfix preview.

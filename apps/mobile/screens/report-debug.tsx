@@ -1,9 +1,8 @@
 /**
  * ReportDebug screen — read-only view of the data behind the most
- * recent AI generation. Gated by the `showDeveloperSection` flag
- * (`env.EXPO_PUBLIC_USE_FIXTURES` or `__DEV__`) — the API does not
- * restrict access (data is the user's own notes + prompt/response),
- * but we hide the navigation entry in production builds.
+ * recent AI generation. Its route and navigation entries use the shared
+ * `SHOW_DEVELOPER_TOOLS` policy. The API retains its authenticated
+ * project-member read contract; this screen adds no mutation surface.
  *
  * Props-driven so dev mirrors + tests can render canned data.
  * See docs/v4/design-maestro-full-regression.md §3.4.

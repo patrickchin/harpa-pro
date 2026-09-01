@@ -1,31 +1,20 @@
 /**
  * Pure mappers between an edit modal's draft value and a new
- * `GeneratedSiteReport`. Both `applyEdit` and `applyDelete` wrap the
- * existing immutable helpers in `lib/reports/report-edit-helpers.ts`
- * so the modal owns no schema knowledge — it just hands a typed draft
- * back to the screen.
+ * canonical `reports.ReportBody`.
  */
-import type {
-  GeneratedReportIssue,
-  GeneratedReportMaterial,
-  GeneratedReportSection,
-  GeneratedReportWeather,
-  GeneratedReportWorkers,
-  GeneratedSiteReport,
-} from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
-import {
-  setIssues,
-  setMaterials,
-  setNextSteps,
-  setSections,
-  updateMeta,
-  updateWeather,
-  updateWorkers,
-  type GeneratedReportMeta,
-} from '@/lib/reports/report-edit-helpers';
+import { updateReportBody } from '@/lib/reports/report-body';
 
 import type { ReportEditTarget } from './types';
+
+type ReportBody = reports.ReportBody;
+type ReportMeta = ReportBody['meta'];
+type ReportWeather = NonNullable<ReportBody['weather']>;
+type ReportWorker = ReportBody['workers'][number];
+type ReportMaterial = ReportBody['materials'][number];
+type ReportIssue = ReportBody['issues'][number];
+type ReportSection = ReportBody['summarySections'][number];
 
 /**
  * Per-target draft type. Bodies declare the slice they edit; this map
@@ -33,40 +22,54 @@ import type { ReportEditTarget } from './types';
  * draft type stay in sync).
  */
 export interface DraftByKind {
-  meta: GeneratedReportMeta;
-  weather: GeneratedReportWeather;
-  workers: GeneratedReportWorkers;
-  materials: GeneratedReportMaterial[];
+  meta: ReportMeta;
+  weather: ReportWeather;
+  workers: ReportWorker[];
+  materials: ReportMaterial[];
   nextSteps: string[];
-  issue: GeneratedReportIssue;
-  section: GeneratedReportSection;
+  issue: ReportIssue;
+  section: ReportSection;
 }
 
 export function applyEdit(
-  report: GeneratedSiteReport,
+  report: ReportBody,
   target: ReportEditTarget,
   draft: DraftByKind[ReportEditTarget['kind']],
-): GeneratedSiteReport {
+): ReportBody {
   switch (target.kind) {
     case 'meta':
-      return updateMeta(report, draft as DraftByKind['meta']);
+      return updateReportBody(report, (next) => {
+        next.meta = draft as DraftByKind['meta'];
+      });
     case 'weather':
-      return updateWeather(report, draft as DraftByKind['weather']);
+      return updateReportBody(report, (next) => {
+        next.weather = draft as DraftByKind['weather'];
+      });
     case 'workers':
-      return updateWorkers(report, draft as DraftByKind['workers']);
+      return updateReportBody(report, (next) => {
+        next.workers = draft as DraftByKind['workers'];
+      });
     case 'materials':
-      return setMaterials(report, draft as DraftByKind['materials']);
+      return updateReportBody(report, (next) => {
+        next.materials = draft as DraftByKind['materials'];
+      });
     case 'nextSteps':
-      return setNextSteps(report, draft as DraftByKind['nextSteps']);
+      return updateReportBody(report, (next) => {
+        next.nextSteps = draft as DraftByKind['nextSteps'];
+      });
     case 'issue': {
-      const next = report.report.issues.slice();
+      const next = report.issues.slice();
       next[target.index] = draft as DraftByKind['issue'];
-      return setIssues(report, next);
+      return updateReportBody(report, (body) => {
+        body.issues = next;
+      });
     }
     case 'section': {
-      const next = report.report.sections.slice();
+      const next = report.summarySections.slice();
       next[target.index] = draft as DraftByKind['section'];
-      return setSections(report, next);
+      return updateReportBody(report, (body) => {
+        body.summarySections = next;
+      });
     }
   }
 }
@@ -77,20 +80,18 @@ export function applyEdit(
  * (the user removes individual rows from inside the body).
  */
 export function applyDelete(
-  report: GeneratedSiteReport,
+  report: ReportBody,
   target: ReportEditTarget,
-): GeneratedSiteReport {
+): ReportBody {
   switch (target.kind) {
     case 'issue':
-      return setIssues(
-        report,
-        report.report.issues.filter((_, i) => i !== target.index),
-      );
+      return updateReportBody(report, (next) => {
+        next.issues = report.issues.filter((_, i) => i !== target.index);
+      });
     case 'section':
-      return setSections(
-        report,
-        report.report.sections.filter((_, i) => i !== target.index),
-      );
+      return updateReportBody(report, (next) => {
+        next.summarySections = report.summarySections.filter((_, i) => i !== target.index);
+      });
     default:
       return report;
   }
@@ -103,38 +104,30 @@ export function applyDelete(
  * the report itself.
  */
 export function seedDraft(
-  report: GeneratedSiteReport,
+  report: ReportBody,
   target: ReportEditTarget,
 ): DraftByKind[ReportEditTarget['kind']] {
-  const r = report.report;
   switch (target.kind) {
     case 'meta':
-      return r.meta;
+      return report.meta;
     case 'weather':
       return (
-        r.weather ?? {
-          conditions: null,
+        report.weather ?? {
+          condition: null,
           temperature: null,
           wind: null,
           impact: null,
         }
       );
     case 'workers':
-      return (
-        r.workers ?? {
-          totalWorkers: null,
-          workerHours: null,
-          notes: null,
-          roles: [],
-        }
-      );
+      return report.workers.map((worker) => ({ ...worker }));
     case 'materials':
-      return r.materials.slice();
+      return report.materials.map((material) => ({ ...material }));
     case 'nextSteps':
-      return r.nextSteps.slice();
+      return report.nextSteps.slice();
     case 'issue':
-      return r.issues[target.index]!;
+      return report.issues[target.index]!;
     case 'section':
-      return r.sections[target.index]!;
+      return report.summarySections[target.index]!;
   }
 }

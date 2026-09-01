@@ -70,9 +70,8 @@ export interface ProfileScreenProps {
    * spinner state. Returns a promise so the body can show "Clearing…". */
   onClearCache: () => Promise<void>;
 
-  /** Developer link visibility — gated on `DEV_TOOLS_VISIBLE` at the
-   * call site. Prop (not import) so dev mirrors / tests can flip it
-   * without env-var gymnastics. */
+  /** Developer link visibility — gated by `SHOW_DEVELOPER_TOOLS` at
+   * the call site. Prop (not import) so mirrors and tests can flip it. */
   showDeveloperSection: boolean;
 
   actions?: ReactNode;

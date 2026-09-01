@@ -21,10 +21,10 @@ import {
   getReportHeaderControlTitle,
   getReportHeaderTitle,
 } from '@/lib/reports/report-header-title';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 interface ReportDetailHeaderProps {
-  report: GeneratedSiteReport;
+  report: reports.ReportBody;
   onBack: () => void;
   onOpenActions: () => void;
   actionsDisabled: boolean;
@@ -44,7 +44,7 @@ export function ReportDetailHeader({
   reportNumber,
 }: ReportDetailHeaderProps) {
   const numStr = reportNumber ?? 'x';
-  const title = getReportHeaderTitle(report.report.meta.title);
+  const title = getReportHeaderTitle(report.meta.title);
 
   return (
     <View className="px-5 py-4">

@@ -4,10 +4,9 @@ name: mobile-ota-pr
 # push (open / new commits / reopen) so devices with a `development`
 # native build can pick up the PR's JS bundle on next launch.
 #
-# Only runs for PRs opened from branches in this repository — PRs
-# from forks are skipped because they cannot access EXPO_TOKEN and
-# we don't want to publish untrusted code to our `development`
-# channel.
+# The changed-path check remains available to every PR. OTA publication runs
+# only for human-owned branches in this repository: forks and Dependabot do not
+# receive EXPO_TOKEN or publish code to the shared `development` channel.
 #
 # Requires:
 #   - EXPO_TOKEN repo secret (EAS access token with publish scope)
@@ -36,33 +35,32 @@ jobs:
     outputs:
       api: ${{ steps.paths.outputs.api }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paths
         uses: ./.github/actions/changed-paths
 
   ota:
     name: EAS Update (development)
     needs: changes
-    # Skip PRs from forked repositories — they can't access secrets
-    # and we don't auto-publish untrusted code.
+    # Skip forks and Dependabot. Both still receive credential-free CI, but
+    # neither may publish dependency-controlled code to the shared channel.
     # Skip the `closed` event — that run exists only to join the
     # concurrency group and cancel any in-flight publish.
     if: >-
       github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: ./.github/actions/setup-monorepo
-        with:
-          node-version: '20'
 
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
@@ -99,9 +97,10 @@ jobs:
         env:
           EXPO_PUBLIC_API_URL_OVERRIDE: ${{ steps.api-url.outputs.url }}
           EXPO_PUBLIC_PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           eas update \
             --channel development \
             --environment development \
-            --message "PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.head.ref }}) $(git rev-parse --short HEAD)" \
+            --message "PR #${{ github.event.pull_request.number }} ($PR_HEAD_REF) $(git rev-parse --short HEAD)" \
             --non-interactive

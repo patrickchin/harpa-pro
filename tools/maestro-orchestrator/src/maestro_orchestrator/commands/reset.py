@@ -22,28 +22,15 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 from rich.console import Console
-from rich.table import Table
 
 from .. import checks, db, device, host
 from ..config import MoConfig
+from ..report_renderer import emit_step_report
 
 Status = Literal["ok", "fail", "skip"]
 
 # Generous timeout — a populated DB takes a few seconds to truncate.
 _DB_TIMEOUT_SECONDS = 15.0
-
-# Reuse doctor's glyph dicts so output reads identically across commands.
-_GLYPHS_RICH = {
-    "ok": "[green]OK[/green]",
-    "fail": "[red]FAIL[/red]",
-    "skip": "[dim]SKIP[/dim]",
-}
-_GLYPHS_PLAIN = {
-    "ok": "[OK]",
-    "fail": "[FAIL]",
-    "skip": "[SKIP]",
-}
-
 
 @dataclass(frozen=True)
 class ResetOptions:
@@ -315,22 +302,16 @@ def _emit_human(
     console: Console | None = None,
 ) -> None:
     console = console or Console()
-    use_color = console.is_terminal and not console.no_color
-    table = Table(title=f"mo reset — host: {host.detect_host()}")
-    table.add_column("status", no_wrap=True)
-    table.add_column("step", no_wrap=True)
-    table.add_column("detail", overflow="fold")
-    for r in reports:
-        tag = _GLYPHS_RICH[r.status] if use_color else _GLYPHS_PLAIN[r.status]
-        table.add_row(tag, r.name, r.detail)
-    console.print(table)
-    if exit_code == 0:
-        msg = "reset: all steps completed"
-        console.print(f"[green]{msg}[/green]" if use_color else msg)
-    else:
-        failed = [r.name for r in reports if r.status == "fail"]
-        msg = f"reset: {len(failed)} failing step(s): {failed}"
-        if use_color:
-            console.print(f"[red]{msg}[/red]")
-        else:
-            Console(stderr=True, no_color=True).print(msg)
+    emit_step_report(
+        console=console,
+        title=f"mo reset — host: {host.detect_host()}",
+        steps=reports,
+        success_message="reset: all steps completed",
+        failure_message=lambda _code, rows: (
+            "reset: "
+            f"{len([row.name for row in rows if row.status == 'fail'])} failing step(s): "
+            f"{[row.name for row in rows if row.status == 'fail']}"
+        ),
+        exit_code=exit_code,
+        failure_to_stderr_plain=True,
+    )

@@ -1,52 +1,41 @@
 name: site-dev
 
-# Build + deploy apps/site to Cloudflare Pages on every push to
-# `dev`. Uses --branch=dev so CF Pages serves it at a stable preview
-# URL (e.g. dev.harpa-pro.pages.dev) rather than overwriting the
-# production deployment. Mirrors site-prod.yml.
+# Cloudflare Git publishes the dev branch. GitHub verifies that the stable
+# alias serves this exact commit; it does not hold Cloudflare credentials.
 
 on:
   push:
     branches: [dev]
     paths:
-      - "apps/site/**"
-      - ".github/workflows/site-dev.yml"
-      - "pnpm-lock.yaml"
-  # Allow manual re-deploys.
+      - 'apps/site/**'
+      - 'packages/api-contract/**'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - '.github/workflows/site-dev.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
   workflow_dispatch: {}
 
 concurrency:
   group: site-dev
-  cancel-in-progress: true # ok to cancel stale dev deploys
+  cancel-in-progress: true
 
 jobs:
-  dev:
+  verify:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     permissions:
       contents: read
-      deployments: write
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup-monorepo
-
-      - name: Build public site
-        # PUBLIC_* env vars are inlined by Astro at build time — see
-        # site-prod.yml for why they must be set here.
-        env:
-          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
-          PUBLIC_API_BASE_URL: https://harpa-pro-api-dev.fly.dev
-        run: pnpm --filter @harpa/site build
-
-      - name: Deploy to Cloudflare Pages (dev)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # --branch=dev makes CF Pages serve this at a stable dev
-          # preview URL instead of overwriting the production deployment.
-          command: >-
-            pages deploy apps/site/dist
-            --project-name=harpa-pro
-            --branch=dev
-            --commit-dirty=true
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin https://dev.harpa-pro.pages.dev
+          --commit "${{ github.sha }}"
+          --branch dev
+          --redirect-path /guides/getting-started
+          --redirect-suffix /docs/guides/getting-started

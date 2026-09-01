@@ -4,7 +4,6 @@
  * Ported from `../haru3-reports/apps/mobile/app/projects/[projectId]/members.tsx`
  * on branch `dev`. Adapted for v4 contract:
  *   - 3 roles (owner / editor / viewer), not 4 (no admin)
- *   - Owner is computed by Project.ownerId === member.userId
  *   - Member fields: { userId, displayName, email, role, joinedAt }
  *
  * Inline AddMemberForm + remove-confirm dialog keep this one body file
@@ -49,12 +48,11 @@ export type ProjectMembersProps = {
   members: ReadonlyArray<MemberRow>;
   currentUserId: string | null;
   myRole: MemberRole;
-  ownerId: string;
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
   onBack: () => void;
-  onAddMember: (input: { email: string; role: 'editor' | 'viewer' }) => void;
+  onAddMember: (input: { email: string; role: MemberRole }) => void;
   isAddPending: boolean;
   addError: string | null;
   /**
@@ -65,6 +63,10 @@ export type ProjectMembersProps = {
    * stale state and hid the error notice from failed invites.
    */
   addSuccessNonce: number;
+  onUpdateMemberRole: (userId: string, role: MemberRole) => void;
+  isUpdateRolePending: boolean;
+  updateRoleError: string | null;
+  updateRoleSuccessNonce: number;
   onRemoveMember: (userId: string) => void;
   isRemovePending: boolean;
   actions?: ReactNode;
@@ -99,12 +101,16 @@ function RoleBadge({ role, userId }: { role: MemberRole; userId?: string }) {
 
 function MemberItem({
   member,
+  canChangeRole,
   canRemove,
+  onChangeRole,
   onRemove,
   onLayout,
 }: {
   member: MemberRow;
+  canChangeRole: boolean;
   canRemove: boolean;
+  onChangeRole?: () => void;
   onRemove?: () => void;
   onLayout?: import('react-native').ViewProps['onLayout'];
 }) {
@@ -137,17 +143,30 @@ function MemberItem({
           {member.email}
         </Text>
       </View>
-      {canRemove && onRemove ? (
-        <Pressable
-          onPress={onRemove}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Remove member"
-          testID={`btn-remove-member-${member.userId}`}
-        >
-          <Trash2 size={18} color={colors.danger.DEFAULT} />
-        </Pressable>
-      ) : null}
+      <View className="flex-row items-center gap-3">
+        {canChangeRole && onChangeRole ? (
+          <Pressable
+            onPress={onChangeRole}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={`Change role for ${displayName}`}
+            testID={`btn-change-member-role-${member.userId}`}
+          >
+            <Pencil size={18} color={colors.muted.foreground} />
+          </Pressable>
+        ) : null}
+        {canRemove && onRemove ? (
+          <Pressable
+            onPress={onRemove}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Remove member"
+            testID={`btn-remove-member-${member.userId}`}
+          >
+            <Trash2 size={18} color={colors.danger.DEFAULT} />
+          </Pressable>
+        ) : null}
+      </View>
     </Card>
   );
 }
@@ -157,12 +176,12 @@ function AddMemberForm({
   isPending,
   errorMessage,
 }: {
-  onAdd: (input: { email: string; role: 'editor' | 'viewer' }) => void;
+  onAdd: (input: { email: string; role: MemberRole }) => void;
   isPending: boolean;
   errorMessage: string | null;
 }) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'editor' | 'viewer'>('editor');
+  const [role, setRole] = useState<MemberRole>('editor');
   const [validation, setValidation] = useState<string | null>(null);
 
   const submit = () => {
@@ -176,7 +195,10 @@ function AddMemberForm({
 
   return (
     <Card variant="muted" padding="md" className="gap-3">
-      <Text className="text-title-sm text-foreground">Invite a teammate</Text>
+      <Text className="text-title-sm text-foreground">Add a teammate</Text>
+      <Text className="text-sm text-muted-foreground">
+        They need an existing Harpa Pro account.
+      </Text>
       <Input
         label="Email address"
         placeholder="teammate@example.com"
@@ -193,7 +215,7 @@ function AddMemberForm({
         testID="input-member-email"
       />
       <View className="flex-row gap-2" testID="picker-member-role">
-        {(['editor', 'viewer'] as const).map((r) => (
+        {(['owner', 'editor', 'viewer'] as const).map((r) => (
           <Button
             key={r}
             variant={role === r ? 'default' : 'outline'}
@@ -218,7 +240,7 @@ function AddMemberForm({
         loading={isPending}
         testID="btn-add-member"
       >
-        {isPending ? 'Inviting…' : 'Send invite'}
+        {isPending ? 'Adding…' : 'Add member'}
       </Button>
     </Card>
   );
@@ -228,7 +250,6 @@ export function ProjectMembers({
   members,
   currentUserId,
   myRole,
-  ownerId,
   isLoading,
   refreshing,
   onRefresh,
@@ -237,6 +258,10 @@ export function ProjectMembers({
   isAddPending,
   addError,
   addSuccessNonce,
+  onUpdateMemberRole,
+  isUpdateRolePending,
+  updateRoleError,
+  updateRoleSuccessNonce,
   onRemoveMember,
   isRemovePending,
   actions,
@@ -247,25 +272,25 @@ export function ProjectMembers({
     if (addSuccessNonce > 0) setShowAdd(false);
   }, [addSuccessNonce]);
   const [roleFilter, setRoleFilter] = useState<MemberRole | null>(null);
+  const [memberToUpdate, setMemberToUpdate] = useState<MemberRow | null>(null);
+  const [roleUpdateAttempted, setRoleUpdateAttempted] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<MemberRow | null>(null);
+
+  useEffect(() => {
+    if (updateRoleSuccessNonce > 0) {
+      setMemberToUpdate(null);
+      setRoleUpdateAttempted(false);
+    }
+  }, [updateRoleSuccessNonce]);
 
   const canManage = myRole === 'owner';
   const headerProbe = useLayoutShiftProbe('project-members:header');
   const firstRowProbe = useLayoutShiftProbe('project-members:first-row');
 
-  const enriched = useMemo(
-    () =>
-      members.map((m) => ({
-        ...m,
-        role: m.userId === ownerId ? ('owner' as MemberRole) : m.role,
-      })),
-    [members, ownerId],
-  );
-
-  const me = enriched.find((m) => m.userId === currentUserId) ?? null;
+  const me = members.find((m) => m.userId === currentUserId) ?? null;
   const others = useMemo(
-    () => enriched.filter((m) => m.userId !== currentUserId),
-    [enriched, currentUserId],
+    () => members.filter((m) => m.userId !== currentUserId),
+    [members, currentUserId],
   );
 
   const roleCounts = useMemo(() => {
@@ -322,7 +347,12 @@ export function ProjectMembers({
           {me ? (
             <MemberItem
               member={me}
+              canChangeRole={canManage}
               canRemove={false}
+              onChangeRole={() => {
+                setRoleUpdateAttempted(false);
+                setMemberToUpdate(me);
+              }}
               onLayout={firstRowProbe}
             />
           ) : null}
@@ -350,7 +380,7 @@ export function ProjectMembers({
                       Add member
                     </Text>
                     <Text className="text-sm text-muted-foreground">
-                      Invite a teammate to this project.
+                      Add a teammate who already has a Harpa Pro account.
                     </Text>
                   </View>
                 </View>
@@ -409,7 +439,12 @@ export function ProjectMembers({
                 <MemberItem
                   key={member.userId}
                   member={member}
+                  canChangeRole={canManage}
                   canRemove={canManage && member.role !== 'owner'}
+                  onChangeRole={() => {
+                    setRoleUpdateAttempted(false);
+                    setMemberToUpdate(member);
+                  }}
                   onRemove={() => setMemberToRemove(member)}
                   // If the current user isn't in the list (no `me` row),
                   // the first teammate is the first member row on screen
@@ -422,6 +457,49 @@ export function ProjectMembers({
         </ScrollView>
       )}
       </KeyboardAvoidingView>
+
+      {memberToUpdate ? (
+        <AppDialogSheet
+          visible
+          title="Change role"
+          message={`Choose a role for ${
+            memberToUpdate.displayName ?? memberToUpdate.email
+          }.`}
+          onClose={() => {
+            if (!isUpdateRolePending) {
+              setMemberToUpdate(null);
+              setRoleUpdateAttempted(false);
+            }
+          }}
+          canDismiss={!isUpdateRolePending}
+          actions={[
+            ...(['owner', 'editor', 'viewer'] as const).map((role) => ({
+              label: ROLE_LABELS[role],
+              disabled:
+                isUpdateRolePending || memberToUpdate.role === role,
+              testID: `change-member-role-${role}`,
+              onPress: () => {
+                setRoleUpdateAttempted(true);
+                onUpdateMemberRole(memberToUpdate.userId, role);
+              },
+            })),
+            {
+              label: 'Cancel',
+              variant: 'quiet' as const,
+              disabled: isUpdateRolePending,
+              testID: 'cancel-change-member-role',
+              onPress: () => {
+                setMemberToUpdate(null);
+                setRoleUpdateAttempted(false);
+              },
+            },
+          ]}
+        >
+          {roleUpdateAttempted && updateRoleError ? (
+            <InlineNotice tone="danger">{updateRoleError}</InlineNotice>
+          ) : null}
+        </AppDialogSheet>
+      ) : null}
 
       {removeCopy && memberToRemove ? (
         <AppDialogSheet

@@ -1,5 +1,9 @@
 # Report Title Consistency + Finalized Layout Cleanup — Implementation Plan
 
+> **Status: historical working plan.** The checkboxes preserve the state of
+> this plan when it was written. They are not the current backlog. Check the
+> current implementation and `docs/v4/` before using any step.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Render the report title consistently across the reports list, draft/generate screen, and finalized screen; show the per-project report number in small text alongside; remove the dead one-pill tab bar on finalized.
@@ -14,24 +18,25 @@
 
 ## File map
 
-| File | Change | Responsibility |
-|---|---|---|
-| `apps/mobile/lib/projects/project-reports-list.ts` | modify | Extend `ReportListItem` with structural `body?` field; rewrite `getReportTitle` + `getReportMeta` to apply the new rule. |
-| `apps/mobile/lib/projects/project-reports-list.test.ts` | **create** | Unit-test the two helpers across the three states (no body, body with title, optimistic row irrelevant — covered by isOptimisticReportId). |
-| `apps/mobile/screens/reports-list.tsx` | (no change) | Already calls `getReportTitle` / `getReportMeta`. |
-| `apps/mobile/screens/reports-list.test.tsx` | modify | Adjust snapshot assertions for the new title/meta. |
-| `apps/mobile/features/generate/GenerateReportProvider.tsx` | modify | Change the `"New Report"` fallback to `Report #${reportNumber}`. |
-| `apps/mobile/screens/generate-notes.tsx` | modify | Pass `subtitle={`#${reportNumber}`}` to `ScreenHeader`. |
-| `apps/mobile/screens/generate-report-tab.test.tsx` | modify | Update the `reportTitle` fallback assertions. |
-| `apps/mobile/components/reports/detail/ReportDetailHeader.tsx` | modify | Apply title fallback, drop the report-type eyebrow + visit-date pill `<View>`, use `ScreenHeader` subtitle for `#N · {visit date}`. |
-| `apps/mobile/screens/saved-report.tsx` | modify | Skip `ReportDetailTabBar` and the tab-switch ternary when `isFinal`; render the Report pane directly. |
-| `apps/mobile/screens/saved-report.test.tsx` | modify | Add finalized-mode assertions (no tab bar, no eyebrow, title fallback). |
+| File                                                           | Change      | Responsibility                                                                                                                             |
+| -------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/mobile/lib/projects/project-reports-list.ts`             | modify      | Extend `ReportListItem` with structural `body?` field; rewrite `getReportTitle` + `getReportMeta` to apply the new rule.                   |
+| `apps/mobile/lib/projects/project-reports-list.test.ts`        | **create**  | Unit-test the two helpers across the three states (no body, body with title, optimistic row irrelevant — covered by isOptimisticReportId). |
+| `apps/mobile/screens/reports-list.tsx`                         | (no change) | Already calls `getReportTitle` / `getReportMeta`.                                                                                          |
+| `apps/mobile/screens/reports-list.test.tsx`                    | modify      | Adjust snapshot assertions for the new title/meta.                                                                                         |
+| `apps/mobile/features/generate/GenerateReportProvider.tsx`     | modify      | Change the `"New Report"` fallback to `Report #${reportNumber}`.                                                                           |
+| `apps/mobile/screens/generate-notes.tsx`                       | modify      | Pass `subtitle={`#${reportNumber}`}` to `ScreenHeader`.                                                                                    |
+| `apps/mobile/screens/generate-report-tab.test.tsx`             | modify      | Update the `reportTitle` fallback assertions.                                                                                              |
+| `apps/mobile/components/reports/detail/ReportDetailHeader.tsx` | modify      | Apply title fallback, drop the report-type eyebrow + visit-date pill `<View>`, use `ScreenHeader` subtitle for `#N · {visit date}`.        |
+| `apps/mobile/screens/saved-report.tsx`                         | modify      | Skip `ReportDetailTabBar` and the tab-switch ternary when `isFinal`; render the Report pane directly.                                      |
+| `apps/mobile/screens/saved-report.test.tsx`                    | modify      | Add finalized-mode assertions (no tab bar, no eyebrow, title fallback).                                                                    |
 
 ---
 
 ## Task 1 — Helper rule + unit tests (TDD)
 
 **Files:**
+
 - Modify: `apps/mobile/lib/projects/project-reports-list.ts`
 - Create: `apps/mobile/lib/projects/project-reports-list.test.ts`
 
@@ -41,11 +46,7 @@ Create `apps/mobile/lib/projects/project-reports-list.test.ts` with:
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import {
-  getReportTitle,
-  getReportMeta,
-  type ReportListItem,
-} from './project-reports-list';
+import { getReportTitle, getReportMeta, type ReportListItem } from './project-reports-list';
 
 const base: ReportListItem = {
   id: 'rep_1',
@@ -62,9 +63,7 @@ describe('getReportTitle', () => {
   });
 
   it('falls back to "Report #N" when meta.title is empty / whitespace', () => {
-    expect(
-      getReportTitle({ ...base, body: { meta: { title: '   ' } } }),
-    ).toBe('Report #7');
+    expect(getReportTitle({ ...base, body: { meta: { title: '   ' } } })).toBe('Report #7');
   });
 
   it('uses meta.title when present', () => {
@@ -92,15 +91,13 @@ describe('getReportMeta', () => {
   });
 
   it('falls back to createdAt when visitDate is null', () => {
-    expect(
-      getReportMeta({ ...base, visitDate: null }),
-    ).toBe('#7 · May 19, 2026 · Draft');
+    expect(getReportMeta({ ...base, visitDate: null })).toBe('#7 · May 19, 2026 · Draft');
   });
 
   it('shows "#N · {visit date} · Finalized {updatedAt}" for finalized', () => {
-    expect(
-      getReportMeta({ ...base, status: 'finalized' }),
-    ).toBe('#7 · May 20, 2026 · Finalized May 21, 2026');
+    expect(getReportMeta({ ...base, status: 'finalized' })).toBe(
+      '#7 · May 20, 2026 · Finalized May 21, 2026',
+    );
   });
 });
 ```
@@ -158,8 +155,7 @@ export function getReportTitle(r: ReportListItem): string {
 export function getReportMeta(r: ReportListItem): string {
   const dateIso = r.visitDate ?? r.createdAt;
   const visit = formatDate(dateIso);
-  const status =
-    r.status === 'draft' ? 'Draft' : `Finalized ${formatDate(r.updatedAt)}`;
+  const status = r.status === 'draft' ? 'Draft' : `Finalized ${formatDate(r.updatedAt)}`;
   return `#${r.number} · ${visit} · ${status}`;
 }
 ```
@@ -186,6 +182,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 2 — Reports list screen test fixes
 
 **Files:**
+
 - Modify: `apps/mobile/screens/reports-list.test.tsx`
 
 - [ ] **Step 1: Inspect the existing assertions that mention `Report #` or the meta string**
@@ -229,6 +226,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 3 — Draft / generate header fallback
 
 **Files:**
+
 - Modify: `apps/mobile/features/generate/GenerateReportProvider.tsx`
 - Modify: `apps/mobile/screens/generate-notes.tsx`
 - Modify: `apps/mobile/screens/generate-report-tab.test.tsx`
@@ -241,7 +239,7 @@ In `apps/mobile/screens/generate-report-tab.test.tsx` locate the line:
 reportTitle: 'Highland Tower',
 ```
 
-That's the *non-fallback* case and stays. **Add** a new test in the same file (right after the existing `describe('GenerateNotes — Report tab', () => { ... })` block):
+That's the _non-fallback_ case and stays. **Add** a new test in the same file (right after the existing `describe('GenerateNotes — Report tab', () => { ... })` block):
 
 ```ts
 describe('GenerateNotes — title fallback', () => {
@@ -344,6 +342,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 4 — Finalized header: title fallback + drop eyebrow + #N · date subtitle
 
 **Files:**
+
 - Modify: `apps/mobile/components/reports/detail/ReportDetailHeader.tsx`
 
 - [ ] **Step 1: Rewrite `ReportDetailHeader.tsx`**
@@ -407,8 +406,7 @@ export function ReportDetailHeader({
   if (visitDate) {
     subtitleParts.push(formatDate(visitDate));
   }
-  const subtitle =
-    subtitleParts.length > 0 ? subtitleParts.join(' · ') : undefined;
+  const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : undefined;
 
   return (
     <View className="px-5 py-4">
@@ -432,9 +430,7 @@ export function ReportDetailHeader({
         >
           <View className="flex-row items-center gap-1.5">
             <MoreHorizontal size={16} color={colors.foreground} />
-            <Text className="text-sm font-semibold text-foreground">
-              Actions
-            </Text>
+            <Text className="text-sm font-semibold text-foreground">Actions</Text>
           </View>
         </Button>
       </View>
@@ -448,13 +444,17 @@ Note: `toTitleCase` import is removed; verify no other usages remain in this fil
 - [ ] **Step 2: Type-check + run header-adjacent tests**
 
 Run:
+
 ```bash
 cd apps/mobile && pnpm tsc --noEmit
 ```
+
 Expected: no new errors. Then:
+
 ```bash
 pnpm test -- saved-report
 ```
+
 Expected: failures pointing at the dropped eyebrow / pill — handled in Task 5.
 
 - [ ] **Step 3: Commit**
@@ -471,6 +471,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 5 — Finalized screen: drop the one-pill tab bar
 
 **Files:**
+
 - Modify: `apps/mobile/screens/saved-report.tsx`
 - Modify: `apps/mobile/screens/saved-report.test.tsx`
 
@@ -528,61 +529,52 @@ Expected: FAIL — `btn-tab-report` is present (the one-pill tab bar still rende
 In `apps/mobile/screens/saved-report.tsx` lines ~401-453 (the `<ReportDetailTabBar>` block and the `activeTab === 'report' ? ... : activeTab === 'edit' ? ... : ...` ternary), restructure to:
 
 ```tsx
-{!isFinal ? (
-  <ReportDetailTabBar
-    activeTab={activeTab}
-    onChange={setActiveTab}
-    notesCount={notesCount}
-    showEditTab={!isFinal}
-    showNotesTab={!isFinal}
-  />
-) : null}
+{
+  !isFinal ? (
+    <ReportDetailTabBar
+      activeTab={activeTab}
+      onChange={setActiveTab}
+      notesCount={notesCount}
+      showEditTab={!isFinal}
+      showNotesTab={!isFinal}
+    />
+  ) : null;
+}
 
-{!isFinal && activeTab === 'edit' ? (
-  <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
-    <Text className="text-sm font-medium text-muted-foreground">
-      Edit report
-    </Text>
-    <Text
-      className="text-xs text-muted-foreground"
-      testID="edit-autosave-status"
-    >
-      {isAutoSaving ? 'Saving…' : lastSavedAt ? 'Saved' : ''}
-    </Text>
-  </View>
-) : null}
-
-{isFinal || activeTab === 'report' ? (
-  <Animated.View
-    entering={FadeIn.duration(250)}
-    className="px-5"
-    testID="saved-report-pane"
-  >
-    <ReportView report={displayReport} reportNumber={reportNumber ?? undefined} />
-    <View className="mt-4">
-      <ReportPhotos
-        noteRows={noteRows}
-        onOpenPhoto={handleOpenPhoto}
-      />
+{
+  !isFinal && activeTab === 'edit' ? (
+    <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
+      <Text className="text-sm font-medium text-muted-foreground">Edit report</Text>
+      <Text className="text-xs text-muted-foreground" testID="edit-autosave-status">
+        {isAutoSaving ? 'Saving…' : lastSavedAt ? 'Saved' : ''}
+      </Text>
     </View>
-  </Animated.View>
-) : !isFinal && activeTab === 'edit' ? (
-  <View className="px-5" testID="saved-report-edit-pane">
-    <ReportEditForm
-      report={displayReport}
-      onChange={handleEditChange}
-    />
-  </View>
-) : (
-  <Animated.View entering={FadeIn.duration(250)}>
-    <ReportNotesPane
-      noteRows={noteRows}
-      reportId={reportId ?? null}
-      onOpenPhoto={handleOpenPhoto}
-      isLoading={notesLoading}
-    />
-  </Animated.View>
-)}
+  ) : null;
+}
+
+{
+  isFinal || activeTab === 'report' ? (
+    <Animated.View entering={FadeIn.duration(250)} className="px-5" testID="saved-report-pane">
+      <ReportView report={displayReport} reportNumber={reportNumber ?? undefined} />
+      <View className="mt-4">
+        <ReportPhotos noteRows={noteRows} onOpenPhoto={handleOpenPhoto} />
+      </View>
+    </Animated.View>
+  ) : !isFinal && activeTab === 'edit' ? (
+    <View className="px-5" testID="saved-report-edit-pane">
+      <ReportEditForm report={displayReport} onChange={handleEditChange} />
+    </View>
+  ) : (
+    <Animated.View entering={FadeIn.duration(250)}>
+      <ReportNotesPane
+        noteRows={noteRows}
+        reportId={reportId ?? null}
+        onOpenPhoto={handleOpenPhoto}
+        isLoading={notesLoading}
+      />
+    </Animated.View>
+  );
+}
 ```
 
 The existing `useEffect` that resets `activeTab` to `'report'` when `isFinal` stays — it's now belt-and-braces.
@@ -607,7 +599,8 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 ## Task 6 — Documentation + verification
 
 **Files:**
-- Modify: `docs/v4/pitfalls.md` *only if* you add a pitfall note (optional, see step).
+
+- Modify: `docs/v4/pitfalls.md` _only if_ you add a pitfall note (optional, see step).
 - Verify: full mobile test suite + type-check.
 
 - [ ] **Step 1: Run the full mobile test suite**

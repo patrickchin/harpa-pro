@@ -45,14 +45,14 @@ without 0021; lexical migration order is correct once both land.
 One owner-RLS row is inserted by `POST /files/presign` before its response.
 The report-PDF path also commits the exact server-built key before its R2 PUT:
 
-| Column | Purpose |
-|---|---|
-| `file_id`, `file_key` | Exact server-minted object identity |
-| `owner_id` | Account serialization point and cascade owner |
-| `scope`, `project_id`, `report_id` | Scope copied from the validated request |
-| `content_type`, `size_bytes` | Metadata registration must match |
-| `presign_expires_at` | End of the PUT capability or server-write intent |
-| `consumed_at` | Set atomically with the `app.files` insert |
+| Column                             | Purpose                                          |
+| ---------------------------------- | ------------------------------------------------ |
+| `file_id`, `file_key`              | Exact server-minted object identity              |
+| `owner_id`                         | Account serialization point and cascade owner    |
+| `scope`, `project_id`, `report_id` | Scope copied from the validated request          |
+| `content_type`, `size_bytes`       | Metadata registration must match                 |
+| `presign_expires_at`               | End of the PUT capability or server-write intent |
+| `consumed_at`                      | Set atomically with the `app.files` insert       |
 
 Consumed leases remain until the URL expires because a signed URL is reusable
 even after registration. The worker bounds table growth after expiry plus the
@@ -159,22 +159,30 @@ because the account transaction has already committed.
   remaining objects;
 - records `attempt_count` and `last_error`, logs failures, and reports them to
   Sentry;
-- sleeps until the next known job is due, capped at a ten-minute idle poll, so
-  an otherwise idle worker does not query Neon every few seconds;
-- prunes expired upload leases once per hour.
+- sleeps until the next known job is due, capped at 24 hours in the current
+  low-traffic mode;
+- reconciles and prunes expired upload leases on startup, then prunes once per
+  24 hours while that process remains running.
 
 Fly runs one service-less worker in production and dev. The HTTP `app` group
-can still suspend at zero; the worker is independently scaled to one
-`shared-cpu-1x` Machine with 256 MB. This is a deliberate always-on cost.
+can still suspend at zero. Fly owns one started worker plus one stopped standby,
+each configured as a `shared-cpu-1x` Machine with 512 MB. The active worker
+launches Node through the `tsx` loader directly and logs a structured
+process/guest memory sample at startup and hourly. This is a deliberate
+always-on cost; the headroom prevents the runtime and Fly guest overhead from
+crowding a 256 MB Machine into recurring OOM restarts. Fly's built-in Machine
+memory metric remains authoritative for whole-VM saturation. The hourly sample
+runs independently and does not query the database.
+
 Preview apps have no worker and cannot call `DELETE /me`.
 
-The route fast-path normally removes the immediate job without waiting for the
-worker. A job inserted after the worker calculated its sleep can wait up to ten
-minutes, and expired lease cleanup can wait up to one hour. Those bounds trade
-cleanup latency for gaps long enough that an idle Neon compute may suspend;
-the Fly worker Machine itself remains continuously billed. Known delayed jobs
-and retries wake at their stored `run_after` when the worker can already see
-them.
+The route fast path normally removes the immediate job without waiting for the
+worker. In low-traffic mode, a job inserted after the worker calculated its
+sleep can wait up to one day, and expired lease cleanup can also wait up to one
+day. Those bounds trade cleanup latency for gaps long enough that an idle Neon
+compute can remain suspended; the Fly worker Machine itself remains
+continuously billed. Known delayed jobs and retries wake at their stored
+`run_after` when the worker can already see them.
 
 ## Bounds and safety
 
@@ -224,11 +232,11 @@ FROM app.storage_lifecycle_rollout
 WHERE singleton;
 ```
 
-If deployment or worker scaling fails before arming, account deletion remains
-intentionally unavailable and legacy registration remains compatible. Rerun
-the production deploy script, which owns the ordered deploy, worker-scale, and
-arm sequence; do not manually force the timestamp before old presigns have
-expired.
+If deployment, narrow worker-topology repair, or verification fails before
+arming, account deletion remains intentionally unavailable and legacy
+registration remains compatible. Rerun the production deploy script, which
+owns the ordered deploy, repair, verify, and arm sequence; do not manually
+force the timestamp before old presigns have expired.
 
 ## Alternatives rejected
 

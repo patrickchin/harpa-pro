@@ -7,8 +7,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./schemas": "./src/schemas/index.ts",
-    "./openapi": "./src/openapi.ts"
+    "./schemas": "./src/schemas/index.ts"
   },
   "scripts": {
     "build": "tsc -b",
@@ -19,13 +18,12 @@
     "gen:types": "tsx scripts/gen-types.ts"
   },
   "dependencies": {
-    "@hono/zod-openapi": "^0.18.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "openapi-typescript": "^7.4.1",
-    "tsx": "^4.19.1",
+    "tsx": "^4.23.12",
     "typescript": "^5.6.2",
-    "vitest": "^2.1.2"
+    "vitest": "^3.2.7"
   }
 }

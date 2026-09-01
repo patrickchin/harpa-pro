@@ -1,19 +1,23 @@
 name: site-preview
 
-# Build + deploy a per-PR preview of apps/site to Cloudflare
-# Pages, then comment the unique preview URL on the PR. See
-# docs/marketing/deploy-cloudflare-pages.md for the one-time CF
-# setup.
+# Build and verify apps/site for every PR. Cloudflare Git publishes the exact
+# mirrored pr-N branch; human-owned same-repository PRs verify that deployment.
 
 on:
   pull_request:
     branches: [dev, main]
     paths:
       - 'apps/site/**'
+      - 'packages/api-contract/**'
       - '.github/workflows/site-preview.yml'
+      - '.github/workflows/pages-preview-ref.yml'
       - 'lighthouserc.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - 'tsconfig.base.json'
 
 # Cancel stale builds when a PR gets a new push.
 concurrency:
@@ -21,14 +25,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      deployments: write
+    env:
+      PUBLIC_DASHBOARD_URL: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-monorepo
 
@@ -42,26 +46,26 @@ jobs:
         run: pnpm --filter @harpa/site typecheck
 
       - name: Build public site
-        # See site-prod.yml for why PUBLIC_* must be set HERE
-        # (Astro inlines them at build time; CF Pages env vars don't
-        # apply to pre-built dist/ uploads).
+        # This credential-free build uses Cloudflare's public test key.
+        # Cloudflare Git independently builds the deployable bytes with the
+        # real public site key stored in the Pages build environment.
         env:
-          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+          PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
           PUBLIC_API_BASE_URL: https://api.harpapro.com
         run: pnpm --filter @harpa/site build
 
       - name: Verify public build excludes admin routes
         run: test ! -e apps/site/dist/admin
 
-      - name: Install Playwright Chromium
-        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium firefox
 
       - name: Browser-test documentation
         run: pnpm --filter @harpa/site test:e2e
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site-playwright-report
           path: |
@@ -71,58 +75,27 @@ jobs:
 
       - name: Lighthouse CI (perf/a11y ≥ 0.90, bp/seo ≥ 0.95)
         run: pnpm exec lhci autorun --config=./lighthouserc.json
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
-      - name: Deploy preview to Cloudflare Pages
-        id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Branch name in CF must be lowercase + safe for URLs;
-          # github.head_ref is the source branch name on PRs.
-          command: >-
-            pages deploy apps/site/dist
-            --project-name=harpa-pro
-            --branch=${{ github.head_ref }}
-            --commit-dirty=true
+  deployment:
+    needs: verify
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    env:
+      SITE_BRANCH: pr-${{ github.event.pull_request.number }}
+      SITE_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro.pages.dev
+    steps:
+      - uses: actions/checkout@v7
 
-      - name: Verify deployed docs redirect
-        if: steps.deploy.outputs.deployment-url
-        shell: bash
-        run: |
-          read -r status location < <(
-            curl --silent --show-error --output /dev/null \
-              --max-redirs 0 \
-              --write-out '%{http_code} %{redirect_url}\n' \
-              "${{ steps.deploy.outputs.deployment-url }}/guides/getting-started"
-          )
-          test "$status" = "301"
-          case "$location" in
-            */docs/guides/getting-started) ;;
-            *) echo "Unexpected redirect: $location" >&2; exit 1 ;;
-          esac
-
-      - name: Comment preview URL on PR
-        if: steps.deploy.outputs.deployment-url
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: site-preview
-          message: |
-            ### 🚧 Public site preview
-
-            **Preview URL:** ${{ steps.deploy.outputs.deployment-url }}
-
-            Built from commit `${{ github.event.pull_request.head.sha }}`
-            on branch `${{ github.head_ref }}`.
-
-            <details><summary>What this checks</summary>
-
-            - Site unit tests, lint, and Astro type checking pass
-            - Astro build of `apps/site` succeeds
-            - Playwright validates the task hierarchy, search, screenshot assets, links, and mobile layout
-            - Lighthouse CI thresholds pass
-            - Static output and legacy redirects work on Cloudflare Pages
-
-            </details>
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "$SITE_PREVIEW_ORIGIN"
+          --commit "${{ github.event.pull_request.head.sha }}"
+          --branch "$SITE_BRANCH"
+          --redirect-path /guides/getting-started
+          --redirect-suffix /docs/guides/getting-started

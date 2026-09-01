@@ -26,7 +26,7 @@ describe('camera-session-registry', () => {
       returnTo: '/r/abc',
       result: null,
     });
-    commitCameraSession(id, ['file:///a.jpg', 'file:///b.jpg']);
+    expect(commitCameraSession(id, ['file:///a.jpg', 'file:///b.jpg'])).toBe(true);
     const uris = consumeCameraSession(id);
     expect(uris).toEqual(['file:///a.jpg', 'file:///b.jpg']);
     // single-use
@@ -40,8 +40,8 @@ describe('camera-session-registry', () => {
     expect(getCameraSession(id)).toBeUndefined();
   });
 
-  it('commit + consume on an unknown id is a no-op', () => {
-    expect(() => commitCameraSession('does-not-exist', [])).not.toThrow();
+  it('reports an unknown commit so the camera can reclaim its files', () => {
+    expect(commitCameraSession('does-not-exist', [])).toBe(false);
     expect(consumeCameraSession('does-not-exist')).toBeUndefined();
   });
 

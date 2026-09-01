@@ -1,6 +1,6 @@
 # Separate admin site
 
-**Status:** Implemented; production rollout and custom-domain cutover pending
+**Status:** Implemented
 
 ## Problem
 
@@ -37,6 +37,9 @@ admin database and credentials remain unchanged.
 ## Routes
 
 - `https://admin.harpapro.com/` renders the activity console directly.
+- `https://admin.harpapro.com/operations` renders the read-only service
+  monitoring page described in
+  [design-admin-service-monitoring.md](design-admin-service-monitoring.md).
 - `https://harpapro.com/admin/activity` and
   `https://www.harpapro.com/admin/activity` return the public site's normal 404.
 - Unknown admin-host paths return a static 404 instead of the console shell.
@@ -49,21 +52,25 @@ origin.
 
 ## Deployments
 
-The admin app has independent preview, development, and production workflows:
+The admin app uses the independent `harpa-pro-admin` Git-connected Pages
+project. Every relevant pull request runs credential-free tests and a build;
+only human-owned same-repository pull requests receive a hosted preview:
 
-- Pull requests deploy `apps/admin/dist` to branch `pr-<number>` of
-  `harpa-pro-admin`. The stable browser origin is therefore
+- A credential-free workflow mirrors eligible pull request heads to the exact
+  Git branch `pr-<number>`. Cloudflare builds that branch, so the stable origin is
   `https://pr-<number>.harpa-pro-admin.pages.dev`.
-- Pushes to `dev` deploy branch `dev`, served at
+- Pushes to `dev` trigger the Git preview branch, served at
   `https://dev.harpa-pro-admin.pages.dev`.
-- Pushes to `main` deploy the Pages production branch and serve
+- Pushes to `main` trigger the Pages production branch and serve
   `https://admin.harpapro.com` after the custom domain is attached.
 
 Admin-only changes must also create the existing per-PR Fly and Neon preview
 environment. Its exact `ADMIN_CORS_ORIGINS` value is the stable `pr-<number>`
 Pages origin, and the admin preview is built against
-`https://harpa-pro-api-pr-<number>.fly.dev`. Using the PR number avoids duplicate
-branch-name sanitisation logic across Cloudflare and GitHub Actions.
+`https://harpa-pro-api-pr-<number>.fly.dev`. Using the generated PR-number Git
+ref avoids duplicate branch-name sanitisation logic across Cloudflare and
+GitHub Actions. See
+[design-cloudflare-pages-git-deployments.md](design-cloudflare-pages-git-deployments.md).
 
 The development API trusts only
 `https://dev.harpa-pro-admin.pages.dev`. Production trusts only
@@ -98,8 +105,9 @@ Automated checks must prove:
 
 1. `apps/site` has no `/admin` source route and its built artifact has no
    `dist/admin` path.
-2. `apps/admin` renders the console only at `/`, publishes a real static 404
-   rather than an SPA fallback, and blocks search discovery.
+2. `apps/admin` renders activity at `/` and operations at `/operations`,
+   publishes a real static 404 rather than an SPA fallback, and blocks search
+   discovery.
 3. Public and admin workflows use different workspace filters, output
    directories, and Pages project names.
 4. Unit tests retain activity filtering, refresh markers, text export, sign-in,

@@ -1,0 +1,55 @@
+name: ruby-security
+
+on:
+  pull_request:
+    paths:
+      - '.ruby-version'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.github/workflows/ruby-security.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - '.ruby-version'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.github/workflows/ruby-security.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: bundle (Ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['3.2.11', '3.4.10']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler: 2.6.9
+          bundler-cache: true
+      - name: Verify patched dependency floors
+        run: |
+          bundle exec ruby -rbundler -e '
+            minimum = {
+              "fastlane" => "2.237.0",
+              "aws-sdk-s3" => "1.228.2",
+              "faraday" => "1.10.6",
+              "excon" => "1.6.0"
+            }
+            locked = Bundler.load.specs.to_h { |spec| [spec.name, spec.version] }
+            minimum.each do |name, version|
+              actual = locked.fetch(name)
+              abort "#{name} #{actual} is below #{version}" if actual < Gem::Version.new(version)
+            end
+          '
+      - name: Load Fastlane configuration
+        env:
+          FASTLANE_SKIP_UPDATE_CHECK: '1'
+        run: bundle exec fastlane lanes

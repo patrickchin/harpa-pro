@@ -1,6 +1,10 @@
 # Separate admin console authentication
 
-**Status:** Implemented; production rollout and first administrator provisioning pending
+**Status:** Implemented and deployed. Current administrator provisioning is
+provider-managed and `UNKNOWN` from the repository.
+
+The Fly inventory and Harpa-recorded AI usage additions below are unmerged
+drafts. They do not provision or enable a provider administrator credential.
 
 ## Context
 
@@ -39,11 +43,26 @@ in `packages/api/src/routes/admin.ts` remain on their current app-admin
 authorization until a separate migration accounts for their existing
 app-user audit foreign keys. They are not called by this page.
 
+The Neon Free usage stack adds `GET /admin/operations/neon-usage` to the same
+boundary. It reuses the existing `ADMIN_NEON_VIEWER_API_KEY` and
+`ADMIN_NEON_ORG_ID` pair and adds no provider credential.
+
+The storage lifecycle stack adds
+`GET /admin/operations/storage-lifecycle` to the same boundary. It reads the
+application database and adds no credential or provider access.
+
+The draft Fly inventory stack adds `GET /admin/operations/fly-inventory` to
+the same `withAdminSession()` boundary.
+
+The draft AI usage stack adds `GET /admin/operations/ai-usage` to that
+boundary. It authenticates against the admin database before one aggregate
+query reads the application usage ledger. The databases do not join.
+
 ## User journey
 
 1. An operator provisions an exact `@harpapro.com` address with the admin CLI
    and stores its long password in a password manager.
-2. The administrator opens `/admin/activity`.
+2. The administrator opens the admin site root, `/`.
 3. The page checks `GET /admin/auth/session`.
 4. If signed out, the page asks for email and password.
 5. `POST /admin/auth/login` verifies the dedicated identity, creates a
@@ -176,7 +195,8 @@ Behavior:
 - canonicalize the email;
 - perform uniform password verification;
 - reject unknown, disabled, wrong-domain, and wrong-password credentials with
-  the same `401` body;
+  the same `401` error code and message; the required top-level `requestId`
+  varies only by request and never by credential class;
 - create a new opaque session and set the admin cookie; and
 - return `{ authenticated: true, email }` with `Cache-Control: no-store`.
 
@@ -202,6 +222,165 @@ keyed by the dedicated admin identity and session. Only then does the route
 read activity from the application database. Anonymous traffic consumes the
 shared IP gate but not the activity bucket.
 
+### `GET /admin/operations/neon-usage`
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any Neon request. Better Auth bearer tokens, Better Auth cookies, and the
+retired application `is_admin` bit cannot authorize the route. A separate
+12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route is read-only and accepts no request body, query, provider selector,
+or write method. Every response sets `Cache-Control: private, no-store`. It
+reuses the optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair.
+The organization must report the exact `free` plan, and every discovered
+project must prove effective `VIEWER` permission before detail calls.
+
+One observation makes at most 22 fixed Neon `GET` requests under one shared
+10-second deadline. It does not retry or follow project pagination. The
+browser calls the route once after session confirmation and again only on
+manual **Refresh**. The full operations page makes 16 fixed GET reads on load
+and 32 total after one Refresh. It does not poll. The report generation live
+canary remains a separate manual POST.
+
+Neon percentages use published Free-plan references and are not credit
+balances. R2 Class A and Class B percentages remain estimates. The GitHub
+percentage describes only the primary public REST request budget for the
+current browser and IP. Unsupported provider money, token, invoice, and credit
+values stay `Unknown`. See
+[Admin provider quota percentages](design-admin-provider-quota-percentages.md)
+for the complete contract.
+
+### `GET /admin/operations/r2-capacity`
+
+Require `withAdminSession()` before any Cloudflare request. Better Auth bearer
+tokens, Better Auth cookies, and the retired application `is_admin` bit cannot
+authorize the route. The shared trusted-Fly-IP gate runs before the dedicated
+admin session lookup. A separate 12-request-per-minute bucket uses the admin
+identity and session after authentication succeeds.
+
+The route is read-only and accepts no request body, query, or provider selector.
+Every response sets `Cache-Control: private, no-store`. See
+[Admin R2 capacity](design-admin-r2-capacity.md) for the credential and provider
+boundaries.
+
+### `GET /admin/operations/sentry` (draft)
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any Sentry request. Better Auth bearer tokens, Better Auth cookies, and the
+retired application `is_admin` bit cannot authorize the route. A separate
+12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route supports read-only requests and accepts no request body, query,
+provider selector, or write method. Every response sets
+`Cache-Control: private, no-store`.
+Set the optional `ADMIN_SENTRY_ORG_SLUG`, `ADMIN_SENTRY_READ_TOKEN`,
+`ADMIN_SENTRY_PROJECT_SLUGS`, `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`, and
+`ADMIN_SENTRY_ENVIRONMENT` together, or leave all five values absent.
+`ADMIN_SENTRY_REGION` is optional, defaults to `global`, and accepts only
+`global`, `us`, or `de`.
+
+One observation makes exactly two fixed Sentry `GET` requests under one shared
+10-second deadline. The requests run in parallel. The route does not retry,
+follow pagination, write to Sentry, or expose a polling path.
+
+The response is aggregate only. It returns bounded unresolved issue-group
+counts, bounded mobile-session totals, reviewed caveats, and bounded unknown
+reasons. It never returns issue titles, event data, people, project names,
+provider diagnostics, or the token itself. See
+[Admin Sentry observer](design-admin-sentry-observer.md) for the complete draft
+contract.
+
+### `GET /admin/operations/fly-inventory` (draft)
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any Fly request. Better Auth bearer tokens, Better Auth cookies, and the
+retired application `is_admin` bit cannot authorize the route. A separate
+12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route supports only reads and accepts no body, query, provider selector, or
+write method. Every response sets `Cache-Control: private, no-store`. The
+optional `ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+`ADMIN_FLY_APP_NAMES` values must be absent or present together.
+
+The route uses fixed public Fly REST paths and returns only configured apps.
+It makes at most 31 provider calls under one deadline. It does not retry,
+follow redirects or pagination, write to Fly, or expose a polling path.
+
+The response uses a strict Machine and Volume field allowlist. The nullable
+process group comes only from reviewed Machine metadata. Credentials, raw
+provider errors, private IPs, raw Machine configuration, and Volume internals
+never cross the boundary.
+
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Remaining Fly credit stays `Unknown`. The full page makes 16 fixed
+GET reads on load and 32 after one manual **Refresh**. See
+[Admin Fly inventory](design-admin-fly-inventory.md) for the complete draft
+contract.
+
+### `GET /admin/operations/storage-lifecycle`
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any application-database read. Better Auth bearer tokens, Better Auth cookies,
+and the retired application `is_admin` bit cannot authorize the route. A
+separate 12-request-per-minute bucket uses the admin identity and session.
+
+The route supports reads only and accepts no body or query. One observation
+runs exactly one fixed application-database statement under a five-second
+deadline. It makes no mutation or provider call. Every response sets
+`Cache-Control: private, no-store`.
+
+The response returns bounded rollout and durable queue aggregates. It excludes
+payloads, user IDs, object keys, raw errors, and Fly identifiers. The database
+state does not prove current worker liveness. See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
+
+### `GET /admin/operations/ai-usage` (draft)
+
+Require the shared trusted-Fly-IP gate before `withAdminSession()` and before
+any application-database query. Better Auth bearer tokens, Better Auth cookies,
+and the retired application `is_admin` bit cannot authorize the route. A
+separate 12-request-per-minute bucket uses the admin identity and session after
+authentication succeeds.
+
+The route is read-only and accepts no request body, query, provider selector,
+or write method. Every response sets `Cache-Control: private, no-store`. One
+request runs one bounded cross-user aggregate over fixed current-month and
+previous-24-hour UTC windows. The route makes no provider request and adds no
+OpenAI, Groq, or Kimi administrator credential.
+
+The strict response returns only normalized provider, operation, fixture-mode,
+status, token, seconds, and timestamp aggregates. It excludes user, project,
+report, model, prompt, transcript, raw vendor, provider response, and database
+error details. The retained ledger is best-effort and not provider billing.
+Remaining provider credit stays `Unknown`. See
+[Admin AI usage ledger](design-admin-ai-usage.md) for the complete draft
+contract.
+
+### `POST /admin/operations/report-generate`
+
+This route is the only protected admin mutation other than logout. It uses the
+same dedicated admin session boundary. It also requires the exact configured
+Origin and the session-derived `X-Admin-CSRF` token. Better Auth sessions,
+application Bearer tokens, and the retired `is_admin` bit cannot authorize it.
+
+The live canary flag defaults to disabled. The parser accepts enablement only
+for the exact non-preview development deployment in live AI mode. A disabled
+route makes no application request or application-database query. Production
+and pull-request previews cannot enable it.
+
+The browser sends an empty, credentialed, no-store POST only after an explicit
+click. Page load, shared **Refresh**, timers, and background work never start
+or clear the run. The browser keeps the result only in component memory.
+
+The fixed synthetic account keeps the normal report and AI limits. The admin
+route also permits only three runs per identity and session in 15 minutes. A
+pass proves one fresh live usage row, a bounded validated preview, and strict
+same-token session cleanup. See
+[Admin live report-generation canary](design-admin-report-live-canary.md).
+
 ### `GET /admin/readyz`
 
 Checks the independent admin database connection and
@@ -216,12 +395,27 @@ second to avoid a readiness thundering herd.
 The admin browser surface uses its own Postgres-backed limiter in the
 independent admin database in deployed environments:
 
-- all `/admin/auth/*` and `/admin/activity` requests: 120 per trusted Fly
+- all protected browser-admin requests: 120 per trusted Fly
   client IP per minute;
 - login: 20 attempts per trusted Fly client IP per 15 minutes;
 - login: 3 attempts per trusted Fly client IP per minute;
-- login: 5 attempts per canonical email per 15 minutes; and
-- activity reads: 120 per dedicated admin identity and session per minute.
+- login: 5 attempts per canonical email per 15 minutes;
+- activity reads: 120 per dedicated admin identity and session per minute;
+- Neon inventory reads: 12 per dedicated admin identity and session per
+  minute;
+- Neon Free usage reads: 12 per dedicated admin identity and session per
+  minute;
+- R2 capacity reads: 12 per dedicated admin identity and session per minute;
+- Sentry reads: 12 per dedicated admin identity and session per minute in the
+  draft stack.
+- Fly inventory reads: 12 per dedicated admin identity and session per minute
+  in the draft stack;
+- storage lifecycle reads: 12 per dedicated admin identity and session per
+  minute;
+- AI usage reads: 12 per dedicated admin identity and session per minute in
+  the draft stack;
+- report generation live-canary runs: 3 per dedicated admin identity and
+  session per 15 minutes.
 
 The shared IP gate protects admin-session database lookups, including invalid
 cookie probes to the activity route. The login IP limits also reject before
@@ -233,10 +427,13 @@ by attempts from other IPs targeting the same email address.
 Login failures remain indistinguishable and never disclose whether an
 identity exists.
 
-Login and logout reject missing or untrusted `Origin` headers. The activity
-request is read-only. If this browser session later protects an admin
-`POST`, `PUT`, `PATCH`, or `DELETE` other than logout, add a per-session CSRF
-token carried in a custom header as described by the
+Login and logout reject missing or untrusted `Origin` headers. The activity,
+Neon inventory, Neon Free usage, R2 capacity, Sentry, Fly inventory, and
+storage lifecycle requests only read data. The draft AI usage request is also
+read-only. The report generation live canary is the first protected admin
+mutation other than logout. It also requires the exact Origin and a
+session-derived CSRF token carried in `X-Admin-CSRF`. The token stays in
+browser memory. The admin session invalidates it, following the
 [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Successful login, failed login, logout, and session rejection emit structured
@@ -249,7 +446,7 @@ and outcome. Passwords and raw session tokens are never logged.
 - Remove browser CORS from `/api/auth/*`; native app auth does not need it.
 - Keep credentialed exact-origin CORS on `/admin/*`.
 - Allow only `GET`, `POST`, and `OPTIONS` for the current browser console.
-- Allow only `Content-Type` and `X-Request-ID`.
+- Allow only `Content-Type`, `X-Request-ID`, and `X-Admin-CSRF`.
 - Keep `Vary: Origin` and never use `*` with credentials.
 - Store environment-specific admin origins as non-secret Fly configuration,
   not in the Doppler secret stream.
@@ -302,6 +499,37 @@ unchanged.
   revocation work against real Postgres.
 - An app session, including an `is_admin = true` app user, cannot read
   `/admin/activity`.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the Neon
+  provider through `/admin/operations/neon-usage`.
+- A dedicated admin request to the Neon Free usage route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets. One observation uses
+  at most 22 provider reads and no provider write.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the R2
+  provider through `/admin/operations/r2-capacity`.
+- A dedicated admin request to the R2 route consumes both its trusted-IP and
+  identity/session budgets.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the draft
+  Sentry observer route.
+- A dedicated admin request to the draft Sentry route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets. One observation uses
+  exactly two provider reads, no provider write, and only aggregate response
+  fields.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot call the draft
+  Fly provider route.
+- A dedicated admin request to the draft Fly route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets. Its fixed plan makes
+  at most 31 provider reads and no provider write.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot read storage
+  lifecycle state through `/admin/operations/storage-lifecycle`.
+- A dedicated storage lifecycle request consumes both budgets and runs one
+  fixed statement. Component tests prove 16/32 reads and no polling.
+- Anonymous, Better Auth, and legacy app-admin sessions cannot run the draft
+  AI usage aggregate.
+- A dedicated admin request to the draft AI usage route consumes both its
+  trusted-IP and 12-per-minute identity/session budgets before one
+  application-database query.
+- Live-canary tests prove the exact Origin, CSRF, dedicated-cookie, and
+  three-per-15-minute gates. They also prove strict redaction and no autorun.
 - Anonymous requests sharing an IP consume only the shared IP gate, not the
   authenticated activity bucket; authenticated activity requests consume
   both.
@@ -346,4 +574,5 @@ that step.
 - password recovery email;
 - an admin identity management UI;
 - migration of the remaining programmatic `/admin/*` routes; and
-- extraction into a separate `apps/admin` deployment.
+- migration of any remaining programmatic admin route that still uses app-user
+  authorization.

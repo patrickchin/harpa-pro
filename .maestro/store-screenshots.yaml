@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "Store screenshots: seeded projects, reports, photos, usage"
+name: 'Store screenshots: seeded projects, reports, photos, usage'
 tags:
   - screenshots
   - store
@@ -20,264 +20,253 @@ tags:
 # so the finalized report and PDF reflect the store screenshot fixture
 # report body.
 
-- launchApp:
-    clearState: true
-    clearKeychain: true
-    stopApp: true
-- waitForAnimationToEnd
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
-- waitForAnimationToEnd:
-    timeout: 20000
-- runFlow:
-    file: helpers/dismiss-open-dialog.yaml
-- extendedWaitUntil:
-    visible:
-      id: "input-email"
-    timeout: 90000
+- runFlow: helpers/launch-local-dev-client.yaml
 
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "test3@harpapro.com"
+      EMAIL: 'test3@harpapro.com'
 
 - runFlow:
     when:
       visible:
-        id: "screen-onboarding"
+        id: 'screen-onboarding'
     commands:
       - tapOn:
-          id: "input-onboarding-name"
-      - inputText: "Avery Chen"
+          id: 'input-onboarding-name'
+      - inputText: 'Avery Chen'
       - tapOn:
-          id: "input-onboarding-company"
-      - inputText: "HARPA Field Demo"
+          id: 'input-onboarding-company'
+      - inputText: 'HARPA Field Demo'
       - hideKeyboard
       # iOS can submit this form while dismissing the keyboard, which
       # navigates to Projects before Maestro reaches the explicit tap.
       - runFlow:
           when:
             visible:
-              id: "btn-onboarding-submit"
+              id: 'btn-onboarding-submit'
           commands:
             - tapOn:
-                id: "btn-onboarding-submit"
+                id: 'btn-onboarding-submit'
 
 - extendedWaitUntil:
     visible:
-      id: "btn-new-project"
+      id: 'btn-new-project'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "project-row-prj_rvrsd000001"
+      id: 'project-row-prj_rvrsd000001'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "project-row-prj_harbp000001"
+      id: 'project-row-prj_harbp000001'
     timeout: 15000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title"
+    id: 'screen-header-title'
 - assertNotVisible:
-    id: "screen-header-title-row"
+    id: 'screen-header-title-row'
 - waitForAnimationToEnd
 - takeScreenshot: 01_projects_list
 
 - tapOn:
-    id: "project-row-prj_rvrsd000001"
+    id: 'project-row-prj_rvrsd000001'
 - runFlow:
     when:
       visible:
-        id: "project-row-prj_rvrsd000001"
+        id: 'project-row-prj_rvrsd000001'
     commands:
       - tapOn:
-          id: "project-row-prj_rvrsd000001"
+          id: 'project-row-prj_rvrsd000001'
 - extendedWaitUntil:
     visible:
-      id: "btn-open-reports"
+      id: 'btn-open-reports'
     timeout: 15000
 - tapOn:
-    id: "btn-open-reports"
+    id: 'btn-open-reports'
 - extendedWaitUntil:
     visible:
-      id: "btn-new-report"
+      id: 'btn-new-report'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "report-row-4"
+      id: 'report-row-4'
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "report-row-3"
+      id: 'report-row-3'
     timeout: 15000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title"
+    id: 'screen-header-title'
 - assertNotVisible:
-    id: "screen-header-title-row"
+    id: 'screen-header-title-row'
 - waitForAnimationToEnd
 - takeScreenshot: 02_reports_list
 
-- openLink: "harpa://projects/prj_rvrsd000001"
+- openLink: 'harpa://projects/prj_rvrsd000001'
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "link-project-members"
+      id: 'link-project-members'
     timeout: 15000
 - tapOn:
-    id: "link-project-members"
+    id: 'link-project-members'
 - extendedWaitUntil:
-    visible: "Members"
+    visible: 'Members'
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Avery Chen"
+    visible: 'Avery Chen'
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Priya Shah"
+    visible: 'Priya Shah'
     timeout: 15000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title"
+    id: 'screen-header-title'
 - assertNotVisible:
-    id: "screen-header-title-row"
+    id: 'screen-header-title-row'
 - waitForAnimationToEnd
 - takeScreenshot: 03_members_team
 
-- openLink: "harpa://projects/prj_rvrsd000001/reports/4/generate"
+- openLink: 'harpa://projects/prj_rvrsd000001/reports/4/generate'
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "input-note"
+      id: 'input-note'
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Access path follow-up"
+    visible: 'Access path follow-up'
     timeout: 30000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title-row"
-- assertVisible: "Site Visit #4"
+    id: 'screen-header-title-row'
+- assertVisible: 'Site Visit #4'
 - tapOn:
-    id: "btn-record-start"
+    id: 'btn-record-start'
 - extendedWaitUntil:
     visible:
-      id: "voice-record-strip"
+      id: 'voice-record-strip'
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      id: "voice-record-duration"
+      id: 'voice-record-duration'
     timeout: 10000
 - waitForAnimationToEnd:
     timeout: 1500
 - takeScreenshot: 04_voice_recording
 - tapOn:
-    id: "btn-record-cancel"
+    id: 'btn-record-cancel'
 
-- openLink: "harpa://projects/prj_rvrsd000001/reports/3"
+- openLink: 'harpa://projects/prj_rvrsd000001/reports/3'
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "saved-report-pane"
+      id: 'saved-report-pane'
     timeout: 30000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title-row"
-- assertVisible: "Site Visit #3"
+    id: 'screen-header-title-row'
+- assertVisible: 'Site Visit #3'
 - scrollUntilVisible:
     element:
-      id: "placed-photos-issue-.*"
+      id: 'placed-photos-issue-.*'
     direction: DOWN
     timeout: 60000
 - extendedWaitUntil:
-    visible: "South foundation wall shows water intrusion"
+    visible: 'South foundation wall shows water intrusion'
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: 05_final_report_issues
 
 - scrollUntilVisible:
     element:
-      id: "report-photos"
+      id: 'btn-report-photo-.*'
     direction: DOWN
     timeout: 60000
+    visibilityPercentage: 100
+    centerElement: true
 - extendedWaitUntil:
     visible:
-      id: "report-photos-grid"
+      id: 'report-photos-grid'
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: 06_final_report_sections_unplaced
 
-- openLink: "harpa://projects/prj_rvrsd000001/reports/3"
+- openLink: 'harpa://projects/prj_rvrsd000001/reports/3'
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 - scrollUntilVisible:
     element:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     direction: UP
     timeout: 60000
 - extendedWaitUntil:
     visible:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     timeout: 30000
 - tapOn:
-    id: "btn-report-actions"
+    id: 'btn-report-actions'
 - extendedWaitUntil:
     visible:
-      id: "report-actions-menu"
+      id: 'report-actions-menu'
     timeout: 15000
 - tapOn:
-    id: "btn-report-view-pdf"
+    id: 'btn-report-view-pdf'
 - extendedWaitUntil:
     visible:
-      id: "pdf-preview"
+      id: 'pdf-preview'
     timeout: 60000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title"
+    id: 'screen-header-title'
 - assertNotVisible:
-    id: "screen-header-title-row"
+    id: 'screen-header-title-row'
 - waitForAnimationToEnd
 - takeScreenshot: 07_pdf_preview
 
 - tapOn:
-    id: "btn-back"
+    id: 'btn-back'
 - extendedWaitUntil:
     visible:
-      id: "saved-report-pane"
+      id: 'saved-report-pane'
     timeout: 15000
-- openLink: "harpa://usage"
+- openLink: 'harpa://usage'
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "screen-usage"
+      id: 'screen-usage'
     timeout: 30000
 - extendedWaitUntil:
     notVisible:
-      id: "usage-loading"
+      id: 'usage-loading'
     timeout: 15000
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title"
+    id: 'screen-header-title'
 - assertNotVisible:
-    id: "screen-header-title-row"
+    id: 'screen-header-title-row'
 - scrollUntilVisible:
     element:
-      id: "usage-by-model"
+      id: 'usage-by-model'
     direction: DOWN
     timeout: 60000
     visibilityPercentage: 10
     centerElement: false
 - scrollUntilVisible:
     element:
-      id: "usage-recent-events"
+      id: 'usage-recent-events'
     direction: DOWN
     timeout: 60000
     visibilityPercentage: 10
@@ -285,35 +274,35 @@ tags:
 - waitForAnimationToEnd
 - takeScreenshot: 08_usage
 
-- openLink: "harpa://projects/prj_rvrsd000001/reports/3"
+- openLink: 'harpa://projects/prj_rvrsd000001/reports/3'
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "report-title-.*"
+      id: 'report-title-.*'
     timeout: 30000
 - assertVisible:
-    id: "report-header-controls"
+    id: 'report-header-controls'
 - assertVisible:
-    id: "screen-header-controls"
+    id: 'screen-header-controls'
 - assertVisible:
-    id: "screen-header-title-row"
-- assertVisible: "Site Visit #3"
+    id: 'screen-header-title-row'
+- assertVisible: 'Site Visit #3'
 - assertVisible:
-    id: "saved-report-pane"
+    id: 'saved-report-pane'
 - assertVisible:
-    id: "btn-tab-report"
+    id: 'btn-tab-report'
 - assertVisible:
-    id: "btn-tab-review"
+    id: 'btn-tab-review'
 - tapOn:
-    id: "btn-tab-review"
+    id: 'btn-tab-review'
 - extendedWaitUntil:
-    visible: "Waterproofing repair details verified.*"
+    visible: 'Waterproofing repair details verified.*'
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Fire lane staging plan reviewed.*"
+    visible: 'Fire lane staging plan reviewed.*'
     timeout: 15000
 - assertVisible:
-    id: "report-review-composer"
+    id: 'report-review-composer'
 - waitForAnimationToEnd
 - takeScreenshot: 09_report_review

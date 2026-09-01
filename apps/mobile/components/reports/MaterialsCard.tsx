@@ -6,16 +6,16 @@
  */
 import { View, Text } from 'react-native';
 import { Package } from 'lucide-react-native';
-import type { GeneratedReportMaterial } from '@harpa/report-core';
-import { getItemMeta } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
+import { getItemMeta } from '@/lib/reports/report-ui';
 
 interface MaterialsCardProps {
-  materials: readonly GeneratedReportMaterial[];
+  materials: reports.ReportBody['materials'];
   onEdit?: () => void;
   editActionsDisabled?: boolean;
 }
@@ -56,7 +56,7 @@ export function MaterialsCard({
         {materials.map((material, index) => {
           const meta = getItemMeta([
             material.quantity,
-            material.quantityUnit,
+            material.unit,
             material.status,
             material.condition,
           ]);

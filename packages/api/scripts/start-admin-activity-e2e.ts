@@ -1,7 +1,7 @@
 import { serve, type ServerType } from '@hono/node-server';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import pg from 'pg';
-import { migrateAdminDatabase } from '../src/db/admin-migrate.js';
+import { migrateAdmin } from '../src/db/admin-migrate.js';
 import { migrate } from '../src/db/migrate.js';
 
 function portFromEnv(name: string, fallback: number): number {
@@ -20,6 +20,7 @@ const SITE_PORT = portFromEnv('ADMIN_E2E_SITE_PORT', 3102);
 const API_BASE_URL = `http://localhost:${API_PORT}`;
 const SITE_ORIGIN = `http://localhost:${SITE_PORT}`;
 const ACTOR_EMAIL = 'activity-actor@e2e.harpapro.com';
+const RESERVED_LABEL_ACTOR_EMAIL = 'deleted-label-live@e2e.harpapro.com';
 const ADMIN_EMAIL = 'admin-activity@harpapro.com';
 const ADMIN_PASSWORD = 'admin-activity-e2e-password';
 
@@ -73,10 +74,34 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
       emailVerified: true,
     }));
   if (!user) throw new Error(`unable to create ${ACTOR_EMAIL}`);
+  const reservedLabelExisting = await authContext.internalAdapter.findUserByEmail(
+    RESERVED_LABEL_ACTOR_EMAIL,
+  );
+  const reservedLabelUser =
+    reservedLabelExisting?.user ??
+    (await authContext.internalAdapter.createUser({
+      email: RESERVED_LABEL_ACTOR_EMAIL,
+      name: RESERVED_LABEL_ACTOR_EMAIL,
+      emailVerified: true,
+    }));
+  if (!reservedLabelUser) {
+    throw new Error(`unable to create ${RESERVED_LABEL_ACTOR_EMAIL}`);
+  }
 
   const projectId = newId('prj');
+  const reservedLabelProjectId = newId('prj');
   const reportId = newId('rpt');
   const reportEventId = newId('aud');
+  const reservedLabelEventId = newId('aud');
+  const deletedProjectId = newId('prj');
+  const deletedReportId = newId('rpt');
+  const deletedNoteId = newId('not');
+  const deletedEventIds = {
+    project: newId('aud'),
+    report: newId('aud'),
+    user: newId('aud'),
+    note: newId('aud'),
+  };
   const noteIds = {
     text: newId('not'),
     voice: newId('not'),
@@ -100,9 +125,20 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
       [user.id, 'Admin Activity E2E'],
     );
     await client.query(
+      `UPDATE public."user"
+       SET name = $2, display_name = $2, email_verified = true, is_admin = false
+       WHERE id = $1`,
+      [reservedLabelUser.id, 'Deleted user'],
+    );
+    await client.query(
       `INSERT INTO app.projects (id, name, owner_id)
        VALUES ($1, $2, $3)`,
       [projectId, 'Admin Activity E2E Project', user.id],
+    );
+    await client.query(
+      `INSERT INTO app.projects (id, name, owner_id)
+       VALUES ($1, $2, $3)`,
+      [reservedLabelProjectId, 'Deleted project', reservedLabelUser.id],
     );
     await client.query(
       `INSERT INTO app.project_members (project_id, user_id, role)
@@ -128,15 +164,15 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
          (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
           project_id, request_id, dedupe_key, metadata)
        VALUES
-         ($1, '2026-07-29T04:00:00Z', 'report.created', $2, 'report', $3,
+         ($1, CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'report.created', $2, 'report', $3,
           $4, 'request-admin-activity-e2e', $5, '{"reportNumber":7}'),
-         ($6, '2026-07-29T04:04:00Z', 'note.text_created', $2, 'note', $10,
+         ($6, CURRENT_TIMESTAMP - INTERVAL '1 minute', 'note.text_created', $2, 'note', $10,
           $4, 'request-note-text-e2e', $14, '{}'),
-         ($7, '2026-07-29T04:03:00Z', 'note.voice_created', $2, 'note', $11,
+         ($7, CURRENT_TIMESTAMP - INTERVAL '2 minutes', 'note.voice_created', $2, 'note', $11,
           $4, 'request-note-voice-e2e', $15, '{}'),
-         ($8, '2026-07-29T04:02:00Z', 'note.image_created', $2, 'note', $12,
+         ($8, CURRENT_TIMESTAMP - INTERVAL '3 minutes', 'note.image_created', $2, 'note', $12,
           $4, 'request-note-image-e2e', $16, '{}'),
-         ($9, '2026-07-29T04:01:00Z', 'note.document_created', $2, 'note', $13,
+         ($9, CURRENT_TIMESTAMP - INTERVAL '4 minutes', 'note.document_created', $2, 'note', $13,
           $4, 'request-note-document-e2e', $17, '{}')`,
       [
         reportEventId,
@@ -156,6 +192,50 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
         `note.voice_created:${noteIds.voice}`,
         `note.image_created:${noteIds.image}`,
         `note.document_created:${noteIds.document}`,
+      ],
+    );
+    await client.query(
+      `INSERT INTO app.activity_events
+         (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+          project_id, request_id, dedupe_key, metadata)
+       VALUES
+         ($1, CURRENT_TIMESTAMP - INTERVAL '5 minutes 30 seconds', 'project.created', $2,
+          'project', $3::text, $3, 'request-live-reserved-labels-e2e', $4, '{}')`,
+      [
+        reservedLabelEventId,
+        reservedLabelUser.id,
+        reservedLabelProjectId,
+        `project.created:${reservedLabelProjectId}`,
+      ],
+    );
+    await client.query(
+      `INSERT INTO app.activity_events
+         (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+          project_id, request_id, dedupe_key, metadata)
+       VALUES
+         ($1, CURRENT_TIMESTAMP - INTERVAL '6 minutes', 'project.created', $2, 'project', $3,
+          $4, 'request-deleted-project-e2e', $5, '{}'),
+         ($6, CURRENT_TIMESTAMP - INTERVAL '7 minutes', 'report.created', $2, 'report', $7,
+          $8, 'request-deleted-report-e2e', $9, '{"reportNumber":8}'),
+         ($10, CURRENT_TIMESTAMP - INTERVAL '8 minutes', 'user.signed_up', NULL, 'user', NULL,
+          NULL, 'request-deleted-user-e2e', $11, '{"method":"email_otp"}'),
+         ($12, CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'note.text_created', $2, 'note', $13,
+          $8, 'request-deleted-note-e2e', $14, '{}')`,
+      [
+        deletedEventIds.project,
+        user.id,
+        deletedProjectId,
+        deletedProjectId,
+        `project.created:${deletedProjectId}`,
+        deletedEventIds.report,
+        deletedReportId,
+        projectId,
+        `report.created:${deletedReportId}`,
+        deletedEventIds.user,
+        `redacted:${deletedEventIds.user}`,
+        deletedEventIds.note,
+        deletedNoteId,
+        `note.text_created:${deletedNoteId}`,
       ],
     );
     await client.query('COMMIT');
@@ -218,7 +298,7 @@ async function main(): Promise<void> {
   const adminDatabaseUrl = adminContainer.getConnectionUri();
   configureEnvironment(appDatabaseUrl, adminDatabaseUrl);
 
-  await Promise.all([migrate(appDatabaseUrl), migrateAdminDatabase(adminDatabaseUrl)]);
+  await Promise.all([migrate(appDatabaseUrl), migrateAdmin(adminDatabaseUrl)]);
 
   const [dbClient, adminDbClient] = await Promise.all([
     import('../src/db/client.js'),

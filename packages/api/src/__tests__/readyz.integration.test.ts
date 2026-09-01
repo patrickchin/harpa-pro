@@ -19,6 +19,8 @@ import { resetReadyzCache } from '../routes/readyz.js';
 
 let container: StartedPostgreSqlContainer;
 let url: string;
+const AI_USAGE_INDEX_MIGRATION = '0029_llm_usage_events_created_at.notx.sql';
+const CURRENT_MIGRATION_HEAD = '0031_remove_retired_llm_usage_ledger.sql';
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer('postgres:16-alpine')
@@ -72,7 +74,53 @@ describe('GET /readyz', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; db: string; head: string };
     expect(body).toMatchObject({ ok: true, db: 'up' });
-    expect(body.head).toMatch(/^[0-9]+_[a-z0-9_]+\.sql$/);
+    expect(body.head).toMatch(/^[0-9]+_[a-z0-9_]+(?:\.notx)?\.sql$/);
+  });
+
+  it('preserves the exact non-transactional filename while comparing heads', async () => {
+    await migrate(url);
+    process.env.MIGRATIONS_REQUIRED_HEAD = AI_USAGE_INDEX_MIGRATION;
+    resetReadyzCache();
+    getPool(url);
+
+    const app = createApp();
+    const res = await app.request('/readyz');
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as {
+      ok: boolean;
+      db: string;
+      expected: string;
+      actual: string;
+    };
+    expect(body).toEqual({
+      ok: false,
+      db: 'head-mismatch',
+      expected: AI_USAGE_INDEX_MIGRATION,
+      actual: CURRENT_MIGRATION_HEAD,
+    });
+  });
+
+  it('does not normalize away the non-transactional suffix when comparing heads', async () => {
+    await migrate(url);
+    process.env.MIGRATIONS_REQUIRED_HEAD = '0029_llm_usage_events_created_at.sql';
+    resetReadyzCache();
+    getPool(url);
+
+    const app = createApp();
+    const res = await app.request('/readyz');
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as {
+      ok: boolean;
+      db: string;
+      expected?: string;
+      actual?: string;
+    };
+    expect(body).toEqual({
+      ok: false,
+      db: 'head-mismatch',
+      expected: '0029_llm_usage_events_created_at.sql',
+      actual: CURRENT_MIGRATION_HEAD,
+    });
   });
 
   it('returns 503 head-mismatch when MIGRATIONS_REQUIRED_HEAD does not match', async () => {
@@ -93,7 +141,7 @@ describe('GET /readyz', () => {
     expect(body.ok).toBe(false);
     expect(body.db).toBe('head-mismatch');
     expect(body.expected).toBe('999912312359_not_a_real_migration.sql');
-    expect(body.actual).toMatch(/^[0-9]+_[a-z0-9_]+\.sql$/);
+    expect(body.actual).toMatch(/^[0-9]+_[a-z0-9_]+(?:\.notx)?\.sql$/);
   });
 
   it('returns 503 db: down when the pool is closed', async () => {

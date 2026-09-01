@@ -1,21 +1,23 @@
-# v4 Implementation Plan
+# v4 implementation plan
 
-> **Status**: planning. Read [`pitfalls.md`](pitfalls.md) and
+> **Status:** roadmap and implementation record. Updated 2026-08-04.
+> Read [`pitfalls.md`](pitfalls.md) and
 > [`architecture.md`](architecture.md) first.
 >
-> This is the master phase plan. Each phase has its own
-> `plan-p<N>-*.md` with task-level breakdown.
+> This file does not show live deployment status. Use the current code,
+> CI results, release notes, and health checks for release decisions.
+> Each phase has a `plan-p<N>-*.md` task record.
 
 ## Phase overview
 
-| # | Name | Focus | Exit gate |
-|---|---|---|---|
-| P0 | [Foundation](plan-p0-foundation.md) | Monorepo, packages, CI, fixtures, auth, Neon branching | All scaffolds compile; `ai-fixtures` works; hand-rolled OTP integration test green; Neon branch script tested in CI; visual gate workflow exists. |
-| P1 | [API Core](plan-p1-api-core.md) | All REST endpoints **with tests + scope + fixtures** | 100% routes implemented; ≥ 90% line coverage; per-request scope tests for every authed route; fixture replay covers every AI route; OpenAPI ↔ code in sync. |
-| P2 | [Mobile Shell](plan-p2-mobile-shell.md) | Auth, nav, NativeWind tokens, primitives, and the core screens in the P2 plan | Auth flow + projects list implemented and reviewed manually against the P2 plan. Primitives locked + snapshot-tested. Screen bodies in `screens/<name>.tsx` props-driven and unit-testable. `lib/env.ts` + lint guards in place. |
-| P3 | [Feature Build](plan-p3-feature-build.md) | Every screen in the P3 plan implemented with tests + a Maestro flow | Every screen passes its behaviour and manual visual review. Maestro full journey green. Upload + voice + camera + PDF pipelines working end-to-end through fixtures. |
-| P4 | [Hardening](plan-p4-hardening.md) | Sentry, perf, deploy, prod migrations | Fly prod + Neon prod live; Sentry catching test crashes; PDF byte-equivalent to mobile-old reference samples; cold-start < 2 s; bundle ≤ v3 baseline. |
-| P5 | [Beta + GA](plan-p5-beta-ga.md) | TestFlight, Play internal, gradual rollout | App store builds approved; rollout monitor wired; cutover. |
+| #   | Name                                      | Current record                           | Focus                                                              |
+| --- | ----------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| P0  | [Foundation](plan-p0-foundation.md)       | Complete                                 | Monorepo, packages, CI, fixtures, auth, and Neon branching.        |
+| P1  | [API core](plan-p1-api-core.md)           | Complete                                 | REST API, scope enforcement, fixtures, and contract generation.    |
+| P2  | [Mobile shell](plan-p2-mobile-shell.md)   | Complete                                 | Auth, navigation, NativeWind tokens, primitives, and core screens. |
+| P3  | [Feature build](plan-p3-feature-build.md) | Feature work shipped; exit checks remain | Reports, notes, upload, voice, camera, PDF, and mobile E2E.        |
+| P4  | [Hardening](plan-p4-hardening.md)         | In progress                              | Observability, performance, deployment, migrations, and recovery.  |
+| P5  | [Beta and GA](plan-p5-beta-ga.md)         | In progress                              | Store distribution, rollout monitoring, and cutover.               |
 
 ## Order of execution
 
@@ -50,29 +52,32 @@ and tests are the baseline. Read the existing JSX and NativeWind
 classes before editing. Add a task-specific design doc before
 making a design change. Visual review is manual on the iOS simulator.
 
-## Success metrics
+## Verification targets
 
-| Metric | Target | Measure |
-|---|---|---|
-| Source files (excl. tests) | ≤ 200 across `apps/mobile/src/` + `packages/api/src/` | `find … -name '*.ts' -o -name '*.tsx' \| grep -v __tests__ \| wc -l` |
-| Test coverage | ≥ 90% API, ≥ 80% mobile | `pnpm test -- --coverage` |
-| Maestro flows | All green on iOS + Android | `pnpm test:e2e` |
-| Visual diff | n/a — manual review against the relevant v4 spec or current baseline | manual |
-| API p95 latency | < 200 ms | Fly metrics |
-| Cold start | < 2 s | Maestro `assertVisible` timing |
-| Bundle size | ≤ v3 baseline | EAS build artifacts |
-| Real LLM calls in CI | 0 | grep audit |
-| Supabase imports | 0 | `check-no-supabase.sh` |
+| Target                                                | Command or gate                                                                 |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| API line coverage at least 90%                        | `pnpm --filter @harpa/api test:coverage`                                        |
+| Mobile line coverage at least 80%                     | `pnpm --filter @harpa/mobile test`                                              |
+| CLI unit and integration suites pass                  | `pnpm --filter @harpa/cli test` and `pnpm --filter @harpa/cli test:integration` |
+| OpenAPI files match the runtime document              | `bash scripts/check-spec-drift.sh`                                              |
+| The production-shaped mobile bundle exports           | `pnpm --filter @harpa/mobile bundle:smoke`                                      |
+| Android launch smoke passes on relevant pull requests | `.github/workflows/e2e-maestro-testid-gate.yml`                                 |
+| Full mobile journeys pass before a release            | Run the applicable `.maestro/` flows on the target platform.                    |
+| Visual behavior matches the current specification     | Review manually on the target device or simulator.                              |
+
+The normal unit and integration lanes use AI replay. The path-filtered
+`ai-live.yml` workflow and production-promotion journeys intentionally call
+live providers. Treat those lanes as cost-bearing tests.
 
 ## Risks + mitigations
 
-| Risk | Mitigation |
-|---|---|
-| OpenAPI drift | `p1-exit-gate.yml` regen + diff |
-| RLS bypass | per-request scope tests + lint guard on raw `db` import |
-| Visual drift | manual review against the relevant v4 spec or current baseline on the iOS simulator |
-| LLM costs in CI | fixtures-first, `AI_LIVE` unset in CI, audit gate |
-| Hermes runtime gaps (`crypto`) | `lib/uuid.ts` central + lint guard |
-| Forgotten timeline note on uploads | integration test per upload kind |
-| Auth env vars missing in release builds | `lib/env.ts` Zod parse at startup; CI parses `.env.example` |
-| Neon branch sprawl | cron deletes branches > 14 days old |
+| Risk                               | Mitigation                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| OpenAPI drift                      | `scripts/check-spec-drift.sh` regenerates the spec and types, then checks the diff.       |
+| RLS bypass                         | per-request scope tests + lint guard on raw `db` import                                   |
+| Visual drift                       | manual review against the relevant v4 spec or current baseline on the iOS simulator       |
+| LLM costs in CI                    | Keep normal lanes in replay. Restrict live calls to `ai-live.yml` and promotion journeys. |
+| Hermes runtime gaps (`crypto`)     | `lib/util/uuid.ts` central + lint guard                                                   |
+| Forgotten timeline note on uploads | integration test per upload kind                                                          |
+| Invalid mobile env values          | `lib/config/env.ts` parses at module load, and unit tests cover the parser.               |
+| Neon branch sprawl                 | cron deletes branches > 14 days old                                                       |

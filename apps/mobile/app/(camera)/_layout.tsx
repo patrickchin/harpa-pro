@@ -17,6 +17,9 @@ export default function CameraLayout() {
       screenOptions={{
         headerShown: false,
         presentation: 'fullScreenModal',
+        // All dismissal must pass through CameraCapture's Cancel/Discard
+        // contract so completed temporary JPEGs are never silently lost.
+        gestureEnabled: false,
         animation: 'slide_from_bottom',
         orientation: 'portrait',
         contentStyle: { backgroundColor: '#000000' },

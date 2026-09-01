@@ -1,6 +1,6 @@
 ---
-applyTo: "docs/**,*.md,**/*.md"
-description: "Docs + markdown style. Loads when editing any markdown file."
+applyTo: 'docs/**,*.md,**/*.md'
+description: 'Docs + markdown style. Loads when editing any markdown file.'
 ---
 
 # Docs

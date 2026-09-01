@@ -14,7 +14,6 @@ import { useRefresh } from '@/lib/util/use-refresh';
 import { useCopyToClipboard } from '@/lib/util/use-clipboard';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
-import { env } from '@/lib/config/env';
 
 export default function ProjectHomeRoute() {
   const router = useRouter();
@@ -69,7 +68,6 @@ export default function ProjectHomeRoute() {
         });
       }}
       actions={<AppHeaderActions />}
-      showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
     />
   );
 }

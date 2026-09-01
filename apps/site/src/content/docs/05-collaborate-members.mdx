@@ -1,16 +1,14 @@
 ---
-title: "Add members to a project"
-description: "Invite teammates by email and choose the access they need."
-tier: "everyday"
+title: 'Add members to a project'
+description: 'Add registered teammates by email and choose the access they need.'
+tier: 'everyday'
 order: 3
-keywords: ["members", "invite", "email", "owner", "editor", "viewer"]
-lastVerified: "2026-07-03"
-related: ["manage-projects", "getting-started"]
-heroScreenshot: "members-team"
-heroScreenshotAlt: "Harpa Pro Members screen listing the project team and roles"
+keywords: ['members', 'email', 'owner', 'editor', 'viewer']
+lastVerified: '2026-08-05'
+related: ['manage-projects', 'getting-started']
 ---
 
-import GuideStep from "../../components/docs/GuideStep.astro";
+import GuideStep from '../../components/docs/GuideStep.astro';
 
 <GuideStep
   number={1}
@@ -18,17 +16,18 @@ import GuideStep from "../../components/docs/GuideStep.astro";
   screenshot="members-team"
   screenshotAlt="Project Members screen with role filters and Add member action"
 >
-  Open the project and tap **Members**. Only the project Owner can add or
-  remove members.
+  Open the project and tap **Members**. Only the project Owner can add or remove members.
 </GuideStep>
 
-<GuideStep number={2} title="Invite by email">
-  Tap **Add member**, enter the email the teammate uses for Harpa Pro, choose a
-  role, and tap **Send invite**.
+<GuideStep number={2} title="Add a registered teammate">
+  Tap **Add member**, enter the email for an existing Harpa Pro account, choose **Editor** or
+  **Viewer**, then tap **Send invite**. Despite that button label, Harpa Pro adds the existing
+  account immediately; it does not email an invitation or create an account for an unknown address.
 </GuideStep>
 
 <GuideStep number={3} title="Choose the right access">
-  **Owner** controls the project and membership. **Editor** creates and edits
-  reports. **Viewer** reads project and report information without changing
-  it. A project has one Owner; invitations add Editors or Viewers.
+  **Editor** can change project content and draft reports. **Viewer** reads project content without
+  changing it. Existing **Owners** control membership, project deletion, and report finalization. A
+  project can have more than one Owner, but the mobile add-member form cannot assign that role.
+  Every member can read and add comments in a finalized report's **Review** tab.
 </GuideStep>

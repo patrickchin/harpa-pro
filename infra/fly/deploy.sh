@@ -51,14 +51,6 @@ bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api
 # Fail closed unless Fly now reports a started service-less worker.
 bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api
 
-# Arm only after deploy, narrow repair, and worker verification succeed. Run
-# inside the worker so CI and manual callers never need the production
-# DATABASE_URL; the command inherits the app's staged Fly secrets. The update
-# is monotonic, so later deploys cannot reopen the first-rollout compatibility
-# grace.
-flyctl ssh console \
-  --app harpa-pro-api \
-  --process-group storage-worker \
-  --pty=false \
-  --command \
-  'env STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases'
+# Lifecycle arming is intentionally separate from deployment. Observe the
+# exact production worker through at least one hourly memory sample, then run
+# scripts/ci/arm-storage-lifecycle-rollout.sh as an explicit operator action.

@@ -67,7 +67,7 @@ ORDER OF EXECUTION (do not reorder):
              first, all three tabs fully wired (Pitfall 4).
            - P3.10 (Files) + P3.11 (Camera): `security-reviewer`
              on the upload pipeline.
-           - P3.13 (Maestro core-end-to-end): `e2e-runner`, iOS
+           - P3.13 (Maestro regression coverage): `e2e-runner`, iOS
              sim AND Android emulator.
   P3 exit — coverage ≥ 80%, guard scripts clean, tag
          `v0.3.0-features`.

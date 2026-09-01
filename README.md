@@ -1,52 +1,71 @@
 # harpa-pro
 
-Mobile-first construction site reporting app. Voice/photo notes, AI-summarised
-daily reports, PDF export, project + team management.
+Harpa Pro is a construction-site reporting product with a mobile capture app
+and an office dashboard. It supports voice and photo notes, AI-generated daily
+reports, PDF export, and project teams.
 
-This repo is a **fresh rewrite (v4)** — see [`AGENTS.md`](AGENTS.md) for the
-stack, hard rules, and conventions, and [`docs/v4/`](docs/v4/) for the
-architecture and phased plan.
+This repository contains the current v4 application. See
+[`AGENTS.md`](AGENTS.md) for project rules and
+[`docs/v4/architecture.md`](docs/v4/architecture.md) for the system index.
 
 ## Quick start
 
 ```bash
+nvm install       # reads the exact release from .nvmrc
+nvm use
+corepack enable
 pnpm install
-pnpm dev          # turbo dev — API + mobile + docs
-pnpm test         # full unit/integration suite
+pnpm dev                              # workspaces with a dev script
+pnpm --filter @harpa/mobile start     # Expo dev-client server
+pnpm --filter @harpa/dashboard dev    # office dashboard on port 3003
+pnpm test                             # workspace unit tests
 ```
+
+`pnpm dev` does not start the mobile workspace. API and CLI integration tests
+also run separately because they start Postgres containers:
+
+```bash
+pnpm test:api:integration
+pnpm --filter @harpa/cli test:integration
+```
+
+Use [`.env.example`](.env.example) for local configuration. The Docker Compose
+stack also requires a `TEST_ACCOUNT_PASSWORD` of at least 16 characters.
 
 ## CLI
 
-`apps/cli` (`@harpa/cli`) is the debug / LLM-driven CLI that talks
-to the API. Every API route has a CLI command. Set `HARPA_API_URL`
-and (after `harpa auth otp verify`) `HARPA_TOKEN`, then:
+`apps/cli` (`@harpa/cli`) is the debug and automation client for supported API
+routes. Set `HARPA_API_URL`, then sign in with email OTP:
 
 ```bash
-pnpm harpa auth otp start +15551234567
-pnpm harpa auth otp verify +15551234567 000000 --raw      # prints token
-export HARPA_TOKEN=$(pnpm harpa auth otp verify ... --raw)
+export HARPA_API_URL=http://localhost:8787
+pnpm harpa auth otp start user@example.com
+OTP_CODE=123456 # Replace with the code from the email.
+export HARPA_TOKEN="$(pnpm harpa auth otp verify user@example.com "$OTP_CODE" --raw)"
 pnpm harpa me get
 pnpm harpa projects list
-pnpm harpa reports generate <reportId>
+pnpm harpa reports generate <projectSlug> <reportNumber>
 pnpm harpa files upload --file ./photo.jpg --kind image
 ```
 
-`--json` returns the raw API response; `--verbose` prints headers
-and the request ID to stderr. See [`docs/v4/arch-cli.md`](docs/v4/arch-cli.md).
+`--json` writes the API response to stdout. `--verbose` writes available
+request and rate-limit metadata to stderr. See
+[`apps/cli/README.md`](apps/cli/README.md).
 
 ## Layout
 
 ```
 apps/
   mobile/          # Expo + NativeWind app
-  docs/            # in-app guides + visual reference (Next.js)
-  marketing/       # Astro marketing site (Cloudflare Pages)
+  dashboard/       # React + Vite office project/report workspace
+  admin/           # Astro administration console
+  site/            # Astro marketing and public documentation site
   cli/             # @harpa/cli — debug / LLM-driven CLI
 packages/
   api/             # Hono REST API (Fly.io)
   api-contract/    # Zod schemas + generated OpenAPI types
   ai-fixtures/     # record/replay layer for every LLM call
-  report-core/     # shared report-body Zod schemas + helpers
+  design-tokens/   # mobile-authored CSS tokens for the dashboard
 infra/
   neon/            # Neon branching scripts
   fly/             # Fly.io deployment config
@@ -61,7 +80,10 @@ skills/            # auto-loaded coding skills
 
 ## Status
 
-P0 (Foundation) and P1 (API Core) complete. P2 (Mobile Shell)
-shipped (`v0.2.0-shell`). P3 (Feature Build) is the active phase —
-see [`docs/v4/implementation-plan.md`](docs/v4/implementation-plan.md)
-and the per-phase plans under [`docs/v4/`](docs/v4/).
+The repository version is `0.1.65`. The mobile, API, public-site, and admin
+production surfaces exist. The office dashboard is active for previews and
+development; automatic production builds and `app.harpapro.com` remain pending
+separate approval. Treat phase documents as implementation records, not as a
+live deployment dashboard. Use
+[`CHANGELOG.md`](CHANGELOG.md), current CI, and deployment health checks for a
+release decision.

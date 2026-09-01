@@ -8,12 +8,12 @@
  * `draft|finalized` (not `final`).
  *
  * The body owns:
- *  - active tab state (Report / Notes / Edit)
+ *  - active tab state (Report / Notes / Review)
  *  - actions-menu visibility
  *  - PDF preview modal visibility
  *  - image preview state
  *  - the "confirm delete" and "confirm unfinalize" dialog visibility
- *  - locally-edited `report` (drives the Edit tab); when the saved
+ *  - locally-edited `report` (drives the per-card edit modal); when the saved
  *    snapshot changes underneath unchanged local edits we adopt it
  *    (the canonical `lastServerJsonRef` reconciliation pattern).
  *
@@ -79,15 +79,15 @@ import {
   splitAttachments,
   type PhotoPlacement,
 } from '@/lib/reports/photo-placements';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
 export type SavedReportStatus = 'draft' | 'finalized';
 
 export interface SavedReportProps {
-  /** Normalized GeneratedSiteReport (or null when not yet resolved). */
-  report: GeneratedSiteReport | null;
-  /** Saved-report status — controls Edit tab visibility + read-only chrome. */
+  /** Canonical report body (or null when not yet resolved). */
+  report: reports.ReportBody | null;
+  /** Saved-report status — controls Notes/Review and read-only edit chrome. */
   reportStatus: SavedReportStatus | null;
   /**
    * Server-side report uuid. Threaded into `ReportNotesPane` so the
@@ -122,7 +122,7 @@ export interface SavedReportProps {
   onBackToProjects: () => void;
 
   /** Edit-tab live patch sink (no-op until persistence wires). */
-  onChangeReport: (next: GeneratedSiteReport) => void;
+  onChangeReport: (next: reports.ReportBody) => void;
   isAutoSaving: boolean;
   lastSavedAt: number | null;
 
@@ -163,8 +163,8 @@ export interface SavedReportProps {
 
   /**
    * P4.8 — show the Report Debug entry in the actions menu. Gated by
-   * the same `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES
-   * or __DEV__) that controls the Profile developer section.
+   * the same `showDeveloperSection` flag (`SHOW_DEVELOPER_TOOLS`) that
+   * controls the Profile developer section.
    */
   showDeveloperSection?: boolean;
   /** Invoked when the user taps the Report Debug entry. */
@@ -234,7 +234,7 @@ export function SavedReport(props: SavedReportProps) {
     title: string;
     message: string;
   } | null>(null);
-  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
+  const [localReport, setLocalReport] = useState<reports.ReportBody | null>(
     null,
   );
   const [activeTab, setActiveTab] = useState<ReportDetailTab>(
@@ -368,7 +368,7 @@ export function SavedReport(props: SavedReportProps) {
     handleSharePdf,
   } = pdfActions;
 
-  const handleEditChange = (next: GeneratedSiteReport) => {
+  const handleEditChange = (next: reports.ReportBody) => {
     setLocalReport(next);
     onChangeReport(next);
   };
@@ -379,7 +379,7 @@ export function SavedReport(props: SavedReportProps) {
     setEditing(target);
   };
 
-  const handleEditModalChange = (next: GeneratedSiteReport) => {
+  const handleEditModalChange = (next: reports.ReportBody) => {
     handleEditChange(next);
   };
 
@@ -772,8 +772,8 @@ export function SavedReport(props: SavedReportProps) {
       {placementActionsEnabled ? (
         <PhotoGroupPlacementSheet
           visible={placementSheetNoteId !== null}
-          issues={displayReport?.report.issues ?? []}
-          sections={displayReport?.report.sections ?? []}
+          issues={displayReport?.issues ?? []}
+          sections={displayReport?.summarySections ?? []}
           photoCount={
             placementSheetNoteId
               ? photoGroups.find((g) => g.noteId === placementSheetNoteId)

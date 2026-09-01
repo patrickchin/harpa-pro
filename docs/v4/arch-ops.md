@@ -1,4 +1,18 @@
-# Observability + Ops
+# Observability and operations
+
+## Node runtime
+
+The repository uses Node `24.19.0` everywhere: local NVM selection,
+GitHub Actions, the Fly API image, and EAS native builds. `.nvmrc` is the
+local source of truth; `package.json` plus `.npmrc` reject other Node majors,
+and the CI policy test prevents workflow-local overrides. Upgrade these pins
+together in one reviewed change so local tools, OTA publication, builds, and
+the deployed API exercise the same runtime. The required `lint-typecheck`
+context runs the Node policy even when a pull request changes only `.nvmrc` or
+`.npmrc`; the heavier lint and typecheck steps remain path-gated.
+
+Homebrew-installed tools may carry their own Node dependency. That installation
+does not define this repository's runtime; `nvm use` does.
 
 ## Hosting
 
@@ -13,21 +27,22 @@
   - `harpa-pro-api-pr-<n>` (per-PR preview) at
     `https://harpa-pro-api-pr-<n>.fly.dev` — created by
     `.github/workflows/pr-preview.yml` (job `fly-preview`) when the PR
-    changes API inputs or the admin browser app, destroyed on PR
+    changes API inputs, the admin browser app, or the office dashboard,
+    destroyed on PR
     close (job `fly-destroy`). Config:
     [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
     Single shared-cpu-1x machine, `min_machines_running = 0`,
     `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
     The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
-    branch. Admin previews use the matching Fly app so their exact browser
-    origin can be allowlisted. Mobile dev/preview builds can flip to a preview URL via
-    `setApiBaseUrlOverride`.
+    branch. Admin and dashboard previews use the matching Fly app so browser
+    auth and live journeys never mutate the shared dev database. Mobile
+    dev/preview builds can flip to a preview URL via `setApiBaseUrlOverride`.
 - **Databases**: two independent Neon projects:
   - the application project uses long-lived `main` (production) and `dev`
     branches plus per-PR `pr-<n>` branches; and
   - `harpa-pro-admin` uses database `harpa_admin`, with matching `main`,
-    long-lived `dev`, and matching per-PR `pr-<n>` branches for
-    API-changing previews.
+    long-lived `dev`, and matching per-PR `pr-<n>` branches for API, admin,
+    and dashboard previews.
     The separate projects give application and admin credentials independent
     restore timelines. See [arch-database.md](arch-database.md).
 - **Storage**: Cloudflare R2. Separate buckets per env
@@ -50,10 +65,53 @@
   - PR branch `pr-<n>` →
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
-  - The root is the only browser route and renders the activity console;
-    unknown browser paths return a static 404. `/admin/activity` remains an API
-    resource path. Data requests require the dedicated API admin session. See
-    [Separate admin site](design-separate-admin-site.md).
+  - `/` renders the activity console. `/operations` renders read-only Harpa
+    readiness, service links, a no-token public GitHub branch/PR snapshot,
+    bounded Neon inventory and Free-plan usage, bounded R2 capacity, aggregate
+    Sentry issue-group and mobile-session evidence, and storage lifecycle
+    database evidence. The draft stack adds bounded Fly inventory and
+    Harpa-recorded AI usage summaries. A separate manual report generation live
+    canary is explicitly disclosed as a synthetic mutation. Unknown browser
+    paths return a static 404. `/admin/activity` and `/admin/operations/*`
+    remain API resource paths. Data and live-canary requests require the
+    dedicated API admin session. See
+    [Separate admin site](design-separate-admin-site.md),
+    [Admin Neon inventory](design-admin-neon-inventory.md),
+    [Admin provider quota percentages](design-admin-provider-quota-percentages.md),
+    [Admin R2 capacity](design-admin-r2-capacity.md),
+    [Admin Sentry observer](design-admin-sentry-observer.md),
+    [Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md),
+    and [Admin live report-generation canary](design-admin-report-live-canary.md).
+    The unmerged additions are specified in
+    [Admin Fly inventory](design-admin-fly-inventory.md) and
+    [Admin AI usage ledger](design-admin-ai-usage.md).
+- **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
+  and retain a Node 22.12.0 compatibility floor in their workspace manifests.
+  Repository builds use the shared Node 24.19.0 runtime.
+- **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
+  Pages project `harpa-pro-dashboard`.
+  - React 19 builds with Vite 8 and Tailwind CSS 4. Vite 8 shares the static
+    web runtime's Node 22.12.0 minimum.
+  - Target production branch `main` → `harpa-pro-dashboard.pages.dev` against
+    the production API. `app.harpapro.com` is not yet attached.
+  - Dev branch `dev` → `dev.harpa-pro-dashboard.pages.dev` against the dev API.
+  - Pull request branch `pr-<n>` → the stable
+    `pr-<n>.harpa-pro-dashboard.pages.dev` alias against its matching isolated
+    Fly/Neon preview.
+  - GitHub verifies the alias serves the pull request head SHA before SPA and
+    live browser checks.
+  - On 2026-08-05, Cloudflare connected the existing Direct Upload project to
+    `patrickchin/harpa-pro` in place and preserved all seven preview
+    deployments. Automatic production deployments remain disabled. No custom
+    domain is attached. See
+    [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
+- **Pages pull request feedback**: The native Cloudflare Git integration owns
+  the preview deployment comment for the public site, admin console, and office
+  dashboard. GitHub Actions verifies each stable alias and reports its result as
+  a check, but does not post a second Pages link or request pull-request write
+  permission. The Fly API preview keeps its separate comment because it covers
+  readiness, isolated databases, and mobile override details that Cloudflare
+  does not provide.
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary
@@ -77,7 +135,9 @@
     Release operators run Fastlane from the repo root:
 
   ```sh
-  bundle install --path vendor/bundle
+  gem install bundler -v 2.6.9 --no-document
+  bundle _2.6.9_ config set --local path vendor/bundle
+  bundle _2.6.9_ install
   bundle exec fastlane doctor
   bundle exec fastlane screenshots_preview       # only after assets exist
   bundle exec fastlane app_privacy_preview       # only after review
@@ -104,7 +164,10 @@
   from authenticated local tools or environment variables. The first
   Play metadata upload may require an existing release on the target
   track; if `supply` reports an empty track, run the EAS submit lane
-  once for that track and re-run the metadata lane.
+  once for that track and re-run the metadata lane. Local release tooling
+  follows [`.ruby-version`](../../.ruby-version) (`3.4.10` today) and
+  Bundler `2.6.9`; the Gemfile stays compatible with the Ruby 3.2 runtime
+  on Expo's SDK 55 builders.
 
 ## Mobile store launch workflow
 
@@ -218,7 +281,9 @@ that might create noisy or disposable data.
 Internal QA flow:
 
 ```sh
-bundle install --path vendor/bundle
+gem install bundler -v 2.6.9 --no-document
+bundle _2.6.9_ config set --local path vendor/bundle
+bundle _2.6.9_ install
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane doctor
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane metadata_preview
 FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane beta
@@ -359,16 +424,444 @@ directly on Fly. CI control-plane credentials such as `NEON_API_KEY` and
 | `prd`          | prod Fly app + prod CI deploys          | `.env.prod`        |
 | `dev_personal` | per-developer overrides on top of `dev` | `.env.local`       |
 
-`.env.example` (committed) enumerates every var. The three live
-variants (`.env.local` / `.env.dev` / `.env.prod`) are gitignored and
-mirror Doppler except for deployment-resolved values such as
-`ADMIN_DATABASE_URL`.
+`.env.example` lists application variables and common deployment variables.
+Workspace-specific examples list additional test and tool values. The three
+live variants (`.env.local`, `.env.dev`, and `.env.prod`) are gitignored.
+Deployment-resolved values, such as `ADMIN_DATABASE_URL`, do not mirror
+Doppler.
+
+### Provider observer transport boundary
+
+Neon inventory and usage, Cloudflare R2, Sentry, and Fly share one internal
+`packages/api/src/lib/provider-observer-http.ts` helper for their observation-wide
+10-second deadline and low-level JSON HTTP mechanics. The helper rejects
+redirects, makes one attempt, normalizes transport and parse failures, and
+supports the bounded byte reader used only by Sentry. Each observer still owns
+its fixed URLs and request plan, provider-specific status and priority mapping,
+schema validation, pagination decisions, and redacted response contract.
+
+### Neon inventory observer
+
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are an optional paired
+runtime configuration. The normal Doppler-to-Fly import supplies them to the
+intended environment. They are not browser or Cloudflare Pages variables. The
+API accepts both variables or neither and rejects a partial pair at boot.
+
+The key belongs to one fixed, dedicated Neon observer. Give that user
+organization role `Viewer`, or role `Collaborator` with explicit project-level
+`Viewer` grants. The API requires every visible project to belong to the
+configured organization and report effective permission `VIEWER`. It fails
+closed before branch calls if Neon omits this proof or shows a higher role.
+Never use the GitHub Actions `NEON_API_KEY`, which can manage preview branches
+and connection URIs.
+
+Provision and prove the observer in this order:
+
+1. Create the dedicated Neon user and apply only the required Viewer grants.
+2. Verify the organization and effective project permissions in Neon.
+3. Create a personal key for that user and record only non-secret creation
+   metadata.
+4. Add both observer variables to the intended Doppler config.
+5. Dispatch the protected API deployment for that environment.
+6. Verify that Fly lists both secret names and that `/healthz.gitCommit` equals
+   the expected full Git SHA.
+7. Verify the admin Pages `/_cf-pages-deployment.json` marker at that SHA. Then
+   call `GET /admin/operations/neon` with a dedicated admin session and confirm
+   the `private, no-store` response reports `VIEWER` for every returned
+   project.
+
+A merge, a Pages marker, or `/readyz` alone does not prove live inventory. If
+the pair is absent, the UI shows `Unknown` and the API makes no Neon request.
+The route lists at most 20 projects and at most 100 active branch details per
+project, with no retries. The count endpoint has no deleted-branch selector,
+while the active-detail request explicitly excludes deleted branches. Neon has
+no documented remaining-credit API, so the console remains the billing source.
+
+### Neon Free usage observer
+
+`GET /admin/operations/neon-usage` reuses the existing optional
+`ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair. It adds no Neon
+credential and does not reuse the CI `NEON_API_KEY`. The route uses the shared
+trusted-Fly-IP gate, dedicated admin session, and a separate
+12-request-per-minute identity and session budget. Every response sets
+`Cache-Control: private, no-store`.
+
+One observation makes at most 22 fixed Neon `GET` requests under one shared
+10-second deadline. It reads the configured organization, at most 20 projects,
+and one detail response per verified project. It does not retry, follow a
+project cursor, or use a provider write method. The organization must report
+the exact `free` plan. Every discovered project must report effective
+permission `VIEWER` before any project-detail request.
+
+The UI derives one-decimal used and remaining percentages from provider values
+and fixed published references. Per-project compute uses 360,000 CU-seconds.
+Per-project storage uses 500,000,000 bytes. Organization public transfer uses
+5,000,000,000 bytes only when project coverage is complete and all periods
+match. Otherwise, organization transfer is `Unknown`. Percentage text can
+exceed 100.0%, while the painted meter stops at 100%.
+
+The existing R2 card shows estimated Class A and Class B percentages against
+the published 1,000,000-operation and 10,000,000-operation references. It does
+not derive a storage percentage from a point-in-time snapshot. The public
+GitHub card shows the primary REST request-budget percentage for the current
+browser and IP from existing response headers. It makes no extra request.
+Unsupported money, token, invoice, and provider credit balances stay
+`Unknown`.
+
+The browser calls each read route once after session confirmation and again
+only on manual **Refresh**. A successful full-stack load makes 16 fixed GET
+reads. One successful Refresh makes another 16, for 32 total. The page does not
+poll. The report generation live canary remains a separate manual POST and does
+not run in either read cycle.
+
+Enablement uses the existing Neon inventory provisioning and exact-SHA proof.
+After deployment, call both Neon routes with the dedicated admin session.
+Confirm `VIEWER` evidence for all returned projects, no more than 22 provider
+reads for one usage observation, and no credential or raw provider response in
+the API response or logs.
+
+### Storage lifecycle database observer
+
+`GET /admin/operations/storage-lifecycle` uses the shared trusted-Fly-IP gate,
+the dedicated admin session, and a separate 12-request-per-minute identity and
+session budget. Every response sets `Cache-Control: private, no-store`.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. The statement reads the singleton rollout row, calls the
+lease-enforcement function, and aggregates `app.storage_delete_jobs`. The route
+has no body, query, retry, pagination, mutation, or provider call.
+
+The UI shows the rollout marker, the exact account-deletion gate, and bounded
+durable queue counts. It does not return queue payloads, user IDs, object keys,
+raw errors, or Fly machine identifiers. The browser calls this route only on
+page load and shared **Refresh**.
+
+This card is database evidence. It does not prove current worker liveness or
+future queue execution. Continue to use exact Fly worker inventory,
+process, release, memory, and rollout-marker checks for executor proof. See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
+
+### Cloudflare R2 capacity observer
+
+`ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+`ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are an optional paired runtime
+configuration. The normal Doppler-to-Fly import supplies them only to the
+intended environment. They are not browser or Cloudflare Pages variables. A
+partial pair fails API boot. An absent pair returns `Unknown` without a
+Cloudflare request.
+
+Create one dedicated, account-scoped token with only these permissions:
+
+- `Workers R2 Storage Read`.
+- `Account Analytics: Read`.
+
+The analytics permission has a broader read scope than R2. Give the token a
+bounded lifetime and record its rotation date. Use Client IP filtering when
+the environment has stable egress. If stable egress is unavailable, record
+that exception and the residual risk before enablement.
+
+Do not reuse R2 S3 credentials, a Pages token, the CI
+`CLOUDFLARE_API_TOKEN`, or any write token. The observer makes at most three
+fixed read requests under one 10-second timeout. It does not retry or follow
+bucket pagination. The API never returns the token, account ID, raw provider
+errors, object keys, or provider envelopes.
+
+The storage metrics are current snapshots without a provider timestamp. They
+are not exact remaining GB-month capacity. The Standard free-tier reference
+does not apply to Infrequent Access storage. Month-to-date Class A and Class B
+used and remaining percentages are conservative estimates against published
+operation references. They are not a provider balance or invoice.
+
+The card shows **Published stored now** as one human-readable IEC value and an
+exact byte count. The browser adds published payload and metadata bytes for
+Standard and Infrequent Access storage. It excludes pending uploads.
+
+Ingress and egress volume stay `Unknown`. The documented R2 metrics do not
+expose transferred bytes. Cloudflare lists direct R2 egress as free, but
+the observer cannot measure bytes served. Harpa uploads and downloads use
+signed R2 URLs, so the application API does not carry the object bytes.
+
+This presentation adds no API route, response schema field, credential, or
+provider request. The three-request R2 ceiling stays unchanged. The browser
+reads the R2 route once after session confirmation and again only on manual
+**Refresh**. The full page still makes 16 fixed GET reads after session
+confirmation. One Refresh adds 16 reads, for 32 total. The page does not poll.
+
+Enable and prove the observer in this order:
+
+1. Merge and deploy the code with both values absent.
+2. Confirm that the card shows `Not configured` and makes no provider request.
+3. Create the dedicated token for the intended account and environment.
+4. Review its two permissions, account scope, lifetime, rotation date, and IP
+   filter or recorded exception.
+5. Add both values to the intended Doppler config and deploy the API.
+6. Verify the Fly release SHA and `/healthz.gitCommit` at the expected full
+   Git SHA.
+7. Verify the admin Pages deployment marker at the matching source head.
+8. Sign in through the dedicated admin site and press **Refresh** once.
+9. Confirm three or fewer fixed provider requests, a redacted response, and no
+   secret or raw provider content in logs.
+10. Compare the displayed snapshot with the Cloudflare R2 dashboard while the
+    estimation caveats remain visible.
+
+Development approval does not authorize production enablement. Repeat the
+token review and deployment proof before enabling production. See
+[Admin R2 capacity](design-admin-r2-capacity.md) for the full contract.
+
+### Sentry aggregate observer
+
+The Sentry stack remains an unmerged draft. It does not provision a live
+observer token. The API accepts this optional server-only set:
+
+- `ADMIN_SENTRY_ORG_SLUG`.
+- `ADMIN_SENTRY_READ_TOKEN`.
+- `ADMIN_SENTRY_PROJECT_SLUGS`.
+- `ADMIN_SENTRY_MOBILE_PROJECT_SLUG`.
+- `ADMIN_SENTRY_ENVIRONMENT`.
+- optional `ADMIN_SENTRY_REGION`.
+
+The first five values must be absent or present together. A partial
+configuration fails API boot. `ADMIN_SENTRY_PROJECT_SLUGS` contains one to
+three unique reviewed projects, and the mobile project must be one of them.
+`ADMIN_SENTRY_ENVIRONMENT` is exactly `production`, `preview`, or
+`development`. `ADMIN_SENTRY_REGION` selects only the fixed `global`, `us`, or
+`de` Sentry API origin.
+
+Provision one dedicated Sentry organization integration token with only
+`event:read` and `org:read`. Do not reuse a DSN, the source-map upload
+`SENTRY_AUTH_TOKEN`, a personal token, or a token with write or admin
+permission. The token never reaches the browser, logs, response contract, or
+fixtures.
+
+One configured observation makes exactly two fixed `GET` requests under one
+shared 10-second deadline. The requests run in parallel, use
+`redirect: 'error'`, never retry, and never follow pagination. One request
+counts unresolved error issue groups for the configured projects and
+environment. The other request reads the last 24 hours of mobile-session health
+for one configured mobile project.
+
+The response returns only aggregate counts, reviewed caveats, and bounded
+unknown reasons. It excludes project names, issue titles, event data, people,
+provider diagnostics, and raw pagination data. A zero issue-group count is not
+proof that every Harpa path is healthy. Mobile-session health covers only the
+configured mobile project and does not cover the API or browser apps. Missing
+or zero session data stays `Unknown`.
+
+The browser reads this route once after session confirmation and once on manual
+**Refresh**. The full page makes 16 fixed GET reads after session confirmation.
+One Refresh makes another 16, for 32 total. The page does not poll or trigger
+the report generation live canary. See
+[Admin Sentry observer](design-admin-sentry-observer.md) for the full
+contract.
+
+### Fly inventory observer
+
+The Fly inventory stack remains an unmerged draft. It does not provision an
+observer token or enable live inventory. The API accepts this optional runtime
+triplet:
+
+- `ADMIN_FLY_ORG_SLUG`.
+- `ADMIN_FLY_READ_ONLY_API_TOKEN`.
+- `ADMIN_FLY_APP_NAMES`.
+
+All three values must be absent or present together. Partial, blank, malformed,
+duplicate, or over-limit values fail API boot. An absent triplet returns
+`Unknown` without contacting Fly.
+
+`ADMIN_FLY_APP_NAMES` contains one to ten unique, exact app names. The
+organization slug and each app name use a conservative lowercase DNS-label
+shape. The API returns no metadata or counts for an app outside this allowlist.
+
+Create a dedicated organization token with the narrowest documented command:
+
+```sh
+fly tokens create readonly --org <org> --name <name> --expiry <duration>
+```
+
+Review the token's organization and read-only scope before use. Do not reuse a
+deploy token, `fly auth login` token, `FLY_API_TOKEN`, or another write-capable
+credential. The API cannot infer token policy from successful `GET` requests.
+
+The observer uses only fixed `GET` requests to
+`https://api.machines.dev`. It uses one 10-second deadline,
+`redirect: 'error'`, and no retry. It lists the organization once. It then
+reads app detail, Machines, and Volumes for each verified app. Apps run
+serially, while the three fixed reads for one app may overlap. Ten configured
+apps produce at most 31 provider calls. The observer has no write path.
+
+The response returns at most ten apps, 50 Machines per app, and 50 Volumes per
+app. It truncates longer provider arrays and marks the observation partial. A
+1,000-row input bound protects each provider app, Machine, and Volume array.
+Payloads above any input bound fail closed as invalid. The observer does not
+follow pagination or use Fly's internal GraphQL API.
+
+The response allowlist excludes private IPs, raw Machine configuration, image
+details, services, checks, events, unreviewed metadata, and Volume internals.
+It also removes provider headers, error text, and raw payloads. The nullable
+process group comes only from the reviewed Machine metadata field.
+
+Machine state and process group do not prove Harpa readiness or worker
+liveness. Volume `size_gb` is allocation, not current use, free space, or
+remaining plan capacity. Fly does not document a stable remaining-credit REST
+field, so the dashboard remains the billing source.
+
+The browser requests the route once after session confirmation and once on
+manual **Refresh**. A successful full-stack load makes 16 fixed GET reads. One
+successful Refresh makes another 16, for 32 total. The page does not poll or
+trigger the report generation live canary.
+
+Do not add the triplet until the operator reviews this draft. After approval,
+enable and prove the observer in this order:
+
+1. Merge and deploy the code with all three values absent.
+2. Confirm that the card shows `Not configured` without a provider request.
+3. Create the dedicated read-only token for the intended organization.
+4. Review its organization, scope, expiry, and rotation record.
+5. Add the exact app allowlist and all three values to the intended Doppler
+   config.
+6. Deploy the API and verify `/healthz.gitCommit` at the expected full SHA.
+7. Verify the admin Pages marker at the matching source head.
+8. Sign in through the dedicated admin site and press **Refresh** once.
+9. Confirm the fixed call plan, bounds, redaction, and absence of secret logs.
+10. Compare the inventory with the Fly dashboard while Fly credit stays
+    `Unknown`.
+
+Development approval does not authorize production enablement. Review and
+approve the production triplet separately. See
+[Admin Fly inventory](design-admin-fly-inventory.md) for the full contract.
+
+### Harpa-recorded AI usage observer
+
+The AI usage stack remains an unmerged draft. It uses no provider observer or
+administrator credential. `GET /admin/operations/ai-usage` authenticates with
+the dedicated admin session, passes the shared trusted-Fly-IP budget and its
+own 12-request-per-minute identity/session budget, and then runs one bounded
+aggregate against `app.llm_usage_events`.
+
+One captured `observedAt` defines the current UTC month-to-date and previous
+24-hour windows. The query groups only normalized provider category,
+operation, fixture mode, and status. It returns at most 72 aggregate rows.
+The response then exposes at most four provider categories per window:
+`openai`, `groq`, `kimi`, and `other`.
+
+`live` and `record` rows represent provider-attributable calls. Replay stays
+separate. Tokens and transcription seconds include only successful
+provider-attributable events. Unknown vendor labels and historical
+transcription rows without duration remain aggregate warnings. The response
+never contains user, project, report, model, prompt, transcript, raw vendor,
+provider response, or database error details.
+
+Migration `0029_llm_usage_events_created_at.notx.sql` adds
+`llm_usage_events_created_at_idx` with `CREATE INDEX CONCURRENTLY` and no
+`IF NOT EXISTS`. This gives the global time-window aggregate a leading
+`created_at DESC` index without a table rewrite. The non-transactional runner
+records the filename only after the index build succeeds. The required-head
+parser accepts the exact optional `.notx.sql` suffix. Migrations 0030 and 0031
+later reconcile one development-only legacy table/ledger shape, so the current
+application head is `0031_remove_retired_llm_usage_ledger.sql`.
+
+An interrupted build can leave a same-name invalid index. A rerun fails closed
+instead of recording the migration. Verify `pg_index.indisvalid = false`, drop
+that exact index concurrently, and rerun the migration. Verify
+`pg_index.indisvalid = true` after the rerun.
+
+Harpa records usage on a best-effort basis, and account deletion removes the
+associated rows. The summary is therefore neither provider billing nor an
+immutable audit record. It makes no OpenAI, Groq, or Kimi request. Provider
+balance, rate-limit headroom, free-tier capacity, and remaining credit all
+stay `Unknown`; use the linked provider dashboards for those facts.
+
+The browser reads this route once after session confirmation and once per
+manual **Refresh**. It does not poll. A successful full-stack load makes 16
+fixed GET reads. One successful Refresh makes another 16, for 32 total. The
+manual report generation live canary remains a separate POST and never runs in
+those cycles.
+
+If this draft is approved, prove it in this order:
+
+1. Deploy the stack without adding a provider administrator credential.
+2. Verify that `/readyz.head` is exactly
+   `0031_remove_retired_llm_usage_ledger.sql` and that
+   `/healthz.gitCommit` is the expected full SHA.
+3. Verify the administrator Pages marker at the matching source head.
+4. Sign in through the dedicated admin site, record the load observation, and
+   press **Refresh** once.
+5. Confirm one aggregate query per read, the strict redacted response, the
+   stated ledger caveats, and the absence of provider requests or content in
+   logs.
+
+See [Admin AI usage ledger](design-admin-ai-usage.md) for the full accounting,
+privacy, migration, and rollout contract.
+
+### Report generation live canary
+
+The live canary uses these runtime values:
+
+- `ADMIN_REPORT_LIVE_CANARY_ENABLED`.
+- `ADMIN_REPORT_DIAGNOSTIC_EMAIL`.
+- `ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID`.
+- `ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER`.
+
+The enablement flag defaults to `0`. The three target values must be absent or
+present together. The email must be an exact member of `TEST_ACCOUNT_EMAILS`.
+The runner uses the existing server-only `TEST_ACCOUNT_PASSWORD`. Do not add a
+browser password, a second canary password, or a customer-selected target.
+
+The API accepts `ADMIN_REPORT_LIVE_CANARY_ENABLED=1` only when all of these
+conditions are true:
+
+- `NODE_ENV=production`.
+- `BETTER_AUTH_URL=https://harpa-pro-api-dev.fly.dev`.
+- `ADMIN_CORS_ORIGINS=https://dev.harpa-pro-admin.pages.dev`.
+- `HARPAPRO_PR_BUILD=0`.
+- `AI_LIVE=1`.
+- `AI_FIXTURE_MODE=live`.
+- all three target values are valid.
+
+The parser fails API boot when an enabled configuration does not match this
+exact development deployment. Pull-request previews and production cannot
+enable the canary. A disabled configured route returns `unknown/not_enabled`
+without an application request or application-database query. An absent target
+returns `unknown/not_configured`.
+
+Provision one dedicated test identity, one synthetic project, one fixed draft
+report, and short synthetic notes. Credential seeding does not create the
+application rows. Deploy and prove the disabled path before any enablement.
+
+A separate authorized development rollout uses this sequence:
+
+1. Add the canary email to `TEST_ACCOUNT_EMAILS` and deploy its credential.
+2. Add the three target values to the development Doppler config.
+3. Keep `ADMIN_REPORT_LIVE_CANARY_ENABLED=0` and deploy the API.
+4. Confirm `unknown/not_enabled` and zero application calls or queries.
+5. Set the flag to `1` in development and deploy the API.
+6. Verify `/healthz.gitCommit` at the expected full SHA.
+7. Verify the admin Pages marker at the expected source head.
+8. Sign in to the development admin site and click **Run live canary** once.
+9. Confirm live mode, one fresh usage row, and the bounded synthetic preview.
+10. Confirm the exact temporary Bearer session now returns a null session.
+11. Confirm that logs contain no secret, prompt, report sample, or raw error.
+
+Each click replaces the fixed synthetic report body and spends real AI tokens.
+The fixed account keeps the normal report and AI usage limits. The admin route
+also permits only three runs per identity and session in 15 minutes.
+
+Page load, shared **Refresh**, timers, and background work never run or clear
+the canary. The browser keeps the result only in component memory. To stop new
+runs, set the flag to `0` and redeploy development. Production enablement needs
+a separate design and explicit approval. See
+[Admin live report-generation canary](design-admin-report-live-canary.md).
 
 An administrator's login password is not a deployment secret. The
 `admin:set-password --password-stdin` command hashes it into the independent
 admin database, and the operator stores the original in a password manager.
 Before hashing or writing, the command rejects a matching application
 endpoint and a connected target containing `app._migrations`.
+The one-off command also selects IPv4 first and disables Node's network-family
+autoselection before importing the pool. On dual-stack DNS networks without a
+working IPv6 route, Node 22 and 24 can otherwise spend the entire five-second
+pool timeout racing an unreachable address. These settings are scoped to the
+provisioning process and do not change the deployed API pool.
 
 ### API production boot contract
 
@@ -384,6 +877,23 @@ are true:
   into the image.
 - `BETTER_AUTH_SECRET` is explicitly set to at least 32 characters and
   is not the checked-in development fallback.
+- `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` are both absent or both
+  present. They remain optional because unconfigured inventory and Free usage
+  are typed `Unknown` states.
+- `ADMIN_CLOUDFLARE_ACCOUNT_ID` and
+  `ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN` are both absent or both present.
+  They remain optional because an unconfigured R2 observation is a typed
+  `Unknown` state.
+- `ADMIN_FLY_ORG_SLUG`, `ADMIN_FLY_READ_ONLY_API_TOKEN`, and
+  `ADMIN_FLY_APP_NAMES` are all absent or form one valid triplet. They remain
+  optional because an unconfigured Fly inventory is a typed `Unknown` state.
+- The three `ADMIN_REPORT_DIAGNOSTIC_*` target values are all absent or form a
+  complete target whose email belongs to `TEST_ACCOUNT_EMAILS`. They remain
+  optional because an unconfigured canary is a typed `Unknown` state.
+- `ADMIN_REPORT_LIVE_CANARY_ENABLED` is `0` or `1` and defaults to `0`. A value
+  of `1` is valid only for the exact non-preview development deployment with
+  live AI mode and a complete target. Production and pull-request previews
+  fail boot when the value is `1`.
 - AI is live (`AI_LIVE=1`, `AI_FIXTURE_MODE=live`) with OpenAI and Groq
   keys.
 - R2 is live with an account ID or explicit endpoint plus both access
@@ -428,7 +938,7 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 **inside the deploy job** before `flyctl deploy`. Pattern:
 
 ```yaml
-- uses: dopplerhq/cli-action@v3
+- uses: dopplerhq/cli-action@v4
 - name: Sync Fly secrets from Doppler
   env:
     DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }} # or _PRD
@@ -444,10 +954,27 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
   run: flyctl deploy ...
 ```
 
-`--stage` defers activation; the subsequent `flyctl deploy` flips the
-secrets on — so code + secrets ship in a single transaction. To rotate
-a secret: edit it in Doppler, push to `dev` or `main`, deploy fires
-and picks up the new value.
+Deployment workflows use action releases that run on Node 24. Cloudflare Pages
+publishes Git-connected browser applications through its GitHub App. GitHub
+Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
+credential.
+
+The shared Pages marker verifier allows 7,200 seconds for Cloudflare's native
+build queue. The public site, admin site, and dashboard `dev` verification and
+pull-request deployment jobs each have a 150-minute outer limit. They still
+require the exact expected commit and branch before any route or browser check
+can pass. The budget covers an observed account-wide stack in which four
+earlier site/admin/dashboard waves kept the next exact site deployment
+incomplete after 75 minutes. All three exact aliases settled after about
+93 minutes, leaving about 27 minutes of measured margin inside the two-hour
+wait and another 30 minutes before the affected job limit. Production callers
+inherit the shared inner default, but their unchanged 20-minute job limits
+remain the effective maximum. This waiting budget does not change production
+deployment settings or activate a build.
+
+`--stage` defers activation. The subsequent `flyctl deploy` activates the
+secrets. To rotate a secret, edit Doppler and dispatch the matching API
+workflow. A normal code change follows the protected `dev` and `main` flow.
 
 The `DOPPLER_TOKEN_{DEV,PRD}` service tokens are created with
 `doppler configs tokens create ci-github --project harpa-pro --config <env>`
@@ -473,25 +1000,35 @@ the canonical `BETTER_AUTH_URL` themselves:
 - production: `https://api.harpapro.com`.
 
 The API fails boot when a non-preview deployment uses any other auth base URL.
-The filter also excludes Doppler metadata, Neon control-plane values,
-Cloudflare tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only
-flags. Before importing, the workflow removes any legacy
+The optional `ADMIN_NEON_VIEWER_API_KEY` and `ADMIN_NEON_ORG_ID` pair survives
+the normal Doppler import because it is API runtime configuration for both
+observer routes. The three optional `ADMIN_REPORT_DIAGNOSTIC_*` values also
+survive that import. `ADMIN_REPORT_LIVE_CANARY_ENABLED` also survives as API
+runtime configuration and defaults to `0`. These values are not browser build
+variables. The CI `NEON_API_KEY` stays excluded and never reaches Fly.
+The optional Cloudflare observer pair also survives the normal import. The
+filter excludes Doppler metadata, Neon control-plane values, CI Cloudflare
+tokens, build-time `PUBLIC_*` / `EXPO_PUBLIC_*`, and other CI-only flags.
+The optional Fly observer triplet also survives the normal import because each
+name starts with `ADMIN_FLY_`, not the excluded CI-only `FLY_` prefix.
+Before importing, the workflow removes any legacy
 `ADMIN_CORS_ORIGINS` Fly secret so the checked-in Fly TOML value cannot remain
 shadowed.
 
-- `.env.example` at the repo root enumerates every
-  `EXPO_PUBLIC_*` var. The `lib/env.ts` Zod parse runs in CI
-  against a populated `.env.example` to catch missing entries
-  before merge.
+- `.env.example` lists every mobile `EXPO_PUBLIC_*` variable parsed by
+  `apps/mobile/lib/config/env.ts`.
 
 ## Observability
 
-- **Sentry** for crashes, both mobile and API. Same project,
-  different DSNs. Runtime vars:
+- **Sentry** for crashes in mobile, dashboard, and API. Runtime/build vars:
   - API: `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT`, and
     `SENTRY_TRACES_SAMPLE_RATE`.
   - Mobile: `EXPO_PUBLIC_SENTRY_DSN` at Metro/EAS build or OTA-update
     time.
+  - Dashboard: optional public `VITE_SENTRY_DSN` Cloudflare build variable.
+    The Pages build wrapper derives `VITE_SENTRY_ENVIRONMENT` from the branch
+    and `VITE_SENTRY_RELEASE` from `CF_PAGES_COMMIT_SHA`. When the DSN is
+    absent, the dashboard does not initialize telemetry.
   - Source maps/native build integration: `SENTRY_ORG`,
     `SENTRY_PROJECT`, optional `SENTRY_URL`, and `SENTRY_AUTH_TOKEN`
     with `project:write`.
@@ -502,18 +1039,23 @@ shadowed.
     bundles receive the same values.
     The Expo plugin disables auto-upload when `SENTRY_AUTH_TOKEN` is not
     present so local prebuilds do not fail.
-- **Fly metrics** — built-in for API latency / 5xx rate.
-- **Logs** — Fly log shipping to Better Stack (free tier) for
-  search.
-- **Request id** — every API request gets `X-Request-Id` echoed
-  in responses; logged with the structured log entry; mobile
-  attaches it to Sentry breadcrumbs on error.
+- **Fly metrics** provide provider-side Machine and HTTP telemetry.
+- **Fly logs** capture application stdout and stderr. The repository has no
+  Better Stack drain or shipping configuration. Verify any external drain in
+  Fly before relying on it.
+- **Request ID** middleware returns `X-Request-Id` on every API response.
+  Error paths add it to console output and Sentry context. The API has no
+  global structured request-log middleware. `REQUEST_LOG` is parsed but has no
+  runtime consumer.
 
 ## Deploy flow
 
 > Detailed pipeline, migration apply, and rollback playbook in
 > [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md). The flow
 > below is the high-level summary.
+
+Feature pull requests target `dev`. Production promotions use a `dev` to
+`main` pull request. Do not merge a feature branch directly to `main`.
 
 The Fly release command applies migrations in this fixed order:
 
@@ -529,26 +1071,63 @@ verify `/admin/readyz` separately after deploy; it checks the admin
 connection and `admin._migrations` head and fails the deployment workflow
 without coupling Fly routing to admin availability.
 
+The administrator operations page displays `/healthz` build identity, both
+readiness heads, and three independent Pages markers as read-only evidence.
+The marker cards identify the public site, administrator site, and office
+dashboard. A separate Sentry card displays only aggregate unresolved issue
+groups and mobile-session health. The page does not infer one Pages identity
+from another.
+
+The admin build sets `PUBLIC_SITE_BASE_URL` and `PUBLIC_DASHBOARD_URL` to fixed
+public origins for the current `main`, `dev`, or `pr-<n>` branch. The browser
+accepts no marker origin from input or a response. The two cross-origin marker
+GETs omit credentials. The administrator marker GET uses same-origin
+credentials. All requests disable caching, and the page does not poll.
+
+The UI does not compare API and Pages SHAs or label a difference as drift. Fly
+and Pages pull-request previews both report the immutable pull-request head,
+but workflow verification remains the authority for that identity. A
+successful full-stack load makes 16 fixed GET reads. One successful manual
+**Refresh** makes another 16, for 32 total.
+
+The `/healthz` browser CORS policy accepts only the exact configured
+administrator origins and does not allow credentials. `/readyz` and
+`/admin/readyz` retain their credentialed administrator-origin policy. Public
+marker files allow public cross-origin reads and contain only the reviewed
+commit and branch fields.
+
+These observations do not replace the workflow checks below. Protected CI and
+release workflows remain responsible for exact deployment proof. See
+[Admin deployment identity](design-admin-deployment-identity.md).
+
 ```
-PR open / push (same-repo only, forks skipped)
-  ↳ Backend preview (API-changing PRs only):
-    ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
-    ↳ Admin Neon branch pr-<n> from admin dev
-    ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-      ↳ release_command applies app migrations, then admin migrations
-      ↳ /readyz verified
-      ↳ /admin/readyz verified separately
-      ↳ sticky PR comment with preview URL
-  ↳ public-site preview deploy to CF Pages (site-preview.yml)
-  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
-    ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
-      when the PR changes API inputs
-    ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
-    ↳ branch is last-write-wins; engineers select older PR bundles
-      via the dev-client launcher (Updates → development → pick)
+PR open / push
+  ↳ Credential-free tests, builds, path checks, and migration guards
+  ↳ Human-owned same-repository PRs only:
+    ↳ exact Git ref pr-<n> mirrors the immutable PR head
+    ↳ Backend preview (API, admin-site, or dashboard changes):
+      ↳ Application Neon branch pr-<n> (pr-preview.yml: neon-create)
+      ↳ Admin Neon branch pr-<n> from admin dev
+      ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
+        ↳ release_command applies app migrations, admin migrations, then
+          seeds configured test/demo password accounts
+        ↳ /readyz verified
+        ↳ /admin/readyz verified separately
+        ↳ sticky PR comment with preview URL
+    ↳ Cloudflare Git builds public/admin/dashboard previews from pr-<n>
+      ↳ GitHub verifies the stable aliases serve the exact PR head SHA
+      ↳ dashboard-preview.yml verifies SPA routing and runs its deployed live
+         browser journey against the matching isolated API
+    ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
+      ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
+        when the PR changes API inputs
+      ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
+      ↳ branch is last-write-wins; engineers select older PR bundles
+        via the dev-client launcher (Updates → development → pick)
   ↳ EAS preview build (manual trigger — planned)
 
-PR close
+Human-owned same-repository PR close
+  ↳ generated Git ref pr-<n> deleted
   ↳ Fly app harpa-pro-api-pr-<n> destroyed (pr-preview.yml: fly-destroy)
   ↳ Application and admin Neon branches pr-<n> deleted
 
@@ -558,7 +1137,9 @@ Push to dev
   ↳ admin migrations applied to admin `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
     ↳ /readyz and /admin/readyz verified independently
-  ↳ public-site deploy to CF Pages dev branch (site-dev.yml)
+  ↳ Cloudflare Git deploys public/admin/dashboard `dev` branches
+    ↳ site-dev.yml, admin-dev.yml, and dashboard-dev.yml verify exact SHA
+    ↳ dashboard-dev.yml also verifies SPA routing
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-dev calls OTA after deploy + journeys pass
@@ -571,17 +1152,28 @@ PR to main (production gate)
   ↳ run stress/core/extended journeys against that exact dev deploy
 
 Push to main (production)
-  ↳ blocking snapshots of application and admin Neon `main` branches
+  ↳ blocking recovery branches of application and admin Neon `main` branches
   ↳ Fly deploy → harpa-pro-api
     ↳ release_command applies app migrations, then admin migrations
     ↳ /readyz and /admin/readyz verified independently
-  ↳ public-site deploy to CF Pages production (site-prod.yml)
+  ↳ Cloudflare Git deploys approved production branches
+    ↳ site-prod.yml and admin-prod.yml verify exact SHA + custom domains
+    ↳ dashboard-prod.yml stays dormant until the repository variable
+       DASHBOARD_PRODUCTION_ENABLED is true, then verifies the Pages hostname
+       and any approved custom domain after dashboard production activation
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass
     ↳ appVersion change: skip until the matching native build exists
   ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
+
+Use the protected GitHub workflows for normal deployment. The local
+`infra/fly/deploy.sh` helper always targets production through
+`infra/fly/fly.toml`; it does not read `FLY_APP`. It labels the image from
+local `HEAD` but does not prove that the checkout is clean or pushed. Before
+an approved emergency use, compare `git status --short`, the local SHA, and
+the remote branch SHA, then record the deployed image digest.
 
 ### Mobile OTA and native runtime ordering
 
@@ -678,7 +1270,6 @@ flyctl secrets set --app harpa-pro-api-dev \
   TURNSTILE_LIVE=1 TURNSTILE_SECRET_KEY=... \
   RATE_LIMIT_BACKEND=postgres \
   WAITLIST_CORS_ORIGINS="https://dev.harpa-pro.pages.dev" \
-  TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
   R2_FIXTURE_MODE=live \
   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
   R2_BUCKET=harpa-pro-dev \
@@ -736,7 +1327,7 @@ addition to the HTTP `app` group:
 
 - `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
   to suspend at zero;
-- `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
+- `storage-worker`: `shared-cpu-1x`, 512 MB, no service attachment,
   with its active Machine and stopped standby owned by Fly deploys.
 
 The active worker is not eligible for HTTP auto-stop, so both dev and
@@ -745,31 +1336,73 @@ stopped standby for deploys and restarts. This cost is required for delayed
 cleanup to run while the API is idle. PR previews do not provision workers;
 their account-deletion gate stays closed.
 
-The worker does not continuously pin Neon with five-second polling. It
-sleeps until the next known job is due, capped at ten minutes to discover
-jobs inserted after the sleep was calculated, and prunes expired upload
-leases hourly. The route remains the immediate-delete fast path. If that
-fast path fails just after a sleep starts, cleanup may lag by ten minutes;
-expired lease/orphan cleanup may lag by one hour. These gaps allow an
-otherwise idle Neon compute to suspend when its configured idle threshold
-is shorter than the gap. They do not reduce the continuously billed Fly
-worker cost.
+The worker process launches Node with the `tsx` loader directly instead of
+keeping `pnpm` and the `tsx` CLI supervisor resident. The 512 MB allocation is
+intentional headroom: the former 256 MB Machine exposed only about 207 MiB to
+the guest and reached roughly 9 MiB available while its durable queue was
+empty, followed by four daily OOM/exit-137 restarts. A structured
+`storage_delete_worker_memory` log records process uptime, Node RSS/heap, and
+guest total/free memory at startup and hourly. Fly's built-in Machine memory
+metric remains the source for whole-VM saturation and should be checked after
+each rollout. Memory sampling has its own local timer and does not query Neon
+or shorten the worker's database sleep.
 
-After the first lease-aware deploy completes, the workflow arms a
-one-time 330-second compatibility grace. During the grace, new presigns
-are leased, lease-less registrations from replaced machines remain
-compatible, and account deletion returns `503`. Arming uses
+The worker does not continuously pin Neon with frequent polling. In the
+current low-traffic mode, it sleeps until the next known job is due, capped at
+24 hours to discover jobs inserted after the sleep was calculated, and prunes
+expired upload leases on startup and once per 24 hours while running. A restart
+reconciles sooner because it has already woken the database. The route remains
+the immediate-delete fast path. If that fast path fails just after a sleep
+starts, delayed cleanup and lease/orphan cleanup may lag by up to one day. This
+trade-off is intentional while Harpa has no external users: it allows an idle
+Neon compute to remain suspended instead of repeatedly paying its idle billing
+tail. It does not reduce the continuously billed Fly worker cost.
+
+The application rate-limit, admin rate-limit, and idempotency garbage
+collectors also use a 24-hour default in low-traffic mode. They run only while
+an HTTP `app` Machine is awake and do not keep its event loop alive by
+themselves.
+
+After the exact production release passes the worker proof below, an
+authorized operator arms a one-time 330-second compatibility grace. During
+the grace, new presigns are leased, lease-less registrations from replaced
+machines remain compatible, and account deletion returns `503`. Arming uses
 `COALESCE(enforce_after, ...)`, so subsequent deploys cannot reopen the
 grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
 seconds is the late-PUT safety window.
 
 `infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
 known exact singleton states, verify at least one Machine has state
-`started` and metadata process group `storage-worker`, then arm by running the
-monotonic rollout command in that group. The command inherits the app's staged
-Fly secrets, so neither CI nor manual callers need the production
-`DATABASE_URL`. The shell policy test stubs external commands, executes this
-sequence, and forbids explicit `storage-worker` scale commands.
+`started` and metadata process group `storage-worker`, then stop. Deployment
+does not arm storage lifecycle or enable account deletion.
+
+Worker proof is a separate observation gate. Require the exact production API
+SHA, the expected active/standby topology, the direct Node worker command, 512
+MB on both worker Machines, a startup memory sample and at least one hourly
+`storage_delete_worker_memory` sample, and no intervening OOM restart or drain
+failure. Re-check the rollout row and durable queue before arming. A short
+post-deploy healthy window is not this proof.
+
+After that proof passes, run the monotonic rollout helper explicitly:
+
+```sh
+bash scripts/ci/arm-storage-lifecycle-rollout.sh harpa-pro-api
+```
+
+The helper uses Fly Machine exec, whose per-attempt timeout is 120 seconds, for
+at most three attempts. A failed attempt is retried only after a fresh
+inventory proves the same worker id is still the sole started worker. This is
+safe when transport fails after the SQL commit because the database update
+uses `COALESCE` and boolean `OR`, so later attempts cannot reopen the grace or
+disable deletion. Success also requires the arming script's confirmation
+marker, not only a zero provider exit code.
+
+The command inherits the app's staged Fly secrets, so neither CI nor manual
+callers need the production `DATABASE_URL`. The GitHub deploy step has a
+30-minute outer timeout in case another provider operation ignores its own
+deadline. The shell policy test stubs external commands, executes this
+sequence, verifies the bounded retry budget, and forbids explicit
+`storage-worker` scale commands.
 
 The shared repair is a no-op only for an exact healthy pair: one
 current-release active worker and one current-release stopped, service-less
@@ -798,8 +1431,24 @@ stopped/no-standby retry starts then verifies the candidate, while an exact
 singleton started/no-standby retry clones it. Id, identity, service, standby, or
 topology drift during any pre-clone re-list or polling fails before cloning.
 
-The verifier remains diagnostic-only. The workflow calls it again after
-repair and before arming, so a green deploy proves a running executor exists.
+The verifier remains diagnostic-only. Deployment calls it after repair. This
+proves that a running executor exists, but it does not satisfy the observation
+gate or prove that lifecycle arming finished. After the separate arming action,
+rely on the command's confirmation marker and the rollout table below. If the
+action stalls before that marker is reported, treat the rollout state as
+unknown and inspect it before retrying.
+
+The admin storage lifecycle card reads the rollout row and aggregate queue
+state. It does not replace this Fly worker verification. A recorded rollout or
+empty queue is not worker-liveness proof.
+
+Inspect the rollout row with this query:
+
+```sql
+SELECT armed_at, enforce_after, account_delete_enabled, updated_at
+FROM app.storage_lifecycle_rollout
+WHERE singleton = TRUE;
+```
 
 Fly can create a stopped standby for the service-less process group. An
 explicit `storage-worker=1` command therefore collapses the pair without
@@ -826,33 +1475,39 @@ ORDER BY run_after;
 
 ### Burst scaling
 
-[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's
-proxy when to wake / start additional machines:
+[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's proxy when
+an existing Machine is too busy to receive more work:
 
-- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly
-  starts routing new connections to a second (or third…) machine.
+- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly routes
+  new connections to another available Machine.
 - `hard_limit = 50` — Fly stops sending to a machine entirely until
   it drains below the soft limit.
 
-Sized for the current node-postgres pool (`max: 10` per machine)
-plus headroom for non-DB-bound work (auth, validation, idle).
-
-**Set the max machine count out-of-band** (not in fly.toml):
+Concurrency settings do not create a maximum Machine count or add Machines.
+Capacity changes are explicit operations. Before changing the app process
+count, record the current process groups and worker topology:
 
 ```bash
-# Allow up to 6 machines in the primary region during a spike.
-fly scale count 6 --max-per-region 6 -a harpa-pro-api
+flyctl scale show --app harpa-pro-api
+flyctl machine list --app harpa-pro-api
 ```
 
-Steady-state Fly will keep `min_machines_running` hot (currently 0 for
-prod) and let the rest stop/suspend when traffic recedes.
+With owner approval, set only the HTTP process group to an exact count:
+
+```bash
+flyctl scale count <count> --process-group app --app harpa-pro-api
+```
+
+Do not omit `--process-group`. A broad scale command can also change the
+service-less `storage-worker` group. After a count change, rerun the Machine
+inventory and confirm the worker pair is unchanged. `--max-per-region` controls
+distribution of the requested count; it is not an autoscaling ceiling.
 
 ### Multi-region (future)
 
-`primary_region = "fra"` today. Adding read-replica regions is a
-single-step `fly regions add` once the user base demands it — Neon
-read replicas exist in multiple regions and the API has no
-sticky-session state. Not configured today; flag for P5+.
+`primary_region = "fra"` today. Multi-region placement is not configured.
+It requires an explicit Machine topology, database-latency design, failure
+policy, and verification plan. Do not treat it as a one-command change.
 
 ### Neon connection pooling
 
@@ -868,9 +1523,9 @@ Neon's per-compute connection limit. Two safety nets:
    fly secrets list -a harpa-pro-api | grep DATABASE_URL  # shows digest only
    doppler secrets get DATABASE_URL --plain | grep -o '[^@]*$'  # full host
    ```
-2. **`pg.Pool.max = 10`** per machine. With 6 machines max that's 60
-   concurrent backend connections — well inside Neon's free-tier
-   limit (~100) and trivially inside paid plans.
+2. **`pg.Pool.max = 10`** per application Machine. Total possible client
+   connections grow with the active Machine count. Verify the current Neon
+   plan and endpoint limits before increasing Fly capacity.
 
 If the pooler hostname is missing, the API still works but Neon's
 compute will saturate well before Fly does and you'll see
@@ -889,22 +1544,26 @@ variable.
 ### Verifying scale in prod
 
 ```bash
-fly status -a harpa-pro-api               # current machine count + state
-fly logs -a harpa-pro-api | grep started  # see auto-starts under load
-fly autoscale show -a harpa-pro-api       # current limits
+flyctl status --app harpa-pro-api
+flyctl scale show --app harpa-pro-api
+flyctl machine list --app harpa-pro-api
+flyctl logs --app harpa-pro-api
 ```
 
 ## Alerts
 
-- Fly app down → PagerDuty.
-- 5xx rate > 1% over 5 min → Slack.
-- Sentry new issue (crash) → Slack.
-- AI provider failure rate > 5% over 10 min → Slack.
+The repository configures Sentry capture, Fly health checks, and deployment
+smokes. It does not configure PagerDuty, Slack alert routes, or percentage
+thresholds. Treat those integrations as unknown until they are verified in
+the provider consoles. Record the destination, threshold, owner, and a test
+event when an external alert is enabled.
 
 ## Budget guards
 
 - AI: per-user monthly token budget enforced server-side; usage
   visible on the in-app `usage` screen.
-- R2: lifecycle rules cap orphan files (see [arch-storage.md](arch-storage.md)).
+- R2: application jobs remove expired uploads and account-owned objects. No
+  bucket-native R2 lifecycle policy is configured in this repository; see
+  [arch-storage.md](arch-storage.md).
 - Neon: application and admin PR branches auto-delete on PR close. CI also
-  prunes stale branches and per-deploy snapshots in both projects.
+  prunes stale branches and pre-deploy recovery branches in both projects.

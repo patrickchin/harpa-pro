@@ -1,5 +1,13 @@
 # Per-account usage limits
 
+> **Status: implemented.** The API enforces the limits and exposes
+> both `/me/usage` and `/me/limits`. The mobile Usage route currently
+> calls `/me/usage`, `/me/limits`, and `/me/usage/events` separately.
+> The blocked dialog has one `Done` action. Near-limit header parsing
+> exists, but the app does not display a near-limit toast; the deleted
+> pending Maestro placeholders were retired rather than kept as runnable
+> coverage.
+
 > Companion: [arch-api-design.md](arch-api-design.md),
 > [arch-database.md](arch-database.md),
 > [arch-auth-and-rls.md](arch-auth-and-rls.md).
@@ -9,31 +17,58 @@
 > [Pitfall 6](pitfalls.md#pitfall-6--per-request-db-scope-rls-replacement-added-late),
 > [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken),
 > [Pitfall 15](pitfalls.md#pitfall-15--route-handlers-that-ignore-user-settings),
-> [Pitfall 16](pitfalls.md#pitfall-16--derived-fallback-fixture-name-silently-disables-ai_live).
+> [Pitfall 16](pitfalls.md#pitfall-16--fixture-selection-silently-disables-ai_live).
 
 ## 1. Problem
 
-We already record per-user usage (`app.llm_usage_events` + the monthly aggregator in `auth/service.ts::fetchUsage`) and surface it via `GET /me/usage`. What we lack is **enforcement** — any account can issue unlimited generations against live providers, with no cap and no "upgrade" surface on mobile.
+The system records per-user usage in `app.llm_usage_events`. It applies
+monthly limits before paid actions and records token totals after AI
+calls. This document describes the shipped plan, count, enforcement,
+error, admin, and mobile contracts.
 
-This doc designs the plan model (free / pro / enterprise + admin override), the counting model, the enforcement point (`enforceUsageLimit` called pre-side-effect), the 403 error envelope + mobile contract, and the admin override path (one-row UPDATE, not a deploy).
-
-Acceptance: every route consuming paid AI capacity calls `enforceUsageLimit(...)` before the side-effect; at-limit users get 403 with structured details; mobile renders an `AppDialogSheet` with `limit`/`used`/`resetAt`; `GET /me/usage` includes `limits + remaining` for one-round-trip rendering.
+Every route that consumes paid AI capacity calls
+`enforceUsageLimit(...)` before the side effect. At-limit users get a
+403 response with structured details. The mobile app maps that response
+to `UsageLimitDialog`.
 
 ## 2. Counting model — live count from existing tables
 
 Compute `used` for each bucket by querying the source-of-truth tables that already power `GET /me/usage`:
 
-| Bucket            | Source table            | Predicate                                         |
-| ----------------- | ----------------------- | ------------------------------------------------- |
-| `report_generate` | `app.llm_usage_events`  | `user_id=? AND operation='generate_report' AND status='ok' AND created_at >= date_trunc('month', now())` |
-| `voice_transcribe`| `app.llm_usage_events`  | `user_id=? AND operation='transcribe'      AND status='ok' AND created_at >= …` |
-| `voice_summarize` | `app.llm_usage_events`  | `user_id=? AND operation='chat'            AND status='ok' AND created_at >= …` |
-| `ai_input_tokens` | `app.llm_usage_events`  | `sum(input_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — transcribe rows store audio duration in `input_seconds`, not tokens. |
-| `ai_output_tokens`| `app.llm_usage_events`  | `sum(output_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — same |
+| Bucket             | Source table           | Predicate                                                                                                                                         |
+| ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report_generate`  | `app.llm_usage_events` | `user_id=? AND operation='generate_report' AND status='ok' AND created_at >= date_trunc('month', now())`                                          |
+| `voice_transcribe` | `app.llm_usage_events` | `user_id=? AND operation='transcribe'      AND status='ok' AND created_at >= …`                                                                   |
+| `voice_summarize`  | `app.llm_usage_events` | `user_id=? AND operation='chat'            AND status='ok' AND created_at >= …`                                                                   |
+| `ai_input_tokens`  | `app.llm_usage_events` | `sum(input_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — transcribe rows store audio duration in `input_seconds`, not tokens. |
+| `ai_output_tokens` | `app.llm_usage_events` | `sum(output_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — same                                                                |
 
 **Why:** one source of truth — the same row that produces the usage screen gates the next call. No drift, no background reconciler, no "counter table forgotten by a new route" failure mode. Cost: one extra small `count(*)`/`sum()` per gated request, mitigated by a partial index `(user_id, created_at) WHERE status='ok'` on `app.llm_usage_events` (added in the same migration as the limits table).
 
 A separate counter table (Pitfall 8 dual-source-of-truth) and an Upstash token bucket (rolling window misaligns with calendar-month plan caps; not source-of-truth for who already consumed what) were both rejected.
+
+### 2.1 Development live-canary proof
+
+The disabled-by-default admin live canary calls the normal report generation
+route with one fixed synthetic account. It does not bypass the
+`report_generate`, `ai_input_tokens`, or `ai_output_tokens` limits. Each
+successful live call consumes the same monthly buckets as an ordinary call.
+
+Immediately before generation, the runner reads the application database
+clock. After generation proof succeeds, it reads at most two matching
+`app.llm_usage_events` rows. The query matches the synthetic user, project,
+report, `generate_report` operation, database-time window, vendor, and model.
+
+A pass requires exactly one row with `fixture_mode=live` and `status=ok`.
+Input and output tokens must be safe non-negative integers with a positive
+sum. Cached tokens must not exceed input tokens. Zero rows, two rows, another
+mode, or invalid accounting data fail the canary.
+
+The admin response returns only bounded token counts, latency, and
+`matched: true`. It does not return a usage-row ID, user ID, report ID, or row
+timestamp from this query. This proof reads the existing source of truth. It
+does not create a second counter or billing balance. See
+[Admin live report-generation canary](design-admin-report-live-canary.md).
 
 ## 3. Data model
 
@@ -61,7 +96,7 @@ export type LimitKind =
   | 'ai_output_tokens';
 
 export interface PlanLimits {
-  report_generate: number;   // count per calendar month, UTC
+  report_generate: number; // count per calendar month, UTC
   voice_transcribe: number;
   voice_summarize: number;
   ai_input_tokens: number;
@@ -69,9 +104,27 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<'free' | 'pro' | 'enterprise', PlanLimits> = {
-  free:       { report_generate:  1_000, voice_transcribe:  1_000, voice_summarize:  1_000, ai_input_tokens:   200_000_000, ai_output_tokens:   50_000_000 },
-  pro:        { report_generate: 10_000, voice_transcribe: 10_000, voice_summarize: 10_000, ai_input_tokens: 2_000_000_000, ai_output_tokens: 500_000_000 },
-  enterprise: { report_generate: Number.POSITIVE_INFINITY, voice_transcribe: Number.POSITIVE_INFINITY, voice_summarize: Number.POSITIVE_INFINITY, ai_input_tokens: Number.POSITIVE_INFINITY, ai_output_tokens: Number.POSITIVE_INFINITY },
+  free: {
+    report_generate: 1_000,
+    voice_transcribe: 1_000,
+    voice_summarize: 1_000,
+    ai_input_tokens: 200_000_000,
+    ai_output_tokens: 50_000_000,
+  },
+  pro: {
+    report_generate: 10_000,
+    voice_transcribe: 10_000,
+    voice_summarize: 10_000,
+    ai_input_tokens: 2_000_000_000,
+    ai_output_tokens: 500_000_000,
+  },
+  enterprise: {
+    report_generate: Number.POSITIVE_INFINITY,
+    voice_transcribe: Number.POSITIVE_INFINITY,
+    voice_summarize: Number.POSITIVE_INFINITY,
+    ai_input_tokens: Number.POSITIVE_INFINITY,
+    ai_output_tokens: Number.POSITIVE_INFINITY,
+  },
 };
 ```
 
@@ -181,13 +234,13 @@ are enforced **pre-hoc**: the route refuses to issue the call.
 
 ### 4.2 Wiring per route
 
-| Route                                  | Bucket            | Phase   |
-| -------------------------------------- | ----------------- | ------- |
-| `POST /reports/:n/generate`            | `report_generate` | pre     |
-| `POST /reports/:n/regenerate`          | `report_generate` | pre     |
-| `POST /voice/transcribe`               | `voice_transcribe`| pre     |
-| `POST /voice/summarize`                | `voice_summarize` | pre     |
-| (every AI call, in `services/ai.ts`)   | `ai_*_tokens`     | post    |
+| Route                                | Bucket             | Phase |
+| ------------------------------------ | ------------------ | ----- |
+| `POST /reports/:n/generate`          | `report_generate`  | pre   |
+| `POST /reports/:n/regenerate`        | `report_generate`  | pre   |
+| `POST /voice/transcribe`             | `voice_transcribe` | pre   |
+| `POST /voice/summarize`              | `voice_summarize`  | pre   |
+| (every AI call, in `services/ai.ts`) | `ai_*_tokens`      | post  |
 
 Token enforcement lives **inside `services/ai.ts`** at the same
 chokepoint that records `llm_usage_events` — see
@@ -227,13 +280,13 @@ exercise the "limit is 1000" path patches `PLAN_LIMITS` via
 
 ### 5.1 New + extended routes
 
-| Method | Path                  | Purpose                                                          |
-| ------ | --------------------- | ---------------------------------------------------------------- |
-| GET    | `/me/limits`          | Current effective limits + used + remaining + resetAt per bucket |
-| GET    | `/me/usage`           | _extended_ — now also includes `limits` field (§5.3)             |
-| PATCH  | `/admin/users/:id/plan`             | Admin-only — change `auth.users.plan`               |
-| PUT    | `/admin/users/:id/limit-overrides`  | Admin-only — upsert overrides row                   |
-| DELETE | `/admin/users/:id/limit-overrides`  | Admin-only — drop overrides                         |
+| Method | Path                               | Purpose                                                          |
+| ------ | ---------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/me/limits`                       | Current effective limits + used + remaining + resetAt per bucket |
+| GET    | `/me/usage`                        | _extended_ — now also includes `limits` field (§5.3)             |
+| PATCH  | `/admin/users/:id/plan`            | Admin-only — change `auth.users.plan`                            |
+| PUT    | `/admin/users/:id/limit-overrides` | Admin-only — upsert overrides row                                |
+| DELETE | `/admin/users/:id/limit-overrides` | Admin-only — drop overrides                                      |
 
 ### 5.2 Zod schemas (in `packages/api-contract/src/usage.ts`)
 
@@ -248,9 +301,9 @@ export const limitKind = z.enum([
 
 export const limitState = z.object({
   kind: limitKind,
-  limit: z.number().int().nullable(),       // null = unbounded
+  limit: z.number().int().nullable(), // null = unbounded
   used: z.number().int().nonnegative(),
-  remaining: z.number().int().nullable(),   // null = unbounded
+  remaining: z.number().int().nullable(), // null = unbounded
   resetAt: z.string().datetime(),
   plan: z.enum(['free', 'pro', 'enterprise']),
   overridden: z.boolean(),
@@ -326,7 +379,7 @@ optional field). The usage screen renders the existing month bars
 The admin's identity is recorded in `granted_by`. An audit log line
 (`audit_limit_change`) is emitted on every mutation — same pattern
 as the test-account password bypass audit in
-[arch-auth-and-rls.md](arch-auth-and-rls.md#test-account-password-bypass-live-deployments).
+[arch-auth-and-rls.md](arch-auth-and-rls.md#test-account-password-bypass).
 
 Admin routes use the same scoped DB but elevated via `withAdmin`
 middleware that re-checks `is_admin` on every request (Pitfall 6 —
@@ -337,14 +390,14 @@ no role caching in the JWT; the DB is the source of truth).
 For every authed surface, the paired-test rule from
 `arch-auth-and-rls.md §Test gates` applies:
 
-| Surface                                            | Own (200/403)                                | Cross (404/403)                                              |
-| -------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ |
-| `GET /me/limits`                                   | A reads A's limits → 200                     | _no cross_ (route is `/me`, scope-pinned)                    |
-| `GET /me/usage`                                    | A reads A's usage+limits → 200                | _no cross_                                                    |
-| `POST /reports/:n/generate` (at-limit)             | A blocked at 5/5 → 403                        | B unaffected at 0/5 → 200                                     |
-| `app.user_limit_overrides` read                    | A reads own override row → row               | A reads B's override row → empty (RLS hides it)              |
-| `app.user_limit_overrides` write (non-admin)       | _denied at route layer (no public route)_     | _denied at table layer (no INSERT/UPDATE grant)_              |
-| `PATCH /admin/users/:id/plan` (non-admin caller)    | _denied at withAdmin → 403_                   | n/a                                                           |
+| Surface                                          | Own (200/403)                             | Cross (404/403)                                  |
+| ------------------------------------------------ | ----------------------------------------- | ------------------------------------------------ |
+| `GET /me/limits`                                 | A reads A's limits → 200                  | _no cross_ (route is `/me`, scope-pinned)        |
+| `GET /me/usage`                                  | A reads A's usage+limits → 200            | _no cross_                                       |
+| `POST /reports/:n/generate` (at-limit)           | A blocked at 5/5 → 403                    | B unaffected at 0/5 → 200                        |
+| `app.user_limit_overrides` read                  | A reads own override row → row            | A reads B's override row → empty (RLS hides it)  |
+| `app.user_limit_overrides` write (non-admin)     | _denied at route layer (no public route)_ | _denied at table layer (no INSERT/UPDATE grant)_ |
+| `PATCH /admin/users/:id/plan` (non-admin caller) | _denied at withAdmin → 403_               | n/a                                              |
 
 Plus the negative-control test from §Test gates — same query without
 the scope wrapper returns the other actor's override row, proving
@@ -354,13 +407,18 @@ the wrapper is what protects it.
 
 ### 8.1 Usage screen
 
-`apps/mobile/screens/usage.tsx` (already shipped in P3.13) renders
-the per-month bars. We extend it with a "Plan + limits" card at the
-top:
+`apps/mobile/app/(app)/usage.tsx` loads three resources:
+
+- `GET /me/usage` for monthly totals and model breakdowns.
+- `GET /me/limits` for the plan and current bucket states.
+- `GET /me/usage/events?limit=20` for recent AI activity.
+
+`apps/mobile/screens/usage.tsx` renders a Plan and limits card above
+the all-time summary:
 
 ```
 ┌───────────────────────────────────────────┐
-│ Free plan                       Upgrade ▸ │
+│ Free plan                                 │
 │                                           │
 │ Reports         ■■■■■░░░░░  5 / 10        │
 │ Voice notes     ■■░░░░░░░░ 12 / 60        │
@@ -368,60 +426,50 @@ top:
 └───────────────────────────────────────────┘
 ```
 
-Data comes from the existing `GET /me/usage` round-trip — the new
-`limits` field is rendered directly. No separate `/me/limits` call
-on this screen; the standalone `GET /me/limits` exists for the
-"blocked dialog" surface to refresh without re-fetching the heavy
-usage payload.
+The `/me/usage` response also contains optional `plan` and `limits`
+fields. The current mobile route does not use those fields. It uses the
+separate `/me/limits` query and refreshes all three queries together.
 
 ### 8.2 Limit-reached dialog
 
-A new `AppDialogSheet` variant
-(`apps/mobile/components/dialogs/UsageLimitDialog.tsx`) is shown
-when the data layer's error handler sees `code:'usage_limit_exceeded'`.
-Body shows `{message, used, limit, resetAt}` and offers a "Go to
-usage" CTA that `router.push('/account/usage')`.
+`apps/mobile/components/account/UsageLimitDialog.tsx` maps a 403
+`usage_limit_exceeded` response. It shows the bucket, used value,
+limit, reset date, plan, and custom-limit marker. It offers one `Done`
+action. It does not navigate to Usage or an upgrade flow.
 
-**No `Alert.alert`** — Pitfall 12. The shared error-handler in
-`lib/api/errors.ts` recognises the new code and dispatches the
-dialog via `useAppDialogSheet()`.
+Callers use `usageLimitFromError()` from
+`lib/api/usage-limit-error.ts`. Generate and voice surfaces pass the
+result to the dialog. The application does not use `Alert.alert`.
 
 ### 8.3 Near-limit toast
 
-A response with `X-Usage-Warning: near-limit;…` triggers a
-**once-per-session** toast (in-memory dedupe by `bucket`). Lives in
-`lib/api/usage-warning.ts` — same place that already inspects
-response headers for the rate-limit warning.
+A response can contain
+`X-Usage-Warning: near-limit; bucket=...; pct=...`.
+`parseUsageWarning()` validates that format. The API client does not
+currently expose response headers to generated hooks, so no mobile
+surface consumes the warning. The pending Maestro flow remains
+blocked on that UI and deterministic seed data.
 
-## 9. Fixture rows (Pitfall 2)
+## 9. Test data
 
-Two new fixtures in `packages/ai-fixtures/fixtures/`:
+There are no mobile HTTP fixtures or MSW layer for usage-limit
+responses. API integration tests create plan and override rows in the
+test database. Mobile component tests pass structured props directly.
 
-- `usage-limits.report-generate-blocked.json` — the canned
-  "monthly limit reached" response for the Maestro flow.
-- `usage-limits.near-limit-warning.json` — the canned response
-  carrying `X-Usage-Warning`.
-
-These are HTTP-shape fixtures used by the mobile MSW layer in
-`:mock` builds, not AI fixtures (no LLM call happens — the route
-short-circuits before reaching `services/ai.ts`). They live under
-`packages/ai-fixtures/fixtures/` only because that's where the
-HTTP fixture loader already reads from; if/when we split the
-loaders we move them.
+Device coverage for an at-limit state still needs a deterministic
+database seed. Add a focused active flow when that seed exists; the
+old blocked placeholder was retired rather than kept as executable
+test inventory.
 
 ## 10. Maestro flows
 
-Add two flows under `.maestro/modules/`:
+`.maestro/modules/15-usage.yaml` covers the Usage screen and the
+default free-plan buckets in the normal regression journey.
 
-- `14a-usage-limit-blocked.yaml` — Alice generates reports until
-  she hits her limit, sees the `UsageLimitDialog`, taps "Go to
-  usage", sees the progress bar at 100%.
-- `14b-near-limit-toast.yaml` — Bob at 4/5 sees the toast on the
-  5th generate.
-
-Both are added to `.maestro/regression-journey.yaml`'s module list
-in the P4.8 design (`design-maestro-full-regression.md`) — file a
-follow-up edit there in the same PR that lands the flows.
+The former at-limit-dialog and near-limit-toast placeholders were
+retired because neither was runnable. Their prerequisites remain an
+at-limit seed, plus a warning consumer and near-limit seed for the
+toast case.
 
 ## 11. Carve-outs
 
@@ -452,52 +500,35 @@ The following are explicit non-goals here and tracked in
   voice-note pipeline. Count + token buckets enforced end-to-end.
 - **Maestro:** `modules/15-usage.yaml` asserts the limits card and the
   default free-plan buckets in the normal regression journey. The
-  blocked scenarios live under `.maestro/pending/`:
-  `usage-limit-dialog.yaml` needs deterministic at-limit seeding, and
-  `usage-near-limit-toast.yaml` needs the `X-Usage-Warning` toast
-  consumer. Self-serve upgrades remain Phase 4.
+  non-runnable at-limit and near-limit placeholders were retired;
+  add focused flows when deterministic seeding and the
+  `X-Usage-Warning` consumer exist. Self-serve upgrades remain out of
+  scope.
 
-## 12. Implementation checklist
+## 12. Historical implementation checklist
 
-One item ≈ one commit. Order matters — migration first so the
-service has a column to read; tests + docs land with each step
-(Pitfall 10).
+The numbered list below records the original delivery sequence. It is
+not an active backlog. The shipped migration is
+`0006_usage_limits.sql`; the current mobile dialog and Maestro status
+are described above.
 
-1. `feat(api): add auth.users.plan + app.user_limit_overrides + index`
-   — migration `0007_usage_limits.sql` + Drizzle schema + scope
-   policy + scope tests (cross-actor read of override row).
-2. `feat(contract): usage-limit Zod schemas + error code`
-   — `packages/api-contract/src/usage.ts` + re-export +
-   `errorCodes.usage_limit_exceeded`.
-3. `feat(api): enforceUsageLimit service + UsageLimitExceededError mapping`
-   — `services/usage-limits.ts` + error mapper update + unit tests
-   for the math (plan + override merge, INFINITY → null serialise).
-4. `feat(api): wire enforceUsageLimit into reports.generate + regenerate`
-   — pre-hoc check; integration test for at-limit 403 + under-limit
-   200 + default-wiring test (no DI stubs).
-5. `feat(api): wire enforceUsageLimit into voice.transcribe + voice.summarize`
-   — same shape; integration tests.
-6. `feat(api): token-bucket post-hoc enforcement in services/ai.ts`
-   — `recordLlmUsage` consults limits after write; next call from
-   over-quota user fails. Integration test exercises the two-call
-   sequence end-to-end.
-7. `feat(api): GET /me/limits + extend GET /me/usage with limits`
-   — route + Zod + integration tests + contract test.
-8. `feat(api): admin routes for plan + overrides + audit log`
-   — three handlers + audit-log line + withAdmin tests +
-   non-admin-denied tests.
-9. `chore(api): check-usage-limit-wiring.sh grep gate + lint integration`
-   — adds the allowlist of files that must call `enforceUsageLimit`;
-   wires into `pnpm lint`.
-10. `feat(mobile): usage-limit dialog + near-limit toast + error mapping`
-    — new dialog + toast + error-handler wiring + behaviour tests.
-11. `feat(mobile): plan + limits card on usage screen`
-    — extends `screens/usage.tsx`; behaviour test on render with
-    mock `limits` payload.
-12. `test(e2e): maestro flows 14a + 14b + add to regression journey`
-    — both flows + edit `design-maestro-full-regression.md` to list
-    them in the module slot inventory.
-13. `docs(v4): cross-link arch-usage-limits.md from architecture.md
-    + arch-api-design.md endpoint inventory + plan-p1 errata note`
-    — index entry, endpoint rows, mention that P1 froze the route
-    set so this is a deliberate amendment.
+Delivered work:
+
+- Migration `0006_usage_limits.sql` adds the plan and override data.
+- `packages/api-contract/src/schemas/usage-limits.ts` defines the
+  limit and admin shapes.
+- `packages/api/src/services/usage-limits.ts` owns counting,
+  effective-limit resolution, enforcement, and admin updates.
+- AI and report routes enforce the correct pre-action buckets.
+- `GET /me/usage` and `GET /me/limits` expose the effective state.
+- Admin routes update plans and overrides with activity records.
+- `scripts/check-usage-limit-wiring.sh` protects route wiring.
+- Mobile renders the limits card and the blocked dialog.
+- `.maestro/modules/15-usage.yaml` covers the normal Usage screen.
+
+Open work:
+
+- Add a user-facing near-limit warning consumer.
+- Add deterministic seeds for the two pending limit scenarios.
+- Decide whether the dialog should link to Usage, support, or an
+  upgrade flow. It currently closes with `Done`.

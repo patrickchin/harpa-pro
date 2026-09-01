@@ -322,6 +322,7 @@ def test_docker_precheck_delegates_to_check_docker_stack(
 def test_device_precheck_delegates_to_check_adb_device(
     fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(reset_cmd.host, "detect_host", lambda: "windows")
     spy = MagicMock(return_value=checks.CheckResult(
         name="adb_device", status="ok", detail="ABC attached"
     ))

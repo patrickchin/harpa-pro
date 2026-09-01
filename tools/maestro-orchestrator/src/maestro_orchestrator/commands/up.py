@@ -2,8 +2,8 @@
 
 Brings the local dev stack into "ready to run Maestro" shape:
 
-  1. Ensure docker-compose stack (pg/api/minio) is up and `/healthz`
-     returns 200.
+  1. Rebuild/reconcile the docker-compose stack (pg/api/minio) from the
+     current checkout and ensure `/healthz` returns 200.
   2. Re-establish `adb reverse tcp:8081`, `tcp:8787`, `tcp:8790`, and
      `tcp:9000` if missing.
   3. Ensure the local auth broker is running on :8790.
@@ -12,10 +12,10 @@ Brings the local dev stack into "ready to run Maestro" shape:
       `EXPO_PUBLIC_API_BASE_URL=http://localhost:8787`).
   5. Run the doctor check catalogue one final time and report.
 
-Each step is short-circuiting: if a sub-step is already in the
-desired state we don't redo it. Cold start (everything stopped) is
-bounded: Metro spawn is detached and we poll its `/status` endpoint
-with a short timeout so the command itself returns within seconds.
+Compose is deliberately reconciled on every invocation because API migrations
+are baked into its images; Docker cache keeps unchanged rebuilds cheap. The
+build has its own 15-minute ceiling, separate from the post-start health
+budget. Device port, broker, and Metro steps still avoid unnecessary restarts.
 """
 
 from __future__ import annotations
@@ -29,10 +29,10 @@ from pathlib import Path
 from typing import Any
 
 from rich.console import Console
-from rich.table import Table
 
 from .. import checks, device, healthcheck, host, paths, pidfile, spawn
 from ..config import MoConfig
+from ..report_renderer import emit_step_report
 from .doctor import run_doctor
 
 EXIT_OK = 0
@@ -44,6 +44,7 @@ EXIT_AUTH_BROKER_FAILED = 6
 # Budgets.
 _DOCKER_POLL_TIMEOUT_SECONDS = 60.0
 _DOCKER_POLL_INTERVAL = 1.0
+_DOCKER_BUILD_TIMEOUT_SECONDS = 900.0
 _METRO_POLL_TIMEOUT_SECONDS = 60.0
 _METRO_POLL_INTERVAL = 1.0
 _HTTP_TIMEOUT_SECONDS = 2.0
@@ -89,25 +90,28 @@ def _docker_stack_running(cfg: MoConfig) -> bool:
 
 
 def _docker_compose_up(cfg: MoConfig) -> tuple[bool, str]:
-    """`docker compose up -d` in the project root. Returns (ok, detail)."""
+    """`docker compose up -d --build` in the project root."""
     try:
         result = subprocess.run(  # noqa: S603
-            ["docker", "compose", "up", "-d"],
+            ["docker", "compose", "up", "-d", "--build"],
             shell=False,
             capture_output=True,
             text=True,
-            timeout=120.0,
+            timeout=_DOCKER_BUILD_TIMEOUT_SECONDS,
             cwd=str(cfg.project_root),
             check=False,
         )
     except FileNotFoundError:
         return False, "`docker` not on PATH"
     except subprocess.TimeoutExpired:
-        return False, "`docker compose up -d` timed out"
+        return False, "`docker compose up -d --build` timed out"
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()[:300]
-        return False, f"docker compose up -d exited {result.returncode}: {detail}"
-    return True, "docker compose up -d completed"
+        return False, (
+            "docker compose up -d --build exited "
+            f"{result.returncode}: {detail}"
+        )
+    return True, "docker compose up -d --build completed"
 
 
 def _poll_api_healthy(*, deadline: float, sleep: Any = time.sleep) -> bool:
@@ -121,22 +125,8 @@ def _poll_api_healthy(*, deadline: float, sleep: Any = time.sleep) -> bool:
 
 
 def _step_docker(cfg: MoConfig, opts: UpOptions, report: UpReport) -> bool:
-    """Returns True iff stack is up after the step."""
-    if _docker_stack_running(cfg):
-        # Also confirm /healthz before claiming success.
-        res = healthcheck.http_get(_API_HEALTH_URL, timeout=_HTTP_TIMEOUT_SECONDS)
-        if res.ok:
-            report.add("docker", "skip", "stack already up + healthy")
-            return True
-        # Containers reported running but API not healthy yet — fall through
-        # and poll. No need to re-issue `up -d`.
-        deadline = time.monotonic() + max(0.0, opts.docker_timeout)
-        if _poll_api_healthy(deadline=deadline):
-            report.add("docker", "ok", "API healthy after wait")
-            return True
-        report.add("docker", "fail", "API did not become healthy in budget")
-        return False
-
+    """Reconcile current images, then return True iff the stack is healthy."""
+    stack_was_running = _docker_stack_running(cfg)
     ok, detail = _docker_compose_up(cfg)
     if not ok:
         report.add("docker", "fail", detail)
@@ -149,6 +139,8 @@ def _step_docker(cfg: MoConfig, opts: UpOptions, report: UpReport) -> bool:
             f"`/healthz` not 200 within {opts.docker_timeout:.0f}s",
         )
         return False
+    if stack_was_running:
+        detail = f"{detail}; reconciled existing stack"
     report.add("docker", "ok", detail)
     return True
 
@@ -427,21 +419,6 @@ def run_up(
     return _emit(opts, console, report)
 
 
-# --- output -------------------------------------------------------------
-_GLYPHS_RICH = {
-    "ok": "[green]OK[/green]",
-    "fail": "[red]FAIL[/red]",
-    "warn": "[yellow]WARN[/yellow]",
-    "skip": "[dim]SKIP[/dim]",
-}
-_GLYPHS_PLAIN = {
-    "ok": "[OK]",
-    "fail": "[FAIL]",
-    "warn": "[WARN]",
-    "skip": "[SKIP]",
-}
-
-
 def _emit(opts: UpOptions, console: Console, report: UpReport) -> int:
     if opts.json_output:
         print(
@@ -451,27 +428,13 @@ def _emit(opts: UpOptions, console: Console, report: UpReport) -> int:
                 sort_keys=True,
             )
         )
-    else:
-        use_color = console.is_terminal and not console.no_color
-        table = Table(title=f"mo up — host: {host.detect_host()}")
-        table.add_column("status", no_wrap=True)
-        table.add_column("step", no_wrap=True)
-        table.add_column("detail", overflow="fold")
-        for step in report.steps:
-            tag = (
-                _GLYPHS_RICH.get(step["status"], step["status"])
-                if use_color
-                else _GLYPHS_PLAIN.get(step["status"], step["status"])
-            )
-            table.add_row(tag, step["name"], step["detail"])
-        console.print(table)
-        if report.exit_code == 0:
-            msg = "up: all steps completed"
-            console.print(f"[green]{msg}[/green]" if use_color else msg)
-        else:
-            console.print(
-                f"[red]up: exit {report.exit_code}[/red]"
-                if use_color
-                else f"up: exit {report.exit_code}"
-            )
+        return report.exit_code
+    emit_step_report(
+        console=console,
+        title=f"mo up — host: {host.detect_host()}",
+        steps=report.steps,
+        success_message="up: all steps completed",
+        failure_message=lambda code, _steps: f"up: exit {code}",
+        exit_code=report.exit_code,
+    )
     return report.exit_code

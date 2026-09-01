@@ -82,8 +82,8 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'delete', path: '/projects/{project}/reports/{number}',                 hook: 'useDeleteReportMutation',      query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/generate',        hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true,  hasHeaders: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/regenerate',      hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true,  hasHeaders: true },
-  { method: 'post',   path: '/projects/{project}/reports/{number}/finalize',        hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: false },
-  { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: false },
+  { method: 'post',   path: '/projects/{project}/reports/{number}/finalize',        hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: true },
+  { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
   { method: 'get',    path: '/projects/{project}/reports/{number}/debug',           hook: 'useReportDebugQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportDebug' },
   { method: 'patch',  path: '/projects/{project}/reports/{number}/attachments',     hook: 'usePlaceReportAttachmentMutation', query: false, hasPathParams: true,  hasBody: true },
@@ -135,13 +135,21 @@ const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
 const MOBILE_SKIP_PATHS = new Set<string>([
   'post /waitlist',
   'post /waitlist/confirm',
-  // Admin authentication and activity are consumed by the dedicated web
-  // console, not mobile.
+  // Admin authentication, activity, and provider observations are consumed by
+  // the dedicated web console, not mobile.
   'get /admin/readyz',
   'post /admin/auth/login',
   'get /admin/auth/session',
   'post /admin/auth/logout',
   'get /admin/activity',
+  'get /admin/operations/ai-usage',
+  'get /admin/operations/fly-inventory',
+  'get /admin/operations/neon',
+  'get /admin/operations/neon-usage',
+  'get /admin/operations/r2-capacity',
+  'get /admin/operations/sentry',
+  'get /admin/operations/storage-lifecycle',
+  'post /admin/operations/report-generate',
   'get /readyz',
   // Universal-link manifests are fetched by the OS (swcd / Android
   // PackageManager), not by the mobile client. Skip from codegen.

@@ -1,7 +1,6 @@
-import { defineCollection, z } from "astro:content";
+import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
-
-import { DOCS_SCREENSHOT_IDS } from "./lib/docs";
+import { z } from "astro/zod";
 
 const DOCS_TIERS = ["core", "everyday", "setup"] as const;
 
@@ -42,8 +41,6 @@ const docs = defineCollection({
     keywords: z.array(z.string().min(1)).min(1),
     lastVerified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     related: z.array(z.string()).default([]),
-    heroScreenshot: z.enum(DOCS_SCREENSHOT_IDS),
-    heroScreenshotAlt: z.string().min(12),
   }),
 });
 

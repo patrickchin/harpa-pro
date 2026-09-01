@@ -5,6 +5,7 @@ the Lovable landing page to static `.astro` components, and deploys to
 a Cloudflare Pages preview URL with a green Lighthouse score.
 
 ## Exit gate
+
 - [x] `pnpm --filter @harpa/site dev` runs locally on port 3002.
 - [x] `pnpm --filter @harpa/site build` produces a static-first
       output (zero JS on pages without islands).
@@ -21,6 +22,7 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 ## Tasks
 
 ### M0.1 Scaffold Astro app
+
 - [x] Scaffold `apps/site` manually (Astro 5 + Tailwind v4
       template equivalent — avoided the interactive `create-astro`
       wizard inside the monorepo).
@@ -37,6 +39,7 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): scaffold astro app`.
 
 ### M0.2 Tailwind + design tokens
+
 - [x] Cloned `patrickchin/harpa-field-reports` to `/tmp/` for
       reference.
 - [x] Tailwind v4 uses CSS-only config (no `tailwind.config.ts`).
@@ -55,6 +58,7 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): tailwind config + design tokens`.
 
 ### M0.3 Port Lovable landing page to Astro
+
 - [x] Translate the Lovable monolithic `LandingPage.tsx` into one
       `.astro` per section under
       `apps/site/src/components/landing/`: `Wordmark`, `Header`,
@@ -82,6 +86,7 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): port landing page from lovable`.
 
 ### M0.4 MDX content collections + primitives
+
 - [x] `src/content.config.ts` (Astro 5 root-level location) defines
       `faq` and `features` collections, each loaded with the v5
       `glob()` loader and validated with Zod (`question`/`title` +
@@ -110,6 +115,7 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): mdx content collections + primitives`.
 
 ### M0.5 Cloudflare Pages deploy
+
 - [x] **No SSR adapter.** Output stays `static` and Pages serves
       `dist/` directly. The `@astrojs/cloudflare` v11 adapter does
       not support Astro 5 and is unnecessary for a static site
@@ -126,43 +132,34 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
       all section headlines render).
 - [x] One-time operator setup documented in
       [`docs/marketing/deploy-cloudflare-pages.md`](deploy-cloudflare-pages.md)
-      (project create, API token scopes, account ID, GH secrets).
-- [x] GitHub Action `.github/workflows/site-preview.yml`:
-      - Triggers on PR to `dev` or `main`, path filter `apps/site/**`
-        (+ `pnpm-lock.yaml` + the workflow itself).
-      - Cancels stale preview builds via `concurrency`.
-      - Installs deps, builds, deploys via `cloudflare/wrangler-action@v3`
-        with `--branch=${{ github.head_ref }}` (CF auto-creates a
-        per-branch preview URL).
-      - Posts (or sticky-updates) a comment on the PR with the
-        preview URL via `marocchino/sticky-pull-request-comment@v2`.
-- [x] GitHub Action `.github/workflows/site-prod.yml`:
-      - Triggers on push to `main` (default branch, per AGENTS.md
-        hard rule #7) + manual `workflow_dispatch`.
-      - Deploys with `--branch=main`, which CF Pages routes to
-        production because the project's production branch is `main`.
-      - `concurrency: cancel-in-progress: false` so prod deploys
-        never get cancelled mid-flight.
-- [x] **Pending operator action**: add `CLOUDFLARE_API_TOKEN` and
-      `CLOUDFLARE_ACCOUNT_ID` GitHub Actions secrets at
-      <https://github.com/patrickchin/harpa-pro/settings/secrets/actions>
-      (token must have `Account → Cloudflare Pages → Edit` and
-      `User → User Details → Read`). Workflows will sit yellow
-      until the secrets exist; local `wrangler login` continues to
-      work for laptop deploys.
+      (project connection, build settings, preview branches, and domains).
+- [x] GitHub Action `.github/workflows/site-preview.yml`: - Triggers on PR to `dev` or `main`, path filter `apps/site/**`
+      (+ `pnpm-lock.yaml` + the workflow itself). - Cancels stale preview builds via `concurrency`. - Installs dependencies, tests, builds, and verifies the native
+      Cloudflare Git deployment at the exact PR SHA. - Reports verification through its GitHub Actions check. The native
+      Cloudflare integration owns the Pages preview comment, status, URL, and
+      deployment-log link.
+- [x] GitHub Action `.github/workflows/site-prod.yml`: - Triggers on push to `main` (default branch, per AGENTS.md
+      hard rule #7) + manual `workflow_dispatch`. - Verifies the native Git deployment on the Pages hostname and both
+      production custom domains at the exact pushed SHA. - `concurrency: cancel-in-progress: false` so prod deploys
+      never get cancelled mid-verification.
+- [x] Direct Upload was superseded by the tokenless Git deployment design in
+      [`design-cloudflare-pages-git-deployments.md`](../v4/design-cloudflare-pages-git-deployments.md).
+      GitHub no longer stores Cloudflare Pages credentials.
 - [x] Commit: `chore(ci): marketing preview + prod deploys`.
 
 ### M0.6 Lighthouse gate
+
 - [x] Add `@lhci/cli` to root `devDependencies`.
 - [x] Create `lighthouserc.json` (budgets: perf ≥ 90, a11y ≥ 90, bp
       ≥ 95, seo ≥ 95). Runs against `apps/site/dist/` via
       LHCI's built-in static server (3 runs, median).
 - [x] GitHub Action step in `site-preview.yml` runs `pnpm exec
-      lhci autorun` BEFORE the Pages deploy — regressions never
+    lhci autorun` BEFORE the Pages deploy — regressions never
       ship a preview URL.
 - [x] Commit: `chore(ci): lighthouse budget gate`.
 
 ### M0.7 TypeScript + lint + test scaffold
+
 - [x] Extend `tsconfig.base.json` in `apps/site/tsconfig.json`
       (chained after `astro/tsconfigs/strict`).
 - [x] Add `eslint.config.mjs` (flat config) — TS + Astro recommended.
@@ -173,12 +170,14 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `chore(marketing): typescript + lint + test scaffold`.
 
 ### M0.8 M0 exit
+
 - [x] Visual review: landing page matches Lovable source in layout +
       spacing + typography (live at harpapro.com via M0.5 prod deploy).
 - [x] Lighthouse all green locally and on preview deploy.
 - [x] Tag `v0.1.0-marketing`.
 
 ## Out of scope for M0
+
 - Waitlist form (React island, M1).
 - Voice demo (React island, M2).
 - Legal pages, OG image, sitemap (M3).

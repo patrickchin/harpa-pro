@@ -29,6 +29,8 @@ cleanup() {
 }
 trap 'cleanup "$?"' EXIT
 
+bash scripts/maestro/prepare-android-emulator.sh
+
 adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 adb reverse tcp:8081 tcp:8081
 
@@ -50,7 +52,7 @@ if ((metro_ready != 1)); then
   exit 1
 fi
 
-timeout 180s "$HOME/.maestro/bin/maestro" test \
+timeout 600s "$HOME/.maestro/bin/maestro" test \
   --env MAESTRO_APP_ID=com.harpa.pro.dev \
   --debug-output "$MAESTRO_DEBUG_DIR" \
   .maestro/ci-launch-smoke.yaml

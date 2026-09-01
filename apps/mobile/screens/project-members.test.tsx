@@ -44,7 +44,6 @@ const defaults = {
   members: [owner, self, bob],
   currentUserId: 'self-id' as string | null,
   myRole: 'owner' as const,
-  ownerId: 'owner-id',
   isLoading: false,
   refreshing: false,
   onRefresh: vi.fn(),
@@ -53,6 +52,10 @@ const defaults = {
   isAddPending: false,
   addError: null,
   addSuccessNonce: 0,
+  onUpdateMemberRole: vi.fn(),
+  isUpdateRolePending: false,
+  updateRoleError: null,
+  updateRoleSuccessNonce: 0,
   onRemoveMember: vi.fn(),
   isRemovePending: false,
 };
@@ -102,6 +105,85 @@ describe('ProjectMembers', () => {
     );
     act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
     expect(onAdd).toHaveBeenCalledWith({ email: 'carol@example.com', role: 'editor' });
+  });
+
+  it('can add another owner', () => {
+    const onAdd = vi.fn();
+    const tree = render(<ProjectMembers {...defaults} onAddMember={onAdd} />);
+    act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'input-member-email' })
+        .props.onChangeText('co-owner@example.com'),
+    );
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'picker-member-role-owner' })
+        .props.onPress(),
+    );
+    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
+    expect(onAdd).toHaveBeenCalledWith({
+      email: 'co-owner@example.com',
+      role: 'owner',
+    });
+  });
+
+  it('lets an owner change an existing member role', () => {
+    const onUpdateMemberRole = vi.fn();
+    const tree = render(
+      <ProjectMembers
+        {...defaults}
+        onUpdateMemberRole={onUpdateMemberRole}
+      />,
+    );
+
+    act(() =>
+      tree.root
+        .findByProps({ testID: `btn-change-member-role-${bob.userId}` })
+        .props.onPress(),
+    );
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'change-member-role-viewer' })
+        .props.onPress(),
+    );
+
+    expect(onUpdateMemberRole).toHaveBeenCalledWith(bob.userId, 'viewer');
+  });
+
+  it('hides role-change affordances from non-owners', () => {
+    const tree = render(<ProjectMembers {...defaults} myRole="editor" />);
+    expect(
+      tree.root.findAllByProps({
+        testID: `btn-change-member-role-${bob.userId}`,
+      }),
+    ).toHaveLength(0);
+  });
+
+  it('keeps the role picker open and surfaces an update failure', () => {
+    const tree = render(
+      <ProjectMembers
+        {...defaults}
+        updateRoleError="Cannot demote the last owner."
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ testID: `btn-change-member-role-${owner.userId}` })
+        .props.onPress(),
+    );
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'change-member-role-viewer' })
+        .props.onPress(),
+    );
+
+    expect(collectText(tree.toJSON())).toContain(
+      'Cannot demote the last owner.',
+    );
+    expect(() =>
+      tree.root.findByProps({ testID: 'change-member-role-editor' }),
+    ).not.toThrow();
   });
 
   it('opens remove confirmation dialog for non-owner members when manager', () => {

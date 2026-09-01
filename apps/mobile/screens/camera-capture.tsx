@@ -33,17 +33,12 @@
  *  - `deleteFile`          — replace `new File(uri).delete()`
  *  - `initialCaptures`     — seed the strip for previewing populated state
  */
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  InteractionManager,
+  BackHandler,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -51,28 +46,18 @@ import {
   View,
 } from 'react-native';
 import { CachedImage } from '@/components/ui/CachedImage';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue } from 'react-native-reanimated';
 import {
   CameraView,
   useCameraPermissions,
-  type CameraCapturedPicture,
   type CameraType,
   type FlashMode,
   type CameraViewType,
 } from '@/lib/native/expo-camera-shim';
 import { File as FsFile } from 'expo-file-system';
-import {
-  Camera as CameraIcon,
-  RefreshCw,
-  X,
-  Zap,
-  ZapOff,
-} from 'lucide-react-native';
+import { Camera as CameraIcon, RefreshCw, X, Zap, ZapOff } from 'lucide-react-native';
 
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { Button } from '@/components/primitives/Button';
@@ -112,15 +97,11 @@ export function pickPictureSize(
       if (!w || !h) return null;
       return { s, w, h, pixels: w * h, ratio: w / h };
     })
-    .filter((x): x is { s: string; w: number; h: number; pixels: number; ratio: number } =>
-      x != null,
+    .filter(
+      (x): x is { s: string; w: number; h: number; pixels: number; ratio: number } => x != null,
     )
     .filter((x) => x.pixels <= maxPixels)
-    .filter(
-      (x) =>
-        Math.abs(x.ratio - 4 / 3) < 0.02 ||
-        Math.abs(x.ratio - 3 / 4) < 0.02,
-    );
+    .filter((x) => Math.abs(x.ratio - 4 / 3) < 0.02 || Math.abs(x.ratio - 3 / 4) < 0.02);
   parsed.sort((a, b) => b.pixels - a.pixels);
   return parsed[0]?.s;
 }
@@ -144,8 +125,11 @@ export interface FocusPoint {
 }
 
 export interface CameraCaptureProps {
-  /** Invoked with the committed URI list when the user taps Done. */
-  onCommit: (uris: string[]) => void;
+  /**
+   * Invoked with the committed URI list when the user taps Done. Return true
+   * only after the caller accepts ownership; otherwise the body deletes them.
+   */
+  onCommit: (uris: string[]) => boolean;
   /** Invoked when the user dismisses the screen (cancel / discard). */
   onCancel: () => void;
   /** Cap on photos per session. Defaults to 20 (matching canonical). */
@@ -157,11 +141,7 @@ export interface CameraCaptureProps {
    * placeholders, snapshot tests). Receives the current facing/flash/
    * zoom so previews can reflect the toggles if useful.
    */
-  renderPreview?: (opts: {
-    facing: CameraType;
-    flash: FlashMode;
-    zoom: number;
-  }) => ReactNode;
+  renderPreview?: (opts: { facing: CameraType; flash: FlashMode; zoom: number }) => ReactNode;
   /**
    * Replace the camera-ref `takePictureAsync` invocation. Useful in
    * the dev mirror (no real camera) and tests. Resolving with `null`
@@ -217,7 +197,10 @@ export function CameraCapture(props: CameraCaptureProps) {
   } = props;
 
   const [hookPermission, requestPermission] = useCameraPermissions({ request: true });
+  const effectivePermission = resolvePermission(permissionOverride, hookPermission);
   const cameraRef = useRef<CameraViewType>(null);
+  const cameraGenerationRef = useRef(0);
+  const captureAttemptRef = useRef(0);
   const insets = useSafeAreaInsets();
 
   const [facing, setFacing] = useState<CameraType>('back');
@@ -225,7 +208,12 @@ export function CameraCapture(props: CameraCaptureProps) {
   const [captures, setCaptures] = useState<CameraCaptureItem[]>(() =>
     initialCaptures ? [...initialCaptures] : [],
   );
+  const capturesRef = useRef(captures);
+  const committedRef = useRef(false);
+  const [isCameraReady, setIsCameraReady] = useState(takePicture != null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const isCapturingRef = useRef(false);
+  const captureSessionActiveRef = useRef(true);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [zoom, setZoom] = useState(MIN_ZOOM);
   // `zoomStart` lives on the UI thread so the pinch worklet can read
@@ -252,21 +240,39 @@ export function CameraCapture(props: CameraCaptureProps) {
   // `pictureSize` prop. Falls back silently if the API isn't available
   // (test mocks, dev mirror, unlinked binary).
   const onCameraReady = useCallback(async () => {
+    const cameraGeneration = cameraGenerationRef.current;
     const ref = cameraRef.current;
     const getSizes = (
       ref as unknown as {
         getAvailablePictureSizesAsync?: () => Promise<string[]>;
       } | null
     )?.getAvailablePictureSizesAsync;
-    if (!getSizes) return;
+    if (!getSizes) {
+      if (cameraGenerationRef.current === cameraGeneration) {
+        setIsCameraReady(true);
+      }
+      return;
+    }
     try {
       const sizes = await getSizes.call(ref);
+      if (cameraGenerationRef.current !== cameraGeneration) return;
       const best = pickPictureSize(sizes ?? []);
-      if (best) setPictureSize(best);
+      if (best && best !== pictureSize) {
+        setPictureSize(best);
+        // Android rebuilds its CameraX use-case group when pictureSize
+        // changes and guarantees another onCameraReady after the new
+        // pipeline opens. iOS updates its session preset without emitting
+        // another ready event, so it can proceed after this callback.
+        if (Platform.OS === 'android') return;
+      }
+      setIsCameraReady(true);
     } catch {
       // Best-effort — leave `pictureSize` undefined and use defaults.
+      if (cameraGenerationRef.current === cameraGeneration) {
+        setIsCameraReady(true);
+      }
     }
-  }, []);
+  }, [pictureSize]);
 
   const removeFile = useCallback(
     (uri: string) => {
@@ -289,10 +295,58 @@ export function CameraCapture(props: CameraCaptureProps) {
     },
     [deleteFile],
   );
+  const removeFileRef = useRef(removeFile);
+  removeFileRef.current = removeFile;
+
+  useEffect(() => {
+    captureSessionActiveRef.current = true;
+    return () => {
+      captureSessionActiveRef.current = false;
+      isCapturingRef.current = false;
+      // System Back / native modal dismissal can bypass the explicit
+      // Cancel flow. Completed cache files remain temporary until Done
+      // commits them to the caller, so clean every uncommitted URI here.
+      if (!committedRef.current) {
+        for (const capture of capturesRef.current) {
+          removeFileRef.current(capture.uri);
+        }
+      }
+      capturesRef.current = [];
+    };
+  }, []);
+
+  const appendCapture = useCallback((item: CameraCaptureItem) => {
+    const next = [...capturesRef.current, item];
+    capturesRef.current = next;
+    setCaptures(next);
+  }, []);
+
+  const saveCaptureToRollBestEffort = useCallback(
+    (uri: string) => {
+      if (!saveToCameraRoll || !saveCaptureToCameraRoll) return;
+      // Start from a resolved promise so a synchronous collaborator throw
+      // becomes the same swallowed rejection as an async save failure.
+      void Promise.resolve()
+        .then(() => saveCaptureToCameraRoll(uri))
+        .catch(() => {});
+    },
+    [saveCaptureToCameraRoll, saveToCameraRoll],
+  );
 
   const handleCapture = useCallback(async () => {
-    if (isCapturing) return;
-    if (captures.length >= maxBurst) return;
+    if (!captureSessionActiveRef.current) return;
+    if (isCapturingRef.current) return;
+    if (capturesRef.current.length >= maxBurst) return;
+    const captureAttempt = ++captureAttemptRef.current;
+    const releaseCaptureLock = () => {
+      if (captureAttemptRef.current === captureAttempt) {
+        isCapturingRef.current = false;
+        if (captureSessionActiveRef.current) {
+          setIsCapturing(false);
+        }
+      }
+    };
+    isCapturingRef.current = true;
     setIsCapturing(true);
 
     // ── Test / dev-mirror injection path ────────────────────────────
@@ -300,103 +354,137 @@ export function CameraCapture(props: CameraCaptureProps) {
       try {
         const item = await takePicture();
         if (item) {
-          setCaptures((prev) => [...prev, item]);
-          if (saveToCameraRoll && saveCaptureToCameraRoll) {
-            void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(
-              () => {},
-            );
+          if (!captureSessionActiveRef.current) {
+            removeFile(item.uri);
+            return;
           }
+          appendCapture(item);
+          saveCaptureToRollBestEffort(item.uri);
         }
       } catch {
         // ignore — bad shot
       } finally {
-        setIsCapturing(false);
+        releaseCaptureLock();
       }
       return;
     }
 
     // ── Default wiring (expo-camera) ────────────────────────────────
     //
-    // `onPictureSaved` lets `takePictureAsync` resolve as soon as the
-    // sensor capture completes, *before* the JPEG is encoded and
-    // written to disk. That JPEG encode is the bulk of the delay the
-    // user feels between shutter presses, so releasing `isCapturing`
-    // on the awaited promise (rather than waiting for the URI) lets
-    // the next press fire ~immediately. The thumbnail / camera-roll
-    // side-effects then run in the callback once the file is ready.
+    // Await ordinary mode instead of Expo's onPictureSaved fast mode.
+    // Expo 55 provides no fast-mode error callback or unregister path:
+    // Android can settle the early promise and then fail JPEG writing
+    // without a callback, while teardown can strand Expo's module-global
+    // callback closure. Serializing through the ordinary promise gives
+    // each shutter one success/rejection terminal and preserves order.
     const ref = cameraRef.current;
     if (!ref) {
-      setIsCapturing(false);
+      releaseCaptureLock();
       return;
     }
     try {
-      await ref.takePictureAsync({
+      const photo = await ref.takePictureAsync({
         skipProcessing: true,
         exif: false,
         imageType: 'jpg',
-        onPictureSaved: (photo: CameraCapturedPicture) => {
-          if (!photo?.uri) return;
-          const item: CameraCaptureItem = {
-            uri: photo.uri,
-            width: photo.width,
-            height: photo.height,
-          };
-          // Defer the re-render (which decodes the new thumbnail) so
-          // it doesn't compete with the next shutter press for the
-          // JS thread on slower devices.
-          InteractionManager.runAfterInteractions(() => {
-            setCaptures((prev) => [...prev, item]);
-            if (saveToCameraRoll && saveCaptureToCameraRoll) {
-              void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(
-                () => {},
-              );
-            }
-          });
-        },
       });
+      if (!photo?.uri) return;
+      const item: CameraCaptureItem = {
+        uri: photo.uri,
+        width: photo.width,
+        height: photo.height,
+      };
+      if (!captureSessionActiveRef.current) {
+        removeFile(item.uri);
+        return;
+      }
+      appendCapture(item);
+      saveCaptureToRollBestEffort(item.uri);
     } catch {
       // Swallow — a single bad shot shouldn't kill the screen.
     } finally {
-      // Resolves ~immediately when `onPictureSaved` is set, so the
-      // next press can fire without waiting on the JPEG write.
-      setIsCapturing(false);
+      releaseCaptureLock();
     }
-  }, [
-    captures.length,
-    isCapturing,
-    maxBurst,
-    takePicture,
-    saveToCameraRoll,
-    saveCaptureToCameraRoll,
-  ]);
+  }, [maxBurst, takePicture, appendCapture, saveCaptureToRollBestEffort, removeFile]);
 
   const handleRemove = useCallback(
     (uri: string) => {
-      setCaptures((prev) => prev.filter((c) => c.uri !== uri));
+      if (!captureSessionActiveRef.current) return;
+      const next = capturesRef.current.filter((c) => c.uri !== uri);
+      capturesRef.current = next;
+      setCaptures(next);
       removeFile(uri);
     },
     [removeFile],
   );
 
   const handleDone = useCallback(() => {
-    onCommit(captures.map((c) => c.uri));
-  }, [captures, onCommit]);
+    if (
+      !captureSessionActiveRef.current ||
+      isCapturingRef.current ||
+      capturesRef.current.length === 0
+    ) {
+      return;
+    }
+    const capturesToCommit = capturesRef.current;
+    const uris = capturesToCommit.map((capture) => capture.uri);
+    captureSessionActiveRef.current = false;
+    // Mark ownership transferred before invoking the callback because route
+    // navigation can synchronously unmount this screen. Roll the marker back
+    // and reclaim the files if the caller explicitly rejects the handoff or
+    // throws before accepting it.
+    committedRef.current = true;
+    let accepted = false;
+    try {
+      accepted = onCommit(uris) === true;
+    } finally {
+      if (!accepted) {
+        committedRef.current = false;
+        capturesRef.current = [];
+        for (const capture of capturesToCommit) {
+          removeFile(capture.uri);
+        }
+        setCaptures([]);
+      }
+    }
+  }, [onCommit, removeFile]);
 
   const discardAndClose = useCallback(() => {
-    for (const c of captures) {
+    if (!captureSessionActiveRef.current) return;
+    captureSessionActiveRef.current = false;
+    const capturesToDelete = capturesRef.current;
+    capturesRef.current = [];
+    for (const c of capturesToDelete) {
       removeFile(c.uri);
     }
     setConfirmDiscardOpen(false);
     onCancel();
-  }, [captures, onCancel, removeFile]);
+  }, [onCancel, removeFile]);
 
   const handleCancel = useCallback(() => {
-    if (captures.length > 0) {
+    if (!captureSessionActiveRef.current) return;
+    // Permission gates return before rendering the discard dialog. If a
+    // permission transition leaves completed captures behind, reclaim them
+    // directly instead of opening an unreachable sheet and trapping Back.
+    if (effectivePermission.state !== 'granted') {
+      discardAndClose();
+      return;
+    }
+    if (capturesRef.current.length > 0) {
       setConfirmDiscardOpen(true);
       return;
     }
+    captureSessionActiveRef.current = false;
     onCancel();
-  }, [captures.length, onCancel]);
+  }, [discardAndClose, effectivePermission.state, onCancel]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleCancel();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [handleCancel]);
 
   // ── Gestures ────────────────────────────────────────────────────────
   //
@@ -442,8 +530,6 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   // ── Permission gates ────────────────────────────────────────────────
 
-  const effectivePermission = resolvePermission(permissionOverride, hookPermission);
-
   if (effectivePermission.state === 'requesting') {
     return (
       <View
@@ -467,9 +553,7 @@ export function CameraCapture(props: CameraCaptureProps) {
           <Text className="text-white text-xl font-bold mt-2 text-center">
             Camera access is off
           </Text>
-          <Text
-            className="text-stone-300 text-base text-center leading-[21px]"
-          >
+          <Text className="text-stone-300 text-base text-center leading-[21px]">
             Allow camera access to capture site photos for your reports.
           </Text>
           <View className="mt-4 gap-2 self-stretch">
@@ -489,7 +573,7 @@ export function CameraCapture(props: CameraCaptureProps) {
             </Button>
             <Pressable
               accessibilityRole="button"
-              onPress={onCancel}
+              onPress={handleCancel}
               className="py-3 items-center"
               testID="btn-camera-permission-cancel"
             >
@@ -507,14 +591,11 @@ export function CameraCapture(props: CameraCaptureProps) {
     flash === 'off' ? (
       <ZapOff size={22} color={colors.primary.foreground} />
     ) : (
-      <Zap
-        size={22}
-        color={flash === 'on' ? colors.accent.DEFAULT : colors.primary.foreground}
-      />
+      <Zap size={22} color={flash === 'on' ? colors.accent.DEFAULT : colors.primary.foreground} />
     );
-  const nextFlash: FlashMode =
-    flash === 'off' ? 'auto' : flash === 'auto' ? 'on' : 'off';
+  const nextFlash: FlashMode = flash === 'off' ? 'auto' : flash === 'auto' ? 'on' : 'off';
   const flashLabel = flash === 'off' ? 'Off' : flash === 'auto' ? 'Auto' : 'On';
+  const shutterDisabled = !isCameraReady || isCapturing || captures.length >= maxBurst;
 
   return (
     <View className="flex-1 bg-black" testID="camera-capture-root">
@@ -535,9 +616,7 @@ export function CameraCapture(props: CameraCaptureProps) {
           <View
             style={{ width: '100%', aspectRatio: 3 / 4, maxHeight: '100%' }}
             testID="camera-gesture-surface"
-            onLayout={(e: {
-              nativeEvent: { layout: { width: number; height: number } };
-            }) => {
+            onLayout={(e: { nativeEvent: { layout: { width: number; height: number } } }) => {
               const { width, height } = e.nativeEvent.layout;
               previewSizeRef.current = { width, height };
             }}
@@ -572,10 +651,7 @@ export function CameraCapture(props: CameraCaptureProps) {
         </GestureDetector>
       </View>
 
-      <SafeAreaView
-        className="absolute inset-0 justify-end"
-        pointerEvents="box-none"
-      >
+      <SafeAreaView className="absolute inset-0 justify-end" pointerEvents="box-none">
         {/* Top bar */}
         <View
           className="absolute top-0 left-0 right-0 px-4 flex-row items-center justify-between bg-black/35"
@@ -615,9 +691,7 @@ export function CameraCapture(props: CameraCaptureProps) {
               className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
             >
               {flashIcon}
-              <Text className="text-white text-[9px] mt-0.5 uppercase tracking-wider">
-                {flash}
-              </Text>
+              <Text className="text-white text-[9px] mt-0.5 uppercase tracking-wider">{flash}</Text>
             </Pressable>
           </View>
         </View>
@@ -654,10 +728,18 @@ export function CameraCapture(props: CameraCaptureProps) {
             ))}
           </ScrollView>
           <Pressable
-            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+            onPress={() => {
+              if (!captureSessionActiveRef.current || isCapturingRef.current) return;
+              if (!takePicture && Platform.OS === 'android') {
+                cameraGenerationRef.current += 1;
+                setIsCameraReady(false);
+              }
+              setFacing((f) => (f === 'back' ? 'front' : 'back'));
+            }}
             accessibilityRole="button"
             accessibilityLabel="Flip camera"
             testID="btn-camera-flip"
+            disabled={isCapturing}
             className="w-11 h-11 rounded-full items-center justify-center ml-auto bg-black/35"
           >
             <RefreshCw size={22} color={colors.primary.foreground} />
@@ -668,16 +750,14 @@ export function CameraCapture(props: CameraCaptureProps) {
         <View className="items-center py-3">
           <Pressable
             onPress={handleCapture}
-            disabled={isCapturing || captures.length >= maxBurst}
+            disabled={shutterDisabled}
             accessibilityRole="button"
             accessibilityLabel="Take photo"
             testID="btn-camera-shutter"
             className={`w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center ${
               captures.length >= maxBurst ? 'opacity-40' : ''
             }`}
-            style={({ pressed }) =>
-              (pressed || isCapturing) && { opacity: 0.7 }
-            }
+            style={({ pressed }) => (pressed || shutterDisabled) && { opacity: 0.7 }}
           >
             <View className="w-[60px] h-[60px] rounded-full bg-white" />
           </Pressable>
@@ -685,10 +765,7 @@ export function CameraCapture(props: CameraCaptureProps) {
 
         {/* Bottom action bar */}
         <View className="px-4 pb-4 pt-1 flex-row items-center justify-between gap-3">
-          <Text
-            className="text-white text-sm font-medium"
-            testID="lbl-camera-count"
-          >
+          <Text className="text-white text-sm font-medium" testID="lbl-camera-count">
             {captures.length === 0
               ? 'No photos'
               : `${captures.length} photo${captures.length === 1 ? '' : 's'}`}
@@ -696,7 +773,7 @@ export function CameraCapture(props: CameraCaptureProps) {
           </Text>
           <Button
             onPress={handleDone}
-            disabled={captures.length === 0}
+            disabled={captures.length === 0 || isCapturing}
             testID="btn-camera-done"
           >
             Done
@@ -730,9 +807,7 @@ export function CameraCapture(props: CameraCaptureProps) {
 }
 
 type ResolvedPermission =
-  | { state: 'requesting' }
-  | { state: 'denied'; canAskAgain: boolean }
-  | { state: 'granted' };
+  { state: 'requesting' } | { state: 'denied'; canAskAgain: boolean } | { state: 'granted' };
 
 function resolvePermission(
   override: CameraCaptureProps['permissionOverride'],

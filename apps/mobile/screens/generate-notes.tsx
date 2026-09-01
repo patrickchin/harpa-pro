@@ -6,7 +6,8 @@
  * on branch `dev`. v4 uses `projectSlug` + per-project `number` route
  * params instead of `projectId` / `reportId`. P3.6 ships the Notes
  * pane; P3.7 ports the Report tab (read-only `ReportView` + completeness
- * skeleton + generating/error states); Edit lands in P3.8.
+ * skeleton + generating/error states). Manual editing is available through
+ * the per-card modal on the Report pane.
  *
  * Header / tab bar / pager / dialogs all read from
  * `GenerateReportProvider` via context. Routes inject data (notes,
@@ -38,7 +39,6 @@ import {
 } from '@/lib/reports/report-header-title';
 import { getDeleteDraftDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
-import { EditTabPane } from '@/components/reports/generate/EditTabPane';
 import { GenerateReportActionRow } from '@/components/reports/generate/GenerateReportActionRow';
 import { GenerateReportDialogs } from '@/components/reports/generate/GenerateReportDialogs';
 import { GenerateReportInputBar } from '@/components/reports/generate/GenerateReportInputBar';
@@ -72,6 +72,10 @@ export type GenerateNotesProps = Omit<GenerateReportProviderProps, 'children'> &
   isDeletingDraft?: boolean;
   /** Profile button slot — rendered in the screen header. */
   actions?: ReactNode;
+  /** Stable route-owned generation marker for end-to-end synchronization. */
+  generationStateTestID?: string;
+  /** Route-owned developer policy; false removes the Debug selector and pane. */
+  showDebugTab?: boolean;
 };
 
 export function GenerateNotes({
@@ -80,15 +84,13 @@ export function GenerateNotes({
   onDeleteDraft,
   isDeletingDraft = false,
   actions,
+  generationStateTestID,
+  showDebugTab = false,
   ...providerProps
 }: GenerateNotesProps) {
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        className="flex-1"
-        keyboardVerticalOffset={0}
-      >
+    <SafeAreaView className="flex-1 bg-background" edges={['top']} testID={generationStateTestID}>
+      <KeyboardAvoidingView behavior="padding" className="flex-1" keyboardVerticalOffset={0}>
         <GenerateReportProvider {...providerProps}>
           <GenerateNotesLayout
             canWrite={canWrite}
@@ -96,6 +98,7 @@ export function GenerateNotes({
             onDeleteDraft={onDeleteDraft}
             isDeletingDraft={isDeletingDraft}
             actions={actions}
+            showDebugTab={showDebugTab}
           />
         </GenerateReportProvider>
       </KeyboardAvoidingView>
@@ -109,6 +112,7 @@ interface LayoutProps {
   onDeleteDraft?: () => void;
   isDeletingDraft: boolean;
   actions?: ReactNode;
+  showDebugTab: boolean;
 }
 
 /**
@@ -122,6 +126,7 @@ function GenerateNotesLayout({
   onDeleteDraft,
   isDeletingDraft,
   actions,
+  showDebugTab,
 }: LayoutProps) {
   const { reportNumber, reportTitle, tabs, generation } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
@@ -137,6 +142,12 @@ function GenerateNotesLayout({
       setEditing(null);
     }
   }, [generation.isUpdating]);
+
+  useEffect(() => {
+    if (!showDebugTab && tabs.active === 'debug') {
+      tabs.set('notes');
+    }
+  }, [showDebugTab, tabs.active, tabs.set]);
 
   const handleEditReport = useCallback(
     (target: ReportEditTarget) => {
@@ -166,10 +177,8 @@ function GenerateNotesLayout({
   };
 
   useEffect(() => {
-    const showEvent =
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent =
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, () => {
       setKeyboardVisible(true);
       Animated.timing(chromeAnim, {
@@ -210,14 +219,8 @@ function GenerateNotesLayout({
   // Pager is purely visual for now — tab switching uses the tab bar.
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
-  const activeIndex =
-    tabs.active === 'notes'
-      ? 0
-      : tabs.active === 'report'
-        ? 1
-        : tabs.active === 'edit'
-          ? 2
-          : 3;
+  const activeTab = !showDebugTab && tabs.active === 'debug' ? 'notes' : tabs.active;
+  const activeIndex = activeTab === 'notes' ? 0 : activeTab === 'report' ? 1 : 2;
 
   return (
     <>
@@ -254,7 +257,7 @@ function GenerateNotesLayout({
 
         {canWrite ? <GenerateReportActionRow /> : null}
 
-        <GenerateReportTabBar />
+        <GenerateReportTabBar showDebugTab={showDebugTab} />
       </Animated.View>
 
       <ScrollView
@@ -278,8 +281,7 @@ function GenerateNotesLayout({
               }
             : {})}
         />
-        <EditTabPane width={windowWidth} />
-        <DebugTabPane width={windowWidth} />
+        {showDebugTab ? <DebugTabPane width={windowWidth} /> : null}
       </ScrollView>
 
       {canWrite ? <GenerateReportInputBar /> : null}

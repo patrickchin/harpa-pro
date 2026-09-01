@@ -52,6 +52,7 @@ export default function ProjectEditRoute() {
       isLoading={projectQ.isLoading}
       isUpdating={update.isPending}
       isDeleting={remove.isPending}
+      canDelete={projectQ.data?.myRole === 'owner'}
       updateError={updateError}
       deleteError={deleteError}
       onBack={() => safeBack(router, `/(app)/projects/${slug}`)}

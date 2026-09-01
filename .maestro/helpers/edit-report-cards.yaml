@@ -13,14 +13,13 @@ appId: ${MAESTRO_APP_ID}
 # when the header action remains visible above the software keyboard. Tap the
 # visible Cancel/Save action directly after text entry.
 #
-# The Generate screen keeps a sticky note input / recorder at the bottom. When
-# scrolling to per-item edit buttons, center the button before tapping so the
-# tap target is not inside that sticky control region.
+# The Generate screen keeps a sticky note input / recorder at the bottom. Keep
+# per-item actions clear of it, but do not ask Maestro to center a control that
+# has just entered from below: its full-screen centering swipe can overshoot the
+# target. The Workers step uses one bounded follow-up gesture for that case.
 
 - assertVisible:
     id: 'report-view-.*'
-- assertNotVisible:
-    text: 'Edit'
 
 # --- Summary & meta: dirty cancel, then save -------------------------------
 - scrollUntilVisible:
@@ -158,8 +157,14 @@ appId: ${MAESTRO_APP_ID}
       id: 'btn-edit-workers'
     direction: DOWN
     timeout: 15000
-    visibilityPercentage: 50
-    centerElement: true
+    visibilityPercentage: 100
+    centerElement: false
+- swipe:
+    start: 50%, 72%
+    end: 50%, 58%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1000
 - tapOn:
     id: 'btn-edit-workers'
 - extendedWaitUntil:
@@ -185,6 +190,14 @@ appId: ${MAESTRO_APP_ID}
       id: 'btn-edit-materials'
     direction: DOWN
     timeout: 10000
+    visibilityPercentage: 100
+    centerElement: false
+- swipe:
+    start: 50%, 72%
+    end: 50%, 58%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1000
 - tapOn:
     id: 'btn-edit-materials'
 - extendedWaitUntil:
@@ -201,6 +214,13 @@ appId: ${MAESTRO_APP_ID}
     notVisible:
       id: 'report-edit-modal'
     timeout: 8000
+- scrollUntilVisible:
+    element:
+      text: 'E2E sealant.*'
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 100
+    centerElement: false
 - assertVisible:
     text: 'E2E sealant.*'
 

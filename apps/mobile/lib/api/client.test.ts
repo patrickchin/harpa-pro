@@ -138,7 +138,7 @@ describe('lib/api/client', () => {
   });
 
   describe('errors', () => {
-    it('maps a 401 envelope to ApiError(unauthorized) preserving requestId', async () => {
+    it('accepts a legacy nested requestId while mapping a 401 envelope', async () => {
       stubFetch(() =>
         jsonResponse(401, {
           error: { code: 'unauthorized', message: 'Bad token', requestId: 'req-9' },
@@ -173,6 +173,23 @@ describe('lib/api/client', () => {
         expect(e.requestId).toBe('rid-top-level');
         expect(telemetry.captureApiErrorBreadcrumb).toHaveBeenCalledWith(e);
       }
+    });
+
+    it('prefers the canonical top-level requestId over a legacy nested id', async () => {
+      stubFetch(() =>
+        jsonResponse(500, {
+          error: {
+            code: 'internal_error',
+            message: 'Internal server error.',
+            requestId: 'rid-legacy-nested',
+          },
+          requestId: 'rid-canonical-top-level',
+        }),
+      );
+
+      await expect(request('/me', 'get')).rejects.toMatchObject({
+        requestId: 'rid-canonical-top-level',
+      });
     });
 
     it('falls back to status-derived code when body is empty', async () => {

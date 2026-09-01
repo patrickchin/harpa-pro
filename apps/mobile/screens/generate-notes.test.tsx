@@ -15,33 +15,35 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
-const voicePipelineMock = vi.hoisted((): {
-  state: {
-    step: string;
-    failedStep: string | null;
-    error: string | null;
-    note: unknown;
-    fileId: string | null;
-    capture: unknown;
-    usageLimit: unknown;
-  };
-  capture: ReturnType<typeof vi.fn>;
-  retry: ReturnType<typeof vi.fn>;
-  reset: ReturnType<typeof vi.fn>;
-} => ({
-  state: {
-    step: 'idle',
-    failedStep: null,
-    error: null,
-    note: null,
-    fileId: null,
-    capture: null,
-    usageLimit: null,
-  },
-  capture: vi.fn(async () => null),
-  retry: vi.fn(async () => null),
-  reset: vi.fn(),
-}));
+const voicePipelineMock = vi.hoisted(
+  (): {
+    state: {
+      step: string;
+      failedStep: string | null;
+      error: string | null;
+      note: unknown;
+      fileId: string | null;
+      capture: unknown;
+      usageLimit: unknown;
+    };
+    capture: ReturnType<typeof vi.fn>;
+    retry: ReturnType<typeof vi.fn>;
+    reset: ReturnType<typeof vi.fn>;
+  } => ({
+    state: {
+      step: 'idle',
+      failedStep: null,
+      error: null,
+      note: null,
+      fileId: null,
+      capture: null,
+      usageLimit: null,
+    },
+    capture: vi.fn(async () => null),
+    retry: vi.fn(async () => null),
+    reset: vi.fn(),
+  }),
+);
 
 const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: false }));
 
@@ -157,11 +159,16 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Start capturing site notes');
   });
 
+  it('exposes the current generation state on the visible screen root', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} generationStateTestID="report-generation-current" />,
+    );
+    expect(tree.root.findByProps({ testID: 'report-generation-current' })).toBeTruthy();
+  });
+
   it('renders the loading indicator when notesLoading=true', () => {
     const tree = render(<GenerateNotes {...baseProps} notesLoading />);
-    expect(() =>
-      tree.root.findByProps({ testID: 'note-timeline-loading' }),
-    ).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'note-timeline-loading' })).not.toThrow();
   });
 
   it('does NOT render the empty state while loading', () => {
@@ -184,13 +191,35 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Report');
   });
 
+  it('omits the Debug selector and pane unless the route enables them', () => {
+    const tree = render(<GenerateNotes {...baseProps} />);
+    expect(tree.root.findAllByProps({ testID: 'btn-tab-debug' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'debug-tab-pane' })).toHaveLength(0);
+
+    act(() => tree.update(<GenerateNotes {...baseProps} showDebugTab />));
+    expect(tree.root.findByProps({ testID: 'btn-tab-debug' })).toBeTruthy();
+    expect(tree.root.findByProps({ testID: 'debug-tab-pane' })).toBeTruthy();
+  });
+
+  it('returns an active hidden Debug tab to Notes', () => {
+    const tree = render(<GenerateNotes {...baseProps} initialTab="debug" showDebugTab />);
+    expect(tree.root.findByProps({ testID: 'debug-tab-pane' })).toBeTruthy();
+
+    act(() => {
+      tree.update(<GenerateNotes {...baseProps} initialTab="debug" />);
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'debug-tab-pane' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-tab-debug' })).toHaveLength(0);
+    expect(tree.root.findByProps({ testID: 'generate-pager' }).props.contentOffset).toEqual({
+      x: 0,
+      y: 0,
+    });
+  });
+
   it('uses the site-visit number above the report title', () => {
     const tree = render(
-      <GenerateNotes
-        {...baseProps}
-        reportTitle="Site Visit — Concrete Pouring"
-        reportNumber={4}
-      />,
+      <GenerateNotes {...baseProps} reportTitle="Site Visit — Concrete Pouring" reportNumber={4} />,
     );
     const controls = tree.root.findByProps({
       testID: 'screen-header-controls',
@@ -199,15 +228,11 @@ describe('GenerateNotes', () => {
 
     expect(collectText(controls)).toContain('Site Visit #4');
     expect(collectText(titleNode.props.children)).toBe('Concrete Pouring');
-    expect(
-      tree.root.findByProps({ testID: 'screen-header-title-row' }),
-    ).toBeTruthy();
+    expect(tree.root.findByProps({ testID: 'screen-header-title-row' })).toBeTruthy();
   });
 
   it('uses a generic report title when the generated title is empty', () => {
-    const tree = render(
-      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={1} />,
-    );
+    const tree = render(<GenerateNotes {...baseProps} reportTitle={null} reportNumber={1} />);
     const controls = tree.root.findByProps({
       testID: 'screen-header-controls',
     });
@@ -219,32 +244,22 @@ describe('GenerateNotes', () => {
 
   it('hides the input bar + action row when canWrite=false', () => {
     const tree = render(<GenerateNotes {...baseProps} canWrite={false} />);
-    expect(
-      tree.root.findAllByProps({ testID: 'input-note' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-generate-update-report' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'input-note' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-generate-update-report' })).toHaveLength(0);
   });
 
   it('shows input bar + action row when canWrite=true', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(() => tree.root.findByProps({ testID: 'input-note' })).not.toThrow();
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-generate-report' }),
-    ).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-generate-report' })).not.toThrow();
   });
 
   it('calls onAddTextNote with the trimmed body when Add is pressed', () => {
     const onAddTextNote = vi.fn();
-    const tree = render(
-      <GenerateNotes {...baseProps} onAddTextNote={onAddTextNote} />,
-    );
+    const tree = render(<GenerateNotes {...baseProps} onAddTextNote={onAddTextNote} />);
     // Type into the input
     act(() => {
-      tree.root
-        .findByProps({ testID: 'input-note' })
-        .props.onChangeText('  Slab pour scheduled  ');
+      tree.root.findByProps({ testID: 'input-note' }).props.onChangeText('  Slab pour scheduled  ');
     });
     // Press Add (only rendered when input has non-whitespace content)
     act(() => {
@@ -256,12 +271,8 @@ describe('GenerateNotes', () => {
   it('does NOT render the Add button while input is empty', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(tree.root.findAllByProps({ testID: 'btn-add-note' })).toHaveLength(0);
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-camera-capture' }),
-    ).not.toThrow();
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-record-start' }),
-    ).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-camera-capture' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-record-start' })).not.toThrow();
   });
 
   it('opens the attachment sheet with stable photo action testIDs', () => {
@@ -270,15 +281,9 @@ describe('GenerateNotes', () => {
     act(() => {
       tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
     });
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-attachment-photo-library' }),
-    ).not.toThrow();
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-attachment-camera' }),
-    ).not.toThrow();
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-attachment-cancel' }),
-    ).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-attachment-photo-library' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-attachment-camera' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-attachment-cancel' })).not.toThrow();
   });
 
   it('keeps camera capture but hides photo-library picking on iOS', () => {
@@ -289,15 +294,9 @@ describe('GenerateNotes', () => {
       tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
     });
 
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-attachment-photo-library' }),
-    ).toHaveLength(0);
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-attachment-camera' }),
-    ).not.toThrow();
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-attachment-cancel' }),
-    ).not.toThrow();
+    expect(tree.root.findAllByProps({ testID: 'btn-attachment-photo-library' })).toHaveLength(0);
+    expect(() => tree.root.findByProps({ testID: 'btn-attachment-camera' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-attachment-cancel' })).not.toThrow();
   });
 
   it('renders the back button when onBack is provided', () => {
@@ -310,30 +309,20 @@ describe('GenerateNotes', () => {
   it('opens delete confirm and forwards onDeleteNote on confirm', () => {
     const onDeleteNote = vi.fn();
     const tree = render(
-      <GenerateNotes
-        {...baseProps}
-        notes={sampleNotes}
-        onDeleteNote={onDeleteNote}
-      />,
+      <GenerateNotes {...baseProps} notes={sampleNotes} onDeleteNote={onDeleteNote} />,
     );
     // Tap the per-row options button on the first note (sourceIndex=0).
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-0' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-0' }).props.onPress();
     });
     // Tap "Delete" in the shared options sheet.
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-delete' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-delete' }).props.onPress();
     });
     // Same-Modal stage swap to the destructive confirm — no native
     // handoff timer to flush.
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-confirm-delete' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-confirm-delete' }).props.onPress();
     });
     expect(onDeleteNote).toHaveBeenCalledTimes(1);
     expect(onDeleteNote).toHaveBeenCalledWith(sampleNotes[0], 0);
@@ -362,12 +351,7 @@ describe('GenerateNotes', () => {
     };
     const onDeleteNote = vi.fn();
     const tree = render(
-      <GenerateNotes
-        {...baseProps}
-        reportId="rep_1"
-        notes={[]}
-        onDeleteNote={onDeleteNote}
-      />,
+      <GenerateNotes {...baseProps} reportId="rep_1" notes={[]} onDeleteNote={onDeleteNote} />,
     );
 
     const text = collectText(tree.toJSON());
@@ -375,19 +359,13 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Second floor concrete pour underway');
 
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-0' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-0' }).props.onPress();
     });
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-delete' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-delete' }).props.onPress();
     });
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-confirm-delete' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-confirm-delete' }).props.onPress();
     });
 
     expect(onDeleteNote).toHaveBeenCalledTimes(1);
@@ -406,33 +384,21 @@ describe('GenerateNotes', () => {
       <GenerateNotes {...baseProps} notes={sampleNotes} onDeleteNote={vi.fn()} />,
     );
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-0' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-0' }).props.onPress();
     });
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-note-options-edit' }),
-    ).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-note-options-edit' })).toHaveLength(0);
   });
 
   it('forwards onUpdateNote with the trimmed body when Save is pressed', () => {
     const onUpdateNote = vi.fn();
     const tree = render(
-      <GenerateNotes
-        {...baseProps}
-        notes={sampleNotes}
-        onUpdateNote={onUpdateNote}
-      />,
+      <GenerateNotes {...baseProps} notes={sampleNotes} onUpdateNote={onUpdateNote} />,
     );
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-0' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-0' }).props.onPress();
     });
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-edit' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-edit' }).props.onPress();
     });
     act(() => {
       tree.root
@@ -440,16 +406,10 @@ describe('GenerateNotes', () => {
         .props.onChangeText('  Updated crew note  ');
     });
     act(() => {
-      tree.root
-        .findByProps({ testID: 'btn-note-options-save-edit' })
-        .props.onPress();
+      tree.root.findByProps({ testID: 'btn-note-options-save-edit' }).props.onPress();
     });
     expect(onUpdateNote).toHaveBeenCalledTimes(1);
-    expect(onUpdateNote).toHaveBeenCalledWith(
-      sampleNotes[0],
-      0,
-      'Updated crew note',
-    );
+    expect(onUpdateNote).toHaveBeenCalledWith(sampleNotes[0], 0, 'Updated crew note');
   });
 
   it('matches the empty-state snapshot', () => {
@@ -480,8 +440,6 @@ describe('GenerateNotes', () => {
 
   it('renders the keyboard-collapsible chrome wrapper', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
-    expect(() =>
-      tree.root.findByProps({ testID: 'generate-notes-chrome' }),
-    ).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'generate-notes-chrome' })).not.toThrow();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import {
@@ -13,35 +13,31 @@ import {
   type PhotoPlacement,
 } from './photo-placements';
 
-function makeReport(): GeneratedSiteReport {
+function makeReport(): reports.ReportBody {
   return {
-    report: {
-      meta: { title: 't', summary: 's', visitDate: null },
-      weather: null,
-      workers: null,
-      materials: [],
-      issues: [
-        {
-          title: 'Issue 0',
-          category: 'safety',
-          severity: 'medium',
-          status: 'open',
-          details: 'd',
-          actionRequired: null,
-          attachments: { images: ['n_issue', 'n_missing'] },
-        },
-      ],
-      nextSteps: [],
-      sections: [
-        { title: 'Section 0', content: 'c' },
-        {
-          title: 'Section 1',
-          content: 'c',
-          attachments: { images: ['n_section'] },
-        },
-      ],
-    },
-  } as unknown as GeneratedSiteReport;
+    meta: { title: 't', summary: 's', visitDate: null },
+    weather: null,
+    workers: [],
+    materials: [],
+    issues: [
+      {
+        title: 'Issue 0',
+        severity: 'medium',
+        description: 'd',
+        action: null,
+        attachments: { images: ['n_issue', 'n_missing'] },
+      },
+    ],
+    nextSteps: [],
+    summarySections: [
+      { title: 'Section 0', body: 'c' },
+      {
+        title: 'Section 1',
+        body: 'c',
+        attachments: { images: ['n_section'] },
+      },
+    ],
+  };
 }
 
 function makeGroup(noteId: string): PhotoGroup {
@@ -159,9 +155,9 @@ describe('placement helpers', () => {
     });
 
     expect(next).not.toBe(original);
-    expect(next.report.issues[0]!.attachments?.images).toEqual(['n_missing']);
-    expect(next.report.sections[0]!.attachments?.images).toEqual(['n_issue']);
-    expect(original.report.issues[0]!.attachments?.images).toEqual([
+    expect(next.issues[0]!.attachments?.images).toEqual(['n_missing']);
+    expect(next.summarySections[0]!.attachments?.images).toEqual(['n_issue']);
+    expect(original.issues[0]!.attachments?.images).toEqual([
       'n_issue',
       'n_missing',
     ]);
@@ -172,8 +168,8 @@ describe('placement helpers', () => {
 
     const next = applyPhotoPlacement(original, 'n_section', null);
 
-    expect(next.report.sections[1]!.attachments).toBeUndefined();
-    expect(original.report.sections[1]!.attachments?.images).toEqual([
+    expect(next.summarySections[1]!.attachments).toBeUndefined();
+    expect(original.summarySections[1]!.attachments?.images).toEqual([
       'n_section',
     ]);
   });

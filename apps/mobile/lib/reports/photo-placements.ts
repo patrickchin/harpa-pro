@@ -1,9 +1,9 @@
 /**
  * Photo placement helpers. Placement source of truth is the live
- * GeneratedSiteReport body: issue/section `attachments.images[]`
+ * canonical report body: issue/section `attachments.images[]`
  * contain image note ids.
  */
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 
@@ -30,14 +30,14 @@ export interface SplitPlacements {
 }
 
 export function collectPlacedAttachmentIds(
-  report: GeneratedSiteReport | null,
+  report: reports.ReportBody | null,
 ): Set<string> {
   const out = new Set<string>();
   if (!report) return out;
-  for (const issue of report.report.issues) {
+  for (const issue of report.issues) {
     for (const id of issue.attachments?.images ?? []) out.add(id);
   }
-  for (const section of report.report.sections) {
+  for (const section of report.summarySections) {
     for (const id of section.attachments?.images ?? []) out.add(id);
   }
   return out;
@@ -55,7 +55,7 @@ function pushPlaced(
 
 export function splitAttachments(
   groups: ReadonlyArray<PhotoGroup>,
-  report: GeneratedSiteReport | null,
+  report: reports.ReportBody | null,
 ): SplitPlacements {
   if (!report) {
     return {
@@ -70,7 +70,7 @@ export function splitAttachments(
   const byIssue = new Map<number, PhotoGroup[]>();
   const bySection = new Map<number, PhotoGroup[]>();
 
-  report.report.issues.forEach((issue, index) => {
+  report.issues.forEach((issue, index) => {
     for (const noteId of issue.attachments?.images ?? []) {
       const group = groupsByNoteId.get(noteId);
       if (!group || placed.has(noteId)) continue;
@@ -79,7 +79,7 @@ export function splitAttachments(
     }
   });
 
-  report.report.sections.forEach((section, index) => {
+  report.summarySections.forEach((section, index) => {
     for (const noteId of section.attachments?.images ?? []) {
       const group = groupsByNoteId.get(noteId);
       if (!group || placed.has(noteId)) continue;
@@ -130,16 +130,16 @@ export function groupPhotos(
 }
 
 export function placementForNoteId(
-  report: GeneratedSiteReport | null,
+  report: reports.ReportBody | null,
   noteId: string | null,
 ): PhotoPlacement | null {
   if (!report || !noteId) return null;
-  const issueIndex = report.report.issues.findIndex((issue) =>
+  const issueIndex = report.issues.findIndex((issue) =>
     (issue.attachments?.images ?? []).includes(noteId),
   );
   if (issueIndex >= 0) return { kind: 'issue', index: issueIndex };
 
-  const sectionIndex = report.report.sections.findIndex((section) =>
+  const sectionIndex = report.summarySections.findIndex((section) =>
     (section.attachments?.images ?? []).includes(noteId),
   );
   if (sectionIndex >= 0) return { kind: 'section', index: sectionIndex };
@@ -148,13 +148,13 @@ export function placementForNoteId(
 
 export function placementLabel(
   placement: PhotoPlacement | null,
-  report: GeneratedSiteReport | null,
+  report: reports.ReportBody | null,
 ): string | null {
   if (!placement || !report) return null;
   if (placement.kind === 'issue') {
-    return report.report.issues[placement.index]?.title ?? null;
+    return report.issues[placement.index]?.title ?? null;
   }
-  return report.report.sections[placement.index]?.title ?? null;
+  return report.summarySections[placement.index]?.title ?? null;
 }
 
 type AttachmentTarget = {
@@ -206,27 +206,27 @@ function addImageAttachment<T extends AttachmentTarget>(
 }
 
 export function applyPhotoPlacement(
-  report: GeneratedSiteReport,
+  report: reports.ReportBody,
   noteId: string,
   placement: PhotoPlacement | null,
-): GeneratedSiteReport {
+): reports.ReportBody {
   if (
     placement?.kind === 'issue' &&
-    report.report.issues[placement.index] === undefined
+    report.issues[placement.index] === undefined
   ) {
     return report;
   }
   if (
     placement?.kind === 'section' &&
-    report.report.sections[placement.index] === undefined
+    report.summarySections[placement.index] === undefined
   ) {
     return report;
   }
 
-  const issues = report.report.issues.map((issue) =>
+  const issues = report.issues.map((issue) =>
     removeImageAttachment(issue, noteId),
   );
-  const sections = report.report.sections.map((section) =>
+  const sections = report.summarySections.map((section) =>
     removeImageAttachment(section, noteId),
   );
 
@@ -241,10 +241,7 @@ export function applyPhotoPlacement(
 
   return {
     ...report,
-    report: {
-      ...report.report,
-      issues,
-      sections,
-    },
+    issues,
+    summarySections: sections,
   };
 }

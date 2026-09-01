@@ -1,6 +1,6 @@
 /**
- * useReportBodyAutosave — debounced PATCH of the Edit-tab's local
- * `GeneratedSiteReport` back to the server via
+ * useReportBodyAutosave — debounced PATCH of the per-card editor's local
+ * canonical `reports.ReportBody` back to the server via
  * `useUpdateReportMutation`.
  *
  * See docs/v4/design-p3x-generate-update-finalize.md §3.6.
@@ -16,7 +16,7 @@
  * button.
  *
  * Instead, the caller signals `dirty=true` from the same callback
- * `<ReportEditForm>` invokes when the user types. The hook fires a
+ * `ReportEditModal` invokes when the user types. The hook fires a
  * debounced PATCH and, on success, calls `onSaved` so the caller can
  * clear its own dirty flag.
  *
@@ -27,10 +27,9 @@
  * the dirty flag.
  */
 import { useEffect, useState } from 'react';
+import { reports } from '@harpa/api-contract';
 
 import { useUpdateReportMutation } from '@/lib/api/hooks';
-import { generatedReportToReportBody } from '@/lib/reports/report-body-adapter';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 
 export interface UseReportBodyAutosaveInput {
   /** Project slug from the URL. Autosave disabled when empty. */
@@ -38,10 +37,14 @@ export interface UseReportBodyAutosaveInput {
   /** Per-project report number from the URL. Autosave disabled when null. */
   number: number | null;
   /**
-   * The current in-memory report. When null we treat the user as not
-   * having opened the Edit tab yet and skip autosave entirely.
+   * The current in-memory report. When null there is nothing to autosave.
    */
-  report: GeneratedSiteReport | null;
+  report: reports.ReportBody | null;
+  /**
+   * Server version the local edit was based on. Autosave remains paused
+   * until the report query has supplied this concurrency precondition.
+   */
+  expectedUpdatedAt: string | null;
   /**
    * True iff the local report has been edited by the user since the
    * last successful save. The hook only PATCHes while this is true.
@@ -53,7 +56,7 @@ export interface UseReportBodyAutosaveInput {
    * Called after a successful PATCH so the caller can clear its
    * `dirty` flag.
    */
-  onSaved?: () => void;
+  onSaved?: (updatedAt: string) => void;
   /** Debounce window in ms. Defaults to 800. */
   debounceMs?: number;
   /**
@@ -81,6 +84,7 @@ export function useReportBodyAutosave({
   slug,
   number,
   report,
+  expectedUpdatedAt,
   dirty,
   onSaved,
   debounceMs = DEFAULT_DEBOUNCE_MS,
@@ -96,16 +100,19 @@ export function useReportBodyAutosave({
     if (!dirty) return;
     if (!slug || number === null) return;
     if (!report) return;
+    if (!expectedUpdatedAt) return;
 
     const handle = setTimeout(() => {
-      const body = generatedReportToReportBody(report);
       setError(null);
       mutation.mutate(
-        { params: { project: slug, number }, body: { body } },
         {
-          onSuccess: () => {
+          params: { project: slug, number },
+          body: { body: report, expectedUpdatedAt },
+        },
+        {
+          onSuccess: (saved) => {
             setLastSavedAt(Date.now());
-            onSaved?.();
+            onSaved?.(saved.updatedAt);
           },
           onError: (err) => {
             setError(err.message ?? 'Autosave failed.');
@@ -120,7 +127,15 @@ export function useReportBodyAutosave({
     // timer on unrelated re-renders. `onSaved` is caller-owned; we
     // intentionally don't depend on it so a re-bound callback doesn't
     // restart the debounce.
-  }, [dirty, paused, slug, number, report, debounceMs]);
+  }, [
+    dirty,
+    paused,
+    slug,
+    number,
+    report,
+    expectedUpdatedAt,
+    debounceMs,
+  ]);
 
   return {
     isAutoSaving: mutation.isPending,

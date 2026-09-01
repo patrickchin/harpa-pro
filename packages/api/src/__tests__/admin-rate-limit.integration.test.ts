@@ -164,6 +164,35 @@ describe('dedicated admin rate limiter', () => {
     expect(persisted.rows).toEqual([{ count: 20 }]);
   });
 
+  it('deletes stale admin buckets while retaining active and recently elapsed windows', async () => {
+    const now = Date.UTC(2026, 7, 13, 12, 0, 0);
+    await getAdminPool().query(
+      `INSERT INTO admin.rate_limit_buckets (bucket_key, window_end, count)
+       VALUES
+         ('stale', $1, 1),
+         ('recently-elapsed', $2, 2),
+         ('active', $3, 3)`,
+      [
+        new Date(now - 60_001),
+        new Date(now - 30_000),
+        new Date(now + 30_000),
+      ],
+    );
+
+    const deleted = await new AdminPostgresRateLimiter(getAdminPool()).gc(now);
+    const remaining = await getAdminPool().query<{ bucket_key: string }>(
+      `SELECT bucket_key
+       FROM admin.rate_limit_buckets
+       ORDER BY bucket_key`,
+    );
+
+    expect(deleted).toBe(1);
+    expect(remaining.rows.map((row) => row.bucket_key)).toEqual([
+      'active',
+      'recently-elapsed',
+    ]);
+  });
+
   it('selects the admin Postgres backend when deployed rate limiting is enabled', async () => {
     runtimeEnv.RATE_LIMIT_BACKEND = 'postgres';
     resetAdminRateLimiter();

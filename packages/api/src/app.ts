@@ -22,9 +22,12 @@ import { adminRoutes } from './routes/admin.js';
 import { adminActivityRoutes } from './routes/admin-activity.js';
 import { adminAuthRoutes } from './routes/admin-auth.js';
 import { adminReadyz } from './routes/admin-readyz.js';
+import { adminOperationsRoutes } from './routes/admin-operations.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
+import { ADMIN_CSRF_HEADER } from './lib/admin-csrf.js';
+import { openApiHonoOptions } from './lib/openapi.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
 
@@ -52,7 +55,7 @@ export type AppEnv = {
 };
 
 export function createApp(): OpenAPIHono<AppEnv> {
-  const app = new OpenAPIHono<AppEnv>();
+  const app = new OpenAPIHono<AppEnv>(openApiHonoOptions);
 
   app.use('*', requestId());
   const sentryMiddleware = createSentryMiddleware(app);
@@ -63,8 +66,40 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // routes. Per-route + shared-AI buckets remain on the relevant routes.
   app.use('*', globalRateLimit());
 
+  const dashboardOriginPatterns = env.DASHBOARD_CORS_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const dashboardCors = cors({
+    origin: (origin) =>
+      dashboardOriginPatterns.some((pattern) => originMatchesPattern(origin, pattern))
+        ? origin
+        : null,
+    allowMethods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Requested-With'],
+    exposeHeaders: ['Set-Auth-Token', 'X-Usage-Warning'],
+    credentials: true,
+    maxAge: 86400,
+  });
+  app.use('*', async (c, next) => {
+    // Public waitlist, health, and admin routes keep narrower allowlists below.
+    const hasDedicatedCors =
+      c.req.path === '/waitlist' ||
+      c.req.path.startsWith('/waitlist/') ||
+      c.req.path === '/healthz' ||
+      c.req.path === '/admin' ||
+      c.req.path.startsWith('/admin/');
+    if (hasDedicatedCors) {
+      return next();
+    }
+    const origin = c.req.header('origin') ?? '';
+    const isDashboardOrigin = dashboardOriginPatterns.some((pattern) =>
+      originMatchesPattern(origin, pattern),
+    );
+    return isDashboardOrigin ? dashboardCors(c, next) : next();
+  });
+
   // Public, non-credentialed CORS for marketing waitlist submissions.
-  // Credentialed auth/admin CORS is configured separately below.
+  // Credentialed dashboard and admin CORS is configured separately.
   const allowedOrigins = env.WAITLIST_CORS_ORIGINS.split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -93,15 +128,33 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const adminOrigins = env.ADMIN_CORS_ORIGINS.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const credentialedOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
+  const adminOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
 
   app.use(
     '/admin/*',
     cors({
-      origin: credentialedOrigin,
+      origin: adminOrigin,
       allowMethods: ['GET', 'POST', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      allowHeaders: ['Content-Type', 'X-Request-ID', ADMIN_CSRF_HEADER],
       credentials: true,
+      maxAge: 86400,
+    }),
+  );
+  app.use(
+    '/readyz',
+    cors({
+      origin: adminOrigin,
+      allowMethods: ['GET', 'OPTIONS'],
+      credentials: true,
+      maxAge: 86400,
+    }),
+  );
+  app.use(
+    '/healthz',
+    cors({
+      origin: adminOrigin,
+      allowMethods: ['GET', 'OPTIONS'],
+      credentials: false,
       maxAge: 86400,
     }),
   );
@@ -145,6 +198,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', settingsRoutes);
   app.route('/', adminAuthRoutes);
   app.route('/', adminActivityRoutes);
+  app.route('/', adminOperationsRoutes);
   app.route('/', adminRoutes);
 
   // OpenAPI spec
@@ -154,4 +208,13 @@ export function createApp(): OpenAPIHono<AppEnv> {
   });
 
   return app;
+}
+
+function originMatchesPattern(origin: string, pattern: string): boolean {
+  if (!origin || !pattern) return false;
+  const escaped = pattern
+    .split('*')
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[^/]*');
+  return new RegExp(`^${escaped}$`).test(origin);
 }

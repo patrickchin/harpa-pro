@@ -10,26 +10,18 @@
  * timeline — so this provider takes that surface as PROPS and exposes
  * it through context.
  *
- * Fields the Report (P3.7) and Edit (P3.8) tabs will need (`generation`,
+ * Fields the Report tab and shared generate surfaces need (`generation`,
  * `draft`, `voice`, `photo`, `preview`, `members`, `menuActions`,
  * `timeline.items` from `useNoteTimeline`) are present as
  * structurally-stable defaults / no-ops with TODO markers so wiring
  * them up later is a one-field-at-a-time change rather than a
  * provider rewrite.
  */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import type { reports } from '@harpa/api-contract';
 
 import type { TabKey } from '@/components/reports/generate/tabs';
-import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 import type { NoteEntry } from '@/lib/notes/note-entry';
-import type { GeneratedSiteReport } from '@harpa/report-core';
 import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
 import {
   RECORDER_START_FAILED_MESSAGE,
@@ -89,7 +81,7 @@ export interface GenerateReportProviderProps {
    * Generated report payload. `null` until the first generation lands
    * (or while the user hasn't touched manual entry yet).
    */
-  report?: GeneratedSiteReport | null;
+  report?: reports.ReportBody | null;
   /** True while a generation request is in flight. */
   isGeneratingReport?: boolean;
   /** Latest generation error message, or `null`. */
@@ -107,21 +99,16 @@ export interface GenerateReportProviderProps {
   /** Called when the user taps Retry / Regenerate. */
   onRegenerate?: () => void;
   /**
-   * Called when the user taps "Edit manually" on the empty Report
-   * tab. Defaults to switching the active tab to `edit`.
-   */
-  onEditManually?: () => void;
-  /**
-   * Called when the Edit-tab form mutates the report. The provider
-   * has no opinion on persistence — the route wrapper wires this to
-   * a local React state (and eventually `useReportDraftPersistence`).
+   * Called when the per-card report editor mutates the report. The provider
+   * has no opinion on persistence — the route wrapper wires this to local
+   * React state and `useReportBodyAutosave`.
    * When omitted, `generation.setReport` is a no-op (read-only).
    */
-  onSetReport?: (next: GeneratedSiteReport) => void;
-  /** True while autosave is in flight. Surfaces in the Edit tab header. */
+  onSetReport?: (next: reports.ReportBody) => void;
+  /** True while autosave is in flight. Gates report actions. */
   isAutoSaving?: boolean;
-  /** Epoch ms of the last successful autosave, or `null` if none. */
-  lastSavedAt?: number | null;
+  /** True while another report-body write is pending or needs recovery. */
+  isReportWriteBlocked?: boolean;
   /** True while finalize is in flight. */
   isFinalizing?: boolean;
   /** Latest finalize error, or `null`. */
@@ -149,6 +136,16 @@ export interface GenerateReportProviderProps {
    * + upload pipeline. When omitted this is a no-op.
    */
   onPickAttachment?: (category: 'image' | 'document') => void;
+  /**
+   * Wraps an inline failed-photo retry so the route can synchronize queue
+   * completion with canonical report/notes refetches.
+   */
+  onRetryPhotoUpload?: (retry: () => Promise<void>) => void;
+  /**
+   * Wraps inline photo cancellation/dismissal so the route can reconcile its
+   * synchronization guard after the queue removes the abandoned job.
+   */
+  onCancelPhotoUpload?: (cancel: () => Promise<void>) => void;
   /**
    * Called when the user picks (or clears) a placement target for a
    * photo group on the Report tab. Route wrapper wires this to
@@ -217,9 +214,7 @@ interface VoiceSurface {
 
 interface PhotoSurface {
   handleCameraCapture: () => Promise<void> | void;
-  handleMenuPick: (
-    category: 'image' | 'document',
-  ) => Promise<void> | void;
+  handleMenuPick: (category: 'image' | 'document') => Promise<void> | void;
   /** Retry a failed image upload job. */
   retryUpload: (jobId: string) => void;
   /** Cancel / dismiss an in-flight or failed image upload job. */
@@ -261,18 +256,6 @@ interface NotesSurface {
 interface TabsSurface {
   active: TabKey;
   set: (next: TabKey) => void;
-  /**
-   * Edit tab opener — separate from `set('edit')` because canonical
-   * lazily seeds an empty report when the user opens Edit. Currently
-   * just switches the tab; lazy-seed lands with P3.8.
-   */
-  openEdit: () => void;
-  /**
-   * Called by the Report tab "Edit manually" CTA. Defaults to
-   * `set('edit')` but routes can override (e.g. to seed an empty
-   * report at the same time, matching canonical).
-   */
-  editManually: () => void;
 }
 
 interface TimelineSurface {
@@ -283,13 +266,13 @@ interface TimelineSurface {
 
 interface GenerationSurface {
   /** Generated report payload. `null` until a report exists. */
-  report: GeneratedSiteReport | null;
+  report: reports.ReportBody | null;
   /**
    * Mutator for the report. Calls the parent-provided `onSetReport`
    * if any; otherwise a no-op (read-only). Always defined so consumers
    * can reference it without a guard.
    */
-  setReport: (next: GeneratedSiteReport) => void;
+  setReport: (next: reports.ReportBody) => void;
   /** True while the AI generation request is in flight. */
   isUpdating: boolean;
   /** Latest generation error, or `null`. */
@@ -333,10 +316,10 @@ interface DraftSurface {
    * a guard.
    */
   finalize: () => void;
-  /** True while autosave is in flight (Edit-tab header). */
+  /** True while autosave is in flight. */
   isAutoSaving: boolean;
-  /** Epoch ms of last successful autosave, or `null`. */
-  lastSavedAt: number | null;
+  /** Disables generation/finalize while another report-body write is unresolved. */
+  isReportWriteBlocked: boolean;
 }
 
 interface PreviewSurface {
@@ -399,15 +382,12 @@ export interface GenerateReportContextValue {
   handleRegenerate: () => void;
 }
 
-const GenerateReportContext =
-  createContext<GenerateReportContextValue | null>(null);
+const GenerateReportContext = createContext<GenerateReportContextValue | null>(null);
 
 export function useGenerateReport(): GenerateReportContextValue {
   const v = useContext(GenerateReportContext);
   if (!v) {
-    throw new Error(
-      'useGenerateReport must be used inside <GenerateReportProvider>',
-    );
+    throw new Error('useGenerateReport must be used inside <GenerateReportProvider>');
   }
   return v;
 }
@@ -424,9 +404,7 @@ export function remapAttachmentKeys(
   fileIdToAttachmentKey: ReadonlyMap<string, string>,
 ): readonly Attachment[] {
   return attachments.map((att) => {
-    const synthetic = att.fileId
-      ? fileIdToAttachmentKey.get(att.fileId)
-      : undefined;
+    const synthetic = att.fileId ? fileIdToAttachmentKey.get(att.fileId) : undefined;
     return synthetic ? { ...att, key: synthetic } : att;
   });
 }
@@ -474,16 +452,17 @@ export function GenerateReportProvider({
   notesSinceLastGeneration = 0,
   needsRegeneration = notesSinceLastGeneration > 0,
   onRegenerate,
-  onEditManually,
   onSetReport,
   isAutoSaving = false,
-  lastSavedAt = null,
+  isReportWriteBlocked = false,
   isFinalizing = false,
   finalizeError = null,
   onFinalize,
   onOpenFile,
   onCameraCapture,
   onPickAttachment,
+  onRetryPhotoUpload,
+  onCancelPhotoUpload,
   onPlacePhotoGroup,
   initialTab = 'notes',
   children,
@@ -493,11 +472,8 @@ export function GenerateReportProvider({
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
-  const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
-    useState(false);
-  const [photoPreviewIndex, setPhotoPreviewIndex] = useState<number | null>(
-    null,
-  );
+  const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
+  const [photoPreviewIndex, setPhotoPreviewIndex] = useState<number | null>(null);
 
   // Phase H: inline recorder state lives here so the input bar can
   // morph between text/photo/mic and the recording strip without
@@ -591,6 +567,28 @@ export function GenerateReportProvider({
   const meQuery = useMeQuery(undefined, { staleTime: 5 * 60 * 1000 });
   const meId = meQuery.data?.user?.id;
   const photoUploads = usePhotoUploadEntries(reportId, meId);
+  const handleRetryPhotoUpload = useCallback(
+    (jobId: string) => {
+      const retry = () => photoUploads.retry(jobId);
+      if (onRetryPhotoUpload) {
+        onRetryPhotoUpload(retry);
+        return;
+      }
+      void retry();
+    },
+    [onRetryPhotoUpload, photoUploads.retry],
+  );
+  const handleCancelPhotoUpload = useCallback(
+    (jobId: string) => {
+      const cancel = () => photoUploads.cancel(jobId);
+      if (onCancelPhotoUpload) {
+        onCancelPhotoUpload(cancel);
+        return;
+      }
+      void cancel();
+    },
+    [onCancelPhotoUpload, photoUploads.cancel],
+  );
   const timelineItems = useMemo<readonly NoteEntry[]>(() => {
     const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
     const photoEntries = photoUploads.entries;
@@ -626,9 +624,7 @@ export function GenerateReportProvider({
     );
 
     const baseWithPhotos =
-      filteredPhotoEntries.length > 0
-        ? [...remappedNotes, ...filteredPhotoEntries]
-        : remappedNotes;
+      filteredPhotoEntries.length > 0 ? [...remappedNotes, ...filteredPhotoEntries] : remappedNotes;
     if (step === 'idle' || !reportId) return baseWithPhotos;
     if (savedNote && notes.some((n) => n.id === savedNote.id)) {
       return baseWithPhotos;
@@ -712,15 +708,6 @@ export function GenerateReportProvider({
 
   const closePhoto = useCallback(() => setPhotoPreviewIndex(null), []);
 
-  // Locally-owned empty report seeded when the user opens Edit without
-  // a generated report ("Edit manually" path). Kept separate from
-  // `onSetReport` so the lazy-init never triggers the route's dirty
-  // flag — only typing in the form should count as a user edit.
-  const [localSeed, setLocalSeed] = useState<GeneratedSiteReport | null>(null);
-  // The report visible to the Edit tab: prefer the authoritative
-  // prop (server/AI) then the locally-seeded blank.
-  const effectiveReport = report ?? localSeed;
-
   const addNote = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -745,20 +732,12 @@ export function GenerateReportProvider({
       const note = timelineItems[sourceIndex];
       if (!note || !onDeleteNote) return;
       onDeleteNote(note, sourceIndex);
-      if (
-        note.source === 'voice' &&
-        note.id &&
-        voicePipeline.state.note?.id === note.id
-      ) {
+      if (note.source === 'voice' && note.id && voicePipeline.state.note?.id === note.id) {
         voicePipeline.reset();
       }
-      cancelImageAttachmentJobs(
-        note,
-        photoUploads.cancel,
-        photoUploads.fileIdToAttachmentKey,
-      );
+      cancelImageAttachmentJobs(note, handleCancelPhotoUpload, photoUploads.fileIdToAttachmentKey);
     },
-    [timelineItems, onDeleteNote, voicePipeline, photoUploads],
+    [timelineItems, onDeleteNote, voicePipeline, handleCancelPhotoUpload, photoUploads],
   );
 
   const updateNote = useCallback(
@@ -772,25 +751,8 @@ export function GenerateReportProvider({
     [notes, onUpdateNote],
   );
 
-  const openEdit = useCallback(() => {
-    if (isGeneratingReport) return;
-    // Lazy-seed locally so the route's dirty flag stays clean.
-    if (!report) setLocalSeed(createEmptyReport());
-    setActiveTab('edit');
-  }, [isGeneratingReport, report]);
-
-  const editManually = useCallback(() => {
-    if (isGeneratingReport) return;
-    if (onEditManually) {
-      onEditManually();
-      return;
-    }
-    if (!report) setLocalSeed(createEmptyReport());
-    setActiveTab('edit');
-  }, [isGeneratingReport, onEditManually, report]);
-
   const setReport = useCallback(
-    (next: GeneratedSiteReport) => {
+    (next: reports.ReportBody) => {
       if (isGeneratingReport) return;
       onSetReport?.(next);
     },
@@ -825,8 +787,7 @@ export function GenerateReportProvider({
       project,
       reportNumber,
       reportTitle:
-        reportTitle?.trim() ||
-        (reportNumber !== null ? `Report #${reportNumber}` : 'New report'),
+        reportTitle?.trim() || (reportNumber !== null ? `Report #${reportNumber}` : 'New report'),
       notes: {
         list: timelineItems,
         totalCount: timelineItems.length,
@@ -848,15 +809,13 @@ export function GenerateReportProvider({
       tabs: {
         active: activeTab,
         set: setActiveTab,
-        openEdit,
-        editManually,
       },
       timeline: {
         items: timelineItems,
         isLoading: notesLoading,
       },
       generation: {
-        report: effectiveReport,
+        report,
         setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
@@ -874,7 +833,7 @@ export function GenerateReportProvider({
         finalizeError,
         finalize: handleFinalize,
         isAutoSaving,
-        lastSavedAt,
+        isReportWriteBlocked,
       },
       // Phase H: inline WhatsApp-style recorder lives in the input
       // bar. `start()` arms the recorder (and surfaces the
@@ -902,8 +861,8 @@ export function GenerateReportProvider({
       photo: {
         handleCameraCapture: () => onCameraCapture?.(),
         handleMenuPick: (category) => onPickAttachment?.(category),
-        retryUpload: photoUploads.retry,
-        cancelUpload: photoUploads.cancel,
+        retryUpload: handleRetryPhotoUpload,
+        cancelUpload: handleCancelPhotoUpload,
       },
       preview: {
         openFile: handleOpenFile,
@@ -940,11 +899,7 @@ export function GenerateReportProvider({
       updateNote,
       onUpdateNote,
       activeTab,
-      openEdit,
-      editManually,
       report,
-      effectiveReport,
-      localSeed,
       setReport,
       isGeneratingReport,
       generationError,
@@ -958,7 +913,7 @@ export function GenerateReportProvider({
       finalizeError,
       handleFinalize,
       isAutoSaving,
-      lastSavedAt,
+      isReportWriteBlocked,
       attachmentSheetVisible,
       fileUploadError,
       inlineRecorder.isRecording,
@@ -986,8 +941,8 @@ export function GenerateReportProvider({
       onCameraCapture,
       onPickAttachment,
       onPlacePhotoGroup,
-      photoUploads.retry,
-      photoUploads.cancel,
+      handleRetryPhotoUpload,
+      handleCancelPhotoUpload,
     ],
   );
 
@@ -1019,7 +974,7 @@ export function GenerateReportProvider({
         title="Recording failed"
         message={
           inlineRecorder.error !== null
-            ? inlineRecorder.userErrorMessage ?? RECORDER_START_FAILED_MESSAGE
+            ? (inlineRecorder.userErrorMessage ?? RECORDER_START_FAILED_MESSAGE)
             : undefined
         }
         noticeTone="danger"

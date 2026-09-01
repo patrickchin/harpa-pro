@@ -1,0 +1,47 @@
+---
+import { Image } from "astro:assets";
+
+import type { DocsScreenshotId } from "../../lib/docs";
+import { docsScreenshot } from "../../lib/docs-screenshots";
+
+interface Props {
+  screenshot: DocsScreenshotId;
+  alt: string;
+  stepTitle: string;
+}
+
+const { screenshot, alt, stepTitle } = Astro.props;
+const { image, focus } = docsScreenshot(screenshot);
+---
+
+<a
+  class="docs-step-media"
+  href={image.src}
+  aria-label={`View full screenshot for ${stepTitle}`}
+  data-docs-screenshot-trigger
+  data-docs-screenshot-src={image.src}
+  data-docs-screenshot-alt={alt}
+  data-docs-screenshot-title={stepTitle}
+  data-docs-screenshot-width={image.width}
+  data-docs-screenshot-height={image.height}
+>
+  <span
+    class="docs-step-media-crop"
+    style={`--docs-screenshot-focus: ${focus}`}
+  >
+    <Image
+      src={image}
+      alt={alt}
+      widths={[360, 520, 720]}
+      sizes="(min-width: 40rem) 320px, calc(100vw - 2rem)"
+      format="webp"
+      quality={82}
+      loading="lazy"
+      decoding="async"
+    />
+  </span>
+  <span class="docs-step-media-caption">
+    <span>View full screenshot</span>
+    <span aria-hidden="true">⛶</span>
+  </span>
+</a>

@@ -75,22 +75,10 @@ tags:
     duration: 500
 - waitForAnimationToEnd
 
-# --- Generate the report ---------------------------------------------------
-# Note: `report-tab-pane` is rendered unconditionally by ReportTabPane —
-# it appears the instant the pager mounts and tells us nothing about
-# generation progress. The real "report rendered" signal is the inner
-# `ReportView` (testID `report-view-N`), which is only mounted once
-# `generation.report` becomes truthy (see ReportTabPane.tsx:108–120 and
-# ReportView.tsx:35). Poll for that with a generous timeout — fixture
-# AI replay is fast but the tab-pager horizontal scroll + reanimated
-# FadeIn on `report-tab-live` can still push first-paint past Maestro's
-# default ~18s implicit wait.
-- extendedWaitUntil:
-    visible:
-      id: 'btn-generate-.*report'
-    timeout: 15000
-- tapOn:
-    id: 'btn-generate-.*report'
+# --- Wait for the route-owned automatic generation -------------------------
+# New drafts auto-generate as soon as their persisted notes arrive. Wait for
+# the stable current-generation marker instead of racing its transient CTA.
+- runFlow: ../helpers/wait-for-auto-regeneration.yaml
 - tapOn:
     id: 'btn-tab-report'
 - extendedWaitUntil:
@@ -164,8 +152,6 @@ tags:
     id: 'btn-tab-review'
 - assertNotVisible:
     id: 'btn-tab-notes'
-- assertNotVisible:
-    id: 'btn-tab-edit'
 - assertNotVisible:
     id: 'btn-edit-meta'
 

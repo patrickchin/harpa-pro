@@ -28,8 +28,21 @@ test("presents two core workflows and concise supporting tasks", async ({
   await expect(page.locator(".docs-everyday-grid > *")).toHaveCount(5);
   await expect(page.locator(".docs-setup-links li")).toHaveCount(2);
   await expect(page.locator(".docs-guide-grid")).toHaveCount(0);
+  const montageCards = page.locator(".docs-montage-card");
+  await expect(montageCards).toHaveCount(3);
+  const montageDestinations = [
+    "/docs/guides/capture-notes-voice",
+    "/docs/guides/generate-ai-report",
+    "/docs/guides/export-share-pdf",
+  ];
+  for (const [index, destination] of montageDestinations.entries()) {
+    await expect(montageCards.nth(index)).toHaveAttribute(
+      "href",
+      destination,
+    );
+  }
+  await expect(page.locator(".docs-phone-frame")).toHaveCount(0);
 });
-
 test("searches guides locally and stays quiet before a query", async ({
   page,
 }) => {
@@ -63,13 +76,24 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
     page.getByRole("heading", { level: 1, name: "Generate an AI report" }),
   ).toBeVisible();
   await expect(page.locator(".docs-step")).toHaveCount(5);
+  await expect(page.locator(".docs-guide-heading img")).toHaveCount(0);
 
-  const screenshots = page.locator(
-    ".docs-guide-heading img, .docs-step .docs-phone-frame img",
-  );
+  const screenshots = page.locator(".docs-step-media img");
+  await expect(screenshots).toHaveCount(4);
   await expect(screenshots.first()).toHaveAttribute("alt", /\S+/);
   for (let index = 0; index < (await screenshots.count()); index += 1) {
     await expect(screenshots.nth(index)).toHaveAttribute("src", /^\/_astro\//);
+  }
+
+  const fullScreenshotLinks = page.getByRole("link", {
+    name: /^View full screenshot for /,
+  });
+  await expect(fullScreenshotLinks).toHaveCount(4);
+  for (let index = 0; index < (await fullScreenshotLinks.count()); index += 1) {
+    await expect(fullScreenshotLinks.nth(index)).toHaveAttribute(
+      "href",
+      /^\/_astro\//,
+    );
   }
 
   const pagination = page.getByRole("navigation", {
@@ -77,6 +101,163 @@ test("renders the core workflow with optimized screenshots and pagination", asyn
   });
   await pagination.getByRole("link", { name: /Export and share a PDF/ }).click();
   await expect(page).toHaveURL(/\/docs\/guides\/export-share-pdf$/);
+});
+
+test("opens a full screenshot in a dismissible dialog", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/docs/guides/generate-ai-report");
+
+  const trigger = page.getByRole("link", {
+    name: "View full screenshot for Finalize and review together",
+  });
+  const guideUrl = page.url();
+  const screenshotUrl = await trigger.getAttribute("href");
+
+  await trigger.click();
+
+  await expect(page).toHaveURL(guideUrl);
+  const dialog = page.getByRole("dialog", {
+    name: "Full screenshot for Finalize and review together",
+  });
+  await expect(dialog).toBeVisible();
+  const fullScreenshot = dialog.getByRole("img", {
+    name: "Finalized Harpa Pro report with its member Review discussion",
+  });
+  await expect(fullScreenshot).toHaveAttribute("src", screenshotUrl ?? "");
+  await expect
+    .poll(() =>
+      fullScreenshot.evaluate(
+        (image) => (image as HTMLImageElement).complete,
+      ),
+    )
+    .toBe(true);
+  await expect(
+    dialog.getByText("Finalize and review together", { exact: true }),
+  ).toBeVisible();
+
+  const bounds = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  expect(bounds).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(
+    Math.abs(
+      (bounds?.x ?? 0) + (bounds?.width ?? 0) / 2 - (viewport?.width ?? 0) / 2,
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(bounds?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    viewport?.height ?? 0,
+  );
+
+  const fit = await fullScreenshot.evaluate((image) => {
+    const fullImage = image as HTMLImageElement;
+    const imageRegion = image.closest<HTMLElement>(
+      ".docs-screenshot-dialog-image",
+    );
+    if (!imageRegion) throw new Error("Screenshot image region is missing");
+
+    const imageBounds = image.getBoundingClientRect();
+    const regionBounds = imageRegion.getBoundingClientRect();
+    return {
+      imageBottom: imageBounds.bottom,
+      imageHeight: imageBounds.height,
+      imageLeft: imageBounds.left,
+      imageRight: imageBounds.right,
+      imageTop: imageBounds.top,
+      imageWidth: imageBounds.width,
+      naturalHeight: fullImage.naturalHeight,
+      naturalWidth: fullImage.naturalWidth,
+      regionBottom: regionBounds.bottom,
+      regionClientHeight: imageRegion.clientHeight,
+      regionLeft: regionBounds.left,
+      regionRight: regionBounds.right,
+      regionScrollHeight: imageRegion.scrollHeight,
+      regionTop: regionBounds.top,
+    };
+  });
+  expect(fit.naturalWidth).toBeGreaterThan(0);
+  expect(fit.naturalHeight).toBeGreaterThan(0);
+  expect(bounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    fit.imageWidth + 32,
+  );
+  expect(fit.regionScrollHeight).toBeLessThanOrEqual(
+    fit.regionClientHeight + 1,
+  );
+  expect(fit.imageTop).toBeGreaterThanOrEqual(fit.regionTop - 1);
+  expect(fit.imageBottom).toBeLessThanOrEqual(fit.regionBottom + 1);
+  expect(fit.imageLeft).toBeGreaterThanOrEqual(fit.regionLeft - 1);
+  expect(fit.imageRight).toBeLessThanOrEqual(fit.regionRight + 1);
+  expect(fit.imageWidth / fit.imageHeight).toBeCloseTo(
+    fit.naturalWidth / fit.naturalHeight,
+    2,
+  );
+
+  await dialog.getByRole("button", { name: "Close full screenshot" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await trigger.click();
+  await expect(fullScreenshot).toBeVisible();
+  const wideBounds = await dialog.boundingBox();
+  const wideImageBounds = await fullScreenshot.boundingBox();
+  expect(wideBounds).not.toBeNull();
+  expect(wideImageBounds).not.toBeNull();
+  expect(wideBounds?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+    (wideImageBounds?.width ?? 0) + 32,
+  );
+  expect(wideImageBounds?.width ?? 0).toBeGreaterThan(fit.imageWidth);
+  await dialog.getByRole("button", { name: "Close full screenshot" }).click();
+  await expect(dialog).not.toBeVisible();
+});
+
+test("keeps modified screenshot clicks as native new-tab links", async ({
+  browserName,
+  page,
+}) => {
+  await page.goto("/docs/guides/generate-ai-report");
+
+  const trigger = page.getByRole("link", {
+    name: "View full screenshot for Start a report",
+  });
+  const screenshotUrl = await trigger.getAttribute("href");
+  expect(screenshotUrl).not.toBeNull();
+
+  if (browserName === "firefox") {
+    // Playwright's Firefox backend does not open a page for a synthetic
+    // modifier-click. Exercise the application boundary directly instead:
+    // the cancellable link event must remain available to native handling.
+    const wasPrevented = await trigger.evaluate((link) => {
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        ctrlKey: true,
+      });
+      link.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+
+    expect(wasPrevented).toBe(false);
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    return;
+  }
+
+  const newPagePromise = page.context().waitForEvent("page", {
+    timeout: 10_000,
+  });
+  await trigger.click({ modifiers: ["ControlOrMeta"] });
+  const imagePage = await newPagePromise;
+
+  await expect(imagePage).toHaveURL(
+    new URL(screenshotUrl ?? "", page.url()).href,
+  );
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await imagePage.close();
 });
 
 test("keeps tier navigation usable on a phone viewport", async ({ page }) => {
@@ -131,7 +312,8 @@ test("serves canonical docs links and generated images", async ({
     expect(response.status(), src).toBeLessThan(400);
   }
 
-  const docsScreenshots = page.locator(".docs-phone-frame img");
+  const docsScreenshots = page.locator(".docs-montage img");
+  await expect(page.locator(".docs-montage-card")).toHaveCount(3);
   expect(await docsScreenshots.count()).toBeGreaterThan(0);
   for (let index = 0; index < (await docsScreenshots.count()); index += 1) {
     await expect(docsScreenshots.nth(index)).toHaveAttribute(

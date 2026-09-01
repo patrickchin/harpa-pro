@@ -1,0 +1,82 @@
+name: dashboard-prod
+
+# Cloudflare Git publishes main only after separately approved dashboard
+# production activation. Until then, both verification jobs remain dormant.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/api-contract/**'
+      - 'packages/design-tokens/**'
+      - '.github/workflows/dashboard-prod.yml'
+      - 'scripts/ci/build-cloudflare-pages.sh'
+      - 'scripts/ci/verify-api-release.sh'
+      - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/verify-pages-deployment.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig*.json'
+  workflow_dispatch: {}
+
+concurrency:
+  group: dashboard-prod
+  cancel-in-progress: false
+
+jobs:
+  api:
+    if: >-
+      vars.DASHBOARD_PRODUCTION_ENABLED == 'true' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify compatible production API
+        env:
+          API_HEALTH_URL: https://api.harpapro.com/healthz
+          API_READY_URL: https://api.harpapro.com/readyz
+          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|scripts/journeys/|pnpm-lock\.yaml$|tsconfig.*\.json$|\.github/workflows/api-prod\.yml$)'
+          EXPECTED_GIT_COMMIT: ${{ github.sha }}
+          API_RELEASE_ATTEMPTS: 30
+          API_RELEASE_SLEEP: 10
+        run: bash scripts/ci/verify-api-release.sh
+
+  deployment:
+    needs: api
+    if: >-
+      vars.DASHBOARD_PRODUCTION_ENABLED == 'true' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        origin:
+          - https://harpa-pro-dashboard.pages.dev
+          - https://app.harpapro.com
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "${{ matrix.origin }}"
+          --commit "${{ github.sha }}"
+          --branch main
+          --title 'Harpa Pro Dashboard'
+
+      - name: Verify deployed dashboard SPA
+        env:
+          DASHBOARD_URL: ${{ matrix.origin }}
+        run: bash scripts/ci/verify-dashboard-pages.sh

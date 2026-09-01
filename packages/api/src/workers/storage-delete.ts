@@ -6,6 +6,11 @@ import {
 } from '../services/storage-delete-jobs.js';
 import { captureApiException } from '../telemetry/sentry.js';
 import {
+  startStorageWorkerMemorySampling,
+  storageWorkerMemorySample,
+  type StorageWorkerMemorySampleReason,
+} from './storage-worker-memory.js';
+import {
   computeStorageWorkerSleepMs,
   LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE,
 } from './storage-worker-schedule.js';
@@ -14,6 +19,7 @@ const {
   errorPollMs: ERROR_POLL_MS,
   leasePruneIntervalMs: LEASE_PRUNE_INTERVAL_MS,
   maxJobsPerPass: MAX_JOBS_PER_PASS,
+  memorySampleIntervalMs: MEMORY_SAMPLE_INTERVAL_MS,
 } = LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE;
 
 let stopping = false;
@@ -28,6 +34,11 @@ process.once('SIGTERM', () => {
 });
 
 console.log('[storage-delete-worker] started');
+logMemorySample('startup');
+const stopMemorySampling = startStorageWorkerMemorySampling(
+  () => logMemorySample('interval'),
+  MEMORY_SAMPLE_INTERVAL_MS,
+);
 
 while (!stopping) {
   try {
@@ -35,9 +46,7 @@ while (!stopping) {
       maxJobs: MAX_JOBS_PER_PASS,
     });
     if (result.failed > 0) {
-      const error = new Error(
-        `${result.failed} storage deletion job(s) failed`,
-      );
+      const error = new Error(`${result.failed} storage deletion job(s) failed`);
       console.warn(
         JSON.stringify({
           level: 'warn',
@@ -50,10 +59,7 @@ while (!stopping) {
     if (Date.now() - lastLeasePruneAt >= LEASE_PRUNE_INTERVAL_MS) {
       const pruned = await pruneExpiredFileUploadLeases();
       lastLeasePruneAt = Date.now();
-      if (
-        pruned.consumedLeasesPruned > 0 ||
-        pruned.unconsumedLeasesPruned > 0
-      ) {
+      if (pruned.consumedLeasesPruned > 0 || pruned.unconsumedLeasesPruned > 0) {
         console.log(
           JSON.stringify({
             level: 'info',
@@ -80,6 +86,7 @@ while (!stopping) {
   }
 }
 
+stopMemorySampling();
 await resetPool();
 console.log('[storage-delete-worker] stopped');
 
@@ -107,4 +114,8 @@ function reportWorkerException(error: unknown): void {
     route: 'storage-delete-jobs',
     status: 0,
   });
+}
+
+function logMemorySample(reason: StorageWorkerMemorySampleReason): void {
+  console.log(JSON.stringify(storageWorkerMemorySample(reason)));
 }

@@ -12,6 +12,7 @@
 > placements can be preserved across regeneration.
 
 Cross-links:
+
 - Replaces [design-photo-placement-v1.md](design-photo-placement-v1.md).
 - Builds on [arch-batch-photo-notes.md](arch-batch-photo-notes.md)
   (`note_files`, `noteId` grouping).
@@ -54,7 +55,7 @@ That worked but had three structural problems:
    placements, leaving the healer to silently un-place things.
 
 3. **Index-coupled to a structure the LLM owns.** `index: 2` is only
-   meaningful relative to the *current* `issues[]` array. The LLM
+   meaningful relative to the _current_ `issues[]` array. The LLM
    regenerates that array on every run. We were betting that
    index-stability under "incremental re-author" would hold, and
    when it didn't (rename, reorder, delete), placement silently broke.
@@ -133,13 +134,13 @@ ALTER TABLE app.notes
 
 `source` values:
 
-| Value | Meaning |
-|---|---|
-| `typed` | Text body entered via keyboard. |
-| `voice` | Voice note (transcribed by the voice pipeline). |
-| `camera` | Photo(s) captured in-app via camera. |
-| `gallery` | Photo(s) chosen from device gallery. |
-| `upload` | File(s) uploaded from outside the app (existing files). |
+| Value     | Meaning                                                 |
+| --------- | ------------------------------------------------------- |
+| `typed`   | Text body entered via keyboard.                         |
+| `voice`   | Voice note (transcribed by the voice pipeline).         |
+| `camera`  | Photo(s) captured in-app via camera.                    |
+| `gallery` | Photo(s) chosen from device gallery.                    |
+| `upload`  | File(s) uploaded from outside the app (existing files). |
 
 `meta` is open-ended JSONB for kind-specific extras (e.g. voice
 `durationSec`, original filename for uploads, EXIF). No schema today;
@@ -192,7 +193,7 @@ type ReportSection = {
 Why **inside `report.body`** and not a side table:
 
 - `report.body` is already a JSONB blob versioned via
-  `report.generated_at` / `report.notes_changed_at`. Placement *is*
+  `report.generated_at` / `report.notes_changed_at`. Placement _is_
   part of the composed report.
 - One read returns everything mobile needs to render. No splice on
   the client. No `splitPlacements` helper. No "compose the view".
@@ -286,10 +287,32 @@ type GenerationPayload = {
 };
 
 type GenerationNote =
-  | { kind: 'text';     id: string; source?: 'typed';     body: string;       createdAt: string }
-  | { kind: 'voice';    id: string; source?: 'voice';     transcript: string; durationSec?: number; createdAt: string }
-  | { kind: 'image';    id: string; source?: 'camera' | 'gallery' | 'upload'; photoCount: number; caption?: string; photos?: { id: string; caption?: string }[]; createdAt: string }
-  | { kind: 'document'; id: string; source?: 'upload';    filename?: string;  caption?: string;     createdAt: string };
+  | { kind: 'text'; id: string; source?: 'typed'; body: string; createdAt: string }
+  | {
+      kind: 'voice';
+      id: string;
+      source?: 'voice';
+      transcript: string;
+      durationSec?: number;
+      createdAt: string;
+    }
+  | {
+      kind: 'image';
+      id: string;
+      source?: 'camera' | 'gallery' | 'upload';
+      photoCount: number;
+      caption?: string;
+      photos?: { id: string; caption?: string }[];
+      createdAt: string;
+    }
+  | {
+      kind: 'document';
+      id: string;
+      source?: 'upload';
+      filename?: string;
+      caption?: string;
+      createdAt: string;
+    };
 ```
 
 Notes:
@@ -318,23 +341,23 @@ Notes:
 
 Target-state rules for when auto-placement is re-enabled:
 
-1. *Notes are listed in chronological capture order. Adjacency
+1. _Notes are listed in chronological capture order. Adjacency
    carries context: a voice note may explain the photo batch
    captured just before it. Treat consecutive notes as potentially
-   related observations.*
-2. *Each note has a stable `id`. To attach a photo or document batch
+   related observations._
+2. _Each note has a stable `id`. To attach a photo or document batch
    to an issue or section, add the note's `id` to that target's
-   `attachments.images` or `attachments.documents` array.*
-3. *If `currentBody` is provided, you MUST preserve every batch ID
+   `attachments.images` or `attachments.documents` array._
+3. _If `currentBody` is provided, you MUST preserve every batch ID
    already present in `currentBody.{issues,sections}[].attachments`.
    You may move existing content around or rewrite descriptions, but
    you may not remove a user-placed batch. You MAY add new
    `attachments` entries for batches not yet placed if you have
    strong contextual evidence (caption, adjacent voice note,
-   explicit mention in a text note).*
-4. *Each batch ID may appear in at most one `attachments` array
+   explicit mention in a text note)._
+4. _Each batch ID may appear in at most one `attachments` array
    across the entire report body. If you place a batch, it is no
-   longer "unplaced" and must not appear elsewhere.*
+   longer "unplaced" and must not appear elsewhere._
 
 Until that is re-enabled, server-side generation strips all
 model-authored `attachments` before parse; the user does not see
@@ -344,10 +367,12 @@ auto-placed batches.
 
 ```ts
 // packages/api-contract/src/reports.ts (additions)
-const attachmentsSchema = z.object({
-  images: z.array(z.string()).optional(),
-  documents: z.array(z.string()).optional(),
-}).strict();
+const attachmentsSchema = z
+  .object({
+    images: z.array(z.string()).optional(),
+    documents: z.array(z.string()).optional(),
+  })
+  .strict();
 
 // Extend issue + section schemas:
 const issueSchema = baseIssueSchema.extend({
@@ -378,20 +403,22 @@ Returns: 200 { report: Report }   // full updated report incl. body
 ```
 
 Why a new endpoint:
+
 - Placement is now a `report.body` mutation. `notes` no longer owns it.
 - One round-trip mutates one JSONB column atomically; client gets the
   full updated body back so the cache stays consistent without
   cross-key invalidation.
 
 Why target uses `{ kind, index }` and not `{ targetTitle }`:
+
 - The mobile UI offers "the section the user is looking at right now"
   as the choice; the user sees current titles. Index is the natural
-  handle on the *current* body version.
+  handle on the _current_ body version.
 - If the body changes between fetch and PATCH (e.g. another editor
   regen'd in the meantime), the server returns 409 + the latest body.
   Client re-renders the sheet; user picks again. Tiny window in
   practice.
-- Note IDs go *into* `body.attachments`; they don't drive the
+- Note IDs go _into_ `body.attachments`; they don't drive the
   endpoint shape.
 
 Service contract:
@@ -403,11 +430,12 @@ export async function placeNoteInReport(
   reportId: string,
   noteId: string,
   target: PlacementTarget | null,
-  expectedBodyVersion: string,  // last-seen body hash or generated_at
+  expectedBodyVersion: string, // last-seen body hash or generated_at
 ): Promise<{ report: Report } | { conflict: Report }>;
 ```
 
 Behaviour:
+
 - 404 if report not visible under scope.
 - 404 if note not visible / not in this report.
 - 400 if note kind ∉ {`image`, `document`}.
@@ -419,7 +447,7 @@ Behaviour:
   **Removes the noteId from any other `attachments` array first**
   (idempotent unplace) so a move is exactly-once.
 - **Does NOT call `bumpNotesChangedAt`.** The bump tracks new
-  *content* since last generation. Placement reshapes presentation
+  _content_ since last generation. Placement reshapes presentation
   of existing content; no regen should be triggered by placement
   alone. (This is the same rule v1 settled on, but in v2 the
   carve-out is structural — placement isn't even a `notes` write.)
@@ -474,7 +502,7 @@ without further info → `upload` (best-guess; meta empty).
 ```tsx
 // IssuesCard — already gets `issue` from body
 <IssuesCard
-  issue={issue}                         // includes issue.attachments
+  issue={issue} // includes issue.attachments
   placedBatches={resolveBatches(noteRows, issue.attachments?.images)}
 />
 
@@ -488,9 +516,7 @@ That same set feeds the bottom `ReportPhotos` card.
 
 ```tsx
 const placedIds = collectPlacedAttachmentIds(report.body);
-const unplacedNotes = noteRows.filter(
-  (n) => n.kind === 'image' && !placedIds.has(n.id),
-);
+const unplacedNotes = noteRows.filter((n) => n.kind === 'image' && !placedIds.has(n.id));
 ```
 
 ### Mutation hook
@@ -523,17 +549,17 @@ there is only one layer.
 
 ## Edge cases
 
-| Case | Behaviour |
-|---|---|
-| Note deleted while placed | ID dangles in `body.attachments` until next regen. Render-time filter drops it from view (cosmetic). Next regen rewrites `body` with current valid IDs only (canonical cleanup). |
-| All photos in a batch deleted | Same as above — note row deletes; ID drops out at next regen. |
-| Issue/section deleted by regen | Existing placements are preserved from `currentBody` when possible. If the generated body no longer has the target, the note returns to the unplaced set and the user can re-place it with one tap. |
-| Issue/section reordered in `ReportEditForm` | Placement endpoint takes `{ kind, index }` against the current body. Manual edits to `body.issues` order automatically carry their `attachments` along (it's the same JSONB object). No drift. |
-| Read-only project member | Placement mutation controls are not rendered (gated on `canEdit`). API 404s under their scope. |
-| Finalised report | Placement editable. Finalisation snapshots `body`; placement reshapes the snapshot. |
-| Voice / text note | Chip not rendered; PATCH returns 400. |
-| Concurrent regen during placement | 409 from `expectedBodyVersion`; client refreshes and the user re-picks. Window is single-digit seconds. |
-| LLM emits attachments | Current implementation strips model-authored `attachments` before validation. Existing user placements are restored from `currentBody`; new auto-placements are ignored. |
+| Case                                        | Behaviour                                                                                                                                                                                           |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Note deleted while placed                   | ID dangles in `body.attachments` until next regen. Render-time filter drops it from view (cosmetic). Next regen rewrites `body` with current valid IDs only (canonical cleanup).                    |
+| All photos in a batch deleted               | Same as above — note row deletes; ID drops out at next regen.                                                                                                                                       |
+| Issue/section deleted by regen              | Existing placements are preserved from `currentBody` when possible. If the generated body no longer has the target, the note returns to the unplaced set and the user can re-place it with one tap. |
+| Issue/section fields edited in the per-card modal | The edit applies to the current body entry. Its `attachments` stay on the same JSONB object, so field changes do not move or detach placed photos.                                      |
+| Read-only project member                    | Placement mutation controls are not rendered (gated on `canEdit`). API 404s under their scope.                                                                                                      |
+| Finalised report                            | Placement editable. Finalisation snapshots `body`; placement reshapes the snapshot.                                                                                                                 |
+| Voice / text note                           | Chip not rendered; PATCH returns 400.                                                                                                                                                               |
+| Concurrent regen during placement           | 409 from `expectedBodyVersion`; client refreshes and the user re-picks. Window is single-digit seconds.                                                                                             |
+| LLM emits attachments                       | Current implementation strips model-authored `attachments` before validation. Existing user placements are restored from `currentBody`; new auto-placements are ignored.                            |
 
 ## Test plan
 
@@ -564,7 +590,7 @@ there is only one layer.
   6. Finalise. Re-open from project list; placement persists.
 
   Driven against fixtures (no live LLM), per
-  [Pitfall 2](pitfalls.md#pitfall-2). The regen step uses a fixture
+  [Pitfall 2](pitfalls.md#pitfall-2--llm-fixtures-retrofitted-not-designed-in). The regen step uses a fixture
   that exercises `currentBody` plumbing.
 
 ## Migration plan (expand-contract)
@@ -654,6 +680,7 @@ deliberately gradual.
 ## Implementation checklist (one item ≈ one commit, grouped by PR)
 
 PR 1 (metadata + ordering):
+
 1. `feat(api): migration NN_metadata — notes.source/meta, note_files.caption`
 2. `feat(api): notesCanonicalOrder helper + audit read sites`
 3. `feat(api): notes_report_order_idx + created_at sanity CHECK`
@@ -661,32 +688,17 @@ PR 1 (metadata + ordering):
 5. `test(api): notes.ordering.integration.test.ts`
 6. `feat(mobile): pass source on note creation flows`
 
-PR 2 (attachments field):
-7. `feat(api-contract): attachments schema on issue + section`
-8. `feat(api): sanitiseAttachments validator + unit tests`
-9. `feat(api): setReportBody runs sanitiseAttachments`
+PR 2 (attachments field): 7. `feat(api-contract): attachments schema on issue + section` 8. `feat(api): sanitiseAttachments validator + unit tests` 9. `feat(api): setReportBody runs sanitiseAttachments`
 
-PR 3 (structured LLM payload):
-10. `feat(api): collectNotesForGeneration returns GenerationPayload`
-11. `feat(api): reportGeneration prompt switches to JSON; system rules updated`
-12. `feat(api): LLM output schema includes attachments; live tests`
-13. `test(api): regen with currentBody preserves user placements`
+PR 3 (structured LLM payload): 10. `feat(api): collectNotesForGeneration returns GenerationPayload` 11. `feat(api): reportGeneration prompt switches to JSON; system rules updated` 12. `feat(api): LLM output schema includes attachments; live tests` 13. `test(api): regen with currentBody preserves user placements`
 
-PR 4 (cutover):
-14. `feat(api): PATCH /reports/{r}/attachments + service + scope + integration`
-15. `feat(mobile): renderer reads body.attachments; bottom card filter`
-16. `feat(mobile): placement sheet calls new endpoint; usePlaceAttachment hook`
-17. `feat(api): one-shot data migration notes.placement → body.attachments`
-18. `chore(api): v1 PATCH /notes/{n}/placement returns 410 Gone`
+PR 4 (cutover): 14. `feat(api): PATCH /reports/{r}/attachments + service + scope + integration` 15. `feat(mobile): renderer reads body.attachments; bottom card filter` 16. `feat(mobile): placement sheet calls new endpoint; usePlaceAttachment hook` 17. `feat(api): one-shot data migration notes.placement → body.attachments` 18. `chore(api): v1 PATCH /notes/{n}/placement returns 410 Gone`
 
-PR 5 (contract):
-19. `feat(api): migration NN_drop_placement — DROP COLUMN notes.placement`
-20. `chore: remove v1 placement code from api, contract, mobile`
-21. `docs: archive v1 design; update R9 with resolved-by-structural-fix footer`
+PR 5 (contract): 19. `feat(api): migration NN_drop_placement — DROP COLUMN notes.placement` 20. `chore: remove v1 placement code from api, contract, mobile` 21. `docs: archive v1 design; update R9 with resolved-by-structural-fix footer`
 
 ## Open questions
 
-- **Q1:** Should the LLM be allowed to *un*-place a batch on regen
+- **Q1:** Should the LLM be allowed to _un_-place a batch on regen
   (as opposed to leaving it placed where the user put it)? Current
   proposal: **no** — the preserve rule is absolute, validator
   enforces. We can relax later if real regens show the LLM has

@@ -3,7 +3,6 @@ import TestRenderer, { act } from 'react-test-renderer';
 import type React from 'react';
 
 import { WorkersCard } from '@/components/reports/WorkersCard';
-import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;
@@ -24,21 +23,33 @@ function collectText(n: unknown): string {
 
 describe('WorkersCard', () => {
   it('renders free-text headcounts from generated reports', () => {
-    const report = reportBodyToGeneratedReport({
-      meta: { title: null, summary: null, visitDate: null },
-      weather: null,
-      workers: [{ role: 'Contractors', count: 'a few', hours: null, notes: null }],
-      materials: [],
-      issues: [],
-      nextSteps: [],
-      summarySections: [],
-    });
-
-    const tree = render(<WorkersCard workers={report.report.workers} />);
+    const tree = render(
+      <WorkersCard
+        workers={[{ role: 'Contractors', count: 'a few', hours: null, notes: null }]}
+      />,
+    );
     const text = collectText(tree.toJSON());
 
     expect(text).toContain('Contractors');
     expect(text).toContain('a few');
     expect(text).not.toContain('NaN');
+  });
+
+  it('renders each worker note once', () => {
+    const tree = render(
+      <WorkersCard
+        workers={[
+          {
+            role: 'Carpenter',
+            count: '4',
+            hours: '8',
+            notes: 'Formwork on grid B.',
+          },
+        ]}
+      />,
+    );
+    const text = collectText(tree.toJSON());
+
+    expect(text.match(/Formwork on grid B\./g)).toHaveLength(1);
   });
 });

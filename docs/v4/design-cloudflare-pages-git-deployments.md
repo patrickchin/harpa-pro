@@ -1,0 +1,195 @@
+# Cloudflare Pages Git deployments
+
+**Status:** Implemented; dashboard production builds remain disabled
+
+## Problem
+
+GitHub Actions historically built each static application and published it
+with Wrangler using long-lived `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets. That upload path did not establish
+how the Pages projects were created: Git-integrated projects also accept manual
+Wrangler deployments. Native Cloudflare Git is now active on the canonical
+public and admin projects, so the credentialed GitHub publisher is redundant.
+
+On 2026-08-05, the Cloudflare UI connected the existing
+`harpa-pro-dashboard` Direct Upload project to `patrickchin/harpa-pro` in
+place. Cloudflare preserved all seven existing deployments. No project
+deletion or recreation occurred.
+
+## Decision
+
+Cloudflare Git is the only publisher for `harpa-pro`, `harpa-pro-admin`, and
+`harpa-pro-dashboard`. GitHub Actions verifies deployments but does not call
+the Cloudflare API.
+
+The production branch remains `main`. Dashboard automatic production builds
+remain disabled. The initial draft rollout restricted dashboard previews to
+the exact `pr-211` branch. Dev activation expands that allowlist to `dev` and
+ephemeral `pr-*` branches. All three projects keep the default `*` build watch
+include so every allowed branch commit produces the exact-SHA marker expected
+by its verification workflow.
+
+### Stable pull request branches
+
+A credential-free workflow mirrors an eligible pull request head to the exact
+Git ref `refs/heads/pr-<number>`:
+
+- only human-owned, same-repository pull requests are mirrored;
+- the workflow never checks out or executes pull request code while holding
+  `contents: write`;
+- synchronizing a pull request moves only its generated `pr-<number>` ref to
+  the exact pull request head SHA; and
+- closing the pull request deletes only that generated ref.
+
+Cloudflare converts that ref into the stable aliases already used by the
+system:
+
+- `https://pr-<number>.harpa-pro.pages.dev`;
+- `https://pr-<number>.harpa-pro-admin.pages.dev`; and
+- `https://pr-<number>.harpa-pro-dashboard.pages.dev`.
+
+This preserves `https://harpa-pro-api-pr-<number>.fly.dev`, the two Neon
+`pr-<number>` branches, and the admin API's exact `ADMIN_CORS_ORIGINS` value.
+It avoids branch-name sanitization logic and does not broaden the admin origin
+allowlist.
+
+### Build contract
+
+Cloudflare invokes `scripts/ci/build-cloudflare-pages.sh <application>`. The
+script fails closed for an unexpected branch and selects build-time public
+configuration as follows:
+
+| Branch        | Public site API | Admin/dashboard API  | Reserved dashboard URL                              |
+| ------------- | --------------- | -------------------- | --------------------------------------------------- |
+| `main`        | production      | production           | `https://harpa-pro-dashboard.pages.dev`             |
+| `dev`         | development     | development          | `https://dev.harpa-pro-dashboard.pages.dev`         |
+| `pr-<number>` | production      | matching Fly preview | `https://pr-<number>.harpa-pro-dashboard.pages.dev` |
+
+The public header does not render the reserved dashboard URL while the product
+is not ready for public discovery.
+
+The build wrapper sets two fixed, non-secret marker origins for the
+administrator app:
+
+| Branch        | `PUBLIC_SITE_BASE_URL`                    | `PUBLIC_DASHBOARD_URL`                              |
+| ------------- | ----------------------------------------- | --------------------------------------------------- |
+| `main`        | `https://harpa-pro.pages.dev`             | `https://harpa-pro-dashboard.pages.dev`             |
+| `dev`         | `https://dev.harpa-pro.pages.dev`         | `https://dev.harpa-pro-dashboard.pages.dev`         |
+| `pr-<number>` | `https://pr-<number>.harpa-pro.pages.dev` | `https://pr-<number>.harpa-pro-dashboard.pages.dev` |
+
+For `pr-<number>`, both values use the exact stable `pr-<number>` Pages alias.
+The administrator browser does not accept a marker origin from input or an API
+response.
+
+Every successful build writes a non-sensitive deployment marker containing
+`CF_PAGES_COMMIT_SHA` and `CF_PAGES_BRANCH`. Each static application serves the
+marker with `Access-Control-Allow-Origin: *`. This public policy applies only
+to the marker and does not authorize an authenticated API request.
+
+The administrator operations page reads the public-site and dashboard markers
+across origins without credentials. It reads its own marker from the current
+origin. It displays three independent cards and does not compare their SHAs.
+It reads the markers only on authenticated load and manual **Refresh**. It does
+not poll. See
+[Admin deployment identity](design-admin-deployment-identity.md).
+
+Verification workflows poll each stable Pages origin until its marker matches
+the expected Git SHA. They then run the surface-specific HTTP checks. A `200`
+from an old deployment is not success. These CI checks remain the exact release
+proof. The administrator cards show only current browser observations.
+
+### Wrangler tooling contract
+
+Cloudflare Git remains the only Pages publisher. Root
+`wrangler@4.125.0` supports the checked-in site and admin
+`wrangler.jsonc` schemas and local diagnostics; it does not restore direct
+uploads from GitHub Actions. Wrangler 4 requires Node 22 or newer, while this
+repository deliberately runs it on the selected Node 24.19.0 runtime.
+
+Wrangler 4 commands that can run locally or remotely default to local
+execution. An operator who intentionally inspects a remote resource must pass
+`--remote`. The CI runtime smoke validates both Pages configs against
+Wrangler's installed schema, exercises the Miniflare 5 HTTP path, and requires
+the patched Undici 7.29 runtime.
+
+The dashboard Pages project sets `SKIP_DEPENDENCY_INSTALL=1` and runs
+`pnpm install --frozen-lockfile` explicitly before the build wrapper. This
+keeps the repository-root `Gemfile.lock`, which belongs to native release
+tooling, from making Pages install Ruby dependencies for a static web build.
+It also makes the JavaScript dependency install use the committed lockfile.
+
+The Turnstile site key remains a plain-text Cloudflare build variable because
+it is intentionally shipped to browsers. Dashboard builds also receive public
+password-account identities and an optional public Sentry DSN. Cloudflare
+credentials do not remain in GitHub.
+
+For dashboard builds, the wrapper exports `VITE_API_BASE_URL` from the branch.
+Cloudflare supplies required `VITE_PASSWORD_ACCOUNT_EMAILS` values in both the
+Preview and Production variable scopes. The wrapper rejects a native dashboard
+build when that value is missing or empty. Cloudflare can also supply the
+optional `VITE_SENTRY_DSN`. The wrapper derives `VITE_SENTRY_ENVIRONMENT` and
+`VITE_SENTRY_RELEASE` from the branch and `CF_PAGES_COMMIT_SHA`. The Production
+password-account value stays dormant while production builds are disabled.
+
+## Workflow ownership
+
+- `site-preview.yml`, `admin-preview.yml`, and `dashboard-preview.yml` retain
+  credential-free local checks. They verify the stable Git deployment before
+  any deployed browser checks.
+- The site, admin, and dashboard dev/production workflows perform
+  post-deployment verification only.
+- `pages-preview-ref.yml` owns the exact `pr-<number>` Git ref lifecycle.
+- Cloudflare owns build, deployment, GitHub build status, branch aliasing, and
+  production rollback history. Its GitHub integration also owns the single
+  Pages preview comment for each project. The verification workflows do not
+  post a duplicate link or request pull-request write permission.
+
+No Pages workflow may reference `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID`, `cloudflare/wrangler-action`, or a direct Pages
+upload after the migration. Delete the two Cloudflare repository secrets only
+after all workflow and branch checks satisfy that invariant.
+
+## Dashboard provider outcome
+
+The 2026-08-05 provider verification records this configuration:
+
+- project: `harpa-pro-dashboard`;
+- Git repository: `patrickchin/harpa-pro`;
+- build command: an explicit `pnpm install --frozen-lockfile`, followed by
+  `bash scripts/ci/build-cloudflare-pages.sh dashboard`;
+- output directory: `apps/dashboard/dist`;
+- preview build variable: `SKIP_DEPENDENCY_INSTALL=1`;
+- production branch: `main`;
+- automatic production deployments: disabled;
+- initial preview custom branch: `pr-211`;
+- build watch include: `*`.
+
+Cloudflare preserved the seven existing preview deployments during the
+in-place connection. The project has no production deployment or custom
+domain. Production and `app.harpapro.com` activation require separate
+approval.
+
+Before dev activation, the dashboard application remained isolated in
+[PR #211](https://github.com/patrickchin/harpa-pro/pull/211). Restricting the
+provider to that exact generated branch prevented unrelated `dev` or `pr-*`
+commits from starting an absent-application build. The dev activation expands
+the preview allowlist to `dev` and `pr-*`. Automatic production deployments
+stay disabled until the application reaches `main` through the protected
+promotion workflow.
+
+## Verification and rollback
+
+Verify the tokenless deployment contract as follows:
+
+1. Run the shell policy suite and application builds locally.
+2. Confirm the Cloudflare build command, output directory, and branch controls.
+3. Verify an eligible pull request builds from `pr-<number>` at the exact head
+   SHA and points at the matching Fly preview.
+4. Merge through `dev` and verify the exact-SHA `dev` Pages deployment.
+5. Confirm no Pages workflow or open branch contains Cloudflare credentials.
+
+Rollback uses the Cloudflare Pages production rollback control for an active
+production project. The current dashboard project has no production deployment
+to roll back. Push a correction or pause Git builds if a preview fails. For an
+active production project, use the Cloudflare Pages rollback control. Do not
+restore credentialed Wrangler workflows or long-lived GitHub credentials.

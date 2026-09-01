@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { errorEnvelope } from '@harpa/api-contract';
 import { createApp } from '../app.js';
 import { getAdminPool } from '../db/admin-client.js';
 import { getPool, resetPool } from '../db/client.js';
@@ -8,6 +9,14 @@ import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
 const ADMIN_ORIGIN = 'http://localhost:3102';
+const UNTRUSTED_ADMIN_ORIGINS = [
+  'https://app.harpapro.com',
+  'https://admin.harpapro.com.evil.example',
+  'https://evil.example.com',
+  'https://harpapro.com',
+  'https://www.harpapro.com',
+  'https://dev.harpa-pro.pages.dev',
+] as const;
 const ADMIN_EMAIL = 'browser-admin@harpapro.com';
 const ADMIN_PASSWORD = 'correct horse battery staple admin password';
 
@@ -85,12 +94,7 @@ describe('dedicated admin browser authentication', () => {
     expect(appAuthPreflight.headers.get('access-control-allow-origin')).toBeNull();
     expect(appAuthPreflight.headers.get('access-control-allow-credentials')).toBeNull();
 
-    for (const origin of [
-      'https://evil.example.com',
-      'https://harpapro.com',
-      'https://www.harpapro.com',
-      'https://dev.harpa-pro.pages.dev',
-    ]) {
+    for (const origin of UNTRUSTED_ADMIN_ORIGINS) {
       const rejected = await app.request('/admin/auth/login', {
         method: 'OPTIONS',
         headers: {
@@ -181,9 +185,11 @@ describe('dedicated admin browser authentication', () => {
   it('sets only the dedicated HttpOnly cookie and reads the session', async () => {
     const loginResponse = await login();
     expect(loginResponse.status).toBe(200);
-    await expect(loginResponse.json()).resolves.toEqual({
+    const loginBody = (await loginResponse.json()) as { csrfToken: string };
+    expect(loginBody).toEqual({
       authenticated: true,
       email: ADMIN_EMAIL,
+      csrfToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
     });
     expect(loginResponse.headers.get('cache-control')).toContain('no-store');
     expect(loginResponse.headers.get('set-cookie')).toMatch(
@@ -201,10 +207,11 @@ describe('dedicated admin browser authentication', () => {
     await expect(session.json()).resolves.toEqual({
       authenticated: true,
       email: ADMIN_EMAIL,
+      csrfToken: loginBody.csrfToken,
     });
   });
 
-  it('returns the same generic failure for every invalid credential class', async () => {
+  it('returns the same generic error fields for every invalid credential class', async () => {
     const responses = await Promise.all([
       login(ADMIN_EMAIL, 'incorrect password long enough to submit'),
       login('unknown@harpapro.com', ADMIN_PASSWORD),
@@ -212,10 +219,20 @@ describe('dedicated admin browser authentication', () => {
     ]);
 
     expect(responses.map((response) => response.status)).toEqual([401, 401, 401]);
-    const bodies = await Promise.all(responses.map((response) => response.text()));
-    expect(new Set(bodies).size).toBe(1);
-    expect(bodies[0]).not.toContain(ADMIN_EMAIL);
-    expect(bodies[0]).not.toMatch(/unknown|domain|disabled/i);
+    const bodies = await Promise.all(
+      responses.map(async (response) => errorEnvelope.parse(await response.json())),
+    );
+    expect(new Set(bodies.map((body) => JSON.stringify(body.error))).size).toBe(1);
+    for (const [index, body] of bodies.entries()) {
+      expect(body.error).toEqual({
+        code: 'unauthorized',
+        message: 'Invalid email or password.',
+      });
+      expect(body.requestId).toBe(responses[index]!.headers.get('x-request-id'));
+    }
+    const serialized = JSON.stringify(bodies);
+    expect(serialized).not.toContain(ADMIN_EMAIL);
+    expect(serialized).not.toMatch(/unknown|domain|disabled/i);
   });
 
   it('does not create a session from a password verified before rotation', async () => {
@@ -266,16 +283,13 @@ describe('dedicated admin browser authentication', () => {
       body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
     });
     const untrusted = await Promise.all(
-      [
-        'https://admin.harpapro.com.evil.example',
-        'https://harpapro.com',
-        'https://www.harpapro.com',
-        'https://dev.harpa-pro.pages.dev',
-      ].map((origin) => login(ADMIN_EMAIL, ADMIN_PASSWORD, origin)),
+      UNTRUSTED_ADMIN_ORIGINS.map((origin) => login(ADMIN_EMAIL, ADMIN_PASSWORD, origin)),
     );
 
     expect(missing.status).toBe(403);
-    expect(untrusted.map((response) => response.status)).toEqual([403, 403, 403, 403]);
+    expect(untrusted.map((response) => response.status)).toEqual(
+      UNTRUSTED_ADMIN_ORIGINS.map(() => 403),
+    );
   });
 
   it('revokes the server session on logout and clears the cookie', async () => {
@@ -301,7 +315,7 @@ describe('dedicated admin browser authentication', () => {
   });
 
   it('does not add admin CORS headers to unrelated routes', async () => {
-    const response = await createApp().request('/healthz', {
+    const response = await createApp().request('/openapi.json', {
       headers: { origin: ADMIN_ORIGIN },
     });
     expect(response.headers.get('access-control-allow-origin')).toBeNull();

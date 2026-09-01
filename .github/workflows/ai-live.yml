@@ -54,7 +54,7 @@ jobs:
       AI_LIVE: '1'
       AI_FIXTURE_MODE: live
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
 

@@ -6,13 +6,13 @@
  */
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { StatTile } from '@/components/primitives/StatTile';
 import { getReportStats } from '@/lib/reports/report-ui';
 
 interface StatBarProps {
-  report: GeneratedSiteReport;
+  report: reports.ReportBody;
 }
 
 export function StatBar({ report }: StatBarProps) {

@@ -20,7 +20,7 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
-import { executeRequest, runRequest } from '../lib/run.js';
+import { executeRequest } from '../lib/run.js';
 import { EXIT, type ExitCode } from '../lib/error.js';
 
 export type FileKind = 'voice' | 'image' | 'document' | 'pdf';
@@ -86,19 +86,15 @@ export const filesPresignCommand = defineCommand({
       process.stderr.write(chalk.red(`Error: --size must be a positive integer\n`));
       process.exit(2);
     }
-    await runRequest({
+    const exit = await filesPresign({
+      client,
+      kind,
+      contentType,
+      sizeBytes,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/files/presign', { body: { scope: 'scratch', kind, contentType, sizeBytes } }),
-      format: (data) =>
-        [
-          `${chalk.green('✓')} Presigned upload URL`,
-          `  File key:   ${data.fileKey}`,
-          `  Upload URL: ${data.uploadUrl}`,
-          `  Expires at: ${data.expiresAt}`,
-        ].join('\n'),
     });
+    process.exit(exit);
   },
 });
 
@@ -154,14 +150,16 @@ export const filesRegisterCommand = defineCommand({
       process.stderr.write(chalk.red(`Error: --size must be a positive integer\n`));
       process.exit(2);
     }
-    await runRequest({
+    const exit = await filesRegister({
+      client,
+      kind,
+      fileKey,
+      sizeBytes,
+      contentType,
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.POST('/files', { body: { scope: 'scratch', kind, fileKey, sizeBytes, contentType } }),
-      format: (data) =>
-        `${chalk.green('✓')} Registered file ${chalk.bold(data.id)} (${data.kind}, ${data.sizeBytes} bytes)`,
     });
+    process.exit(exit);
   },
 });
 
@@ -201,18 +199,13 @@ export const filesUrlCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    await runRequest({
+    const exit = await filesUrl({
+      client,
+      fileId: String(args.fileId),
       json: args.json,
       verbose: args.verbose,
-      request: () =>
-        client.GET('/files/{id}/url', { params: { path: { id: String(args.fileId) } } }),
-      format: (data) =>
-        [
-          `${chalk.green('✓')} Signed download URL`,
-          `  URL:        ${data.url}`,
-          `  Expires at: ${data.expiresAt}`,
-        ].join('\n'),
     });
+    process.exit(exit);
   },
 });
 

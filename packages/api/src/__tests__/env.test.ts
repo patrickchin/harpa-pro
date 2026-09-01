@@ -16,6 +16,23 @@ const KEYS = [
   'ADMIN_MIGRATIONS_REQUIRED_HEAD',
   'DATABASE_URL',
   'ADMIN_DATABASE_URL',
+  'ADMIN_NEON_VIEWER_API_KEY',
+  'ADMIN_NEON_ORG_ID',
+  'ADMIN_CLOUDFLARE_ACCOUNT_ID',
+  'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN',
+  'ADMIN_SENTRY_ORG_SLUG',
+  'ADMIN_SENTRY_READ_TOKEN',
+  'ADMIN_SENTRY_PROJECT_SLUGS',
+  'ADMIN_SENTRY_MOBILE_PROJECT_SLUG',
+  'ADMIN_SENTRY_ENVIRONMENT',
+  'ADMIN_SENTRY_REGION',
+  'ADMIN_FLY_ORG_SLUG',
+  'ADMIN_FLY_READ_ONLY_API_TOKEN',
+  'ADMIN_FLY_APP_NAMES',
+  'ADMIN_REPORT_DIAGNOSTIC_EMAIL',
+  'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID',
+  'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER',
+  'ADMIN_REPORT_LIVE_CANARY_ENABLED',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'ADMIN_CORS_ORIGINS',
@@ -37,6 +54,8 @@ const KEYS = [
   'TEST_ACCOUNT_PASSWORD',
   'DEMO_ACCOUNT_EMAILS',
   'DEMO_ACCOUNT_PASSWORD',
+  'DASHBOARD_CORS_ORIGINS',
+  'ADMIN_CORS_ORIGINS',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -117,6 +136,15 @@ describe('env: email OTP transport', () => {
 });
 
 describe('env: production services fail closed', () => {
+  it('accepts an exact non-transactional application migration head', async () => {
+    setValidProductionEnv();
+    process.env.MIGRATIONS_REQUIRED_HEAD = '0029_llm_usage_events_created_at.notx.sql';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.MIGRATIONS_REQUIRED_HEAD).toBe('0029_llm_usage_events_created_at.notx.sql');
+  });
+
   it('accepts a fully configured production environment', async () => {
     setValidProductionEnv();
 
@@ -264,6 +292,720 @@ describe('env: admin database isolation', () => {
     expect(mod.env.DATABASE_URL).toBe(process.env.DATABASE_URL);
     expect(mod.env.ADMIN_DATABASE_URL).toBe(process.env.ADMIN_DATABASE_URL);
   });
+});
+
+describe('env: admin Neon observer', () => {
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_NEON_VIEWER_API_KEY).toBeUndefined();
+    expect(mod.env.ADMIN_NEON_ORG_ID).toBeUndefined();
+  });
+
+  it('accepts a viewer key and organization ID together', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+    process.env.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_NEON_VIEWER_API_KEY).toBe('test-neon-viewer-key');
+    expect(mod.env.ADMIN_NEON_ORG_ID).toBe('org-harpa-pro');
+  });
+
+  it('rejects a viewer key without an organization ID', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_ORG_ID/);
+  });
+
+  it('rejects an organization ID without a viewer key', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_ORG_ID = 'org-harpa-pro';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY/);
+  });
+
+  it("rejects an organization ID outside Neon's documented ID format", async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = 'test-neon-viewer-key';
+    process.env.ADMIN_NEON_ORG_ID = 'https://console.neon.tech/api/v2';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_ORG_ID/);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('rejects %s observer configuration', async (_description, value) => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_NEON_VIEWER_API_KEY = value;
+    process.env.ADMIN_NEON_ORG_ID = value;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_NEON_VIEWER_API_KEY|ADMIN_NEON_ORG_ID/);
+  });
+});
+
+describe('env: admin Cloudflare R2 observer', () => {
+  const completeObserver = {
+    ADMIN_CLOUDFLARE_ACCOUNT_ID: '023e105f4ecef8ad9ca31a8372d0c353',
+    ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: 'test-cloudflare-r2-observer-token',
+  } as const;
+
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
+    expect(mod.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN).toBeUndefined();
+  });
+
+  it('accepts a lowercase 32-character account ID and observer token together', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CLOUDFLARE_ACCOUNT_ID).toBe(completeObserver.ADMIN_CLOUDFLARE_ACCOUNT_ID);
+    expect(mod.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN).toBe(
+      completeObserver.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN,
+    );
+  });
+
+  it('rejects an observer token without an account ID', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN =
+      completeObserver.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+
+  it('rejects an account ID without an observer token', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_CLOUDFLARE_ACCOUNT_ID = completeObserver.ADMIN_CLOUDFLARE_ACCOUNT_ID;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN/);
+  });
+
+  it.each([
+    ['empty account ID', 'ADMIN_CLOUDFLARE_ACCOUNT_ID', ''],
+    ['whitespace-only account ID', 'ADMIN_CLOUDFLARE_ACCOUNT_ID', '   '],
+    ['empty observer token', 'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN', ''],
+    ['whitespace-only observer token', 'ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN', '   '],
+  ] as const)('rejects %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each([
+    '023e105f4ecef8ad9ca31a8372d0c35',
+    '023E105F4ECEF8AD9CA31A8372D0C353',
+    '023e105f4ecef8ad9ca31a8372d0c35g',
+    'https://dash.cloudflare.com/023e105f4ecef8ad9ca31a8372d0c353',
+  ])('rejects malformed Cloudflare account ID %s', async (accountId) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_CLOUDFLARE_ACCOUNT_ID: accountId,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CLOUDFLARE_ACCOUNT_ID/);
+  });
+});
+
+describe('env: admin Sentry observer', () => {
+  const completeObserver = {
+    ADMIN_SENTRY_ORG_SLUG: 'harpa-pro',
+    ADMIN_SENTRY_READ_TOKEN: 'test-sentry-read-token',
+    ADMIN_SENTRY_PROJECT_SLUGS: 'harpa-pro-api,harpa-pro-mobile',
+    ADMIN_SENTRY_MOBILE_PROJECT_SLUG: 'harpa-pro-mobile',
+    ADMIN_SENTRY_ENVIRONMENT: 'production',
+  } as const;
+
+  const requiredKeys = Object.keys(completeObserver) as Array<keyof typeof completeObserver>;
+  const invalidSlugs = [
+    ['path traversal', '../harpa-pro'],
+    ['slash', 'harpa/pro'],
+    ['underscore', 'harpa_pro'],
+    ['dot', 'harpa.pro'],
+    ['leading hyphen', '-harpa-pro'],
+    ['trailing hyphen', 'harpa-pro-'],
+    ['more than 63 characters', 'a'.repeat(64)],
+  ] as const;
+
+  it('accepts the observer being wholly unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    for (const key of requiredKeys) expect(mod.env[key]).toBeUndefined();
+    expect(mod.env.ADMIN_SENTRY_REGION).toBeUndefined();
+  });
+
+  it('accepts all required fields together and defaults the region to global', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_ORG_SLUG).toBe('harpa-pro');
+    expect(mod.env.ADMIN_SENTRY_READ_TOKEN).toBe('test-sentry-read-token');
+    expect(mod.env.ADMIN_SENTRY_PROJECT_SLUGS).toBe('harpa-pro-api,harpa-pro-mobile');
+    expect(mod.env.ADMIN_SENTRY_MOBILE_PROJECT_SLUG).toBe('harpa-pro-mobile');
+    expect(mod.env.ADMIN_SENTRY_ENVIRONMENT).toBe('production');
+    expect(mod.env.ADMIN_SENTRY_REGION).toBe('global');
+  });
+
+  it.each(['global', 'us', 'de'] as const)('accepts the fixed %s region', async (region) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_SENTRY_REGION: region });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_REGION).toBe(region);
+  });
+
+  it.each(['production', 'preview', 'development'] as const)(
+    'accepts the exact %s environment',
+    async (environment) => {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, {
+        ADMIN_SENTRY_ENVIRONMENT: environment,
+      });
+
+      const mod = await freshImportEnv();
+
+      expect(mod.env.ADMIN_SENTRY_ENVIRONMENT).toBe(environment);
+    },
+  );
+
+  it.each([
+    ['one', 'harpa-pro-mobile'],
+    ['three', 'harpa-pro-api,harpa-pro-mobile,harpa-pro-dashboard'],
+  ] as const)('accepts %s reviewed project slug values', async (_count, projectSlugs) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_PROJECT_SLUGS: projectSlugs,
+    });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_PROJECT_SLUGS).toBe(projectSlugs);
+    expect(mod.env.ADMIN_SENTRY_MOBILE_PROJECT_SLUG).toBe('harpa-pro-mobile');
+  });
+
+  it.each(requiredKeys)('rejects a partial observer missing %s', async (missingKey) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+    delete process.env[missingKey];
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(missingKey));
+  });
+
+  it('rejects a region without the five required observer fields', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_SENTRY_REGION = 'us';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_(ORG_SLUG|REGION)/);
+  });
+
+  it.each([...requiredKeys, 'ADMIN_SENTRY_REGION'] as const)(
+    'rejects an empty or whitespace-only %s',
+    async (key) => {
+      for (const value of ['', '   ']) {
+        process.env.NODE_ENV = 'development';
+        Object.assign(process.env, completeObserver, {
+          ADMIN_SENTRY_REGION: 'global',
+          [key]: value,
+        });
+
+        await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+      }
+    },
+  );
+
+  it.each([
+    ['organization slug', 'ADMIN_SENTRY_ORG_SLUG', 'Harpa-Pro'],
+    ['organization URL', 'ADMIN_SENTRY_ORG_SLUG', 'https://sentry.io/harpa-pro'],
+    ['project uppercase', 'ADMIN_SENTRY_PROJECT_SLUGS', 'harpa-pro-api,Harpa-Pro-Mobile'],
+    ['project URL', 'ADMIN_SENTRY_PROJECT_SLUGS', 'harpa-pro-api,https://sentry.io/x'],
+    ['mobile uppercase', 'ADMIN_SENTRY_MOBILE_PROJECT_SLUG', 'Harpa-Pro-Mobile'],
+    ['environment alias', 'ADMIN_SENTRY_ENVIRONMENT', 'prod'],
+    ['arbitrary region', 'ADMIN_SENTRY_REGION', 'eu'],
+  ] as const)('rejects malformed %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each(invalidSlugs)('rejects an organization slug with %s', async (_description, slug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_SENTRY_ORG_SLUG: slug });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_ORG_SLUG/);
+  });
+
+  it.each(invalidSlugs)('rejects a project slug with %s', async (_description, slug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_PROJECT_SLUGS: `${slug},harpa-pro-mobile`,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_PROJECT_SLUGS/);
+  });
+
+  it.each(invalidSlugs)('rejects a mobile project slug with %s', async (_description, slug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_MOBILE_PROJECT_SLUG: slug,
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_MOBILE_PROJECT_SLUG/);
+  });
+
+  it('rejects duplicate, empty, and more than three project slugs', async () => {
+    for (const projectSlugs of [
+      'harpa-pro-api, harpa-pro-api',
+      'harpa-pro-api,,harpa-pro-mobile',
+      'one,two,three,four',
+    ]) {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, {
+        ADMIN_SENTRY_PROJECT_SLUGS: projectSlugs,
+      });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_PROJECT_SLUGS/);
+    }
+  });
+
+  it('rejects a mobile project outside the reviewed project allowlist', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_MOBILE_PROJECT_SLUG: 'unreviewed-mobile',
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_SENTRY_MOBILE_PROJECT_SLUG/);
+  });
+
+  it('normalizes surrounding project-list whitespace before export', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_SENTRY_PROJECT_SLUGS: ' harpa-pro-api , harpa-pro-mobile ',
+    });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_SENTRY_PROJECT_SLUGS).toBe('harpa-pro-api,harpa-pro-mobile');
+  });
+});
+
+describe('env: admin Fly inventory observer', () => {
+  const completeObserver = {
+    ADMIN_FLY_ORG_SLUG: 'harpa-pro',
+    ADMIN_FLY_READ_ONLY_API_TOKEN: 'test-fly-read-only-api-token',
+    ADMIN_FLY_APP_NAMES: 'harpa-pro-api,harpa-pro-api-dev',
+  } as const;
+
+  it('accepts the observer being unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_ORG_SLUG).toBeUndefined();
+    expect(mod.env.ADMIN_FLY_READ_ONLY_API_TOKEN).toBeUndefined();
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBeUndefined();
+  });
+
+  it('accepts the organization, read-only token, and reviewed app names together', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_ORG_SLUG).toBe(completeObserver.ADMIN_FLY_ORG_SLUG);
+    expect(mod.env.ADMIN_FLY_READ_ONLY_API_TOKEN).toBe(
+      completeObserver.ADMIN_FLY_READ_ONLY_API_TOKEN,
+    );
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBe(completeObserver.ADMIN_FLY_APP_NAMES);
+  });
+
+  it('trims every configured value and Fly app-name segment at boot', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, {
+      ADMIN_FLY_ORG_SLUG: '  harpa-pro  ',
+      ADMIN_FLY_READ_ONLY_API_TOKEN: '  test-fly-read-only-api-token  ',
+      ADMIN_FLY_APP_NAMES: '  harpa-pro-api , harpa-pro-api-dev  ',
+    });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_ORG_SLUG).toBe('harpa-pro');
+    expect(mod.env.ADMIN_FLY_READ_ONLY_API_TOKEN).toBe('test-fly-read-only-api-token');
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBe('harpa-pro-api,harpa-pro-api-dev');
+  });
+
+  it.each([
+    ['organization only', ['ADMIN_FLY_ORG_SLUG']],
+    ['token only', ['ADMIN_FLY_READ_ONLY_API_TOKEN']],
+    ['app names only', ['ADMIN_FLY_APP_NAMES']],
+    ['organization and token', ['ADMIN_FLY_ORG_SLUG', 'ADMIN_FLY_READ_ONLY_API_TOKEN']],
+    ['organization and app names', ['ADMIN_FLY_ORG_SLUG', 'ADMIN_FLY_APP_NAMES']],
+    ['token and app names', ['ADMIN_FLY_READ_ONLY_API_TOKEN', 'ADMIN_FLY_APP_NAMES']],
+  ] as const)(
+    'rejects partial observer configuration: %s',
+    async (_description, configuredKeys) => {
+      process.env.NODE_ENV = 'development';
+      for (const key of configuredKeys) process.env[key] = completeObserver[key];
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY/);
+    },
+  );
+
+  it.each(
+    (
+      ['ADMIN_FLY_ORG_SLUG', 'ADMIN_FLY_READ_ONLY_API_TOKEN', 'ADMIN_FLY_APP_NAMES'] as const
+    ).flatMap(
+      (key) =>
+        [
+          ['empty', key, ''],
+          ['whitespace-only', key, '   '],
+        ] as const,
+    ),
+  )('rejects %s %s', async (_description, key, value) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { [key]: value });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each([
+    'Harpa-Pro',
+    'harpa_pro',
+    '-harpa-pro',
+    'harpa-pro-',
+    'https://fly.io/harpa-pro',
+    'a'.repeat(64),
+  ])('rejects malformed Fly organization slug %s', async (organizationSlug) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_FLY_ORG_SLUG: organizationSlug });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_ORG_SLUG/);
+  });
+
+  it.each([
+    'Harpa-Pro-Api',
+    'harpa_pro_api',
+    '-harpa-pro-api',
+    'harpa-pro-api-',
+    'harpa.pro.api',
+    'harpa pro api',
+    'https://fly.io/apps/harpa-pro-api',
+    'a'.repeat(64),
+  ])('rejects malformed Fly app name %s', async (appName) => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appName });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+  });
+
+  it.each([',harpa-pro-api', 'harpa-pro-api,', 'harpa-pro-api,,harpa-pro-api-dev'])(
+    'rejects an empty Fly app-name segment in %s',
+    async (appNames) => {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appNames });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+    },
+  );
+
+  it.each(['harpa-pro-api,harpa-pro-api', 'harpa-pro-api, harpa-pro-api'])(
+    'rejects duplicate Fly app names in %s',
+    async (appNames) => {
+      process.env.NODE_ENV = 'development';
+      Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appNames });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+    },
+  );
+
+  it('accepts exactly ten unique reviewed Fly app names', async () => {
+    process.env.NODE_ENV = 'development';
+    const appNames = Array.from({ length: 10 }, (_, index) => `harpa-pro-api-${index}`).join(',');
+    Object.assign(process.env, completeObserver, { ADMIN_FLY_APP_NAMES: appNames });
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_FLY_APP_NAMES).toBe(appNames);
+  });
+
+  it('rejects more than ten reviewed Fly app names', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeObserver, {
+      ADMIN_FLY_APP_NAMES: Array.from({ length: 11 }, (_, index) => `harpa-pro-api-${index}`).join(
+        ',',
+      ),
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_FLY_APP_NAMES/);
+  });
+});
+
+describe('env: admin report-generation diagnostic target', () => {
+  const completeTarget = {
+    ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'report-canary@e2e.harpapro.com',
+    ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: 'prj_01234567',
+    ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: '7',
+  } as const;
+
+  function setTestAccountAccess(): void {
+    process.env.NODE_ENV = 'development';
+    process.env.TEST_ACCOUNT_EMAILS =
+      'test@harpapro.com, report-canary@e2e.harpapro.com, test2@harpapro.com';
+    process.env.TEST_ACCOUNT_PASSWORD = 'test-password-12345';
+  }
+
+  it('accepts the diagnostic being unconfigured', async () => {
+    setTestAccountAccess();
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_EMAIL).toBeUndefined();
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID).toBeUndefined();
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER).toBeUndefined();
+  });
+
+  it('accepts a complete target whose email is an exact test-account member', async () => {
+    setTestAccountAccess();
+    Object.assign(process.env, completeTarget);
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_EMAIL).toBe('report-canary@e2e.harpapro.com');
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID).toBe('prj_01234567');
+    expect(mod.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER).toBe(7);
+  });
+
+  it.each([
+    ['email only', ['ADMIN_REPORT_DIAGNOSTIC_EMAIL']],
+    ['project only', ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID']],
+    ['report number only', ['ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER']],
+    ['email and project', ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', 'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID']],
+    [
+      'email and report number',
+      ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', 'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER'],
+    ],
+    [
+      'project and report number',
+      ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID', 'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER'],
+    ],
+  ] as const)('rejects partial target configuration: %s', async (_description, configuredKeys) => {
+    setTestAccountAccess();
+    for (const key of configuredKeys) process.env[key] = completeTarget[key];
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC/);
+  });
+
+  it.each([
+    ['email', 'ADMIN_REPORT_DIAGNOSTIC_EMAIL'],
+    ['project ID', 'ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID'],
+    ['report number', 'ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER'],
+  ] as const)('rejects a blank %s', async (_description, key) => {
+    setTestAccountAccess();
+    Object.assign(process.env, completeTarget, { [key]: '   ' });
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it.each(['not-an-email', 'https://example.com/canary'])(
+    'rejects malformed diagnostic email %s',
+    async (email) => {
+      setTestAccountAccess();
+      process.env.TEST_ACCOUNT_EMAILS = `${process.env.TEST_ACCOUNT_EMAILS},${email}`;
+      Object.assign(process.env, completeTarget, { ADMIN_REPORT_DIAGNOSTIC_EMAIL: email });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC_EMAIL/);
+    },
+  );
+
+  it.each(['project-01234567', 'tiny-tree-06262558', 'prj_short', 'prj_0123456i'])(
+    'rejects malformed diagnostic project ID %s',
+    async (projectId) => {
+      setTestAccountAccess();
+      Object.assign(process.env, completeTarget, {
+        ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: projectId,
+      });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID/);
+    },
+  );
+
+  it.each(['0', '-1', '1.5', 'seven'])(
+    'rejects malformed diagnostic report number %s',
+    async (reportNumber) => {
+      setTestAccountAccess();
+      Object.assign(process.env, completeTarget, {
+        ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: reportNumber,
+      });
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER/);
+    },
+  );
+
+  it('rejects a valid email that is not in TEST_ACCOUNT_EMAILS', async () => {
+    setTestAccountAccess();
+    Object.assign(process.env, completeTarget, {
+      ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'customer@example.com',
+    });
+
+    await expect(freshImportEnv()).rejects.toThrow(
+      /ADMIN_REPORT_DIAGNOSTIC_EMAIL|TEST_ACCOUNT_EMAILS/,
+    );
+  });
+
+  it('rejects a complete target when test-account password access is unconfigured', async () => {
+    process.env.NODE_ENV = 'development';
+    Object.assign(process.env, completeTarget);
+
+    await expect(freshImportEnv()).rejects.toThrow(
+      /ADMIN_REPORT_DIAGNOSTIC_EMAIL|TEST_ACCOUNT_EMAILS|TEST_ACCOUNT_PASSWORD/,
+    );
+  });
+});
+
+describe('env: admin report-generation live canary enablement', () => {
+  const completeTarget = {
+    ADMIN_REPORT_DIAGNOSTIC_EMAIL: 'report-canary@e2e.harpapro.com',
+    ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: 'prj_01234567',
+    ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: '7',
+    TEST_ACCOUNT_EMAILS: 'test@harpapro.com, report-canary@e2e.harpapro.com, test2@harpapro.com',
+    TEST_ACCOUNT_PASSWORD: 'test-password-12345',
+  } as const;
+
+  function setValidDevelopmentCanaryEnv(): void {
+    setValidProductionEnv();
+    Object.assign(process.env, completeTarget, {
+      ADMIN_REPORT_LIVE_CANARY_ENABLED: '1',
+      BETTER_AUTH_URL: 'https://harpa-pro-api-dev.fly.dev',
+      ADMIN_CORS_ORIGINS: 'https://dev.harpa-pro-admin.pages.dev',
+    });
+  }
+
+  it('defaults the live canary to disabled', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_LIVE_CANARY_ENABLED).toBe('0');
+  });
+
+  it('accepts an explicitly disabled canary without a target or live provider wiring', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.ADMIN_REPORT_LIVE_CANARY_ENABLED = '0';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_LIVE_CANARY_ENABLED).toBe('0');
+  });
+
+  it('accepts enablement only for the exact live development deployment correlation', async () => {
+    setValidDevelopmentCanaryEnv();
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_REPORT_LIVE_CANARY_ENABLED).toBe('1');
+    expect(mod.env.NODE_ENV).toBe('production');
+    expect(mod.env.BETTER_AUTH_URL).toBe('https://harpa-pro-api-dev.fly.dev');
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('https://dev.harpa-pro-admin.pages.dev');
+    expect(mod.env.HARPAPRO_PR_BUILD).toBe('0');
+    expect(mod.env.AI_LIVE).toBe('1');
+    expect(mod.env.AI_FIXTURE_MODE).toBe('live');
+  });
+
+  it.each(['', '   ', 'true', 'yes', '2', '-1'])(
+    'rejects unsupported enablement value %j',
+    async (value) => {
+      process.env.NODE_ENV = 'development';
+      process.env.ADMIN_REPORT_LIVE_CANARY_ENABLED = value;
+
+      await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_LIVE_CANARY_ENABLED/);
+    },
+  );
+
+  it('rejects a pull-request build flag on the exact development deployment', async () => {
+    setValidDevelopmentCanaryEnv();
+    process.env.HARPAPRO_PR_BUILD = '1';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_REPORT_LIVE_CANARY_ENABLED/);
+  });
+
+  it.each([
+    [
+      'a non-production Node environment',
+      () => {
+        process.env.NODE_ENV = 'development';
+      },
+    ],
+    [
+      'the production API and administrator origin',
+      () => {
+        process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
+        process.env.ADMIN_CORS_ORIGINS = 'https://admin.harpapro.com';
+      },
+    ],
+    [
+      'a development API URL with a trailing slash',
+      () => {
+        process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-dev.fly.dev/';
+      },
+    ],
+    [
+      'an additional administrator origin',
+      () => {
+        process.env.ADMIN_CORS_ORIGINS =
+          'https://dev.harpa-pro-admin.pages.dev,https://admin.harpapro.com';
+      },
+    ],
+    [
+      'AI replay mode',
+      () => {
+        process.env.AI_LIVE = '0';
+      },
+    ],
+    [
+      'fixture replay mode',
+      () => {
+        process.env.AI_FIXTURE_MODE = 'replay';
+      },
+    ],
+    [
+      'an absent diagnostic target',
+      () => {
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_EMAIL;
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID;
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER;
+      },
+    ],
+    [
+      'a partial diagnostic target',
+      () => {
+        delete process.env.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER;
+      },
+    ],
+  ] as const)(
+    'rejects live-canary enablement with %s',
+    async (_description, invalidateConfiguration) => {
+      setValidDevelopmentCanaryEnv();
+      invalidateConfiguration();
+
+      await expect(freshImportEnv()).rejects.toThrow();
+    },
+  );
 });
 
 describe('env: Postgres connection URLs', () => {

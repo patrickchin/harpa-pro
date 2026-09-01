@@ -5,23 +5,28 @@
 
 ## Why R2
 
-- S3-compatible (works with `@aws-sdk/client-s3` + presigners).
-- Zero egress.
-- Free tier covers dev.
-- Our deploy lives on Fly.io; R2 is geographically close to all
-  edge regions.
+- The API can use the S3-compatible client and presigners.
+- Clients upload directly with short-lived signed URLs.
+- Storage remains separate from the Fly.io API runtime.
 
-## Buckets
+Pricing, egress policy, bucket location, and the current provider-side
+configuration can change. Verify them in Cloudflare before making an
+operational or cost decision.
 
-| Bucket | Purpose | Access |
-|---|---|---|
-| `harpa-voice` | Original voice recordings (m4a) | Private. Signed URLs only. |
-| `harpa-images` | Photo notes (jpeg) | Private. Signed URLs. |
-| `harpa-documents` | User-uploaded documents (pdf, docx, …) | Private. Signed URLs. |
-| `harpa-reports` | Rendered report PDFs | Private. Signed URLs. |
-| `harpa-fixtures` | Replay assets used in `:mock` (small audio + jpeg) | Public. CDN. |
+## Bucket
 
-Bucket setup lives in `infra/r2/bootstrap.ts` (idempotent).
+All file kinds share one bucket, selected by `R2_BUCKET` and defaulting to
+`harpa-pro`. Object prefixes separate project files, avatars, and scratch
+files. The repository does not define separate voice, image, document,
+report, or fixture buckets.
+
+`infra/r2/bootstrap.ts` can create the configured bucket through Cloudflare's
+management API. It does not apply the lifecycle rule described in its header.
+It currently expects a Cloudflare management bearer token in
+`R2_ACCESS_KEY_ID`, while the API uses that variable for an S3 access-key ID.
+Treat bootstrap credentials as a separate operator concern until this
+contract is corrected. Current bucket existence, public-access policy, and
+lifecycle configuration are **UNKNOWN** until verified in Cloudflare.
 
 ## Object key layout
 
@@ -29,11 +34,11 @@ Migration `0011_files_project_scope.sql` switched from the legacy
 owner-keyed layout (`users/<ownerId>/<kind>/<uuid>.<ext>`) to a
 three-scope layout that mirrors the data hierarchy:
 
-| Scope | Key pattern |
-|---|---|
+| Scope   | Key pattern                                              |
+| ------- | -------------------------------------------------------- |
 | Project | `projects/<projectId>/reports/<reportId>/<fileId>.<ext>` |
-| Avatar | `users/<userId>/avatar/<fileId>.<ext>` |
-| Scratch | `users/<userId>/scratch/<fileId>.<ext>` |
+| Avatar  | `users/<userId>/avatar/<fileId>.<ext>`                   |
+| Scratch | `users/<userId>/scratch/<fileId>.<ext>`                  |
 
 Scratch is the holding pen for personal-but-uncategorized uploads:
 the standalone `/voice/transcribe` source files, debug/orphan
@@ -61,15 +66,15 @@ sequenceDiagram
   App->>R2: PUT uploadUrl (Uint8Array body)
   R2-->>App: 200
   App->>API: POST /files { scope, …, fileKey, sizeBytes }
-  API-->>App: { fileId }
-  App->>API: POST /reports/:id/notes { kind:'image', fileId }
-  API-->>App: { noteId }
+  API-->>App: file record { id, fileKey, … }
+  App->>API: POST /reports/{reportId}/notes { kind:'image', fileId }
+  API-->>App: note record { id, kind, … }
 ```
 
 The presign + register bodies are discriminated on `scope`:
 
 - `{ scope: 'project', projectId, reportId, kind, contentType,
-  sizeBytes }` — server membership-checks the project before
+sizeBytes }` — server membership-checks the project before
   minting.
 - `{ scope: 'avatar', contentType, sizeBytes }` — `kind` is
   implicitly `image`.
@@ -82,7 +87,7 @@ flow — even for documents. The mobile upload queue calls
 
 ## Download flow
 
-`GET /files/:id/url` returns `{ url, expiresAt }`. Signed URLs have
+`GET /files/{id}/url` returns `{ url, expiresAt }`. Signed URLs have
 a 5-minute TTL and are scoped to GET. Mobile caches signed URLs in
 React Query with `staleTime: 4 minutes`.
 
@@ -172,8 +177,8 @@ the avatar API/storage scope remains compatible but has no mobile entry
 point. See
 [`design-ios-photo-library-disablement.md`](design-ios-photo-library-disablement.md).
 
-The note kind enum + server-side pipeline already accept
-`document`/`pdf`, but document picking remains deferred (see
+The file pipeline accepts `document` and `pdf`. Both appear as a
+`document` timeline note, but document picking remains deferred (see
 `plan-camera-upload-pipeline.md`).
 
 ### Upload queue persistence (mobile)
@@ -233,7 +238,7 @@ photo modules in `.maestro/regression-journey.yaml`:
    `UploadQueueStrip` summarises in-flight + failed work in a Notes-tab
    footer.
 4. **Run.** `runUploadJob` calls `presign → PUT → registerFile →
-   createNote`. Cancellation is wired via `AbortController` (see below)
+createNote`. Cancellation is wired via `AbortController` (see below)
    and progress flows back to the cards in real time.
 5. **Reconcile.** `createNote` returns; React Query invalidates
    `reportNotes`; the `PhotoNoteCard` replaces the pending row. The
@@ -245,10 +250,11 @@ photo modules in `.maestro/regression-journey.yaml`:
 
 ### Document / PDF UI — deferred
 
-The note-kind enum (`image | voice | document | pdf`) and the
-server-side pipeline (`POST /files/presign`, `POST /files`,
-`POST /reports/:id/notes`) accept document kinds end-to-end, and the
-upload queue is kind-agnostic. **Only the mobile UI is deferred.**
+The file-kind enum accepts `voice | image | document | pdf`. Timeline notes
+accept `text | voice | image | document`, so a PDF upload becomes a
+`document` note. The server-side pipeline (`POST /files/presign`,
+`POST /files`, `POST /reports/{reportId}/notes`) accepts the file kinds, and
+the upload queue is kind-agnostic. **Only the mobile UI is deferred.**
 The attachment sheet's "Document" option surfaces a "Coming soon"
 banner; there is no `DocumentNoteCard`. When document UI lands, it
 reuses every pipeline component from steps 2 – 6 above unchanged.
@@ -324,7 +330,9 @@ so a previous abort does not poison the new attempt. The
   the server-built object key. Clients never specify the key — they
   hand the API a `scope` (`project` | `avatar` | `scratch`) plus the
   payload metadata and receive the key + matching presigned URL back.
-- Bucket policies deny all public access to non-fixture buckets.
+- The application only produces signed object URLs. The intended bucket is
+  private, but its current public-access policy is provider state and remains
+  **UNKNOWN** until Cloudflare is checked.
 - `app.files` carries the upload metadata (`owner_id`, `kind`,
   `file_key`, `size_bytes`, `content_type`) plus the nullable
   project-scope linkage: `project_id` (FK → `app.projects.id` ON
@@ -348,9 +356,10 @@ so a previous abort does not poison the new attempt. The
   membership leg of every policy short-circuits to false and the
   effective rule collapses to owner-only — personal scopes stay
   personal.
-- Lifecycle: account deletion and expired upload leases are handled by
-  the durable API-owned lifecycle below. Bucket lifecycle expiry remains
-  a residual guardrail, not the source of correctness.
+
+- Account deletion and expired upload leases use the durable API-owned
+  lifecycle below. The repository bootstrap does not yet apply a bucket
+  lifecycle rule, so no provider-side residual guardrail should be assumed.
 
 ### Account-deletion cleanup
 
@@ -415,11 +424,42 @@ remains an explicit always-on cost.
 
 The first rolling deploy is gated by
 `app.storage_lifecycle_rollout`. Account deletion returns `503` until
-old lease-less presigns have expired. Lease enforcement is armed once,
-330 seconds after a successful deploy, and later deploys never reopen
-the grace. See
+old lease-less presigns have expired. After the exact production worker passes
+its separate observation proof, lease enforcement and account deletion are
+armed with a 330-second grace; later deploys never reopen the grace. See
 [`design-r2-object-lifecycle.md`](design-r2-object-lifecycle.md) for
 the full race analysis and operational queries.
+Local Compose is deliberately different: its migration one-shot arms the
+existing rollout helper with a zero-second grace and enables account deletion
+before seed/API startup. A freshly created disposable stack has no older API
+machine or outstanding presigned upload to protect; changing the migration's
+closed default would still be unsafe for deployed databases.
+Enabling deletion also requires the local `storage-worker` service. The route
+only attempts the immediately due job; the worker drains retries and the final
+exact-key pass scheduled after all signed PUTs expire. It shares the API's
+Postgres/MinIO configuration, waits for migrations and bucket creation,
+restarts unless explicitly stopped, and must start before the API exposes
+account deletion.
+The current rollout row in each deployed database is **UNKNOWN** until the
+admin observer or an operational query reads it.
+
+#### Admin storage lifecycle observer
+
+`GET /admin/operations/storage-lifecycle` exposes a bounded, read-only view of
+the rollout row and durable cleanup queue. The route uses the trusted-Fly-IP
+gate, dedicated admin session, and a separate 12-request-per-minute limit.
+
+One observation runs exactly one fixed application-database statement under a
+five-second deadline. It returns only reviewed rollout fields, the exact
+account-deletion gate, aggregate queue counts, bounded timestamps, and fixed
+caveats. It excludes payloads, object keys, user IDs, raw errors, and per-job
+claim data.
+
+This snapshot is database evidence. It does not prove worker liveness,
+provider health, or future cleanup execution. The route makes no mutation or
+provider call. The browser reads it only on page load and shared **Refresh**.
+See
+[Admin storage lifecycle observer](design-admin-storage-lifecycle-observer.md).
 
 ## Live mode (production)
 
@@ -436,30 +476,33 @@ forcePathStyle = true        # R2 requires path-style addressing
 Required env (asserted at API boot whenever live mode is selected;
 fixture mode stays free of R2 creds):
 
-| Env | Notes |
-|---|---|
-| `R2_ACCOUNT_ID` | Cloudflare account id (skip if `R2_ENDPOINT` is set) |
-| `R2_ACCESS_KEY_ID` | R2 API token access key |
-| `R2_SECRET_ACCESS_KEY` | R2 API token secret |
-| `R2_BUCKET` | Defaults to `harpa-pro` |
-| `R2_ENDPOINT` | Optional override for local S3-compatible mocks |
-| `R2_PRESIGN_TTL_SEC` | Defaults to and is capped at 300 seconds; rollout grace is 330 seconds |
+| Env                    | Notes                                                                  |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `R2_ACCOUNT_ID`        | Cloudflare account id (skip if `R2_ENDPOINT` is set)                   |
+| `R2_ACCESS_KEY_ID`     | S3-compatible access key ID                                            |
+| `R2_SECRET_ACCESS_KEY` | S3-compatible secret access key                                        |
+| `R2_BUCKET`            | Defaults to `harpa-pro`                                                |
+| `R2_ENDPOINT`          | Optional override for local S3-compatible mocks                        |
+| `R2_PRESIGN_TTL_SEC`   | Defaults to and is capped at 300 seconds; rollout grace is 330 seconds |
 
 `R2Storage` signs `content-type` and `content-length` into every PUT
 URL so a stolen link can't be reused for arbitrary uploads (Pitfall 8).
+The environment contract is present in code. Current production credentials,
+bucket policy, and lifecycle rules are **UNKNOWN** until Cloudflare and the
+deployed service are checked.
 
 ## Fixture mode
 
-When `EXPO_PUBLIC_USE_FIXTURES=true` (mobile) or `R2_FIXTURE_MODE=replay`
-(API):
+`R2_FIXTURE_MODE=replay` selects `FixtureStorage` in the API. It returns
+deterministic URLs under `https://fixtures.harpa.local`, creates the same
+database leases and file rows as live mode, and keeps no object bytes.
+Server-side `putObject` calls are deterministic no-ops. Tests that exercise a
+client PUT must intercept or replace that URL themselves.
 
-- `POST /files/presign` returns a fake URL pointing at the local
-  fixture server (or a public URL in `harpa-fixtures`).
-- The mobile upload queue PUTs to it; in tests we intercept with MSW.
-- `POST /files` consumes the lease minted by the fixture presign and
-  stores a row pointing at the fixture key.
-- Tests that exercise transcription wire `voice.fixture.m4a` from
-  `harpa-fixtures` so the OpenAI fixture replay matches.
+`EXPO_PUBLIC_USE_FIXTURES=true` is a separate mobile input and display flag.
+It does not change the API's storage backend. A mock mobile build pointed at a
+live API can therefore still call live storage.
 
-This means normal CI makes **no Cloudflare R2 calls**. The dedicated
-default-wiring lane uses local MinIO to exercise the real S3 client.
+Ordinary integration tests select replay mode and make no Cloudflare calls.
+Dedicated MinIO tests select `R2_FIXTURE_MODE=live` to exercise the real S3
+client and route wiring.

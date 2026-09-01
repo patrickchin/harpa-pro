@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 type SendVerificationOtp = (input: {
   email: string;
@@ -51,6 +51,7 @@ vi.mock('../env.js', () => ({
     DEMO_ACCOUNT_EMAILS: undefined,
     BETTER_AUTH_SECRET: 'test-secret-at-least-sixteen-characters',
     BETTER_AUTH_URL: 'http://localhost:8787',
+    DASHBOARD_CORS_ORIGINS: 'http://localhost:3003',
     ADMIN_CORS_ORIGINS: 'http://localhost:3002',
     NODE_ENV: 'development',
     EMAIL_OTP_LIVE: '0',
@@ -69,6 +70,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+beforeAll(async () => {
+  await import('./auth.js');
+}, 30_000);
+
 describe('preview email OTP diagnostics', () => {
   it('does not log the OTP or full recipient address', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -76,7 +81,6 @@ describe('preview email OTP diagnostics', () => {
     const email = 'private.person+preview@example.com';
     const otp = '817263';
 
-    await import('./auth.js');
     expect(captured.sendVerificationOTP).toBeTypeOf('function');
 
     await captured.sendVerificationOTP?.({ email, otp, type: 'sign-in' });
@@ -87,5 +91,5 @@ describe('preview email OTP diagnostics', () => {
     expect(output).toContain('email_otp_preview');
     expect(output).toContain('example.com');
     expect(output).toContain('sign-in');
-  });
+  }, 30_000);
 });

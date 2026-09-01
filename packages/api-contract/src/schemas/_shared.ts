@@ -27,12 +27,16 @@ export const paginated = <T extends z.ZodTypeAny>(item: T) =>
     nextCursor: cursor.nullable(),
   });
 
-export const errorEnvelope = z.object({
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-    details: z.unknown().optional(),
-    requestId: z.string().optional(),
-  }),
-});
+export const errorEnvelope = z
+  .object({
+    error: z
+      .object({
+        code: z.string(),
+        message: z.string(),
+        details: z.unknown().optional(),
+      })
+      .strict(),
+    requestId: z.string().min(1),
+  })
+  .strict();
 export type ErrorEnvelope = z.infer<typeof errorEnvelope>;

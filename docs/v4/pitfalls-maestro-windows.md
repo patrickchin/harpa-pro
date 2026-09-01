@@ -1,5 +1,9 @@
 # Maestro-on-Windows pitfalls
 
+> **Status: historical.** The current app uses email authentication and no
+> longer shows this phone country picker. Keep this file as an incident record,
+> not as a current Maestro runbook.
+
 This document catalogs pitfalls hit while pushing E2E coverage with
 Maestro 2.5.1 on Windows / PowerShell 7, driving a real Android
 device (Samsung, serial `R3CT7092S2H`) against the local
@@ -65,12 +69,11 @@ hit due to the matcher implementation.
 
 **Cause.** `CountryPickerModal.tsx#matches` does
 `country.code.toLowerCase().includes(q)` — it matches against the
-country *code*, not the display name. Combined with keyboard
+country _code_, not the display name. Combined with keyboard
 occlusion, name-based searches are doubly unreliable.
 
-**Workaround.** Use the
-[`.maestro/helpers/pick-country-us.yaml`](../../.maestro/helpers/pick-country-us.yaml)
-helper:
+**Historical workaround.** The removed `pick-country-us.yaml` helper used
+these steps:
 
 1. Open the picker.
 2. Focus `country-picker-search`.

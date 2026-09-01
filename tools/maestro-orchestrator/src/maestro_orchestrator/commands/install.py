@@ -24,9 +24,9 @@ from pathlib import Path
 from typing import Any
 
 from rich.console import Console
-from rich.table import Table
 
 from ..config import MoConfig
+from ..report_renderer import emit_step_report
 
 EXIT_OK = 0
 EXIT_NO_APK = 1
@@ -176,20 +176,6 @@ def run_install(
     return _emit(opts, console, report)
 
 
-_GLYPHS_RICH = {
-    "ok": "[green]OK[/green]",
-    "fail": "[red]FAIL[/red]",
-    "warn": "[yellow]WARN[/yellow]",
-    "skip": "[dim]SKIP[/dim]",
-}
-_GLYPHS_PLAIN = {
-    "ok": "[OK]",
-    "fail": "[FAIL]",
-    "warn": "[WARN]",
-    "skip": "[SKIP]",
-}
-
-
 def _emit(opts: InstallOptions, console: Console, report: InstallReport) -> int:
     if opts.json_output:
         print(
@@ -200,29 +186,12 @@ def _emit(opts: InstallOptions, console: Console, report: InstallReport) -> int:
             )
         )
         return report.exit_code
-    use_color = console.is_terminal and not console.no_color
-    table = Table(title="mo install (android)")
-    table.add_column("status", no_wrap=True)
-    table.add_column("step", no_wrap=True)
-    table.add_column("detail", overflow="fold")
-    for step in report.steps:
-        tag = (
-            _GLYPHS_RICH.get(step["status"], step["status"])
-            if use_color
-            else _GLYPHS_PLAIN.get(step["status"], step["status"])
-        )
-        table.add_row(tag, step["name"], step["detail"])
-    console.print(table)
-    if report.exit_code == 0:
-        console.print(
-            "[green]install: APK pushed[/green]"
-            if use_color
-            else "install: APK pushed"
-        )
-    else:
-        console.print(
-            f"[red]install: exit {report.exit_code}[/red]"
-            if use_color
-            else f"install: exit {report.exit_code}"
-        )
+    emit_step_report(
+        console=console,
+        title="mo install (android)",
+        steps=report.steps,
+        success_message="install: APK pushed",
+        failure_message=lambda code, _steps: f"install: exit {code}",
+        exit_code=report.exit_code,
+    )
     return report.exit_code

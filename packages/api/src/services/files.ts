@@ -12,7 +12,7 @@
  * `buildKey()`). The client never specifies a key — see
  * docs/v4/arch-storage.md §Security.
  */
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
 import type { FileKind } from './storage.js';
@@ -72,21 +72,30 @@ export async function registerFile(
     reportId?: string | null;
   },
 ): Promise<FileRow | null> {
-  const r = await db.execute<RawFile>(sql`
-    INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id)
-    VALUES (
-      ${input.id},
-      ${ownerId},
-      ${input.kind}::app.file_kind,
-      ${input.fileKey},
-      ${input.sizeBytes}::bigint,
-      ${input.contentType},
-      ${input.projectId ?? null},
-      ${input.reportId ?? null}
-    )
-    RETURNING id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id, created_at
-  `);
-  const row = r.rows[0];
+  const rows = await db
+    .insert(schema.files)
+    .values({
+      id: input.id,
+      ownerId,
+      kind: input.kind,
+      fileKey: input.fileKey,
+      sizeBytes: input.sizeBytes,
+      contentType: input.contentType,
+      projectId: input.projectId ?? null,
+      reportId: input.reportId ?? null,
+    })
+    .returning({
+      id: schema.files.id,
+      owner_id: schema.files.ownerId,
+      kind: schema.files.kind,
+      file_key: schema.files.fileKey,
+      size_bytes: schema.files.sizeBytes,
+      content_type: schema.files.contentType,
+      project_id: schema.files.projectId,
+      report_id: schema.files.reportId,
+      created_at: schema.files.createdAt,
+    });
+  const row = rows[0];
   return row ? mapFile(row) : null;
 }
 
@@ -276,10 +285,21 @@ export async function registerFileFromUploadLease(
 }
 
 export async function getFileById(db: Db, fileId: string): Promise<FileRow | null> {
-  const r = await db.execute<RawFile>(sql`
-    SELECT id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id, created_at
-    FROM app.files WHERE id = ${fileId} LIMIT 1
-  `);
-  const row = r.rows[0];
+  const rows = await db
+    .select({
+      id: schema.files.id,
+      owner_id: schema.files.ownerId,
+      kind: schema.files.kind,
+      file_key: schema.files.fileKey,
+      size_bytes: schema.files.sizeBytes,
+      content_type: schema.files.contentType,
+      project_id: schema.files.projectId,
+      report_id: schema.files.reportId,
+      created_at: schema.files.createdAt,
+    })
+    .from(schema.files)
+    .where(eq(schema.files.id, fileId))
+    .limit(1);
+  const row = rows[0];
   return row ? mapFile(row) : null;
 }

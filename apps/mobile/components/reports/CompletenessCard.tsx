@@ -14,7 +14,7 @@ import {
   ClipboardList,
   type LucideIcon,
 } from 'lucide-react-native';
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
@@ -25,25 +25,25 @@ interface MissingField {
   icon: LucideIcon;
 }
 
-function getMissingFields(report: GeneratedSiteReport): MissingField[] {
+function getMissingFields(report: reports.ReportBody): MissingField[] {
   const missing: MissingField[] = [];
 
-  if (!report.report.meta.visitDate) {
+  if (!report.meta.visitDate) {
     missing.push({ label: 'Visit date', icon: ClipboardList });
   }
-  if (!report.report.weather) {
+  if (!report.weather) {
     missing.push({ label: 'Weather conditions', icon: Cloud });
   }
-  if (!report.report.workers) {
+  if (report.workers.length === 0) {
     missing.push({ label: 'Workers / crew info', icon: Users });
   }
-  if (report.report.materials.length === 0) {
+  if (report.materials.length === 0) {
     missing.push({ label: 'Materials', icon: Package });
   }
-  if (report.report.issues.length === 0) {
+  if (report.issues.length === 0) {
     missing.push({ label: 'Issues / risks', icon: AlertTriangle });
   }
-  if (report.report.nextSteps.length === 0) {
+  if (report.nextSteps.length === 0) {
     missing.push({ label: 'Next steps', icon: ClipboardList });
   }
 
@@ -51,7 +51,7 @@ function getMissingFields(report: GeneratedSiteReport): MissingField[] {
 }
 
 interface CompletenessCardProps {
-  report: GeneratedSiteReport;
+  report: reports.ReportBody;
 }
 
 export function CompletenessCard({ report }: CompletenessCardProps) {

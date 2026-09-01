@@ -3,6 +3,7 @@
  * Mirrors apps/mobile/lib/env.ts pattern. Pitfall 5.
  */
 import { z } from 'zod';
+import { email as emailSchema, projectId as projectIdSchema } from '@harpa/api-contract';
 import { isPostgresConnectionUrl, isSamePostgresEndpoint } from './db/admin-isolation.js';
 
 const DEV_BETTER_AUTH_SECRET = 'dev-only-secret-do-not-use-in-prod';
@@ -12,6 +13,7 @@ const PRODUCTION_ADMIN_ORIGIN = 'https://admin.harpapro.com';
 const DEVELOPMENT_ADMIN_ORIGIN = 'https://dev.harpa-pro-admin.pages.dev';
 const PREVIEW_API_URL = /^https:\/\/harpa-pro-api-pr-([1-9][0-9]*)\.fly\.dev$/;
 const PREVIEW_ADMIN_ORIGIN = /^https:\/\/pr-[1-9][0-9]*\.harpa-pro-admin\.pages\.dev$/;
+const FLY_DNS_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional());
 const postgresConnectionUrl = z
@@ -36,6 +38,93 @@ const exactHttpOrigins = z.string().refine((value) => {
     })
   );
 }, 'must be a comma-separated list of exact HTTP(S) origins');
+
+const flyDnsLabel = z
+  .string()
+  .trim()
+  .regex(FLY_DNS_LABEL, 'must be a lowercase DNS-label identifier of at most 63 characters');
+
+const sentryProjectSlugs = z
+  .string()
+  .trim()
+  .min(1)
+  .superRefine((value, ctx) => {
+    const slugs = value.split(',').map((candidate) => candidate.trim());
+    if (slugs.some((slug) => slug.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'must not contain an empty Sentry project slug',
+      });
+    }
+    if (slugs.length > 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        type: 'array',
+        maximum: 3,
+        inclusive: true,
+        message: 'must contain at most three Sentry project slugs',
+      });
+    }
+    if (new Set(slugs).size !== slugs.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Sentry project slugs must be unique',
+      });
+    }
+    if (slugs.some((slug) => !FLY_DNS_LABEL.test(slug))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'each Sentry project slug must be a lowercase DNS-label identifier',
+      });
+    }
+  })
+  .transform((value) =>
+    value
+      .split(',')
+      .map((candidate) => candidate.trim())
+      .join(','),
+  );
+
+const flyAppNames = z
+  .string()
+  .trim()
+  .min(1)
+  .superRefine((value, ctx) => {
+    const names = value.split(',').map((candidate) => candidate.trim());
+    if (names.some((name) => name.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'must not contain an empty Fly app-name segment',
+      });
+    }
+    if (names.length > 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        type: 'array',
+        maximum: 10,
+        inclusive: true,
+        message: 'must contain at most ten Fly app names',
+      });
+    }
+    if (new Set(names).size !== names.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Fly app names must be unique',
+      });
+    }
+    if (names.some((name) => !FLY_DNS_LABEL.test(name))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'each Fly app name must be a lowercase DNS-label identifier',
+      });
+    }
+  })
+  .transform((value) =>
+    value
+      .split(',')
+      .map((candidate) => candidate.trim())
+      .join(','),
+  );
 
 const DEMO_ACCOUNT_EMAILS = new Set([
   'demo@harpapro.com',
@@ -75,6 +164,62 @@ const Env = z
      * sessions. It must never point at the application database.
      */
     ADMIN_DATABASE_URL: postgresConnectionUrl.optional(),
+    /**
+     * Optional read-only Neon inventory observer for the admin operations page.
+     * This dedicated personal key must belong to a Viewer and must never reuse
+     * the branch-management NEON_API_KEY held by CI. Both values are paired by
+     * the refinements below.
+     */
+    ADMIN_NEON_VIEWER_API_KEY: z.string().trim().min(1).optional(),
+    ADMIN_NEON_ORG_ID: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9-]{1,60}$/, 'must be a Neon organization ID')
+      .optional(),
+    /**
+     * Optional read-only Cloudflare R2 observer for the admin operations page.
+     * The account ID and token must be paired. The token must never reuse S3,
+     * Pages, or CI write credentials.
+     */
+    ADMIN_CLOUDFLARE_ACCOUNT_ID: z
+      .string()
+      .trim()
+      .regex(/^[a-f0-9]{32}$/, 'must be a lowercase 32-character Cloudflare account ID')
+      .optional(),
+    ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN: z.string().trim().min(1).optional(),
+    /**
+     * Optional Sentry observer for the admin operations page. The dedicated
+     * token must be read-only. The first five values below are an all-or-none
+     * observer configuration. Region is fixed to global, US, or DE.
+     */
+    ADMIN_SENTRY_ORG_SLUG: flyDnsLabel.optional(),
+    ADMIN_SENTRY_READ_TOKEN: z.string().trim().min(1).optional(),
+    ADMIN_SENTRY_PROJECT_SLUGS: sentryProjectSlugs.optional(),
+    ADMIN_SENTRY_MOBILE_PROJECT_SLUG: flyDnsLabel.optional(),
+    ADMIN_SENTRY_ENVIRONMENT: z.enum(['production', 'preview', 'development']).optional(),
+    ADMIN_SENTRY_REGION: z.enum(['global', 'us', 'de']).optional(),
+    /**
+     * Optional Fly inventory observer for the admin operations page. All three
+     * values must be configured together. The token must be a dedicated,
+     * organization-scoped read-only token; app names are a bounded allowlist.
+     */
+    ADMIN_FLY_ORG_SLUG: flyDnsLabel.optional(),
+    ADMIN_FLY_READ_ONLY_API_TOKEN: z.string().trim().min(1).optional(),
+    ADMIN_FLY_APP_NAMES: flyAppNames.optional(),
+    /**
+     * Optional fixed synthetic target for the bounded admin report-generation
+     * diagnostic. All three values must be absent or present together. The
+     * email must also be an exact TEST_ACCOUNT_EMAILS member; the existing
+     * server-only TEST_ACCOUNT_PASSWORD supplies its credential.
+     */
+    ADMIN_REPORT_DIAGNOSTIC_EMAIL: emailSchema.optional(),
+    ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID: projectIdSchema.optional(),
+    ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER: z.coerce.number().int().positive().optional(),
+    /**
+     * Explicit opt-in for the cost-bearing development report canary. The
+     * refinements below bind enablement to the exact live dev deployment.
+     */
+    ADMIN_REPORT_LIVE_CANARY_ENABLED: z.enum(['0', '1']).default('0'),
     BETTER_AUTH_SECRET: z.string().min(16).default(DEV_BETTER_AUTH_SECRET),
     BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
     /**
@@ -192,6 +337,16 @@ const Env = z
       .string()
       .default('https://harpapro.com,https://www.harpapro.com,http://localhost:3002'),
     /**
+     * Comma-separated browser origins allowed to call authenticated dashboard
+     * and Better Auth routes with credentials. `*` supports Cloudflare Pages
+     * preview subdomains.
+     */
+    DASHBOARD_CORS_ORIGINS: z
+      .string()
+      .default(
+        'https://app.harpapro.com,https://harpa-pro-dashboard.pages.dev,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003,http://127.0.0.1:3003',
+      ),
+    /**
      * Exact browser origins allowed to send credentialed `/admin/*` requests.
      * Better Auth is intentionally not exposed to the admin browser.
      */
@@ -206,17 +361,20 @@ const Env = z
      * infra/fly/Dockerfile ARG MIGRATIONS_REQUIRED_HEAD). Used by /readyz
      * to detect "code ahead of schema" — see docs/v4/arch-cicd-and-migrations.md.
      *
-     * Format is intentionally permissive (`<digits>_<slug>.sql`) because the
+     * Format is intentionally permissive (`<digits>_<slug>[.notx].sql`) because the
      * project has two historical filename conventions in flight (`NNNN_*.sql`
      * on dev/v4 and `YYYYMMDDHHmm_*.sql` on the live main branch). The lexical
-     * sort still produces the right "newest" answer for either.
+     * sort still produces the right "newest" answer for either. The optional
+     * `.notx` suffix is exact migration identity for statements such as
+     * `CREATE INDEX CONCURRENTLY` that the runner must execute outside a
+     * transaction.
      *
      * Optional in dev/test (so a local API can boot without setting it).
      * Required in production: enforced by the refinement below.
      */
     MIGRATIONS_REQUIRED_HEAD: z
       .string()
-      .regex(/^[0-9]+_[a-z0-9_]+\.sql$/, 'must match <digits>_<slug>.sql')
+      .regex(/^[0-9]+_[a-z0-9_]+(?:\.notx)?\.sql$/, 'must match <digits>_<slug>[.notx].sql')
       .optional(),
     /**
      * Independent admin database migration head expected by `/admin/readyz`.
@@ -298,6 +456,67 @@ const Env = z
     path: ['DEMO_ACCOUNT_PASSWORD'],
     message: 'DEMO_ACCOUNT_EMAILS and DEMO_ACCOUNT_PASSWORD must be set together',
   })
+  .refine((e) => !e.ADMIN_NEON_VIEWER_API_KEY || !!e.ADMIN_NEON_ORG_ID, {
+    path: ['ADMIN_NEON_ORG_ID'],
+    message: 'ADMIN_NEON_VIEWER_API_KEY and ADMIN_NEON_ORG_ID must be set together',
+  })
+  .refine((e) => !e.ADMIN_NEON_ORG_ID || !!e.ADMIN_NEON_VIEWER_API_KEY, {
+    path: ['ADMIN_NEON_VIEWER_API_KEY'],
+    message: 'ADMIN_NEON_VIEWER_API_KEY and ADMIN_NEON_ORG_ID must be set together',
+  })
+  .refine((e) => !e.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN || !!e.ADMIN_CLOUDFLARE_ACCOUNT_ID, {
+    path: ['ADMIN_CLOUDFLARE_ACCOUNT_ID'],
+    message:
+      'ADMIN_CLOUDFLARE_ACCOUNT_ID and ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN must be set together',
+  })
+  .refine((e) => !e.ADMIN_CLOUDFLARE_ACCOUNT_ID || !!e.ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN, {
+    path: ['ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN'],
+    message:
+      'ADMIN_CLOUDFLARE_ACCOUNT_ID and ADMIN_CLOUDFLARE_R2_OBSERVER_API_TOKEN must be set together',
+  })
+  .superRefine((e, ctx) => {
+    const sentryObserver = [
+      ['ADMIN_SENTRY_ORG_SLUG', e.ADMIN_SENTRY_ORG_SLUG],
+      ['ADMIN_SENTRY_READ_TOKEN', e.ADMIN_SENTRY_READ_TOKEN],
+      ['ADMIN_SENTRY_PROJECT_SLUGS', e.ADMIN_SENTRY_PROJECT_SLUGS],
+      ['ADMIN_SENTRY_MOBILE_PROJECT_SLUG', e.ADMIN_SENTRY_MOBILE_PROJECT_SLUG],
+      ['ADMIN_SENTRY_ENVIRONMENT', e.ADMIN_SENTRY_ENVIRONMENT],
+    ] as const;
+    const configuredSentryFields = sentryObserver.filter(([, value]) => value !== undefined);
+    if (
+      configuredSentryFields.length > 0 &&
+      configuredSentryFields.length < sentryObserver.length
+    ) {
+      for (const [path, value] of sentryObserver) {
+        if (value !== undefined) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: 'all required ADMIN_SENTRY observer values must be set together',
+        });
+      }
+    }
+
+    if (e.ADMIN_SENTRY_REGION && configuredSentryFields.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_SENTRY_ORG_SLUG'],
+        message: 'ADMIN_SENTRY_REGION requires the complete Sentry observer configuration',
+      });
+    }
+
+    if (
+      e.ADMIN_SENTRY_MOBILE_PROJECT_SLUG &&
+      e.ADMIN_SENTRY_PROJECT_SLUGS &&
+      !splitCsv(e.ADMIN_SENTRY_PROJECT_SLUGS).includes(e.ADMIN_SENTRY_MOBILE_PROJECT_SLUG)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_SENTRY_MOBILE_PROJECT_SLUG'],
+        message: 'must be an exact member of ADMIN_SENTRY_PROJECT_SLUGS',
+      });
+    }
+  })
   .refine(
     (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',
     {
@@ -308,9 +527,87 @@ const Env = z
     },
   )
   .superRefine((e, ctx) => {
+    const flyObserver = [
+      ['ADMIN_FLY_ORG_SLUG', e.ADMIN_FLY_ORG_SLUG],
+      ['ADMIN_FLY_READ_ONLY_API_TOKEN', e.ADMIN_FLY_READ_ONLY_API_TOKEN],
+      ['ADMIN_FLY_APP_NAMES', e.ADMIN_FLY_APP_NAMES],
+    ] as const;
+    const configuredFlyFields = flyObserver.filter(([, value]) => value !== undefined);
+    if (configuredFlyFields.length > 0 && configuredFlyFields.length < flyObserver.length) {
+      for (const [path, value] of flyObserver) {
+        if (value !== undefined) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: 'all ADMIN_FLY observer values must be set together',
+        });
+      }
+    }
+
+    const reportDiagnosticTarget = [
+      ['ADMIN_REPORT_DIAGNOSTIC_EMAIL', e.ADMIN_REPORT_DIAGNOSTIC_EMAIL],
+      ['ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID', e.ADMIN_REPORT_DIAGNOSTIC_PROJECT_ID],
+      ['ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER', e.ADMIN_REPORT_DIAGNOSTIC_REPORT_NUMBER],
+    ] as const;
+    const configuredReportDiagnosticFields = reportDiagnosticTarget.filter(
+      ([, value]) => value !== undefined,
+    );
+
+    if (
+      configuredReportDiagnosticFields.length > 0 &&
+      configuredReportDiagnosticFields.length < reportDiagnosticTarget.length
+    ) {
+      for (const [path, value] of reportDiagnosticTarget) {
+        if (value !== undefined) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: 'all ADMIN_REPORT_DIAGNOSTIC target values must be set together',
+        });
+      }
+    } else if (configuredReportDiagnosticFields.length === reportDiagnosticTarget.length) {
+      const testAccountEmails = new Set(
+        splitCsv(e.TEST_ACCOUNT_EMAILS ?? '').map((candidate) => candidate.toLowerCase()),
+      );
+      if (
+        !e.ADMIN_REPORT_DIAGNOSTIC_EMAIL ||
+        !testAccountEmails.has(e.ADMIN_REPORT_DIAGNOSTIC_EMAIL)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ADMIN_REPORT_DIAGNOSTIC_EMAIL'],
+          message: 'must be an exact member of TEST_ACCOUNT_EMAILS',
+        });
+      }
+      if (!e.TEST_ACCOUNT_PASSWORD) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['TEST_ACCOUNT_PASSWORD'],
+          message: 'required when the admin report diagnostic target is configured',
+        });
+      }
+    }
+
     const isProduction = e.NODE_ENV === 'production';
     const isPrPreview = e.HARPAPRO_PR_BUILD === '1';
     const isLiveDeployment = isProduction && !isPrPreview;
+
+    if (
+      e.ADMIN_REPORT_LIVE_CANARY_ENABLED === '1' &&
+      (e.NODE_ENV !== 'production' ||
+        e.BETTER_AUTH_URL !== DEVELOPMENT_API_URL ||
+        e.ADMIN_CORS_ORIGINS !== DEVELOPMENT_ADMIN_ORIGIN ||
+        e.HARPAPRO_PR_BUILD !== '0' ||
+        e.AI_LIVE !== '1' ||
+        e.AI_FIXTURE_MODE !== 'live' ||
+        configuredReportDiagnosticFields.length !== reportDiagnosticTarget.length)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_REPORT_LIVE_CANARY_ENABLED'],
+        message: 'may be enabled only for the exact live development canary configuration',
+      });
+    }
 
     if (
       isProduction &&
@@ -403,7 +700,12 @@ const Env = z
         message: 'required when RESEND_LIVE=1',
       });
     }
-  });
+  })
+  .transform((e) =>
+    e.ADMIN_SENTRY_ORG_SLUG && !e.ADMIN_SENTRY_REGION
+      ? { ...e, ADMIN_SENTRY_REGION: 'global' as const }
+      : e,
+  );
 
 export const env = Env.parse(process.env);
 export type Env = z.infer<typeof Env>;

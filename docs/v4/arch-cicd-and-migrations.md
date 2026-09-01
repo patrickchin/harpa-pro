@@ -373,6 +373,13 @@ exception for introducing this gate; GitHub never reuses PR numbers, so the
 exception is dead after that PR merges and a later normal promotion can remove
 the clause.
 
+The trusted preview gate includes the API code that emits the proof consumed by
+`main-gate`: `/healthz`, `/readyz`, `/admin/readyz`, the build-info helper that
+surfaces the immutable Git SHA, their app/server mounting path, the locked
+dependency graph, and the deploy-time test-account seeder used by the journey
+suite. Focused `main` hotfixes may change product logic, but they cannot change
+those proof surfaces outside the one-time PR 360 bootstrap.
+
 For an eligible hotfix, both create jobs use Neon's schema-only mode with
 `main` as the schema source. Neon copies structure and roles but no rows. Each
 job then creates a new empty database (`harpa_pr_N` or `harpa_admin_pr_N`) for

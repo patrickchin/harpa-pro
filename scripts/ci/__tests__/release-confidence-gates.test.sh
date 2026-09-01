@@ -334,6 +334,30 @@ require_fixed ".github/actions/changed-paths/action.yml" \
   "infra/neon/branch.ts" \
   "focused hotfixes cannot rewrite preview database provisioning"
 require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/src/lib/build-info.ts" \
+  "focused hotfixes cannot rewrite the build metadata surfaced to main-gate"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/src/app.ts" \
+  "focused hotfixes cannot remount trusted proof endpoints"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/src/server.ts" \
+  "focused hotfixes cannot replace the trusted API request handler"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/src/routes/health.ts" \
+  "focused hotfixes cannot rewrite the health endpoint used for exact-SHA proof"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/src/routes/readyz.ts" \
+  "focused hotfixes cannot rewrite app readiness head verification"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/src/routes/admin-readyz.ts" \
+  "focused hotfixes cannot rewrite admin readiness head verification"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "packages/api/scripts/seed-test-account.ts" \
+  "focused hotfixes cannot rewrite seeded preview journey credentials"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "pnpm-lock.yaml" \
+  "focused hotfixes cannot rewrite the preview dependency graph"
+require_fixed ".github/actions/changed-paths/action.yml" \
   "infra/fly/Dockerfile" \
   "focused hotfixes cannot rewrite the preview image build"
 require_fixed ".github/actions/changed-paths/action.yml" \

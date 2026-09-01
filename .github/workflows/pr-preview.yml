@@ -5,8 +5,8 @@ name: pr-preview
 # Lifecycle (all keyed on PR number `${{ github.event.pull_request.number }}`):
 #
 #   on open / synchronize / reopen
-#     ├─ neon-create        → app Neon `pr-<n>` from app `dev`
-#     ├─ admin-neon-create  → admin Neon `pr-<n>` from admin `dev`
+#     ├─ neon-create        → app Neon `pr-<n>`
+#     ├─ admin-neon-create  → admin Neon `pr-<n>`
 #     └─ fly-preview        → Fly app `harpa-pro-api-pr-<n>` (create + deploy)
 #                       └─ release_command migrates both isolated branches
 #                       └─ /readyz verified after deploy
@@ -61,6 +61,18 @@ jobs:
     permissions: { contents: read }
     steps:
       - uses: actions/checkout@v4
+      # PR 360 is the one-time bootstrap of this exact-SHA preview gate. PR
+      # numbers cannot be reused, so its exception is dead after that PR merges;
+      # a normal dev-to-main promotion can remove the dead clause later.
+      - name: Reject database changes from focused main hotfixes
+        if: >-
+          github.event.pull_request.base.ref == 'main' &&
+          github.event.pull_request.head.ref != 'dev' &&
+          needs.changes.outputs.api-migrations == 'true' &&
+          github.event.pull_request.number != 360
+        run: |
+          echo "::error::Focused main hotfixes cannot change database migrations or trusted preview-gate wiring; land through dev and use the normal dev-to-main promotion path."
+          exit 1
       - name: Lint migration filenames
         run: |
           set -euo pipefail
@@ -123,10 +135,21 @@ jobs:
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        # `db:branch:create` is delete-and-recreate, so each push gets a
-        # fresh branch from `dev` with a seven-day expiry. Migrations apply via
-        # Fly release_command.
-        run: pnpm --silent db:branch:create ${{ github.event.pull_request.number }} dev > /dev/null
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        # Focused main hotfixes cannot point older code at dev's newer schema.
+        # Give them a data-less schema copy plus a fresh database. Normal PRs
+        # retain the dev-data clone that exercises migrations against real
+        # nonproduction data shapes.
+        run: |
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
+            export NEON_DATABASE_NAME="harpa_pr_${PR_NUMBER}"
+            export NEON_ROLE_NAME="neondb_owner"
+            pnpm --silent db:branch:create-empty "$PR_NUMBER" main > /dev/null
+          else
+            pnpm --silent db:branch:create "$PR_NUMBER" dev > /dev/null
+          fi
 
   # Create the matching branch in the isolated admin project. It is based on
   # admin `dev` so preview credentials can be provisioned independently from
@@ -147,9 +170,16 @@ jobs:
           NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
           NEON_DATABASE_NAME: harpa_admin
           NEON_ROLE_NAME: harpa_admin_owner
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          pnpm --silent db:branch:create \
-            ${{ github.event.pull_request.number }} dev > /dev/null
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
+            export NEON_DATABASE_NAME="harpa_admin_pr_${PR_NUMBER}"
+            pnpm --silent db:branch:create-empty "$PR_NUMBER" main > /dev/null
+          else
+            pnpm --silent db:branch:create "$PR_NUMBER" dev > /dev/null
+          fi
 
   # Deploy a per-PR Fly app. Mirrors api-dev.yml's idioms: Doppler dev →
   # `flyctl secrets import --stage` → `flyctl deploy`. The PR's Neon URI
@@ -175,15 +205,22 @@ jobs:
       - uses: ./.github/actions/setup-monorepo
 
       - name: Resolve Neon URI for this PR
-        # `ensure` is read-or-create on a branch *name*. The branch was just
-        # made by `neon-create`; ensure returns its URI without recreating.
+        # The branch was just made by `neon-create`. `uri` is intentionally
+        # read-only and fails closed instead of recreating a missing preview
+        # from a data-bearing parent.
         # Preview runtime deliberately shares this direct URI with migrations:
         # traffic is small and a second pooled credential adds little value.
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          URI=$(pnpm --silent db:branch:ensure pr-${{ github.event.pull_request.number }} dev)
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
+            export NEON_DATABASE_NAME="harpa_pr_${PR_NUMBER}"
+          fi
+          URI=$(pnpm --silent db:branch:uri "pr-${PR_NUMBER}")
           echo "::add-mask::$URI"
           echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
 
@@ -195,8 +232,14 @@ jobs:
           NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
           NEON_DATABASE_NAME: harpa_admin
           NEON_ROLE_NAME: harpa_admin_owner
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          URI=$(pnpm --silent db:branch:ensure pr-${{ github.event.pull_request.number }} dev)
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
+            export NEON_DATABASE_NAME="harpa_admin_pr_${PR_NUMBER}"
+          fi
+          URI=$(pnpm --silent db:branch:uri "pr-${PR_NUMBER}")
           echo "::add-mask::$URI"
           echo "ADMIN_DATABASE_URL=$URI" >> "$GITHUB_ENV"
 

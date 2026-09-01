@@ -315,6 +315,45 @@ require_fixed ".github/workflows/pr-preview.yml" \
 require_fixed ".github/workflows/pr-preview.yml" \
   'ref: ${{ github.event.pull_request.head.sha }}' \
   "preview deploy checks out the exact PR head SHA"
+require_fixed ".github/workflows/pr-preview.yml" \
+  "Focused main hotfixes cannot change database migrations or trusted preview-gate wiring" \
+  "focused main hotfixes reject migration changes"
+require_fixed ".github/workflows/pr-preview.yml" \
+  "github.event.pull_request.number != 360" \
+  "the trusted-preview bootstrap exception is bound to one non-reusable PR number"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "infra/fly/fly.toml" \
+  "migration-change detection covers the production release command"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "infra/fly/fly.dev.toml" \
+  "migration-change detection covers the development release command"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  ".github/workflows/pr-preview.yml" \
+  "focused hotfixes cannot rewrite the trusted preview workflow"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "infra/neon/branch.ts" \
+  "focused hotfixes cannot rewrite preview database provisioning"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "infra/fly/Dockerfile" \
+  "focused hotfixes cannot rewrite the preview image build"
+require_fixed ".github/actions/changed-paths/action.yml" \
+  "scripts/journeys/**" \
+  "focused hotfixes cannot weaken the journey suite"
+require_fixed_count ".github/workflows/pr-preview.yml" \
+  "db:branch:create-empty" 2 \
+  "focused hotfix previews create data-less app and admin branches"
+require_fixed_count ".github/workflows/pr-preview.yml" \
+  "db:branch:uri" 2 \
+  "preview URI resolution fails closed for both databases"
+require_fixed "infra/neon/branch.ts" \
+  "init_source: initSource" \
+  "Neon helper sends schema-only initialization to the API"
+require_fixed "package.json" \
+  '"test": "pnpm test:infra:neon && turbo run test"' \
+  "Neon branch behavior tests run in the default local and CI test command"
+require_fixed "infra/fly/fly.preview.toml" \
+  "db:seed-test-account" \
+  "preview release provisions isolated journey test accounts"
 require_fixed "infra/fly/deploy.sh" \
   "git rev-parse HEAD" \
   "shared Fly deploy injects the full Git SHA"

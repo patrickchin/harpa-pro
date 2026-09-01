@@ -3,8 +3,10 @@
  *
  * Usage:
  *   pnpm db:branch:create <pr-number> [parent]
+ *   pnpm db:branch:create-empty <pr-number> <schema-source>
  *   pnpm db:branch:delete <pr-number>
  *   pnpm db:branch:ensure <branch-name> [parent]
+ *   pnpm db:branch:uri <branch-name>
  *   pnpm db:branch:prune-snapshots <keep-days> [max-count]
  *
  * Reads NEON_API_KEY + NEON_PROJECT_ID from env. Connection URIs default to
@@ -17,8 +19,11 @@
  * each PR gets its own isolated DB. `api-dev.yml` calls ensure so the
  * long-lived `dev` branch persists across deploys — per docs/v4/arch-ops.md.
  */
+import { pathToFileURL } from 'node:url';
+
 const NEON_API = 'https://console.neon.tech/api/v2';
 const PR_BRANCH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const POSTGRES_IDENTIFIER = /^[a-z][a-z0-9_]{0,62}$/;
 
 interface BranchResponse {
   branch: { id: string; name: string };
@@ -42,10 +47,29 @@ interface NeonEndpoint {
   type: 'read_only' | 'read_write';
 }
 
+interface PreviewDatabaseConfig {
+  name: string;
+  ownerName: string;
+}
+
 function requiredEnv(name: 'NEON_DATABASE_NAME' | 'NEON_ROLE_NAME', fallback: string): string {
   const value = process.env[name] ?? fallback;
   if (!value.trim()) throw new Error(`${name} must not be empty`);
   return value;
+}
+
+function previewDatabaseConfig(): PreviewDatabaseConfig {
+  const name = requiredEnv('NEON_DATABASE_NAME', '');
+  const ownerName = requiredEnv('NEON_ROLE_NAME', '');
+  for (const [envName, value] of [
+    ['NEON_DATABASE_NAME', name],
+    ['NEON_ROLE_NAME', ownerName],
+  ] as const) {
+    if (!POSTGRES_IDENTIFIER.test(value)) {
+      throw new Error(`${envName} must be a valid PostgreSQL identifier`);
+    }
+  }
+  return { name, ownerName };
 }
 
 async function neonFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -103,10 +127,12 @@ function expiresInSevenDays(): string {
 function branchCreateFields(
   name: string,
   parentId?: string,
-): { name: string; parent_id?: string; expires_at?: string } {
+  initSource?: 'schema-only',
+): { name: string; parent_id?: string; init_source?: 'schema-only'; expires_at?: string } {
   return {
     name,
     ...(parentId ? { parent_id: parentId } : {}),
+    ...(initSource ? { init_source: initSource } : {}),
     ...(name.startsWith('pr-') ? { expires_at: expiresInSevenDays() } : {}),
   };
 }
@@ -183,6 +209,50 @@ async function createBranch(prNumber: string, parent?: string): Promise<void> {
   console.log(uri);
 }
 
+async function createDatabase(
+  branchId: string,
+  { name, ownerName }: PreviewDatabaseConfig,
+): Promise<void> {
+  const res = await neonFetch(`/branches/${branchId}/databases`, {
+    method: 'POST',
+    body: JSON.stringify({ database: { name, owner_name: ownerName } }),
+  });
+  if (!res.ok) {
+    throw new Error(`neon database create failed (${res.status}): ${await res.text()}`);
+  }
+}
+
+/**
+ * Create a schema-only root branch, then add a fresh database for migrations
+ * from scratch. The source branch contributes structure and roles only: Neon
+ * copies no rows into schema-only branches. The preview connects exclusively
+ * to the new database named by NEON_DATABASE_NAME.
+ */
+export async function createSchemaOnlyPreview(
+  prNumber: string,
+  schemaSource: string,
+): Promise<string> {
+  if (!/^\d+$/.test(prNumber)) throw new Error('pr-number must be a positive integer');
+  const database = previewDatabaseConfig();
+  const name = `pr-${prNumber}`;
+  await deleteBranchIfExists(name);
+  const parentId = await parentIdFor(schemaSource);
+  if (!parentId) throw new Error(`neon schema source branch '${schemaSource}' not found`);
+  const res = await neonFetch('/branches', {
+    method: 'POST',
+    body: JSON.stringify({
+      branch: branchCreateFields(name, parentId, 'schema-only'),
+      endpoints: [{ type: 'read_write' }],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`neon schema-only branch create failed (${res.status}): ${await res.text()}`);
+  }
+  const body = (await res.json()) as BranchResponse;
+  await createDatabase(body.branch.id, database);
+  return connectionUri(body.branch.id, body.endpoints);
+}
+
 async function deleteBranchIfExists(name: string): Promise<void> {
   const target = (await listBranches()).find((branch) => branch.name === name);
   if (!target) return;
@@ -224,6 +294,12 @@ async function ensureBranch(name: string, parent?: string): Promise<void> {
   }
   const body = (await res.json()) as BranchResponse;
   console.log(await connectionUri(body.branch.id, body.endpoints));
+}
+
+export async function existingBranchUri(name: string): Promise<string> {
+  const existing = (await listBranches()).find((branch) => branch.name === name);
+  if (!existing) throw new Error(`neon branch '${name}' not found`);
+  return connectionUri(existing.id);
 }
 
 /**
@@ -305,20 +381,32 @@ async function main(): Promise<void> {
   const [, , cmd, arg, option] = process.argv;
   if (!cmd || !arg) {
     console.error(
-      'usage: branch.ts <create|delete|ensure|snapshot|prune-snapshots> <arg> [option]',
+      'usage: branch.ts <create|create-empty|delete|ensure|uri|snapshot|prune-snapshots> <arg> [option]',
     );
     process.exit(2);
   }
   if (cmd === 'create') return createBranch(arg, option);
+  if (cmd === 'create-empty') {
+    if (!option) throw new Error('create-empty requires a schema source branch');
+    console.log(await createSchemaOnlyPreview(arg, option));
+    return;
+  }
   if (cmd === 'delete') return deleteBranch(arg);
   if (cmd === 'ensure') return ensureBranch(arg, option);
+  if (cmd === 'uri') {
+    console.log(await existingBranchUri(arg));
+    return;
+  }
   if (cmd === 'snapshot') return snapshotBranch(arg, option);
   if (cmd === 'prune-snapshots') return pruneSnapshots(arg, option);
   console.error(`unknown command: ${cmd}`);
   process.exit(2);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const invokedPath = process.argv[1];
+if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

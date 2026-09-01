@@ -54,8 +54,10 @@ build-time manifest for the readiness check.**
 
 The admin stream lives in the independent `harpa-pro-admin` Neon project:
 production uses `main`, development uses `dev`, and API previews use `pr-N`
-from admin `dev`. Production snapshots and scheduled pruning run independently
-in both Neon projects.
+from admin `dev`. A focused non-`dev` hotfix targeting `main` instead creates a
+schema-only `pr-N` root from `main`, then migrates a new empty per-PR database;
+no production rows enter the public preview. Production snapshots and
+scheduled pruning run independently in both Neon projects.
 
 Hosted PR browser admin login is intentionally disabled: Cloudflare's dynamic
 Pages preview origins cannot satisfy the exact-origin cookie policy without
@@ -79,7 +81,7 @@ development is the first hosted environment for browser verification.
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  API-changing PR opened / synchronized                                 │
-│   • App Neon pr-<n> created from app main                              │
+│   • App Neon pr-<n> created from app dev                               │
 │   • Admin Neon pr-<n> created from admin dev                           │
 │   • Fly app harpa-pro-api-pr-<n> created/deployed                      │
 │       └─ release_command applies app then admin migrations             │
@@ -346,17 +348,39 @@ to `main` continue through the normal `dev → main` promotion path.
 ### `.github/workflows/pr-preview.yml`
 
 - Lifecycle jobs keyed on PR number:
-  - `neon-create` — creates the app Neon branch `pr-<n>` on open/sync.
+  - `neon-create` — creates the app Neon branch `pr-<n>` on open/sync from
+    app `dev` for ordinary PRs.
   - `admin-neon-create` — creates the isolated admin branch `pr-<n>` from
     admin `dev`. Neither create job applies migrations.
   - `fly-preview` — creates Fly app `harpa-pro-api-pr-<n>`, stages secrets
     from Doppler `dev` with both database URLs overridden to the matching
     direct PR-branch URIs,
     and `flyctl deploy`s using [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
-    Verifies both readiness endpoints and posts a sticky PR comment.
+    Its release command migrates both isolated databases and idempotently seeds
+    the dev journey accounts before verifying both readiness endpoints and
+    posting a sticky PR comment.
   - `fly-destroy` — destroys the Fly app on PR close.
   - `neon-destroy` and `admin-neon-destroy` — delete both branches on close,
     after `fly-destroy`.
+
+Focused non-`dev` hotfixes targeting `main` are deliberately narrower. They
+cannot include app/admin migrations, database code, API migration-script
+wiring, Fly release commands, or the workflow/scripts that constitute the
+trusted exact-SHA preview gate. Those changes must land on `dev` and use the
+normal promotion path, where the data-bearing `dev` clone exercises the upgrade
+against realistic nonproduction rows. PR 360 is the one-time bootstrap
+exception for introducing this gate; GitHub never reuses PR numbers, so the
+exception is dead after that PR merges and a later normal promotion can remove
+the clause.
+
+For an eligible hotfix, both create jobs use Neon's schema-only mode with
+`main` as the schema source. Neon copies structure and roles but no rows. Each
+job then creates a new empty database (`harpa_pr_N` or `harpa_admin_pr_N`) for
+migrations from scratch. URI resolution is read-only and fails if the expected
+branch is missing, so it cannot silently fall back to cloning a data-bearing
+branch. The schema-only roots retain the same seven-day expiry and explicit
+PR-close deletion as ordinary previews.
+
 - `guard` job: same filename checks for both migration streams (no manifest
   diff because previews are ephemeral).
 - Forks are skipped (no `FLY_API_TOKEN` / `DOPPLER_TOKEN_DEV` /

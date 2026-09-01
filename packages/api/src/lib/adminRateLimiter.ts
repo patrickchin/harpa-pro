@@ -8,6 +8,7 @@
 import type pg from 'pg';
 import { getAdminPool } from '../db/admin-client.js';
 import { env } from '../env.js';
+import { LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS } from './background-maintenance.js';
 import { MemoryRateLimiter, type RateLimiter, type RateLimiterResult } from './rateLimiter.js';
 
 export class AdminPostgresRateLimiter implements RateLimiter {
@@ -74,7 +75,9 @@ let gcTimer: ReturnType<typeof setInterval> | null = null;
  * Memory mode needs no sweep. The timer is unref'd so it cannot keep a
  * process alive during shutdown.
  */
-export function startAdminRateLimitGc(intervalMs = 10 * 60_000): void {
+export function startAdminRateLimitGc(
+  intervalMs = LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS,
+): void {
   if (gcTimer) return;
   const limiter = getAdminRateLimiter();
   if (!(limiter instanceof AdminPostgresRateLimiter)) return;

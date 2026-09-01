@@ -14,6 +14,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { getPool } from '../db/client.js';
 import { env } from '../env.js';
+import { LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS } from './background-maintenance.js';
 
 export interface CachedResponse {
   status: number;
@@ -409,7 +410,9 @@ export function resetIdempotencyStore(): void {
 
 let gcTimer: ReturnType<typeof setInterval> | null = null;
 
-export function startIdempotencyGc(intervalMs = 10 * 60_000): void {
+export function startIdempotencyGc(
+  intervalMs = LOW_TRAFFIC_MAINTENANCE_INTERVAL_MS,
+): void {
   if (gcTimer) return;
   const store = getIdempotencyStore();
   if (!(store instanceof PostgresIdempotencyStore)) return;

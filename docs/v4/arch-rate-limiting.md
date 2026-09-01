@@ -253,10 +253,9 @@ ON CONFLICT (bucket_key) DO UPDATE
 RETURNING count, window_end;
 ```
 
-GC: cron-style `DELETE FROM app.rate_limit_buckets WHERE window_end < now() - interval '1 hour'`
-runs on an interval timer in the API process (every 10 min, jittered
-per machine). One machine doing GC is fine; the others no-op via
-`ON CONFLICT DO NOTHING` patterns where applicable.
+GC uses `DELETE FROM app.rate_limit_buckets WHERE window_end < $1`. In the
+current low-traffic mode, the application and admin scheduler helpers default
+to once every 24 hours. Memory mode does not start a cleanup timer.
 
 This bucket table is **outside** the per-request scope wrapper — it
 uses an admin namespace connection, same as `auth.sessions`. No RLS;

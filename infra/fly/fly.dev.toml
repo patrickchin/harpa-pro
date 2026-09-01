@@ -24,6 +24,7 @@ primary_region = "fra"
 [env]
   NODE_ENV = "production"
   PORT = "8787"
+  BACKGROUND_MAINTENANCE_ENABLED = "0"
   ADMIN_CORS_ORIGINS = "https://dev.harpa-pro-admin.pages.dev"
 
 [processes]

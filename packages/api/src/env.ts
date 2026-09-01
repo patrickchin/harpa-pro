@@ -172,6 +172,12 @@ const Env = z
      */
     RATE_LIMIT_BACKEND: z.enum(['memory', 'postgres']).default('memory'),
     /**
+     * Emergency kill switch for background database maintenance loops.
+     * `'0'` keeps synchronous request cleanup intact while pausing the
+     * service-side polling paths that wake Neon while Harpa is idle.
+     */
+    BACKGROUND_MAINTENANCE_ENABLED: z.enum(['0', '1']).default('1'),
+    /**
      * Idempotency response backend. Dev/test default to memory; production
      * always selects Postgres even when this override is omitted.
      */

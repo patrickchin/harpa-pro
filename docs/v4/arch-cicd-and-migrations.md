@@ -72,7 +72,7 @@ locally against two independent Testcontainers databases.
 The dashboard uses the same exact head-SHA `pr-N` Pages contract. Cloudflare
 connected the existing project to `patrickchin/harpa-pro` in place on
 2026-08-05. Its live browser lane runs on the stable branch alias. The matching
-Fly preview separately verifies GitHub's synthetic merge SHA first.
+Fly preview separately verifies the same immutable pull-request head SHA first.
 
 ### Alternatives rejected
 

@@ -1088,9 +1088,10 @@ GETs omit credentials. The administrator marker GET uses same-origin
 credentials. All requests disable caching, and the page does not poll.
 
 The UI does not compare API and Pages SHAs or label a difference as drift. Fly
-pull-request previews can report the synthetic merge ref while Pages reports
-the pull-request head. A successful full-stack load makes 16 fixed GET reads.
-One successful manual **Refresh** makes another 16, for 32 total.
+and Pages pull-request previews both report the immutable pull-request head,
+but workflow verification remains the authority for that identity. A
+successful full-stack load makes 16 fixed GET reads. One successful manual
+**Refresh** makes another 16, for 32 total.
 
 The `/healthz` browser CORS policy accepts only the exact configured
 administrator origins and does not allow credentials. `/readyz` and

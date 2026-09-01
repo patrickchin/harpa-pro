@@ -1,7 +1,7 @@
 name: dashboard-preview
 
-# Test the office dashboard on every PR. Cloudflare Git publishes the mirrored
-# pr-N head while the Fly preview runs GitHub's synthetic merge commit.
+# Test the office dashboard on every PR. Cloudflare Git and the Fly preview
+# both publish the immutable pull-request head behind their pr-N aliases.
 
 on:
   pull_request:
@@ -117,8 +117,8 @@ jobs:
           API_HEALTH_URL: ${{ env.API_PREVIEW_ORIGIN }}/healthz
           API_READY_URL: ${{ env.API_PREVIEW_ORIGIN }}/readyz
           API_PATH_PATTERN: '.*'
-          # pr-preview checks out GitHub's synthetic merge ref.
-          EXPECTED_GIT_COMMIT: ${{ github.sha }}
+          # pr-preview explicitly checks out the immutable PR head.
+          EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}
           API_RELEASE_ATTEMPTS: 60
           API_RELEASE_SLEEP: 10
         run: bash scripts/ci/verify-api-release.sh

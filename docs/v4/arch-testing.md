@@ -280,7 +280,8 @@ Each AI-touching route has a test that:
 - `test:e2e` keeps broad mock-backed browser coverage.
 - `test:e2e:live` runs one serial Chromium journey against the stable
   `pr-<n>.harpa-pro-dashboard.pages.dev` alias and its isolated API.
-- The workflow first verifies the Fly API at GitHub's synthetic merge SHA.
+- The workflow first verifies the Fly API at the immutable pull-request head
+  SHA deployed by `pr-preview.yml`.
 - It then verifies the Pages marker at the pull request head SHA and checks SPA
   routing before the live journey starts.
 - The live lane uses public password-account email identities from the Pages

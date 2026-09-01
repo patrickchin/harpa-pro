@@ -24,13 +24,13 @@ request head SHA. Live auth uses the existing `TEST_ACCOUNT_EMAILS` and
 
 The live lane runs after:
 
-1. the matching Fly API reports the tested synthetic merge SHA;
+1. the matching Fly API reports the immutable pull request head SHA;
 2. the stable Pages alias serves the pull request head SHA marker; and
 3. direct client-side routing on that alias passes the SPA check.
 
-The two SHA checks are intentionally distinct. The backend validates GitHub's
-tested merge. The static artifact validates the exact head mirrored to
-`refs/heads/pr-<number>`.
+The backend and static artifact independently validate the same exact head
+mirrored to `refs/heads/pr-<number>`. A synthetic merge SHA is not accepted
+because `pr-preview.yml` explicitly deploys the immutable pull request head.
 
 On 2026-08-05, the Cloudflare UI connected the existing dashboard project to
 `patrickchin/harpa-pro` in place. The seven existing preview deployments were

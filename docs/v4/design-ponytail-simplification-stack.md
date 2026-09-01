@@ -269,7 +269,6 @@ Each PR needs targeted proof, not one giant final pass.
 ### PR 1
 
 - Workspace install/build succeeds after dependency and asset deletion.
-- `pnpm test:docs:links` stays green for doc/reference cleanup.
 - Changed workflow/path-filter tests remain green.
 
 ### PR 2

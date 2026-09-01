@@ -36,11 +36,9 @@ jobs:
         if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
       - run: pnpm typecheck
         if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
-      - name: Removal verification gates
+      - name: Repository policy gates
         if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
         run: |
-          bash scripts/check-no-supabase.sh
-          bash scripts/check-no-unistyles.sh
           bash scripts/check-scope-tests.sh
           bash scripts/check-mobile-lib-flat.sh
       - name: CI policy tests

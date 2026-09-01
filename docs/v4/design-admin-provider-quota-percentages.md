@@ -451,7 +451,7 @@ and absence of a `/rate_limit` call.
 
 Run API contract, env, observer unit and coverage, route integration/scope,
 OpenAPI drift/codegen, API lint/typecheck, admin unit/coverage/lint/typecheck/
-build, documentation links, and the root required gates under the repository's
+build, and the root required gates under the repository's
 pinned Node version. Before any merge, required checks and every applicable
 `pr-N` Pages marker must name the exact pull-request head SHA.
 

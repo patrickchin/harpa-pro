@@ -10,8 +10,8 @@
 
 ## North-star principles
 
-1. **Self-hostable, no Supabase.** Auth, db, file storage, and edge
-   functions all run on services we control or can swap.
+1. **Self-hostable.** Auth, db, file storage, and edge functions all
+   run on services we control or can swap.
 2. **Tested-first.** Every layer has its test strategy decided before
    it's built. No phase exits without its coverage gate.
 3. **Visual acceptance is explicit.** The relevant `design-*.md` or
@@ -94,7 +94,7 @@ flowchart TB
 | -------------- | ----------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Auth           | Supabase Auth (JWT, JWKS)     | **Better Auth for the app; isolated password auth for the admin console** | App and admin identities cannot authorize each other. See [arch-auth-and-rls.md](arch-auth-and-rls.md).            |
 | DB             | Supabase Postgres + RLS       | **Independent app and admin Neon projects**                               | App data keeps per-request scoped roles; admin credentials have an independent restore boundary.                   |
-| Storage        | Supabase Storage              | **Cloudflare R2** + signed URLs                                           | No Supabase. R2 has zero egress, S3-compatible.                                                                    |
+| Storage        | Supabase Storage              | **Cloudflare R2** + signed URLs                                           | R2 has zero egress and an S3-compatible API.                                                                       |
 | Mobile styling | Unistyles (P2 onwards)        | **NativeWind v4**                                                         | v3's switch to Unistyles caused the realignment. NativeWind matches mobile-old's class strings; faster ports.      |
 | API            | Hono + Drizzle                | **same**                                                                  | Working pattern, keep.                                                                                             |
 | Contract       | Zod + OpenAPI generated types | **same**                                                                  | Working pattern, keep.                                                                                             |
@@ -177,10 +177,6 @@ infra/
   neon/                   # branching scripts (create/delete on PR)
   fly/                    # deploy scripts
   r2/                     # bucket setup, lifecycle policies
-
-scripts/
-  check-no-supabase.sh
-  check-no-unistyles.sh
 
 docs/
   v4/                     # current

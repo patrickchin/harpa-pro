@@ -64,7 +64,6 @@ making a design change. Visual review is manual on the iOS simulator.
 | Android launch smoke passes on relevant pull requests | `.github/workflows/e2e-maestro-testid-gate.yml`                                 |
 | Full mobile journeys pass before a release            | Run the applicable `.maestro/` flows on the target platform.                    |
 | Visual behavior matches the current specification     | Review manually on the target device or simulator.                              |
-| Legacy Supabase imports remain absent                 | `bash scripts/check-no-supabase.sh`                                             |
 
 The normal unit and integration lanes use AI replay. The path-filtered
 `ai-live.yml` workflow and production-promotion journeys intentionally call

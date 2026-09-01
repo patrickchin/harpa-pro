@@ -27,7 +27,6 @@ also run separately because they start Postgres containers:
 ```bash
 pnpm test:api:integration
 pnpm --filter @harpa/cli test:integration
-pnpm test:docs:links
 ```
 
 Use [`.env.example`](.env.example) for local configuration. The Docker Compose

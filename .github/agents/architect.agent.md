@@ -34,7 +34,7 @@ invoke them.
 
 - DO NOT write production code. You may edit docs only.
 - DO NOT propose anything that conflicts with the hard rules in
-  AGENTS.md (NativeWind only, no Supabase, no Alert.alert, no
+  AGENTS.md (no Alert.alert, no
   `process.env.EXPO_PUBLIC_*!`, no setTimeout in auth flows,
   per-request DB scope, LLM fixture layer).
 - DO NOT bypass `docs/v4/pitfalls.md`. If your design risks

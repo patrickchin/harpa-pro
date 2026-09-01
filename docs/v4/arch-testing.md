@@ -332,7 +332,7 @@ documented in [`arch-ops.md`](arch-ops.md).
 
 | Workflow                      | Trigger                                                       | Gate                                                                                                   |
 | ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, documentation links, removal gates, and CI policy tests                     |
+| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, repository policy gates, and CI policy tests                                 |
 | `unit.yml`                    | Pull requests and pushes to `dev` or `main`, with path gating | `pnpm test`                                                                                            |
 | `api-integration.yml`         | API-relevant pull requests and pushes                         | Combined API unit and Testcontainers coverage at 90% lines                                             |
 | `cli.yml`                     | CLI-relevant pull requests and branch pushes                  | CLI typecheck, lint, tests, help drift, and integration journeys                                       |
@@ -419,17 +419,11 @@ main-promotion SHA verifier against fake health responses, including
 rejection of matching abbreviated SHAs. Both run from the PR-gated
 `lint-typecheck.yml` job.
 
-## Removal verification gates
+## Repository policy gates
 
-When the v4 mobile / API replaces a legacy concept, a removal gate
-ensures the legacy path is gone:
+The root lint and CI jobs run focused checks for repository contracts
+that are not covered by workspace linters:
 
-- `check-no-supabase.sh` — no `@supabase/*` import or `supabase.*`
-  URL in `apps/`, `packages/`, `infra/`. (Covers JSON / TOML / YAML
-  too, so kept as a grep gate rather than an ESLint rule.)
-- `check-no-unistyles.sh` — no `react-native-unistyles` anywhere
-  in `apps/`, `packages/`, or `infra/`. Same rationale as above
-  (covers non-JS files).
 - `check-scope-tests.sh` — every authenticated route module has a
   non-empty matching scope-test file.
 - `check-spec-drift.sh` — regenerates the OpenAPI spec + types and

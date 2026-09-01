@@ -251,7 +251,7 @@ Add RED tests before implementation that prove:
 Retain the existing API CORS test that limits `/healthz` to the configured
 administrator origin. Run the focused component and CORS suites, full
 administrator tests and coverage, API unit tests, lint, typecheck, builds,
-documentation links, OpenAPI drift, and the protected pre-push gate.
+OpenAPI drift, and the protected pre-push gate.
 
 ## Rollout and proof
 

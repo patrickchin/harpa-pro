@@ -325,7 +325,7 @@ RED tests precede implementation and prove:
 
 Run contract, env, observer unit and coverage, route integration/scope,
 OpenAPI drift/codegen, API unit/lint/typecheck, admin unit/coverage/lint/
-typecheck/build, documentation links, and the root required gates under the
+typecheck/build, and the root required gates under the
 repository's pinned Node version.
 
 ## Rollout and rollback

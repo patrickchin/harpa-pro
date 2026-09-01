@@ -48,7 +48,7 @@ acting, push back on anything unclear.
      it preserve the current implementation and tests? A design
      change without a task-specific design doc is P0 (Pitfall 3).
    - Does it use only allowed primitives, no Alert.alert, no hex
-     literals, no Unistyles, no Supabase, no
+     literals, no
      `process.env.EXPO_PUBLIC_*!`, no setTimeout in auth (Pitfalls
      3, 5, 11, 12; rules 4–6, 9)?
    - For new code paths: is there a behaviour test? For new

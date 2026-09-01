@@ -257,8 +257,8 @@ require_job_fixed "$MAIN_GATE" journeys \
 require_job_fixed "$MAIN_GATE" journeys \
   "Port the dependency update through dev" \
   "main gate explains the safe security-update route"
-require_fixed_count "$MAIN_GATE" "$AUTHOR_GUARD" 3 \
-  "main gate keeps every live-dev journey step away from Dependabot credentials"
+require_fixed_count "$MAIN_GATE" "$AUTHOR_GUARD" 5 \
+  "main gate keeps every exact-SHA journey step away from Dependabot credentials"
 
 for workflow in \
   .github/workflows/admin-preview.yml \

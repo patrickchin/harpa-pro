@@ -365,13 +365,27 @@ require_fixed ".github/actions/changed-paths/action.yml" \
   "focused hotfixes cannot weaken the journey suite"
 require_fixed_count ".github/workflows/pr-preview.yml" \
   "db:branch:create-empty" 2 \
-  "focused hotfix previews create data-less app and admin branches"
+  "focused hotfix previews sanitize app and admin branches"
 require_fixed_count ".github/workflows/pr-preview.yml" \
   "db:branch:uri" 2 \
   "preview URI resolution fails closed for both databases"
 require_fixed "infra/neon/branch.ts" \
-  "init_source: initSource" \
-  "Neon helper sends schema-only initialization to the API"
+  "proveOnlyFreshDatabaseRemains" \
+  "Neon helper positively verifies inherited databases are gone"
+require_fixed "infra/neon/branch.ts" \
+  "proveOnlyFreshRoleRemains" \
+  "Neon helper positively verifies inherited roles are gone"
+require_fixed "infra/neon/branch.ts" \
+  "/roles" \
+  "Neon helper creates a child-only preview role"
+# shellcheck disable=SC2016 # Assert the literal workflow expression, not this shell's value.
+require_fixed ".github/workflows/pr-preview.yml" \
+  'NEON_ROLE_NAME="harpa_pr_${PR_NUMBER}_owner"' \
+  "focused app previews use a child-only role"
+# shellcheck disable=SC2016 # Assert the literal workflow expression, not this shell's value.
+require_fixed ".github/workflows/pr-preview.yml" \
+  'NEON_ROLE_NAME="harpa_admin_pr_${PR_NUMBER}_owner"' \
+  "focused admin previews use a child-only role"
 require_fixed "package.json" \
   '"test": "pnpm test:infra:neon && turbo run test"' \
   "Neon branch behavior tests run in the default local and CI test command"

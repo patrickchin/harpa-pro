@@ -139,13 +139,14 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         # Focused main hotfixes cannot point older code at dev's newer schema.
-        # Give them a data-less schema copy plus a fresh database. Normal PRs
-        # retain the dev-data clone that exercises migrations against real
-        # nonproduction data shapes.
+        # Create a private main child, replace every inherited database and role
+        # with a fresh database owned by a child-only role, and emit no URI until
+        # sanitation is proved. Normal PRs retain the dev-data clone that exercises
+        # migrations against realistic nonproduction data shapes.
         run: |
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
             export NEON_DATABASE_NAME="harpa_pr_${PR_NUMBER}"
-            export NEON_ROLE_NAME="neondb_owner"
+            export NEON_ROLE_NAME="harpa_pr_${PR_NUMBER}_owner"
             pnpm --silent db:branch:create-empty "$PR_NUMBER" main > /dev/null
           else
             pnpm --silent db:branch:create "$PR_NUMBER" dev > /dev/null
@@ -176,6 +177,7 @@ jobs:
         run: |
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
             export NEON_DATABASE_NAME="harpa_admin_pr_${PR_NUMBER}"
+            export NEON_ROLE_NAME="harpa_admin_pr_${PR_NUMBER}_owner"
             pnpm --silent db:branch:create-empty "$PR_NUMBER" main > /dev/null
           else
             pnpm --silent db:branch:create "$PR_NUMBER" dev > /dev/null
@@ -219,6 +221,7 @@ jobs:
         run: |
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
             export NEON_DATABASE_NAME="harpa_pr_${PR_NUMBER}"
+            export NEON_ROLE_NAME="harpa_pr_${PR_NUMBER}_owner"
           fi
           URI=$(pnpm --silent db:branch:uri "pr-${PR_NUMBER}")
           echo "::add-mask::$URI"
@@ -238,6 +241,7 @@ jobs:
         run: |
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "dev" ]]; then
             export NEON_DATABASE_NAME="harpa_admin_pr_${PR_NUMBER}"
+            export NEON_ROLE_NAME="harpa_admin_pr_${PR_NUMBER}_owner"
           fi
           URI=$(pnpm --silent db:branch:uri "pr-${PR_NUMBER}")
           echo "::add-mask::$URI"

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 
-import { createSchemaOnlyPreview, existingBranchUri } from './branch.ts';
+import { createSanitizedPreview, existingBranchUri } from './branch.ts';
 
 const originalFetch = globalThis.fetch;
 const originalEnv = {
@@ -19,15 +19,21 @@ afterEach(() => {
   }
 });
 
-test('creates a data-less preview branch and a fresh per-PR database', async () => {
+test('removes inherited databases before returning a fresh preview URI', async () => {
   process.env['NEON_API_KEY'] = 'test-api-key';
   process.env['NEON_PROJECT_ID'] = 'test-project';
   process.env['NEON_DATABASE_NAME'] = 'harpa_pr_360';
-  process.env['NEON_ROLE_NAME'] = 'neondb_owner';
+  process.env['NEON_ROLE_NAME'] = 'harpa_pr_360_owner';
 
   let branchCreateSeen = false;
   let databaseCreateSeen = false;
+  let inheritedDatabaseDeleteSeen = false;
+  let inheritedRoleDeleteSeen = false;
   let connectionUriSeen = false;
+  let databaseCreated = false;
+  let inheritedDatabaseDeleted = false;
+  let inheritedRoleDeleted = false;
+  let databaseCreateAttempts = 0;
 
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
@@ -45,7 +51,7 @@ test('creates a data-less preview branch and a fresh per-PR database', async () 
       };
       assert.equal(body.branch.name, 'pr-360');
       assert.equal(body.branch.parent_id, 'br-main');
-      assert.equal(body.branch.init_source, 'schema-only');
+      assert.equal(body.branch.init_source, 'parent-data');
       assert.match(body.branch.expires_at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
       assert.deepEqual(body.endpoints, [{ type: 'read_write' }]);
       branchCreateSeen = true;
@@ -58,11 +64,28 @@ test('creates a data-less preview branch and a fresh per-PR database', async () 
       );
     }
 
+    if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method !== 'POST') {
+      return Response.json({
+        databases:
+          databaseCreated && inheritedDatabaseDeleted
+            ? [{ name: 'harpa_pr_360' }]
+            : [{ name: 'neondb' }],
+      });
+    }
+
     if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method === 'POST') {
+      databaseCreateAttempts += 1;
+      if (databaseCreateAttempts === 1) {
+        return new Response('branch operation still running', {
+          status: 423,
+          headers: { 'retry-after': '0' },
+        });
+      }
       assert.deepEqual(JSON.parse(String(init.body)), {
-        database: { name: 'harpa_pr_360', owner_name: 'neondb_owner' },
+        database: { name: 'harpa_pr_360', owner_name: 'harpa_pr_360_owner' },
       });
       databaseCreateSeen = true;
+      databaseCreated = true;
       return Response.json(
         {
           database: {
@@ -77,11 +100,42 @@ test('creates a data-less preview branch and a fresh per-PR database', async () 
       );
     }
 
+    if (url.pathname.endsWith('/branches/br-preview/roles') && init?.method !== 'POST') {
+      return Response.json({
+        roles: inheritedRoleDeleted ? [{ name: 'harpa_pr_360_owner' }] : [{ name: 'neondb_owner' }],
+      });
+    }
+
+    if (url.pathname.endsWith('/branches/br-preview/roles') && init?.method === 'POST') {
+      assert.deepEqual(JSON.parse(String(init.body)), {
+        role: { name: 'harpa_pr_360_owner' },
+      });
+      return Response.json(
+        { role: { name: 'harpa_pr_360_owner' }, operations: [] },
+        { status: 201 },
+      );
+    }
+
+    if (url.pathname.endsWith('/branches/br-preview/databases/neondb')) {
+      assert.equal(init?.method, 'DELETE');
+      inheritedDatabaseDeleteSeen = true;
+      inheritedDatabaseDeleted = true;
+      return new Response(null, { status: 204 });
+    }
+
+    if (url.pathname.endsWith('/branches/br-preview/roles/neondb_owner')) {
+      assert.equal(init?.method, 'DELETE');
+      inheritedRoleDeleteSeen = true;
+      inheritedRoleDeleted = true;
+      return new Response(null, { status: 204 });
+    }
+
     if (url.pathname.endsWith('/connection_uri')) {
+      assert.equal(inheritedRoleDeleted, true);
       assert.equal(url.searchParams.get('branch_id'), 'br-preview');
       assert.equal(url.searchParams.get('endpoint_id'), 'ep-preview');
       assert.equal(url.searchParams.get('database_name'), 'harpa_pr_360');
-      assert.equal(url.searchParams.get('role_name'), 'neondb_owner');
+      assert.equal(url.searchParams.get('role_name'), 'harpa_pr_360_owner');
       connectionUriSeen = true;
       return Response.json({ uri: 'postgresql://preview.example/harpa_pr_360' });
     }
@@ -89,11 +143,13 @@ test('creates a data-less preview branch and a fresh per-PR database', async () 
     return new Response(`unexpected request: ${url}`, { status: 500 });
   };
 
-  const uri = await createSchemaOnlyPreview('360', 'main');
+  const uri = await createSanitizedPreview('360', 'main');
 
   assert.equal(uri, 'postgresql://preview.example/harpa_pr_360');
   assert.equal(branchCreateSeen, true);
   assert.equal(databaseCreateSeen, true);
+  assert.equal(inheritedDatabaseDeleteSeen, true);
+  assert.equal(inheritedRoleDeleteSeen, true);
   assert.equal(connectionUriSeen, true);
 });
 
@@ -106,7 +162,118 @@ test('rejects an unsafe preview database identifier before calling Neon', async 
     throw new Error('fetch must not run');
   };
 
-  await assert.rejects(createSchemaOnlyPreview('360', 'main'), /valid PostgreSQL identifier/);
+  await assert.rejects(createSanitizedPreview('360', 'main'), /valid PostgreSQL identifier/);
+});
+
+test('deletes the entire preview branch when inherited-data removal fails', async () => {
+  process.env['NEON_API_KEY'] = 'test-api-key';
+  process.env['NEON_PROJECT_ID'] = 'test-project';
+  process.env['NEON_DATABASE_NAME'] = 'harpa_pr_360';
+  process.env['NEON_ROLE_NAME'] = 'harpa_pr_360_owner';
+  let branchCleanupSeen = false;
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/branches') && init?.method !== 'POST') {
+      return Response.json({
+        branches: [{ id: 'br-main', name: 'main', created_at: '2026-09-01T00:00:00Z' }],
+      });
+    }
+    if (url.pathname.endsWith('/branches') && init?.method === 'POST') {
+      return Response.json(
+        {
+          branch: { id: 'br-preview', name: 'pr-360' },
+          endpoints: [{ id: 'ep-preview', host: 'preview.example.neon.tech', type: 'read_write' }],
+        },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method !== 'POST') {
+      return Response.json({ databases: [{ name: 'neondb' }] });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method === 'POST') {
+      return Response.json({ database: { name: 'harpa_pr_360' }, operations: [] }, { status: 201 });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/roles') && init?.method !== 'POST') {
+      return Response.json({ roles: [{ name: 'neondb_owner' }] });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/roles') && init?.method === 'POST') {
+      return Response.json(
+        { role: { name: 'harpa_pr_360_owner' }, operations: [] },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/branches/br-preview/databases/neondb')) {
+      return new Response('cannot delete inherited database', { status: 400 });
+    }
+    if (url.pathname.endsWith('/branches/br-preview') && init?.method === 'DELETE') {
+      branchCleanupSeen = true;
+      return new Response(null, { status: 204 });
+    }
+    return new Response(`unexpected request: ${url}`, { status: 500 });
+  };
+
+  await assert.rejects(createSanitizedPreview('360', 'main'), /database delete.*failed/);
+  assert.equal(branchCleanupSeen, true);
+});
+
+test('deletes the entire preview branch when inherited-role removal fails', async () => {
+  process.env['NEON_API_KEY'] = 'test-api-key';
+  process.env['NEON_PROJECT_ID'] = 'test-project';
+  process.env['NEON_DATABASE_NAME'] = 'harpa_pr_360';
+  process.env['NEON_ROLE_NAME'] = 'harpa_pr_360_owner';
+  let branchCleanupSeen = false;
+  let inheritedDatabaseDeleted = false;
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/branches') && init?.method !== 'POST') {
+      return Response.json({
+        branches: [{ id: 'br-main', name: 'main', created_at: '2026-09-01T00:00:00Z' }],
+      });
+    }
+    if (url.pathname.endsWith('/branches') && init?.method === 'POST') {
+      return Response.json(
+        {
+          branch: { id: 'br-preview', name: 'pr-360' },
+          endpoints: [{ id: 'ep-preview', host: 'preview.example.neon.tech', type: 'read_write' }],
+        },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method !== 'POST') {
+      return Response.json({
+        databases: inheritedDatabaseDeleted ? [{ name: 'harpa_pr_360' }] : [{ name: 'neondb' }],
+      });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method === 'POST') {
+      return Response.json({ database: { name: 'harpa_pr_360' }, operations: [] }, { status: 201 });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/roles') && init?.method !== 'POST') {
+      return Response.json({ roles: [{ name: 'neondb_owner' }] });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/roles') && init?.method === 'POST') {
+      return Response.json(
+        { role: { name: 'harpa_pr_360_owner' }, operations: [] },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/branches/br-preview/databases/neondb')) {
+      inheritedDatabaseDeleted = true;
+      return new Response(null, { status: 204 });
+    }
+    if (url.pathname.endsWith('/branches/br-preview/roles/neondb_owner')) {
+      return new Response('cannot delete inherited role', { status: 400 });
+    }
+    if (url.pathname.endsWith('/branches/br-preview') && init?.method === 'DELETE') {
+      branchCleanupSeen = true;
+      return new Response(null, { status: 204 });
+    }
+    return new Response(`unexpected request: ${url}`, { status: 500 });
+  };
+
+  await assert.rejects(createSanitizedPreview('360', 'main'), /role delete.*failed/);
+  assert.equal(branchCleanupSeen, true);
 });
 
 test('fails closed when a preview branch is missing', async () => {

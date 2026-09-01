@@ -3,7 +3,7 @@
  *
  * Usage:
  *   pnpm db:branch:create <pr-number> [parent]
- *   pnpm db:branch:create-empty <pr-number> <schema-source>
+ *   pnpm db:branch:create-empty <pr-number> <parent>
  *   pnpm db:branch:delete <pr-number>
  *   pnpm db:branch:ensure <branch-name> [parent]
  *   pnpm db:branch:uri <branch-name>
@@ -24,6 +24,8 @@ import { pathToFileURL } from 'node:url';
 const NEON_API = 'https://console.neon.tech/api/v2';
 const PR_BRANCH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const POSTGRES_IDENTIFIER = /^[a-z][a-z0-9_]{0,62}$/;
+const NEON_LOCK_RETRY_ATTEMPTS = 12;
+const SANITATION_VERIFY_ATTEMPTS = 20;
 
 interface BranchResponse {
   branch: { id: string; name: string };
@@ -50,6 +52,14 @@ interface NeonEndpoint {
 interface PreviewDatabaseConfig {
   name: string;
   ownerName: string;
+}
+
+interface DatabaseList {
+  databases: Array<{ name: string }>;
+}
+
+interface RoleList {
+  roles: Array<{ name: string }>;
 }
 
 function requiredEnv(name: 'NEON_DATABASE_NAME' | 'NEON_ROLE_NAME', fallback: string): string {
@@ -90,6 +100,32 @@ async function neonFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
+function retryDelayMs(response: Response, attempt: number): number {
+  const retryAfter = response.headers.get('retry-after');
+  if (retryAfter !== null && /^\d+(?:\.\d+)?$/.test(retryAfter)) {
+    return Number(retryAfter) * 1_000;
+  }
+  return Math.min(attempt * 1_000, 5_000);
+}
+
+async function neonRequestWithLockRetry(
+  path: string,
+  init: RequestInit,
+  operation: string,
+): Promise<Response> {
+  for (let attempt = 1; attempt <= NEON_LOCK_RETRY_ATTEMPTS; attempt += 1) {
+    const response = await neonFetch(path, init);
+    if (response.ok) return response;
+    const body = await response.text();
+    const retryable = response.status === 423 || response.status === 503;
+    if (!retryable || attempt === NEON_LOCK_RETRY_ATTEMPTS) {
+      throw new Error(`${operation} failed (${response.status}): ${body}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs(response, attempt)));
+  }
+  throw new Error(`${operation} exhausted retries`);
+}
+
 async function listBranches(): Promise<BranchList['branches']> {
   const branches: NeonBranch[] = [];
   const seenCursors = new Set<string>();
@@ -127,8 +163,8 @@ function expiresInSevenDays(): string {
 function branchCreateFields(
   name: string,
   parentId?: string,
-  initSource?: 'schema-only',
-): { name: string; parent_id?: string; init_source?: 'schema-only'; expires_at?: string } {
+  initSource?: 'parent-data',
+): { name: string; parent_id?: string; init_source?: 'parent-data'; expires_at?: string } {
   return {
     name,
     ...(parentId ? { parent_id: parentId } : {}),
@@ -138,10 +174,11 @@ function branchCreateFields(
 }
 
 async function deleteBranchById(id: string, name: string): Promise<void> {
-  const res = await neonFetch(`/branches/${id}`, { method: 'DELETE' });
-  if (!res.ok) {
-    throw new Error(`neon branch delete failed for '${name}' (${res.status}): ${await res.text()}`);
-  }
+  await neonRequestWithLockRetry(
+    `/branches/${id}`,
+    { method: 'DELETE' },
+    `neon branch delete for '${name}'`,
+  );
 }
 
 async function parentIdFor(name?: string): Promise<string | undefined> {
@@ -157,10 +194,11 @@ async function connectionUri(
 ): Promise<string> {
   let endpoint = responseEndpoints.find((candidate) => candidate.type === 'read_write');
   if (!endpoint) {
-    const epRes = await neonFetch(`/branches/${branchId}/endpoints`);
-    if (!epRes.ok) {
-      throw new Error(`neon endpoint list failed (${epRes.status}): ${await epRes.text()}`);
-    }
+    const epRes = await neonRequestWithLockRetry(
+      `/branches/${branchId}/endpoints`,
+      { method: 'GET' },
+      'neon endpoint list',
+    );
     const epBody = (await epRes.json()) as {
       endpoints: NeonEndpoint[];
     };
@@ -177,10 +215,11 @@ async function connectionUri(
   // Intentionally omit `pooled=true`: migrators require session semantics.
   // Preview deployments deliberately reuse this direct URI at runtime because
   // their traffic is low; splitting migration/runtime URLs is deferred.
-  const uriRes = await neonFetch(`/connection_uri?${params.toString()}`);
-  if (!uriRes.ok) {
-    throw new Error(`neon connection_uri failed (${uriRes.status}): ${await uriRes.text()}`);
-  }
+  const uriRes = await neonRequestWithLockRetry(
+    `/connection_uri?${params.toString()}`,
+    { method: 'GET' },
+    'neon connection_uri',
+  );
   const uriBody = (await uriRes.json()) as { uri: string };
   if (!uriBody.uri) throw new Error('neon response did not include a connection URI');
   return uriBody.uri;
@@ -213,44 +252,144 @@ async function createDatabase(
   branchId: string,
   { name, ownerName }: PreviewDatabaseConfig,
 ): Promise<void> {
-  const res = await neonFetch(`/branches/${branchId}/databases`, {
-    method: 'POST',
-    body: JSON.stringify({ database: { name, owner_name: ownerName } }),
-  });
-  if (!res.ok) {
-    throw new Error(`neon database create failed (${res.status}): ${await res.text()}`);
+  await neonRequestWithLockRetry(
+    `/branches/${branchId}/databases`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ database: { name, owner_name: ownerName } }),
+    },
+    'neon database create',
+  );
+}
+
+async function createRole(branchId: string, name: string): Promise<void> {
+  await neonRequestWithLockRetry(
+    `/branches/${branchId}/roles`,
+    { method: 'POST', body: JSON.stringify({ role: { name } }) },
+    'neon preview role create',
+  );
+}
+
+async function listDatabaseNames(branchId: string): Promise<string[]> {
+  const response = await neonRequestWithLockRetry(
+    `/branches/${branchId}/databases`,
+    { method: 'GET' },
+    'neon database list',
+  );
+  const body = (await response.json()) as DatabaseList;
+  return body.databases.map((database) => database.name).sort();
+}
+
+async function deleteDatabase(branchId: string, name: string): Promise<void> {
+  await neonRequestWithLockRetry(
+    `/branches/${branchId}/databases/${encodeURIComponent(name)}`,
+    { method: 'DELETE' },
+    `neon database delete for '${name}'`,
+  );
+}
+
+async function listRoleNames(branchId: string): Promise<string[]> {
+  const response = await neonRequestWithLockRetry(
+    `/branches/${branchId}/roles`,
+    { method: 'GET' },
+    'neon role list',
+  );
+  const body = (await response.json()) as RoleList;
+  return body.roles.map((role) => role.name).sort();
+}
+
+async function deleteRole(branchId: string, name: string): Promise<void> {
+  await neonRequestWithLockRetry(
+    `/branches/${branchId}/roles/${encodeURIComponent(name)}`,
+    { method: 'DELETE' },
+    `neon role delete for '${name}'`,
+  );
+}
+
+async function proveOnlyFreshDatabaseRemains(branchId: string, expected: string): Promise<void> {
+  let actual: string[] = [];
+  for (let attempt = 1; attempt <= SANITATION_VERIFY_ATTEMPTS; attempt += 1) {
+    actual = await listDatabaseNames(branchId);
+    if (actual.length === 1 && actual[0] === expected) return;
+    if (attempt < SANITATION_VERIFY_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(attempt * 500, 2_000)));
+    }
   }
+  throw new Error(
+    `neon preview sanitation failed: expected only '${expected}', found [${actual.join(', ')}]`,
+  );
+}
+
+async function proveOnlyFreshRoleRemains(branchId: string, expected: string): Promise<void> {
+  let actual: string[] = [];
+  for (let attempt = 1; attempt <= SANITATION_VERIFY_ATTEMPTS; attempt += 1) {
+    actual = await listRoleNames(branchId);
+    if (actual.length === 1 && actual[0] === expected) return;
+    if (attempt < SANITATION_VERIFY_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(attempt * 500, 2_000)));
+    }
+  }
+  throw new Error(
+    `neon preview sanitation failed: expected only role '${expected}', found [${actual.join(', ')}]`,
+  );
 }
 
 /**
- * Create a schema-only root branch, then add a fresh database for migrations
- * from scratch. The source branch contributes structure and roles only: Neon
- * copies no rows into schema-only branches. The preview connects exclusively
- * to the new database named by NEON_DATABASE_NAME.
+ * Clone the parent into a private ephemeral branch, create a child-only role
+ * and fresh database, then delete every inherited database and role. No
+ * connection URI is requested or emitted until the API proves only the empty
+ * database and child-only role remain. Any failure deletes the entire preview
+ * branch before surfacing the error.
  */
-export async function createSchemaOnlyPreview(
-  prNumber: string,
-  schemaSource: string,
-): Promise<string> {
+export async function createSanitizedPreview(prNumber: string, parent: string): Promise<string> {
   if (!/^\d+$/.test(prNumber)) throw new Error('pr-number must be a positive integer');
   const database = previewDatabaseConfig();
   const name = `pr-${prNumber}`;
   await deleteBranchIfExists(name);
-  const parentId = await parentIdFor(schemaSource);
-  if (!parentId) throw new Error(`neon schema source branch '${schemaSource}' not found`);
-  const res = await neonFetch('/branches', {
-    method: 'POST',
-    body: JSON.stringify({
-      branch: branchCreateFields(name, parentId, 'schema-only'),
-      endpoints: [{ type: 'read_write' }],
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`neon schema-only branch create failed (${res.status}): ${await res.text()}`);
-  }
+  const parentId = await parentIdFor(parent);
+  if (!parentId) throw new Error(`neon parent branch '${parent}' not found`);
+  const res = await neonRequestWithLockRetry(
+    '/branches',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        branch: branchCreateFields(name, parentId, 'parent-data'),
+        endpoints: [{ type: 'read_write' }],
+      }),
+    },
+    'neon preview branch create',
+  );
   const body = (await res.json()) as BranchResponse;
-  await createDatabase(body.branch.id, database);
-  return connectionUri(body.branch.id, body.endpoints);
+  try {
+    const inheritedDatabases = await listDatabaseNames(body.branch.id);
+    const inheritedRoles = await listRoleNames(body.branch.id);
+    if (inheritedDatabases.includes(database.name)) {
+      throw new Error(`preview database '${database.name}' already exists on parent branch`);
+    }
+    if (inheritedRoles.includes(database.ownerName)) {
+      throw new Error(`preview role '${database.ownerName}' already exists on parent branch`);
+    }
+    await createRole(body.branch.id, database.ownerName);
+    await createDatabase(body.branch.id, database);
+    for (const inherited of inheritedDatabases) {
+      await deleteDatabase(body.branch.id, inherited);
+    }
+    for (const inherited of inheritedRoles) {
+      await deleteRole(body.branch.id, inherited);
+    }
+    await proveOnlyFreshDatabaseRemains(body.branch.id, database.name);
+    await proveOnlyFreshRoleRemains(body.branch.id, database.ownerName);
+    return await connectionUri(body.branch.id, body.endpoints);
+  } catch (error) {
+    try {
+      await deleteBranchById(body.branch.id, name);
+    } catch (cleanupError) {
+      console.error(
+        `[neon] failed to delete unsafe preview branch ${name}: ${String(cleanupError)}`,
+      );
+    }
+    throw error;
+  }
 }
 
 async function deleteBranchIfExists(name: string): Promise<void> {
@@ -387,8 +526,8 @@ async function main(): Promise<void> {
   }
   if (cmd === 'create') return createBranch(arg, option);
   if (cmd === 'create-empty') {
-    if (!option) throw new Error('create-empty requires a schema source branch');
-    console.log(await createSchemaOnlyPreview(arg, option));
+    if (!option) throw new Error('create-empty requires a parent branch');
+    console.log(await createSanitizedPreview(arg, option));
     return;
   }
   if (cmd === 'delete') return deleteBranch(arg);

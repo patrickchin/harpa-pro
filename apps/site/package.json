@@ -21,7 +21,7 @@
     "@harpa/api-contract": "workspace:*",
     "@marsidev/react-turnstile": "^1.5.2",
     "@tailwindcss/vite": "^4.0.0",
-    "astro": "^5.1.1",
+    "astro": "^7.1.1",
     "lucide-static": "^0.469.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -42,6 +42,6 @@
     "jsdom": "^25.0.1",
     "typescript": "^5.6.2",
     "typescript-eslint": "^8.59.3",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.11"
   }
 }

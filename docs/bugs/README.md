@@ -374,6 +374,11 @@ schedule rather than only checking configuration text.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-09-01** — The dashboard live-preview gate rejected a healthy exact-head
+  Fly preview because it still expected GitHub's synthetic merge SHA. Fix:
+  verify the immutable pull-request head used by both Fly and Pages, and pin
+  that contract in both dashboard policy suites.
+  [detail](2026-09-01-dashboard-preview-synthetic-sha.md)
 - **2026-08-25** _(R19)_ — Production and development storage workers queried
   empty cleanup tables every ten minutes and pruned leases hourly, exhausting
   Neon's monthly compute allowance by August 16 despite zero external users.

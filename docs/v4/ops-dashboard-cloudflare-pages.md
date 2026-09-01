@@ -121,8 +121,8 @@ does not pass this gate.
 
 The API and browser checks have distinct SHA contracts:
 
-- the Fly preview must report GitHub's tested synthetic merge SHA; and
-- the Pages marker must report the pull request head SHA from `pr-<n>`.
+- the Fly preview must report the immutable pull request head SHA; and
+- the Pages marker must report that same head SHA from `pr-<n>`.
 
 After both checks pass, the workflow verifies SPA routing and runs the live
 Chromium journey against the stable `pr-<n>` alias. It does not depend on a

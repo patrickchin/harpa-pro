@@ -155,8 +155,8 @@ require_fixed "$PREVIEW" 'DASHBOARD_LIVE_BASE_URL: ${{ env.DASHBOARD_PREVIEW_ORI
   "live journey targets the exact verified stable Pages alias"
 require_fixed "$PREVIEW" 'DASHBOARD_LIVE_API_URL: ${{ env.API_PREVIEW_ORIGIN }}' \
   "live setup targets the matching PR API"
-require_fixed "$PREVIEW" 'EXPECTED_GIT_COMMIT: ${{ github.sha }}' \
-  "Fly verification uses the synthetic merge SHA"
+require_fixed "$PREVIEW" 'EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}' \
+  "Fly verification uses the immutable pull-request head SHA"
 require_fixed "$PREVIEW" '--commit "${{ github.event.pull_request.head.sha }}"' \
   "Pages verification uses the mirrored pull-request head SHA"
 require_fixed "$PREVIEW" 'DASHBOARD_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}' \

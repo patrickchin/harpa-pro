@@ -2,15 +2,16 @@ name: main-gate
 
 # Pre-merge gate for PRs targeting `main` (production).
 #
-# Runs the curl journey suite against the live dev deployment to prove
-# the contract still works end-to-end before promoting `dev → main`.
+# Runs the curl journey suite against an exact-SHA deployment to prove the
+# contract still works end-to-end before changing `main`. Normal `dev → main`
+# promotions use the live dev deployment. Focused API/admin main hotfixes use
+# the isolated Fly + Neon environment created by `pr-preview.yml` for that PR.
 # Required check on `main`'s branch protection — see
 # docs/v4/arch-cicd-and-migrations.md.
 #
-# Why dev, not a fresh ephemeral env: journeys exercise live AI providers,
-# Twilio Verify (bypassed via test accounts), and R2 — all configured on
-# the dev Fly app. Spinning a parallel env per PR would 10x our infra
-# surface for one check.
+# Normal promotions reuse dev's already-proved deployment. Focused hotfixes use
+# one isolated preview so the exact PR head can be tested without exposing
+# production data or pointing older code at dev's newer schema.
 
 on:
   pull_request:
@@ -23,7 +24,9 @@ concurrency:
 jobs:
   journeys:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     permissions:
+      actions: read
       contents: read
     steps:
       - name: Reject direct Dependabot production promotions
@@ -38,17 +41,43 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           lfs: true # voice samples for core/extended journeys
 
-      - name: Verify deployed dev SHA
+      - name: Resolve exact-SHA journey target
+        id: target
         if: github.event.pull_request.user.login != 'dependabot[bot]'
         env:
-          HEALTH_URL: ${{ vars.API_HEALTH_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/healthz' }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          DEV_HEALTH_URL: ${{ vars.API_HEALTH_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/healthz' }}
+          PREVIEW_BASE_URL: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+        run: |
+          set -euo pipefail
+          if [[ "$HEAD_REF" == "dev" ]]; then
+            base_url="${DEV_HEALTH_URL%/healthz}"
+          else
+            base_url="$PREVIEW_BASE_URL"
+          fi
+          echo "base_url=$base_url" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for exact-SHA preview provenance
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          github.event.pull_request.head.ref != 'dev'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/ci/wait-for-pr-preview.sh
+
+      - name: Verify deployed SHA
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          HEALTH_URL: ${{ steps.target.outputs.base_url }}/healthz
           EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/ci/verify-deployed-sha.sh
 
-      - name: Run journeys against dev
+      - name: Run journeys against verified target
         if: github.event.pull_request.user.login != 'dependabot[bot]'
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
-        # Tests the dev deployment as-is; assumes `dev` is the merge candidate.
+        # The target was SHA-bound above, whether it is shared dev or an
+        # isolated focused-hotfix preview.
         env:
           PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_DEV }}
           EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
@@ -58,4 +87,4 @@ jobs:
             echo "::error::TEST_ACCOUNT_EMAIL_DEV repo variable is unset; cannot run journeys" >&2
             exit 1
           fi
-          bash scripts/journeys/all.sh dev
+          bash scripts/journeys/all.sh "${{ steps.target.outputs.base_url }}"

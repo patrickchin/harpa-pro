@@ -1,6 +1,11 @@
 # Design — low-traffic background maintenance
 
-Status: approved for implementation on 2026-08-25.
+Status: approved on 2026-08-25 and delivered to production as a focused hotfix
+on 2026-09-01.
+
+Delivery note: the focused `main` hotfix was validated against its exact-SHA
+isolated PR preview. It did not require or imply promotion of the unrelated
+commits accumulated on `dev`.
 
 ## Problem
 
@@ -18,7 +23,7 @@ unnecessary at this traffic level.
 
 ## Decision
 
-Use a startup reconciliation followed by a 24-hour low-traffic maintenance
+Use startup reconciliation followed by a 24-hour low-traffic maintenance
 cadence:
 
 - discover storage jobs and prune expired upload leases when the worker starts,

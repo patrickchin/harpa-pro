@@ -113,8 +113,8 @@ require_fixed "$PREVIEW" \
 forbid_fixed "$PREVIEW" "https://harpa-pro-api-dev.fly.dev" \
   "preview never mutates the shared dev API"
 require_fixed "$PREVIEW" \
-  'EXPECTED_GIT_COMMIT: ${{ github.sha }}' \
-  "preview verifies the synthetic merge SHA on Fly"
+  'EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}' \
+  "preview verifies the immutable pull-request head SHA on Fly"
 require_fixed "$PREVIEW" \
   '--commit "${{ github.event.pull_request.head.sha }}"' \
   "preview verifies the PR head SHA published by Cloudflare Git"

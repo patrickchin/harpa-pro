@@ -20,11 +20,37 @@ function withoutCode(source) {
   return withoutFencedCode(source).replace(/`[^`\n]*`/g, '');
 }
 
+function withoutHtmlTags(source) {
+  let output = '';
+  let pendingTag = '';
+  let depth = 0;
+
+  for (const character of source) {
+    if (character === '<') {
+      depth += 1;
+      pendingTag += character;
+      continue;
+    }
+
+    if (depth > 0) {
+      pendingTag += character;
+      if (character === '>') {
+        depth -= 1;
+        if (depth === 0) pendingTag = '';
+      }
+      continue;
+    }
+
+    output += character;
+  }
+
+  return depth === 0 ? output : output + pendingTag;
+}
+
 function headingSlug(value) {
-  return value
+  return withoutHtmlTags(value)
     .trim()
     .toLowerCase()
-    .replace(/<[^>]*>/g, '')
     .replace(/[\p{P}\p{S}]/gu, (character) =>
       character === '-' || character === '_' ? character : '',
     )

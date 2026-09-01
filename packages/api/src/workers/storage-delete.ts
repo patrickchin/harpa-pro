@@ -5,12 +5,16 @@ import {
   pruneExpiredFileUploadLeases,
 } from '../services/storage-delete-jobs.js';
 import { captureApiException } from '../telemetry/sentry.js';
+import {
+  computeStorageWorkerSleepMs,
+  LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE,
+} from './storage-worker-schedule.js';
 
-const MAX_IDLE_POLL_MS = 10 * 60_000;
-const MIN_IDLE_POLL_MS = 1_000;
-const ERROR_POLL_MS = 60_000;
-const MAX_JOBS_PER_PASS = 10;
-const LEASE_PRUNE_INTERVAL_MS = 60 * 60_000;
+const {
+  errorPollMs: ERROR_POLL_MS,
+  leasePruneIntervalMs: LEASE_PRUNE_INTERVAL_MS,
+  maxJobsPerPass: MAX_JOBS_PER_PASS,
+} = LOW_TRAFFIC_STORAGE_WORKER_SCHEDULE;
 
 let stopping = false;
 let lastLeasePruneAt = 0;
@@ -61,20 +65,12 @@ while (!stopping) {
     }
     if (result.claimed === 0) {
       const now = Date.now();
-      const nextJobWakeAt = await getNextStorageDeleteJobWakeAt();
-      const nextJobWaitMs = nextJobWakeAt
-        ? Math.max(MIN_IDLE_POLL_MS, nextJobWakeAt.getTime() - now)
-        : MAX_IDLE_POLL_MS;
-      const nextLeasePruneWaitMs = Math.max(
-        MIN_IDLE_POLL_MS,
-        LEASE_PRUNE_INTERVAL_MS - (now - lastLeasePruneAt),
-      );
       await wait(
-        Math.min(
-          MAX_IDLE_POLL_MS,
-          nextJobWaitMs,
-          nextLeasePruneWaitMs,
-        ),
+        computeStorageWorkerSleepMs({
+          now,
+          lastLeasePruneAt,
+          nextJobWakeAt: await getNextStorageDeleteJobWakeAt(),
+        }),
       );
     }
   } catch (error) {

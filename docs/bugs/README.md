@@ -289,12 +289,29 @@ without updating the journey, the first semantic failure occurs after merge.
 Mitigation: update black-box assertions and journey docs in the policy PR, then
 pin high-risk authorization expectations with a focused PR-gated policy test.
 
+### R19 — Idle polling defeats scale-to-zero
+
+A tiny periodic query can consume far more serverless database allowance than
+its execution time suggests. Every poll wakes the compute, and the provider's
+idle timeout keeps billing after the query finishes. A ten-minute poll against
+a five-minute suspension window therefore keeps a database active roughly half
+the day even when every query returns an empty queue. Count every wake source:
+raising an idle-discovery interval does nothing if an hourly prune still wakes
+the same database. Prefer an immediate or event-driven path plus a daily
+reconciliation sweep, and test the scheduler rather than configuration text.
+
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-08-25** *(R19)* — Production and development storage workers queried
+  empty cleanup tables every ten minutes and pruned leases hourly, exhausting
+  Neon's compute allowance despite zero external users. Fix: preserve immediate
+  deletion and durable retries while moving idle reconciliation, lease pruning,
+  and API database garbage collection to a daily low-traffic cadence.
+  [detail](2026-08-25-idle-polling-neon-compute.md)
 - **2026-07-29** — A manually dispatched API workflow called reusable mobile OTA with inherited `workflow_dispatch` context, so the callee tried blank native registration and could force redundant manual publication. Fix: discriminate successful API calls with their call-only input, skip registration, and evaluate them with effective `workflow_call` policy semantics. [detail](2026-07-29-reusable-ota-dispatch-context.md)
 - **2026-07-29** — The first `api-dev` deploy after PR #205 stopped before lifecycle arming when `storage-worker=1` tried to collapse Fly's active/standby pair; later recovery proved Fly can leave an updated Machine stopped and render the clone's same tagged image as `tag@digest`. Fix: remove broad scaling, explicitly start only the exact stopped/no-standby candidate, and compare a narrowly validated canonical tag, at most one explicit digest, and exact release metadata at every fresh proof. [detail](2026-07-29-fly-worker-scale-confirmation.md)
 - **2026-07-29** — The first `api-dev` push after PR #202 failed before creating any jobs because its reusable OTA caller was capped at `contents: read` while the nested runtime-registration job requested `contents: write`. Fix: grant write only on the reusable-call jobs, preserve the called workflows' read-only default, and add a scoped policy regression. [detail](2026-07-29-reusable-workflow-permission-ceiling.md)

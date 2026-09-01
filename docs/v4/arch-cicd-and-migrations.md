@@ -54,8 +54,13 @@ build-time manifest for the readiness check.**
 
 The admin stream lives in the independent `harpa-pro-admin` Neon project:
 production uses `main`, development uses `dev`, and API previews use `pr-N`
-from admin `dev`. Production snapshots and scheduled pruning run independently
-in both Neon projects.
+from admin `dev`. A focused non-`dev` hotfix targeting `main` instead creates a
+private `pr-N` child from `main` with no compute, adds a disabled endpoint,
+replaces every inherited database and role with a new empty per-PR database
+owned by a child-only role, and enables or exposes no connection URI until that
+sanitation is proved. No production rows or parent-valid passwords remain in
+the public preview. Production snapshots and scheduled pruning run
+independently in both Neon projects.
 
 Hosted PR browser admin login is intentionally disabled: Cloudflare's dynamic
 Pages preview origins cannot satisfy the exact-origin cookie policy without
@@ -79,7 +84,7 @@ development is the first hosted environment for browser verification.
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  API-changing PR opened / synchronized                                 │
-│   • App Neon pr-<n> created from app main                              │
+│   • App Neon pr-<n> created from app dev                               │
 │   • Admin Neon pr-<n> created from admin dev                           │
 │   • Fly app harpa-pro-api-pr-<n> created/deployed                      │
 │       └─ release_command applies app then admin migrations             │
@@ -160,7 +165,7 @@ environment and only surfaces when the deploy fires.
 | `pr-preview.yml`              |       ✓       | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify                                                        |
 | `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Per-PR Expo OTA preview                                                                                                    |
 | `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Tests + Cloudflare Pages preview for the public site                                                                       |
-| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys                                        |
+| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target before journeys: shared dev for `dev → main`, isolated PR preview for focused main hotfixes   |
 | `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                                    |
 | `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                                       |
 | `site-dev.yml`                |       ✗       | dev                   | Cloudflare Pages `dev` branch deploy                                                                                       |
@@ -242,13 +247,24 @@ operator sequence.
 
 ### Main-promotion SHA binding
 
-`main-gate.yml` checks out `github.event.pull_request.head.sha`, then
-polls the dev API's `/healthz` with
-`scripts/ci/verify-deployed-sha.sh`. The reported 40-character
-`gitCommit` must equal that full PR head SHA
-before any journey runs. This prevents a healthy but stale or newer
-shared dev deployment from making an unrelated `main` promotion
-green. Both the poll loop and the surrounding job are bounded.
+`main-gate.yml` checks out `github.event.pull_request.head.sha`, then selects
+an exact-SHA journey target. A normal `dev → main` promotion polls the shared
+dev API. A focused hotfix branch polls the isolated Fly + Neon deployment
+created by `pr-preview.yml` for that PR. In both cases,
+`scripts/ci/verify-deployed-sha.sh` requires `/healthz.gitCommit` to equal the
+full 40-character PR head SHA before any journey runs. This prevents a healthy
+but stale or unrelated deployment from making a production change green while
+still allowing a narrow hotfix without promoting every pending `dev` commit.
+The preview deploy explicitly checks out the immutable PR head instead of the
+synthetic pull-request merge ref, so its image marker uses the same identity as
+the gate. Before the gate sends dev journey credentials to a focused-hotfix
+preview, `scripts/ci/wait-for-pr-preview.sh` queries GitHub Actions for the
+matching head SHA and requires that run's `fly-preview` job to have succeeded.
+A skipped, failed, missing, or unrelated preview fails closed. The provenance
+wait, the SHA poll, and the surrounding job are bounded and covered by shell
+self-tests in the required lint workflow. This focused path is intentionally
+limited to API/admin changes that are eligible for `pr-preview`; other changes
+to `main` continue through the normal `dev → main` promotion path.
 
 ---
 
@@ -335,17 +351,54 @@ green. Both the poll loop and the surrounding job are bounded.
 ### `.github/workflows/pr-preview.yml`
 
 - Lifecycle jobs keyed on PR number:
-  - `neon-create` — creates the app Neon branch `pr-<n>` on open/sync.
+  - `neon-create` — creates the app Neon branch `pr-<n>` on open/sync from
+    app `dev` for ordinary PRs.
   - `admin-neon-create` — creates the isolated admin branch `pr-<n>` from
     admin `dev`. Neither create job applies migrations.
   - `fly-preview` — creates Fly app `harpa-pro-api-pr-<n>`, stages secrets
     from Doppler `dev` with both database URLs overridden to the matching
     direct PR-branch URIs,
     and `flyctl deploy`s using [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
-    Verifies both readiness endpoints and posts a sticky PR comment.
+    Its release command migrates both isolated databases and idempotently seeds
+    the dev journey accounts before verifying both readiness endpoints and
+    posting a sticky PR comment.
   - `fly-destroy` — destroys the Fly app on PR close.
   - `neon-destroy` and `admin-neon-destroy` — delete both branches on close,
     after `fly-destroy`.
+
+Focused non-`dev` hotfixes targeting `main` are deliberately narrower. They
+cannot include app/admin migrations, database code, API migration-script
+wiring, Fly release commands, or the workflow/scripts that constitute the
+trusted exact-SHA preview gate. Those changes must land on `dev` and use the
+normal promotion path, where the data-bearing `dev` clone exercises the upgrade
+against realistic nonproduction rows. PR 360 is the one-time bootstrap
+exception for introducing this gate; GitHub never reuses PR numbers, so the
+exception is dead after that PR merges and a later normal promotion can remove
+the clause.
+
+The trusted preview gate includes the API code that emits the proof consumed by
+`main-gate`: `/healthz`, `/readyz`, `/admin/readyz`, the build-info helper that
+surfaces the immutable Git SHA, their app/server mounting path, the locked
+dependency graph, and the deploy-time test-account seeder used by the journey
+suite. Focused `main` hotfixes may change product logic, but they cannot change
+those proof surfaces outside the one-time PR 360 bootstrap.
+
+For an eligible hotfix, both create jobs make a private child of `main` without
+a compute or connection URI. The helper then adds a disabled read-write
+endpoint; Neon does not allow a database connection to enable a disabled
+endpoint. Through the management API it creates a PR-specific role that does
+not exist on the parent and a new empty database (`harpa_pr_N` or
+`harpa_admin_pr_N`) owned by that role. It deletes every inherited database and
+role, then re-lists the branch and requires the fresh database and PR role to be
+the only ones remaining. It also proves the endpoint is still disabled before
+enabling it and requesting a URI. Any creation, deletion, or verification
+failure stops URI resolution and deployment and attempts to delete the branch;
+even if provider cleanup also fails, the data-bearing residue has no enabled
+endpoint. This avoids parent-password reuse when the Neon production branch is
+not protected. URI resolution later in the deploy is read-only and fails if
+the expected branch is missing. The sanitized child branches retain the same
+seven-day expiry and explicit PR-close deletion as ordinary previews.
+
 - `guard` job: same filename checks for both migration streams (no manifest
   diff because previews are ephemeral).
 - Forks are skipped (no `FLY_API_TOKEN` / `DOPPLER_TOKEN_DEV` /

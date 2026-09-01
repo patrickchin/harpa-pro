@@ -29,7 +29,7 @@ const SANITATION_VERIFY_ATTEMPTS = 20;
 
 interface BranchResponse {
   branch: { id: string; name: string };
-  endpoints: NeonEndpoint[];
+  endpoints?: NeonEndpoint[];
 }
 
 interface BranchList {
@@ -47,6 +47,12 @@ interface NeonEndpoint {
   id: string;
   host: string;
   type: 'read_only' | 'read_write';
+  branch_id?: string;
+  disabled?: boolean;
+}
+
+interface EndpointResponse {
+  endpoint: NeonEndpoint;
 }
 
 interface PreviewDatabaseConfig {
@@ -270,6 +276,61 @@ async function createRole(branchId: string, name: string): Promise<void> {
   );
 }
 
+async function createDisabledEndpoint(branchId: string): Promise<NeonEndpoint> {
+  const response = await neonRequestWithLockRetry(
+    '/endpoints',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        endpoint: { branch_id: branchId, type: 'read_write', disabled: true },
+      }),
+    },
+    'neon disabled preview endpoint create',
+  );
+  const { endpoint } = (await response.json()) as EndpointResponse;
+  if (
+    !endpoint?.id ||
+    !endpoint.host ||
+    endpoint.branch_id !== branchId ||
+    endpoint.type !== 'read_write' ||
+    endpoint.disabled !== true
+  ) {
+    throw new Error('neon preview endpoint was not created disabled on the expected branch');
+  }
+  return endpoint;
+}
+
+async function proveEndpointDisabled(endpointId: string): Promise<void> {
+  const response = await neonRequestWithLockRetry(
+    `/endpoints/${endpointId}`,
+    { method: 'GET' },
+    'neon preview endpoint safety check',
+  );
+  const { endpoint } = (await response.json()) as EndpointResponse;
+  if (endpoint?.id !== endpointId || endpoint.disabled !== true) {
+    throw new Error('neon preview endpoint enabled before sanitation was proved');
+  }
+}
+
+async function enableEndpoint(endpointId: string): Promise<NeonEndpoint> {
+  const response = await neonRequestWithLockRetry(
+    `/endpoints/${endpointId}`,
+    { method: 'PATCH', body: JSON.stringify({ endpoint: { disabled: false } }) },
+    'neon sanitized preview endpoint enable',
+  );
+  const { endpoint } = (await response.json()) as EndpointResponse;
+  if (
+    !endpoint?.id ||
+    endpoint.id !== endpointId ||
+    !endpoint.host ||
+    endpoint.type !== 'read_write' ||
+    endpoint.disabled !== false
+  ) {
+    throw new Error('neon sanitized preview endpoint did not enable as expected');
+  }
+  return endpoint;
+}
+
 async function listDatabaseNames(branchId: string): Promise<string[]> {
   const response = await neonRequestWithLockRetry(
     `/branches/${branchId}/databases`,
@@ -335,11 +396,12 @@ async function proveOnlyFreshRoleRemains(branchId: string, expected: string): Pr
 }
 
 /**
- * Clone the parent into a private ephemeral branch, create a child-only role
- * and fresh database, then delete every inherited database and role. No
- * connection URI is requested or emitted until the API proves only the empty
- * database and child-only role remain. Any failure deletes the entire preview
- * branch before surfacing the error.
+ * Clone the parent into a private ephemeral branch with no compute, then add a
+ * disabled endpoint for management operations. Create a child-only role and
+ * fresh database, delete every inherited database and role, and prove both the
+ * result and the disabled endpoint before enabling it. No connection URI is
+ * requested or emitted until then. Any earlier residue remains inaccessible
+ * even if best-effort branch cleanup also fails.
  */
 export async function createSanitizedPreview(prNumber: string, parent: string): Promise<string> {
   if (!/^\d+$/.test(prNumber)) throw new Error('pr-number must be a positive integer');
@@ -354,13 +416,13 @@ export async function createSanitizedPreview(prNumber: string, parent: string): 
       method: 'POST',
       body: JSON.stringify({
         branch: branchCreateFields(name, parentId, 'parent-data'),
-        endpoints: [{ type: 'read_write' }],
       }),
     },
     'neon preview branch create',
   );
   const body = (await res.json()) as BranchResponse;
   try {
+    let endpoint = await createDisabledEndpoint(body.branch.id);
     const inheritedDatabases = await listDatabaseNames(body.branch.id);
     const inheritedRoles = await listRoleNames(body.branch.id);
     if (inheritedDatabases.includes(database.name)) {
@@ -379,7 +441,9 @@ export async function createSanitizedPreview(prNumber: string, parent: string): 
     }
     await proveOnlyFreshDatabaseRemains(body.branch.id, database.name);
     await proveOnlyFreshRoleRemains(body.branch.id, database.ownerName);
-    return await connectionUri(body.branch.id, body.endpoints);
+    await proveEndpointDisabled(endpoint.id);
+    endpoint = await enableEndpoint(endpoint.id);
+    return await connectionUri(body.branch.id, [endpoint]);
   } catch (error) {
     try {
       await deleteBranchById(body.branch.id, name);

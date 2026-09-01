@@ -55,10 +55,11 @@ build-time manifest for the readiness check.**
 The admin stream lives in the independent `harpa-pro-admin` Neon project:
 production uses `main`, development uses `dev`, and API previews use `pr-N`
 from admin `dev`. A focused non-`dev` hotfix targeting `main` instead creates a
-private `pr-N` child from `main`, replaces every inherited database and role
-with a new empty per-PR database owned by a child-only role, and exposes no
-connection URI until that sanitation is proved. No production rows or
-parent-valid passwords remain in the public preview. Production snapshots and scheduled pruning run
+private `pr-N` child from `main` with no compute, adds a disabled endpoint,
+replaces every inherited database and role with a new empty per-PR database
+owned by a child-only role, and enables or exposes no connection URI until that
+sanitation is proved. No production rows or parent-valid passwords remain in
+the public preview. Production snapshots and scheduled pruning run
 independently in both Neon projects.
 
 Hosted PR browser admin login is intentionally disabled: Cloudflare's dynamic
@@ -383,16 +384,20 @@ suite. Focused `main` hotfixes may change product logic, but they cannot change
 those proof surfaces outside the one-time PR 360 bootstrap.
 
 For an eligible hotfix, both create jobs make a private child of `main` without
-requesting or printing a connection URI. Inside that child, the helper creates
-a PR-specific role that does not exist on the parent and a new empty database
-(`harpa_pr_N` or `harpa_admin_pr_N`) owned by that role. It deletes every
-inherited database and role, then re-lists the branch and requires the fresh
-database and PR role to be the only ones remaining before it requests a URI.
-Any creation, deletion, or verification failure deletes the entire unsafe
-preview branch and fails the workflow. This also avoids parent-password reuse when the Neon production
-branch is not protected. URI resolution later in the deploy is read-only and
-fails if the expected branch is missing. The sanitized child branches retain
-the same seven-day expiry and explicit PR-close deletion as ordinary previews.
+a compute or connection URI. The helper then adds a disabled read-write
+endpoint; Neon does not allow a database connection to enable a disabled
+endpoint. Through the management API it creates a PR-specific role that does
+not exist on the parent and a new empty database (`harpa_pr_N` or
+`harpa_admin_pr_N`) owned by that role. It deletes every inherited database and
+role, then re-lists the branch and requires the fresh database and PR role to be
+the only ones remaining. It also proves the endpoint is still disabled before
+enabling it and requesting a URI. Any creation, deletion, or verification
+failure stops URI resolution and deployment and attempts to delete the branch;
+even if provider cleanup also fails, the data-bearing residue has no enabled
+endpoint. This avoids parent-password reuse when the Neon production branch is
+not protected. URI resolution later in the deploy is read-only and fails if
+the expected branch is missing. The sanitized child branches retain the same
+seven-day expiry and explicit PR-close deletion as ordinary previews.
 
 - `guard` job: same filename checks for both migration streams (no manifest
   diff because previews are ephemeral).

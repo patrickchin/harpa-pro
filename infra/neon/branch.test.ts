@@ -19,7 +19,7 @@ afterEach(() => {
   }
 });
 
-test('removes inherited databases before returning a fresh preview URI', async () => {
+test('keeps the endpoint disabled while removing inherited data and roles', async () => {
   process.env['NEON_API_KEY'] = 'test-api-key';
   process.env['NEON_PROJECT_ID'] = 'test-project';
   process.env['NEON_DATABASE_NAME'] = 'harpa_pr_360';
@@ -29,10 +29,13 @@ test('removes inherited databases before returning a fresh preview URI', async (
   let databaseCreateSeen = false;
   let inheritedDatabaseDeleteSeen = false;
   let inheritedRoleDeleteSeen = false;
+  let disabledEndpointCreateSeen = false;
+  let endpointEnableSeen = false;
   let connectionUriSeen = false;
   let databaseCreated = false;
   let inheritedDatabaseDeleted = false;
   let inheritedRoleDeleted = false;
+  let endpointDisabled = true;
   let databaseCreateAttempts = 0;
 
   globalThis.fetch = async (input, init) => {
@@ -47,21 +50,70 @@ test('removes inherited databases before returning a fresh preview URI', async (
     if (url.pathname.endsWith('/branches') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body)) as {
         branch: Record<string, string>;
-        endpoints: Array<{ type: string }>;
+        endpoints?: Array<{ type: string }>;
       };
       assert.equal(body.branch.name, 'pr-360');
       assert.equal(body.branch.parent_id, 'br-main');
       assert.equal(body.branch.init_source, 'parent-data');
       assert.match(body.branch.expires_at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
-      assert.deepEqual(body.endpoints, [{ type: 'read_write' }]);
+      assert.equal(body.endpoints, undefined);
       branchCreateSeen = true;
       return Response.json(
         {
           branch: { id: 'br-preview', name: 'pr-360' },
-          endpoints: [{ id: 'ep-preview', host: 'preview.example.neon.tech', type: 'read_write' }],
         },
         { status: 201 },
       );
+    }
+
+    if (url.pathname.endsWith('/endpoints') && init?.method === 'POST') {
+      assert.deepEqual(JSON.parse(String(init.body)), {
+        endpoint: { branch_id: 'br-preview', type: 'read_write', disabled: true },
+      });
+      disabledEndpointCreateSeen = true;
+      return Response.json(
+        {
+          endpoint: {
+            id: 'ep-preview',
+            host: 'preview.example.neon.tech',
+            branch_id: 'br-preview',
+            type: 'read_write',
+            disabled: true,
+          },
+          operations: [],
+        },
+        { status: 201 },
+      );
+    }
+
+    if (url.pathname.endsWith('/endpoints/ep-preview') && init?.method === 'GET') {
+      return Response.json({
+        endpoint: {
+          id: 'ep-preview',
+          host: 'preview.example.neon.tech',
+          branch_id: 'br-preview',
+          type: 'read_write',
+          disabled: endpointDisabled,
+        },
+      });
+    }
+
+    if (url.pathname.endsWith('/endpoints/ep-preview') && init?.method === 'PATCH') {
+      assert.deepEqual(JSON.parse(String(init.body)), { endpoint: { disabled: false } });
+      assert.equal(inheritedDatabaseDeleted, true);
+      assert.equal(inheritedRoleDeleted, true);
+      endpointDisabled = false;
+      endpointEnableSeen = true;
+      return Response.json({
+        endpoint: {
+          id: 'ep-preview',
+          host: 'preview.example.neon.tech',
+          branch_id: 'br-preview',
+          type: 'read_write',
+          disabled: false,
+        },
+        operations: [],
+      });
     }
 
     if (url.pathname.endsWith('/branches/br-preview/databases') && init?.method !== 'POST') {
@@ -131,6 +183,7 @@ test('removes inherited databases before returning a fresh preview URI', async (
     }
 
     if (url.pathname.endsWith('/connection_uri')) {
+      assert.equal(endpointDisabled, false);
       assert.equal(inheritedRoleDeleted, true);
       assert.equal(url.searchParams.get('branch_id'), 'br-preview');
       assert.equal(url.searchParams.get('endpoint_id'), 'ep-preview');
@@ -150,7 +203,52 @@ test('removes inherited databases before returning a fresh preview URI', async (
   assert.equal(databaseCreateSeen, true);
   assert.equal(inheritedDatabaseDeleteSeen, true);
   assert.equal(inheritedRoleDeleteSeen, true);
+  assert.equal(disabledEndpointCreateSeen, true);
+  assert.equal(endpointEnableSeen, true);
   assert.equal(connectionUriSeen, true);
+});
+
+test('deletes a preview branch if Neon does not keep its endpoint disabled', async () => {
+  process.env['NEON_API_KEY'] = 'test-api-key';
+  process.env['NEON_PROJECT_ID'] = 'test-project';
+  process.env['NEON_DATABASE_NAME'] = 'harpa_pr_360';
+  process.env['NEON_ROLE_NAME'] = 'harpa_pr_360_owner';
+  let branchCleanupSeen = false;
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/branches') && init?.method !== 'POST') {
+      return Response.json({
+        branches: [{ id: 'br-main', name: 'main', created_at: '2026-09-01T00:00:00Z' }],
+      });
+    }
+    if (url.pathname.endsWith('/branches') && init?.method === 'POST') {
+      return Response.json({ branch: { id: 'br-preview', name: 'pr-360' } }, { status: 201 });
+    }
+    if (url.pathname.endsWith('/endpoints') && init?.method === 'POST') {
+      return Response.json(
+        {
+          endpoint: {
+            id: 'ep-preview',
+            host: 'preview.example.neon.tech',
+            branch_id: 'br-preview',
+            type: 'read_write',
+            disabled: false,
+          },
+          operations: [],
+        },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/branches/br-preview') && init?.method === 'DELETE') {
+      branchCleanupSeen = true;
+      return new Response(null, { status: 204 });
+    }
+    return new Response(`unexpected request: ${url}`, { status: 500 });
+  };
+
+  await assert.rejects(createSanitizedPreview('360', 'main'), /not created disabled/);
+  assert.equal(branchCleanupSeen, true);
 });
 
 test('rejects an unsafe preview database identifier before calling Neon', async () => {
@@ -183,7 +281,21 @@ test('deletes the entire preview branch when inherited-data removal fails', asyn
       return Response.json(
         {
           branch: { id: 'br-preview', name: 'pr-360' },
-          endpoints: [{ id: 'ep-preview', host: 'preview.example.neon.tech', type: 'read_write' }],
+        },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/endpoints') && init?.method === 'POST') {
+      return Response.json(
+        {
+          endpoint: {
+            id: 'ep-preview',
+            host: 'preview.example.neon.tech',
+            branch_id: 'br-preview',
+            type: 'read_write',
+            disabled: true,
+          },
+          operations: [],
         },
         { status: 201 },
       );
@@ -236,7 +348,21 @@ test('deletes the entire preview branch when inherited-role removal fails', asyn
       return Response.json(
         {
           branch: { id: 'br-preview', name: 'pr-360' },
-          endpoints: [{ id: 'ep-preview', host: 'preview.example.neon.tech', type: 'read_write' }],
+        },
+        { status: 201 },
+      );
+    }
+    if (url.pathname.endsWith('/endpoints') && init?.method === 'POST') {
+      return Response.json(
+        {
+          endpoint: {
+            id: 'ep-preview',
+            host: 'preview.example.neon.tech',
+            branch_id: 'br-preview',
+            type: 'read_write',
+            disabled: true,
+          },
+          operations: [],
         },
         { status: 201 },
       );

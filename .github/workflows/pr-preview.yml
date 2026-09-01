@@ -139,8 +139,8 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         # Focused main hotfixes cannot point older code at dev's newer schema.
-        # Create a private main child, replace every inherited database and role
-        # with a fresh database owned by a child-only role, and emit no URI until
+        # Create a private main child with no compute, add a disabled endpoint,
+        # replace every inherited database and role, and enable/emit no URI until
         # sanitation is proved. Normal PRs retain the dev-data clone that exercises
         # migrations against realistic nonproduction data shapes.
         run: |

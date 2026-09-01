@@ -376,6 +376,9 @@ require_fixed "infra/neon/branch.ts" \
   "proveOnlyFreshRoleRemains" \
   "Neon helper positively verifies inherited roles are gone"
 require_fixed "infra/neon/branch.ts" \
+  "proveEndpointDisabled" \
+  "Neon helper keeps the preview endpoint disabled until sanitation is proved"
+require_fixed "infra/neon/branch.ts" \
   "/roles" \
   "Neon helper creates a child-only preview role"
 # shellcheck disable=SC2016 # Assert the literal workflow expression, not this shell's value.

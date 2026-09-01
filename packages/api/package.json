@@ -30,8 +30,8 @@
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1110.0",
-    "@aws-sdk/s3-request-presigner": "^3.1110.0",
+    "@aws-sdk/client-s3": "^3.1121.0",
+    "@aws-sdk/s3-request-presigner": "^3.1121.0",
     "@better-auth/expo": "1.6.28",
     "@harpa/ai-fixtures": "workspace:*",
     "@harpa/api-contract": "workspace:*",

@@ -113,7 +113,7 @@ export async function runStorageDeleteWorker(options: StorageDeleteWorkerOptions
   log('[storage-delete-worker] stopped');
 }
 
-if (process.env.VITEST !== 'true' && !import.meta.vitest) {
+if (process.env.VITEST !== 'true') {
   await runStorageDeleteWorker();
 }
 

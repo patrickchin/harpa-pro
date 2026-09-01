@@ -160,7 +160,7 @@ environment and only surfaces when the deploy fires.
 | `pr-preview.yml`              |       ✓       | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify                                                        |
 | `mobile-ota-pr.yml`           |       ✓       | (PR-only)             | Per-PR Expo OTA preview                                                                                                    |
 | `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Tests + Cloudflare Pages preview for the public site                                                                       |
-| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys                                        |
+| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target before journeys: shared dev for `dev → main`, isolated PR preview for focused main hotfixes   |
 | `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                                    |
 | `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                                       |
 | `site-dev.yml`                |       ✗       | dev                   | Cloudflare Pages `dev` branch deploy                                                                                       |
@@ -242,13 +242,24 @@ operator sequence.
 
 ### Main-promotion SHA binding
 
-`main-gate.yml` checks out `github.event.pull_request.head.sha`, then
-polls the dev API's `/healthz` with
-`scripts/ci/verify-deployed-sha.sh`. The reported 40-character
-`gitCommit` must equal that full PR head SHA
-before any journey runs. This prevents a healthy but stale or newer
-shared dev deployment from making an unrelated `main` promotion
-green. Both the poll loop and the surrounding job are bounded.
+`main-gate.yml` checks out `github.event.pull_request.head.sha`, then selects
+an exact-SHA journey target. A normal `dev → main` promotion polls the shared
+dev API. A focused hotfix branch polls the isolated Fly + Neon deployment
+created by `pr-preview.yml` for that PR. In both cases,
+`scripts/ci/verify-deployed-sha.sh` requires `/healthz.gitCommit` to equal the
+full 40-character PR head SHA before any journey runs. This prevents a healthy
+but stale or unrelated deployment from making a production change green while
+still allowing a narrow hotfix without promoting every pending `dev` commit.
+The preview deploy explicitly checks out the immutable PR head instead of the
+synthetic pull-request merge ref, so its image marker uses the same identity as
+the gate. Before the gate sends dev journey credentials to a focused-hotfix
+preview, `scripts/ci/wait-for-pr-preview.sh` queries GitHub Actions for the
+matching head SHA and requires that run's `fly-preview` job to have succeeded.
+A skipped, failed, missing, or unrelated preview fails closed. The provenance
+wait, the SHA poll, and the surrounding job are bounded and covered by shell
+self-tests in the required lint workflow. This focused path is intentionally
+limited to API/admin changes that are eligible for `pr-preview`; other changes
+to `main` continue through the normal `dev → main` promotion path.
 
 ---
 

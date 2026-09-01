@@ -167,7 +167,11 @@ jobs:
       APP_NAME: harpa-pro-api-pr-${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v4
-        with: { lfs: true }
+        # Pull-request checkouts otherwise default to the synthetic merge ref.
+        # The image marker must match the immutable PR head used by main-gate.
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          lfs: true
       - uses: ./.github/actions/setup-monorepo
 
       - name: Resolve Neon URI for this PR

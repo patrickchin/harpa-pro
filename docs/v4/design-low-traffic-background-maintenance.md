@@ -2,6 +2,10 @@
 
 Status: approved for the production hotfix on 2026-09-01.
 
+Delivery note: the focused `main` hotfix is validated against its exact-SHA
+isolated PR preview. It does not require or imply promotion of the unrelated
+commits currently accumulated on `dev`.
+
 ## Problem
 
 Harpa has no external users, but production runs a service-less storage worker.

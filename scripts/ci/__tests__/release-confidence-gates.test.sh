@@ -270,11 +270,39 @@ require_fixed ".github/workflows/main-gate.yml" \
 require_fixed ".github/workflows/main-gate.yml" \
   'EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}' \
   "main gate declares the PR head as the expected deployment"
+# shellcheck disable=SC2016
+require_fixed ".github/workflows/main-gate.yml" \
+  'HEAD_REF: ${{ github.event.pull_request.head.ref }}' \
+  "main gate distinguishes dev promotions from focused hotfixes"
+# shellcheck disable=SC2016
+require_fixed ".github/workflows/main-gate.yml" \
+  'PREVIEW_BASE_URL: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev' \
+  "main gate binds focused hotfixes to their exact-SHA preview"
+# shellcheck disable=SC2016
+require_fixed ".github/workflows/main-gate.yml" \
+  'HEALTH_URL: ${{ steps.target.outputs.base_url }}/healthz' \
+  "main gate verifies the selected exact-SHA deployment"
+# shellcheck disable=SC2016
+require_fixed ".github/workflows/main-gate.yml" \
+  'bash scripts/journeys/all.sh "${{ steps.target.outputs.base_url }}"' \
+  "main gate runs journeys against the selected exact-SHA deployment"
+require_fixed ".github/workflows/main-gate.yml" \
+  "actions: read" \
+  "main gate can inspect preview workflow provenance"
+require_fixed ".github/workflows/main-gate.yml" \
+  "bash scripts/ci/wait-for-pr-preview.sh" \
+  "main gate proves the preview job succeeded before using its URL"
 require_fixed ".github/workflows/main-gate.yml" \
   "bash scripts/ci/verify-deployed-sha.sh" \
   "main gate verifies the deployed SHA"
 require_before ".github/workflows/main-gate.yml" \
-  "Verify deployed dev SHA" "Run journeys against dev" \
+  "Resolve exact-SHA journey target" "Verify deployed SHA" \
+  "main gate resolves its target before SHA verification"
+require_before ".github/workflows/main-gate.yml" \
+  "Wait for exact-SHA preview provenance" "Verify deployed SHA" \
+  "preview provenance is proved before SHA verification"
+require_before ".github/workflows/main-gate.yml" \
+  "Verify deployed SHA" "Run journeys against verified target" \
   "deployed SHA is verified before journeys run"
 
 require_fixed ".github/workflows/api-dev.yml" \
@@ -283,6 +311,10 @@ require_fixed ".github/workflows/api-dev.yml" \
 require_fixed ".github/workflows/pr-preview.yml" \
   "git rev-parse HEAD" \
   "preview deploy injects the full Git SHA"
+# shellcheck disable=SC2016
+require_fixed ".github/workflows/pr-preview.yml" \
+  'ref: ${{ github.event.pull_request.head.sha }}' \
+  "preview deploy checks out the exact PR head SHA"
 require_fixed "infra/fly/deploy.sh" \
   "git rev-parse HEAD" \
   "shared Fly deploy injects the full Git SHA"
@@ -293,6 +325,9 @@ require_fixed ".github/workflows/lint-typecheck.yml" \
 require_fixed ".github/workflows/lint-typecheck.yml" \
   "bash scripts/ci/__tests__/verify-deployed-sha.test.sh" \
   "deployed-SHA verifier self-test runs on PRs"
+require_fixed ".github/workflows/lint-typecheck.yml" \
+  "bash scripts/ci/__tests__/wait-for-pr-preview.test.sh" \
+  "preview provenance self-test runs on PRs"
 
 echo
 echo "failed: $FAIL"

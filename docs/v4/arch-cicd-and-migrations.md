@@ -434,6 +434,10 @@ period is still active.
     from Doppler `dev` with both database URLs overridden to the matching
     direct PR-branch URIs,
     and `flyctl deploy`s using [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
+    Before deployment it idempotently proves or allocates public IPv6 and
+    shared IPv4 ingress. This covers a cancelled first deployment that leaves
+    the Fly app present without DNS-backed addresses, which a later deploy does
+    not repair automatically.
     Its release command migrates both isolated databases and idempotently seeds
     the dev journey accounts before verifying both readiness endpoints and
     posting a sticky PR comment.

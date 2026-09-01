@@ -1224,6 +1224,18 @@ require_fixed "package.json" \
 require_fixed "infra/fly/fly.preview.toml" \
   "db:seed-test-account" \
   "preview release provisions isolated journey test accounts"
+require_fixed ".github/workflows/pr-preview.yml" \
+  "flyctl ips list --app \"\$APP_NAME\" --json" \
+  "preview ingress discovery is idempotent"
+require_fixed ".github/workflows/pr-preview.yml" \
+  "flyctl ips allocate-v6 --app \"\$APP_NAME\"" \
+  "preview explicitly allocates public IPv6 ingress"
+require_fixed ".github/workflows/pr-preview.yml" \
+  "flyctl ips allocate-v4 --shared --yes --app \"\$APP_NAME\"" \
+  "preview explicitly allocates shared IPv4 ingress"
+require_before ".github/workflows/pr-preview.yml" \
+  "flyctl ips allocate-v6" "      - name: Deploy to Fly.io (preview)" \
+  "preview ingress exists before deployment"
 require_fixed "infra/fly/deploy.sh" \
   "git rev-parse HEAD" \
   "shared Fly deploy injects the full Git SHA"

@@ -489,7 +489,7 @@ No other top-level scripts are Maestro/E2E/device related.
 
 | Script    | Command                                                                                                                                               | Disposition                                              |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `lint`    | `turbo run lint && bash scripts/check-no-supabase.sh && … && bash scripts/check-maestro-appid.sh && bash scripts/check-no-maestro-point-taps.sh && …` | keep — Maestro app-id and no-point-tap checks chained in |
+| `lint`    | `turbo run lint && … && bash scripts/check-maestro-appid.sh && bash scripts/check-no-maestro-point-taps.sh && …`                                     | keep — Maestro app-id and no-point-tap checks chained in |
 | `android` | `expo run:android`                                                                                                                                    | keep — `mo run` will not own native builds               |
 | `ios`     | `expo run:ios`                                                                                                                                        | keep — same                                              |
 

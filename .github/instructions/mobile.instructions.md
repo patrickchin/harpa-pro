@@ -7,9 +7,9 @@ description: 'Mobile-specific rules for the Expo / NativeWind app. Loads automat
 
 ## Styling
 
-- **NativeWind v4 only.** No Unistyles, no StyleSheet.create, no raw
-  hex colours in component code. Tokens come from the Tailwind config
-  - theme tokens — see `docs/v4/arch-mobile.md`.
+- **Current styling:** NativeWind v4. Reuse the shared theme tokens;
+  do not add `StyleSheet.create` or raw hex colours in component
+  code. See `docs/v4/arch-mobile.md`.
 
 ## Dialogs / overlays
 

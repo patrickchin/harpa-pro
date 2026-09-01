@@ -972,9 +972,6 @@ inherit the shared inner default, but their unchanged 20-minute job limits
 remain the effective maximum. This waiting budget does not change production
 deployment settings or activate a build.
 
-The root lint job runs `pnpm test:docs:links`. It checks repository Markdown
-links and local image references before merge.
-
 `--stage` defers activation. The subsequent `flyctl deploy` activates the
 secrets. To rotate a secret, edit Doppler and dispatch the matching API
 workflow. A normal code change follows the protected `dev` and `main` flow.

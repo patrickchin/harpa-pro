@@ -63,7 +63,7 @@ The five most-violated in v3 attempts:
 1. Use the relevant `design-*.md` or `plan-*.md` as the screen spec.
    If neither exists, current implementation and tests are the
    baseline. A design change needs a task-specific design doc.
-2. NativeWind only — no Unistyles, no raw hex in `components/**`.
+2. No raw hex in `components/**`; use the current design-token path.
 3. No `Alert.alert` — `AppDialogSheet` only.
 4. No `process.env.EXPO_PUBLIC_*!` — `lib/env.ts` only.
 5. No `setTimeout` chains in auth or generation flows (Pitfall 5).

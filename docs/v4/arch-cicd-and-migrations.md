@@ -167,7 +167,7 @@ environment and only surfaces when the deploy fires.
 
 | Workflow                      |   PR-gated    | Push (dev / main)     | What it catches                                                                           |
 | ----------------------------- | :-----------: | --------------------- | ----------------------------------------------------------------------------------------- |
-| `lint-typecheck.yml`          |       ✓       | dev + main            | ESLint, TypeScript, documentation links, removal gates, CI policy tests, and shellcheck   |
+| `lint-typecheck.yml`          |       ✓       | dev + main            | ESLint, TypeScript, repository policy gates, CI policy tests, and shellcheck              |
 | `unit.yml`                    |       ✓       | dev + main            | Vitest unit suites for every package                                                      |
 | `api-integration.yml`         |       ✓       | dev + main            | Combined API unit and Testcontainers run with a hard 90% line-coverage threshold          |
 | `cli.yml`                     |       ✓       | dev + main            | CLI typecheck, lint, tests, help drift, and integration journeys                          |
@@ -749,8 +749,8 @@ repair procedure.
 - **Pitfall 6 (per-request scope late, untested)** — `/readyz` uses the
   default pool (admin/system role), not a scoped role; documented inline.
   The scope wrapper continues to be the only path used by user routes.
-- **Pitfall 10 (defer tests/docs)** — documentation link checks run through
-  `pnpm test:docs:links` and the root lint command.
+- **Pitfall 10 (defer tests/docs)** — documentation updates ship in the same
+  pull request as the workflow and migration changes they describe.
 - **Pitfall 13 / R5 (DI stubs become the spec)** — all readyz + migrator
   tests run against real Postgres via Testcontainers, no DB stub.
 

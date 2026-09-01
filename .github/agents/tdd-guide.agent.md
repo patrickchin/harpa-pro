@@ -31,7 +31,7 @@ only after you have written and verified the failing test.
 - DO NOT add helpers / abstractions / type aliases beyond what the
   current task strictly needs.
 - DO NOT use `Alert.alert`, `process.env.EXPO_PUBLIC_*!`, raw hex
-  colours, Unistyles, Supabase, or setTimeout in auth flows.
+  colours, or setTimeout in auth flows.
 - DO NOT touch the API or the network from a body component
   (`apps/mobile/screens/<name>.tsx`); those land in the real route
   per the page template.

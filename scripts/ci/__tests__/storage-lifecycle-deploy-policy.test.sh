@@ -101,12 +101,13 @@ fi
   exit 1
 }
 [[ "${ACTIONS[3]}" == \
-  "flyctl ssh console --app harpa-pro-api --process-group storage-worker --pty=false --command env STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases" ]] || {
-  echo "  FAIL - remote lifecycle arming does not follow worker verification"
+  "flyctl ssh console --app harpa-pro-api --process-group app --pty=false --command env STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases" ]] || {
+  echo "  FAIL - lifecycle arming must use the app process after worker verification"
   exit 1
 }
 
 echo "  ok   - deploy, narrow repair, verification, and arming run in order"
+echo "  ok   - lifecycle arming avoids the memory-constrained storage worker"
 echo "  ok   - production DATABASE_URL stays inside Fly"
 
 grep -q 'STORAGE_ACCOUNT_DELETE_ENABLED=false' \

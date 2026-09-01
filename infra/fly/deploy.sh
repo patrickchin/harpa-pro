@@ -52,13 +52,14 @@ bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api
 bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api
 
 # Arm only after deploy, narrow repair, and worker verification succeed. Run
-# inside the worker so CI and manual callers never need the production
-# DATABASE_URL; the command inherits the app's staged Fly secrets. The update
-# is monotonic, so later deploys cannot reopen the first-rollout compatibility
-# grace.
+# inside the 512 MB app process: starting another pnpm + tsx process inside the
+# 256 MB worker can OOM the worker that was just verified. The command still
+# inherits Fly's staged secrets, so CI and manual callers never need the
+# production DATABASE_URL. The update is monotonic, so later deploys cannot
+# reopen the first-rollout compatibility grace.
 flyctl ssh console \
   --app harpa-pro-api \
-  --process-group storage-worker \
+  --process-group app \
   --pty=false \
   --command \
   'env STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases'

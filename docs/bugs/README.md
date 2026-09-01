@@ -306,6 +306,11 @@ reconciliation sweep, and test the scheduler rather than configuration text.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-09-01** — Post-deploy lifecycle arming launched a second `pnpm` +
+  `tsx` process inside the 256 MB storage worker, OOM-killing the worker and
+  leaving the Fly deploy step hung after release completion. Fix: preserve
+  worker verification, then run the monotonic command on the 512 MB app
+  process. [detail](2026-09-01-storage-worker-arming-oom.md)
 - **2026-08-25** *(R19)* — Production and development storage workers queried
   empty cleanup tables every ten minutes and pruned leases hourly, exhausting
   Neon's compute allowance despite zero external users. Fix: preserve immediate

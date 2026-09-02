@@ -20,7 +20,7 @@ import { resetReadyzCache } from '../routes/readyz.js';
 let container: StartedPostgreSqlContainer;
 let url: string;
 const AI_USAGE_INDEX_MIGRATION = '0029_llm_usage_events_created_at.notx.sql';
-const CURRENT_MIGRATION_HEAD = '0031_remove_retired_llm_usage_ledger.sql';
+const CURRENT_MIGRATION_HEAD = '0032_better_auth_account_issuer.sql';
 
 beforeAll(async () => {
   container = await new PostgreSqlContainer('postgres:16-alpine')

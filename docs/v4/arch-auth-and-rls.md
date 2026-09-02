@@ -399,6 +399,13 @@ CLI pick them up. The dependency-policy test pins the related packages and
 checks the exact generation command. No current CI job regenerates the file
 and compares the result, so schema drift still needs a direct review check.
 
+Migration `0032_better_auth_account_issuer.sql` is the deliberate exception
+during the Better Auth 1.7 expand stage: the checked-in mirror is the output
+independently generated with 1.7.2, while the deployed runtime and CLI stay on
+1.6.28. Do not regenerate the file with the 1.6 CLI during this interval. The
+Stage 2 package update must run the 1.7.2 generator and leave the mirror
+byte-for-byte unchanged.
+
 The API and mobile manifests pin `better-auth`, `@better-auth/expo`, and the
 official `auth` CLI to the same exact stable release. Upgrade all of them
 together. Version ranges or the retired `@better-auth/cli` package can let
@@ -418,17 +425,26 @@ The file is imported by the Drizzle adapter and re-exported by
 
 Better-auth tables live in `public` (Postgres default schema):
 
-| Table                 | Owner       | Notes                                          |
-| --------------------- | ----------- | ---------------------------------------------- |
-| `public.user`         | better-auth | `id text` (slug: `usr_…`)                      |
-| `public.session`      | better-auth | `id text` (slug: `ses_…`)                      |
-| `public.account`      | better-auth | `id text` (slug: `idn_…`), used by SIWA/Google |
-| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store           |
-| `app.*`               | application | RLS enforced, `app.usr_id` domain on FK cols   |
+| Table                 | Owner       | Notes                                            |
+| --------------------- | ----------- | ------------------------------------------------ |
+| `public.user`         | better-auth | `id text` (slug: `usr_…`)                        |
+| `public.session`      | better-auth | `id text` (slug: `ses_…`)                        |
+| `public.account`      | better-auth | `id text` (slug: `idn_…`), issuer-keyed identity |
+| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store             |
+| `app.*`               | application | RLS enforced, `app.usr_id` domain on FK cols     |
 
 **No RLS on `public.session`, `public.account`, or `public.verification`.**
 The better-auth adapter queries these with the unscoped pool; RLS
 would block its own session lookups.
+
+The only currently supported account provider is `credential`. Its canonical
+identity is `issuer = 'local:credential'` and `account_id = user_id`, enforced
+by the unique `(issuer, account_id)` index. The physical issuer default is a
+temporary compatibility extension for Better Auth 1.6 writers and rollback;
+it is intentionally absent from the generated Drizzle declaration. Any live
+non-credential account blocks the 1.7 rollout. SIWA, Google, or another
+provider requires a separately reviewed identity migration rather than an
+inferred issuer.
 
 **`public.user` does have an RLS policy** — see the migration snippet
 below. Better Auth uses the raw application connection before a request has
@@ -615,7 +631,7 @@ See [`arch-storage.md` §Security](arch-storage.md#security) and
 
 ## Lint guard
 
-`packages/api/.eslintrc.cjs` blocks direct imports of `db/client` and
+`packages/api/eslint.config.mjs` blocks direct imports of `db/client` and
 `db/scope` from most route modules. Public auth, health, waitlist, admin, and
 readiness routes are explicit exceptions because they cannot use an
 authenticated request scope. Tests are also excluded. The current config does
@@ -701,7 +717,10 @@ Env-Zod enforces both-or-neither. The deployment design configures both
 provider state before relying on it. The before-hook rejects any email not on
 the configured allowlist. The deploy seed is credential-level idempotent: if
 an allowlisted user already exists, it creates or refreshes that user's
-`credential` account password instead of assuming the user is ready.
+`credential` account password instead of assuming the user is ready. During
+the 1.7 expand stage, the retained database default assigns
+`issuer = 'local:credential'` to this unchanged 1.6 writer; integration
+coverage asserts the stored issuer and canonical account ID.
 
 The report generation live canary may use a dedicated allowlisted identity such as
 `report-canary@e2e.harpapro.com`. Account seeding supplies credentials only;

@@ -3,7 +3,7 @@
  * every screen used `process.env.EXPO_PUBLIC_*!` non-null assertions in v3,
  * which crashed at runtime when a var was missing.
  *
- * Rules (enforced by ESLint, see .eslintrc.cjs):
+ * Rules (enforced by ESLint, see eslint.config.mjs):
  *   - This file is the ONLY place that reads `process.env.EXPO_PUBLIC_*`.
  *   - All consumers import `env` from here.
  *   - EXPO_PUBLIC_* values are inlined at bundle time by Metro — changing

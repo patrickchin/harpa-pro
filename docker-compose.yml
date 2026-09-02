@@ -118,7 +118,7 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex when seed scripts import the shared env parser.
       # Pin to the current local migration head. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0031_remove_retired_llm_usage_ledger.sql
+      MIGRATIONS_REQUIRED_HEAD: 0032_better_auth_account_issuer.sql
       ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       BETTER_AUTH_SECRET: dev-only-secret-do-not-use-in-prod
@@ -141,7 +141,7 @@ services:
       NODE_ENV: development
       # The image bakes empty migration-head args, which are invalid when the
       # shared env parser loads. Pin the same local heads as the API service.
-      MIGRATIONS_REQUIRED_HEAD: 0031_remove_retired_llm_usage_ledger.sql
+      MIGRATIONS_REQUIRED_HEAD: 0032_better_auth_account_issuer.sql
       ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       R2_FIXTURE_MODE: live
@@ -170,7 +170,7 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex on boot. Pin to the current head so the API
       # starts cleanly in the compose stack. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0031_remove_retired_llm_usage_ledger.sql
+      MIGRATIONS_REQUIRED_HEAD: 0032_better_auth_account_issuer.sql
       ADMIN_MIGRATIONS_REQUIRED_HEAD: 0002_admin_rate_limit_buckets.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       # Live storage backed by MinIO (in-network). R2_PUBLIC_ENDPOINT

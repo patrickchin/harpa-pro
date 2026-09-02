@@ -34,7 +34,7 @@ import type { ScopedDb } from './db/scope.js';
 /**
  * Scoped DB accessor injected by withAuth (see middleware/auth.ts).
  * Route handlers MUST go through `c.get('db')(fn)` rather than importing
- * the raw drizzle handle; the lint rule in .eslintrc.cjs enforces this.
+ * the raw drizzle handle; the lint rule in eslint.config.mjs enforces this.
  * See docs/v4/arch-auth-and-rls.md.
  */
 export type ScopedDbAccessor = <T>(fn: (db: ScopedDb) => Promise<T>) => Promise<T>;

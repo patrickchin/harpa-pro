@@ -15,7 +15,7 @@ description: 'Mobile-specific rules for the Expo / NativeWind app. Loads automat
 
 - **No `Alert.alert`.** Use `AppDialogSheet` or another themed
   primitive. Enforced by the `no-restricted-imports` rule in
-  [`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs).
+  [`apps/mobile/eslint.config.mjs`](../../apps/mobile/eslint.config.mjs).
 
 ## Env vars
 

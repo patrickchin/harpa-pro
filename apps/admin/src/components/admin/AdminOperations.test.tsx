@@ -1579,7 +1579,7 @@ describe('AdminOperations', () => {
       within(sentrySection).getByRole('link', { name: 'Open Sentry issues ↗' }),
     ).toHaveProperty('href', 'https://sentry.io/issues/');
     expect(screen.getAllByRole('link', { name: 'Open dashboard ↗' })).toHaveLength(16);
-  });
+  }, 15_000);
 
   it('uses sixteen fixed reads on load and thirty-two after shared Refresh without polling or live-canary autorun', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });

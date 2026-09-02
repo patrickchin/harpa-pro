@@ -56,17 +56,19 @@ async function readSeededAccount(): Promise<{
   const userId = users.rows[0]!.id;
   const credentials = await getPool().query<{
     id: string;
+    issuer: string;
     account_id: string;
     provider_id: string;
     password: string | null;
   }>(
-    `SELECT id, account_id, provider_id, password
+    `SELECT id, issuer, account_id, provider_id, password
        FROM public."account"
       WHERE user_id = $1`,
     [userId],
   );
   expect(credentials.rows).toHaveLength(1);
   expect(credentials.rows[0]).toMatchObject({
+    issuer: 'local:credential',
     account_id: userId,
     provider_id: 'credential',
   });

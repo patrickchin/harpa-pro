@@ -452,7 +452,7 @@ The root `lint` script runs the gates listed above through
 so the checks reuse the Windows `node_modules` tree.
 
 The following gates were migrated to ESLint rules in
-[`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs) so
+[`apps/mobile/eslint.config.mjs`](../../apps/mobile/eslint.config.mjs) so
 they surface as editor squiggles, not just CI failures:
 
 - `Alert.alert` outside `lib/dialogs/` → `no-restricted-imports` on

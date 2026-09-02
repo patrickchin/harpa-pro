@@ -732,6 +732,17 @@ when the schema is already current. The separate data-only migration
 `0031_remove_retired_llm_usage_ledger.sql` deletes only the retired filename;
 it does not touch `0003_report_last_generation.sql`.
 
+`0032_better_auth_account_issuer.sql` is the Better Auth 1.7 schema-expansion
+boundary. It takes a bounded `ACCESS EXCLUSIVE` lock on `public.account`,
+rejects unknown providers and projected issuer/account collisions before DDL,
+canonicalizes credential rows, and installs the non-null issuer plus exact
+unique index transactionally. Its `local:credential` default stays in place
+for the 1.6 rollback window. Before each protected merge, inventory only
+aggregate provider, noncanonical, and collision counts; never log account IDs,
+emails, hashes, tokens, or sessions. Stage 1 must be healthy and inventoried in
+production on Better Auth 1.6.28 before the 1.7 runtime update may enter
+`dev`.
+
 `/readyz` compares only the newest lexical ledger filename. A green head is
 not proof that every older filename or table definition matches the checkout.
 For suspected drift, compare the full ledger and relevant PostgreSQL catalog

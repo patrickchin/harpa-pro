@@ -11,7 +11,7 @@
  *  - The legacy API (`signIn`, `signOut`, `refresh`) is preserved so
  *    callers don't all have to change at once.
  *  - We bridge better-auth's cookie storage (managed by `expoClient`)
- *    into the existing synchronous bearer getter used by
+ *    into the bearer getter used by
  *    `lib/api/client.ts`. Better-auth's expoClient stores the session
  *    cookie in SecureStore as a JSON blob; we extract just the
  *    `session_token` value and pass it as `Authorization: Bearer …`.
@@ -56,16 +56,16 @@ export type { SessionUser } from './client';
 
 /**
  * Best-effort token getter. Reads the cookie from `authClient.getCookie()`
- * (sync — backed by SecureStore.getItem), splits it, and returns the
+ * (async — backed by SecureStore.getItemAsync), splits it, and returns the
  * `*.session_token` value.
  *
  * Returns `null` when no cookie is stored. Errors are swallowed —
  * fail-closed so an authenticated request just goes out unauthenticated
  * and gets a 401, which the unauthorized callback handles.
  */
-function readBearerToken(): string | null {
+async function readBearerToken(): Promise<string | null> {
   try {
-    const cookie = authClient.getCookie();
+    const cookie = await authClient.getCookie();
     if (!cookie) return null;
     // Cookie format: `name1=value1; name2=value2`. The session token
     // cookie name ends in `.session_token` (better-auth's convention).
@@ -98,7 +98,7 @@ export function AuthSessionProvider({ children }: ProviderProps): React.JSX.Elem
         ? 'needs-onboarding'
         : 'authenticated';
 
-  // Wire the synchronous bearer getter into `lib/api/client.ts`. This
+  // Wire the asynchronous bearer getter into `lib/api/client.ts`. This
   // runs on every mount of the provider; setting the getter is
   // idempotent (it overwrites the previous reference).
   useEffect(() => {

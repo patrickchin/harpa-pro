@@ -99,14 +99,14 @@ rules. Summary below.
   and is a schema no-op on the already-current production shape. The second
   is data-only and removes exactly the retired
   `0003_llm_usage_events.sql` ledger identity.
-- Migration `0032_better_auth_account_issuer.sql` expands
-  `public.account` to Better Auth 1.7's issuer-based identity while the
-  deployed runtime remains on 1.6.28. It accepts only credential accounts,
-  canonicalizes them to `(local:credential, user_id)`, and creates the unique
-  `(issuer, account_id)` index. The non-null issuer keeps a
-  `local:credential` database default so old 1.6 writers and a 1.6 rollback
-  remain compatible. Removing that default is a later physical-contract
-  migration, not part of the 1.7 runtime upgrade.
+- Migration `0032_better_auth_account_issuer.sql` expanded
+  `public.account` ahead of the Better Auth 1.7 runtime update. It accepts only
+  credential accounts, canonicalizes them to `(local:credential, user_id)`,
+  and creates the unique `(issuer, account_id)` index. The 1.7.2 runtime writes
+  the issuer explicitly. The non-null issuer retains a `local:credential`
+  database default only so a 1.6 rollback remains compatible. Removing that
+  default is a later physical-contract migration, not part of the 1.7 runtime
+  upgrade.
 - Both streams are forward-only. Never run an admin migration through the
   application loader or edit an applied migration.
 - The repository does not have an immutable migration manifest or applied-file

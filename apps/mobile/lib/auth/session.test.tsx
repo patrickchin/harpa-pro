@@ -91,7 +91,7 @@ function makeUploadQueue() {
 beforeEach(() => {
   vi.clearAllMocks();
   signOutMock.mockResolvedValue(undefined);
-  getCookieMock.mockReturnValue(null);
+  getCookieMock.mockResolvedValue(null);
 });
 
 describe('useAuthSession', () => {
@@ -130,29 +130,27 @@ describe('useAuthSession', () => {
     expect(value().status).toBe('authenticated');
   });
 
-  it('wires the bearer token getter from authClient.getCookie()', () => {
-    getCookieMock.mockReturnValue(
+  it('wires the bearer token getter from authClient.getCookie()', async () => {
+    getCookieMock.mockResolvedValue(
       'other=foo; better-auth.session_token=token-abc; trailing=bar',
     );
     renderWithSession({ data: null, isPending: false });
-    const getter = setAuthTokenGetterMock.mock.calls.at(-1)![0] as () => string | null;
-    expect(getter()).toBe('token-abc');
+    const getter = setAuthTokenGetterMock.mock.calls.at(-1)![0] as () => Promise<string | null>;
+    await expect(getter()).resolves.toBe('token-abc');
   });
 
-  it('returns null from the bearer getter when no cookie is stored', () => {
-    getCookieMock.mockReturnValue(null);
+  it('returns null from the bearer getter when no cookie is stored', async () => {
+    getCookieMock.mockResolvedValue(null);
     renderWithSession({ data: null, isPending: false });
-    const getter = setAuthTokenGetterMock.mock.calls.at(-1)![0] as () => string | null;
-    expect(getter()).toBeNull();
+    const getter = setAuthTokenGetterMock.mock.calls.at(-1)![0] as () => Promise<string | null>;
+    await expect(getter()).resolves.toBeNull();
   });
 
-  it('returns null from the bearer getter when getCookie throws', () => {
-    getCookieMock.mockImplementation(() => {
-      throw new Error('boom');
-    });
+  it('returns null from the bearer getter when getCookie rejects', async () => {
+    getCookieMock.mockRejectedValue(new Error('boom'));
     renderWithSession({ data: null, isPending: false });
-    const getter = setAuthTokenGetterMock.mock.calls.at(-1)![0] as () => string | null;
-    expect(getter()).toBeNull();
+    const getter = setAuthTokenGetterMock.mock.calls.at(-1)![0] as () => Promise<string | null>;
+    await expect(getter()).resolves.toBeNull();
   });
 
   it('signOut calls authClient.signOut + resets cache + refetches', async () => {

@@ -72,6 +72,10 @@ const resend = createResendClient();
 
 const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
   get(_, prop, receiver) {
+    // Better Auth probes Drizzle metadata while constructing the adapter.
+    // We pass authSchema explicitly and keep joins disabled, so this probe
+    // must not initialize the lazy database connection at module load.
+    if (prop === '_') return undefined;
     return Reflect.get(rawDb(), prop, receiver);
   },
 });
@@ -98,6 +102,7 @@ type AuthInternalContext = {
     linkAccount: (input: {
       userId: string;
       providerId: string;
+      issuer: string;
       accountId: string;
       password: string;
     }) => Promise<unknown>;

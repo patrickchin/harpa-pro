@@ -153,9 +153,9 @@ beforeAll(async () => {
   );
   await admin.query(
     `INSERT INTO public."account"
-       (id, account_id, provider_id, user_id, created_at, updated_at)
-     VALUES ($1, $2, 'credential', $3, now(), now())`,
-    [newId('idn'), aliceEmail, alice],
+       (id, issuer, account_id, provider_id, user_id, created_at, updated_at)
+     VALUES ($1, 'local:credential', $2, 'credential', $2, now(), now())`,
+    [newId('idn'), alice],
   );
   await admin.query(
     `INSERT INTO public."verification"(id, identifier, value, expires_at, created_at, updated_at)
@@ -511,6 +511,24 @@ describe('account deletion cleanup transaction', () => {
 
 describe('DELETE /me', () => {
   it('deletes the caller account, revokes sessions, and preserves shared projects', async () => {
+    const credential = await admin.query<{
+      issuer: string;
+      account_id: string;
+      provider_id: string;
+    }>(
+      `SELECT issuer, account_id, provider_id
+       FROM public."account"
+       WHERE user_id = $1`,
+      [alice],
+    );
+    expect(credential.rows).toEqual([
+      {
+        issuer: 'local:credential',
+        account_id: alice,
+        provider_id: 'credential',
+      },
+    ]);
+
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
 

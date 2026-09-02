@@ -87,7 +87,10 @@ Key decisions (full rationale in the design spec):
   CLI-generated schema (`packages/api/src/db/auth-schema.ts`). The
   adapter uses the **unscoped** connection pool (`rawDb()`) — not
   `withScopedConnection` — because it needs to read sessions before it
-  knows which user to scope to.
+  knows which user to scope to. The lazy database proxy returns `undefined`
+  for Drizzle's `_` metadata probe because the adapter receives the auth
+  schema explicitly and relational joins are disabled. Adapter construction
+  and module import must not initialize the database.
 - **`expo()` plugin** (`@better-auth/expo`) supports Expo origins and
   mobile session storage.
 - **`bearer()` plugin** accepts the mobile session token and the
@@ -399,18 +402,29 @@ CLI pick them up. The dependency-policy test pins the related packages and
 checks the exact generation command. No current CI job regenerates the file
 and compares the result, so schema drift still needs a direct review check.
 
-Migration `0032_better_auth_account_issuer.sql` is the deliberate exception
-during the Better Auth 1.7 expand stage: the checked-in mirror is the output
-independently generated with 1.7.2, while the deployed runtime and CLI stay on
-1.6.28. Do not regenerate the file with the 1.6 CLI during this interval. The
-Stage 2 package update must run the 1.7.2 generator and leave the mirror
-byte-for-byte unchanged.
+Migration `0032_better_auth_account_issuer.sql` was the deliberate expand-stage
+bridge deployed before the Better Auth 1.7 runtime update. Its checked-in mirror
+was generated independently with 1.7.2 while the 1.6.28 runtime remained live.
+The runtime and CLI now use 1.7.2; regenerating with the pinned CLI must leave
+the mirror byte-for-byte unchanged. The `local:credential` database default
+remains only for rollback compatibility until a later physical-contract
+migration removes it.
 
 The API and mobile manifests pin `better-auth`, `@better-auth/expo`, and the
 official `auth` CLI to the same exact stable release. Upgrade all of them
 together. Version ranges or the retired `@better-auth/cli` package can let
 pnpm satisfy the Expo plugin with an older `@better-auth/core`, even when the
 top-level runtime package looks current.
+
+Better Auth 1.7 identifies an account by `(issuer, accountId)`. Harpa Pro is
+credential-only, so every current account uses
+`issuer = 'local:credential'`, `account_id = user_id`, and
+`provider_id = 'credential'`. Direct seed and test writers derive the issuer
+with `createLocalAccountIssuer('credential')`. The 1.7.2 package does not
+implement the upgrade guide's `identityStrategy` option, so the server must
+not add or cast through that unsupported setting. Any live account with a
+different provider blocks deployment and requires a separately designed
+identity migration.
 
 The mobile workspace pins Zod 4 because Better Auth's client and Expo plugin
 declarations use Zod 4 through `better-call`. The shared API contract retains
@@ -820,9 +834,13 @@ introduces that data contract.
   the bearer token and browser session cookie cannot be reused after.
 - **`@better-auth/expo` client** persists the bearer token in
   `expo-secure-store` on signed builds, so the session survives app restarts.
-  Development builds fall back to process-local memory when SecureStore fails
-  because the build lacks Keychain entitlement. That fallback does not survive
-  a restart.
+  The storage adapter exposes both sync and async reads and writes. Bearer
+  acquisition awaits Better Auth's async cookie read before constructing an
+  API request. Development builds fall back to one shared process-local cache
+  when either SecureStore path fails because the build lacks Keychain
+  entitlement. Production uses SecureStore directly, so failures surface
+  instead of silently creating a volatile session. The development fallback
+  does not survive a restart.
 - **Dashboard browser client** sends the better-auth `HttpOnly` cookie
   with `credentials: include`. Dashboard code does not persist the
   session token in local storage.

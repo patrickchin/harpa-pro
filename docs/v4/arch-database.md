@@ -99,13 +99,23 @@ rules. Summary below.
   and is a schema no-op on the already-current production shape. The second
   is data-only and removes exactly the retired
   `0003_llm_usage_events.sql` ledger identity.
+- Migration `0032_better_auth_account_issuer.sql` expands
+  `public.account` to Better Auth 1.7's issuer-based identity while the
+  deployed runtime remains on 1.6.28. It accepts only credential accounts,
+  canonicalizes them to `(local:credential, user_id)`, and creates the unique
+  `(issuer, account_id)` index. The non-null issuer keeps a
+  `local:credential` database default so old 1.6 writers and a 1.6 rollback
+  remain compatible. Removing that default is a later physical-contract
+  migration, not part of the 1.7 runtime upgrade.
 - Both streams are forward-only. Never run an admin migration through the
   application loader or edit an applied migration.
 - The repository does not have an immutable migration manifest or applied-file
   checksum gate. The ledger stores filenames only. Review and branch
   protection must prevent edits to an applied file.
 - An application migration MUST be paired with:
-  - the Drizzle schema change in `packages/api/src/db/schema.ts`,
+  - the relevant Drizzle schema mirror: `packages/api/src/db/schema.ts` for
+    application tables or `packages/api/src/db/auth-schema.ts` for
+    Better Auth tables,
   - a per-request scope test in `__tests__/scope/` when a user-owned table or
     policy changes (Pitfall 6).
 - An admin migration must be paired with the isolated Drizzle mirror in

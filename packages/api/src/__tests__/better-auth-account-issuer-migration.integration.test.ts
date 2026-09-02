@@ -295,4 +295,66 @@ describe('Better Auth account issuer migration', () => {
       ]);
     });
   }, 120_000);
+
+  it('rejects a same-name index with the wrong definition', async () => {
+    await resetToLegacySchema();
+    await withClient(async (client) => {
+      await client.query('DROP INDEX public.account_user_id_idx');
+      await client.query(
+        'CREATE INDEX account_user_id_idx ON public."account" (provider_id)',
+      );
+    });
+
+    await expect(migrate(connectionString)).rejects.toThrow(
+      /unexpected pre-1\.7 public\.account index definitions/i,
+    );
+
+    await withClient(async (client) => {
+      await expectMigrationRolledBack(client);
+      const index = await client.query<{ indexdef: string }>(`
+        SELECT indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'account'
+          AND indexname = 'account_user_id_idx'
+      `);
+      expect(index.rows).toEqual([
+        {
+          indexdef:
+            'CREATE INDEX account_user_id_idx ON public.account USING btree (provider_id)',
+        },
+      ]);
+    });
+  }, 120_000);
+
+  it('rejects a same-name foreign key with the wrong delete action', async () => {
+    await resetToLegacySchema();
+    await withClient(async (client) => {
+      await client.query(`
+        ALTER TABLE public."account"
+          DROP CONSTRAINT account_user_id_fkey,
+          ADD CONSTRAINT account_user_id_fkey
+            FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE RESTRICT
+      `);
+    });
+
+    await expect(migrate(connectionString)).rejects.toThrow(
+      /unexpected pre-1\.7 public\.account constraint definitions/i,
+    );
+
+    await withClient(async (client) => {
+      await expectMigrationRolledBack(client);
+      const constraint = await client.query<{ definition: string }>(`
+        SELECT pg_get_constraintdef(oid) AS definition
+        FROM pg_constraint
+        WHERE conrelid = 'public."account"'::regclass
+          AND conname = 'account_user_id_fkey'
+      `);
+      expect(constraint.rows).toEqual([
+        {
+          definition: 'FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE RESTRICT',
+        },
+      ]);
+    });
+  }, 120_000);
 });

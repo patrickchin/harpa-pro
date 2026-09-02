@@ -72,18 +72,62 @@ BEGIN
       coalesce(array_length(actual_constraints, 1), 0);
   END IF;
 
-  SELECT array_agg(indexname::text ORDER BY indexname)
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_definition
+    JOIN pg_attribute id_column
+      ON id_column.attrelid = constraint_definition.conrelid
+     AND id_column.attname = 'id'
+    WHERE constraint_definition.conrelid = 'public."account"'::regclass
+      AND constraint_definition.conname = 'account_pkey'
+      AND constraint_definition.contype = 'p'
+      AND constraint_definition.conkey::smallint[] =
+        ARRAY[id_column.attnum]::smallint[]
+      AND constraint_definition.convalidated
+      AND NOT constraint_definition.condeferrable
+      AND NOT constraint_definition.condeferred
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint constraint_definition
+    JOIN pg_attribute user_id_column
+      ON user_id_column.attrelid = constraint_definition.conrelid
+     AND user_id_column.attname = 'user_id'
+    JOIN pg_attribute referenced_id_column
+      ON referenced_id_column.attrelid = 'public."user"'::regclass
+     AND referenced_id_column.attname = 'id'
+    WHERE constraint_definition.conrelid = 'public."account"'::regclass
+      AND constraint_definition.conname = 'account_user_id_fkey'
+      AND constraint_definition.contype = 'f'
+      AND constraint_definition.conkey::smallint[] =
+        ARRAY[user_id_column.attnum]::smallint[]
+      AND constraint_definition.confrelid = 'public."user"'::regclass
+      AND constraint_definition.confkey::smallint[] =
+        ARRAY[referenced_id_column.attnum]::smallint[]
+      AND constraint_definition.confmatchtype = 's'
+      AND constraint_definition.confupdtype = 'a'
+      AND constraint_definition.confdeltype = 'c'
+      AND constraint_definition.convalidated
+      AND NOT constraint_definition.condeferrable
+      AND NOT constraint_definition.condeferred
+  ) THEN
+    RAISE EXCEPTION 'unexpected pre-1.7 public.account constraint definitions';
+  END IF;
+
+  SELECT array_agg(
+      regexp_replace(indexdef, '\s+', ' ', 'g')
+      ORDER BY indexname
+    )
     INTO actual_indexes
   FROM pg_indexes
   WHERE schemaname = 'public'
     AND tablename = 'account';
 
   IF actual_indexes IS DISTINCT FROM ARRAY[
-    'account_pkey',
-    'account_user_id_idx'
+    'CREATE UNIQUE INDEX account_pkey ON public.account USING btree (id)',
+    'CREATE INDEX account_user_id_idx ON public.account USING btree (user_id)'
   ]::text[] THEN
     RAISE EXCEPTION
-      'unexpected pre-1.7 public.account index layout (% indexes)',
+      'unexpected pre-1.7 public.account index definitions (% indexes)',
       coalesce(array_length(actual_indexes, 1), 0);
   END IF;
 

@@ -28,7 +28,7 @@ import { expect, vi } from 'vitest';
 // `features/voice/fixtureRecorder.test.ts` overrides this per-case via
 // `__resetPickedRecorderForTests` and direct env mutation.
 // vitest.setup.ts is an allow-listed reader of EXPO_PUBLIC_* in
-// `.eslintrc.cjs` — it must mutate the env before the recorder
+// `eslint.config.mjs` — it must mutate the env before the recorder
 // factory imports it, so it precedes `lib/env.ts`.
 process.env.EXPO_PUBLIC_USE_FIXTURES = 'true';
 

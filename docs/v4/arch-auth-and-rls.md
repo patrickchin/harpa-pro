@@ -615,7 +615,7 @@ See [`arch-storage.md` §Security](arch-storage.md#security) and
 
 ## Lint guard
 
-`packages/api/.eslintrc.cjs` blocks direct imports of `db/client` and
+`packages/api/eslint.config.mjs` blocks direct imports of `db/client` and
 `db/scope` from most route modules. Public auth, health, waitlist, admin, and
 readiness routes are explicit exceptions because they cannot use an
 authenticated request scope. Tests are also excluded. The current config does

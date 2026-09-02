@@ -25,10 +25,10 @@ describe('site smoke', () => {
     };
 
     expect(pkg.dependencies).toMatchObject({
-      '@astrojs/mdx': '^7.0.5',
-      '@astrojs/react': '^6.0.2',
+      '@astrojs/mdx': '^7.0.8',
+      '@astrojs/react': '^6.0.4',
       '@tailwindcss/vite': '^4.3.3',
-      astro: '^7.2.2',
+      astro: '^7.2.9',
       react: '19.2.0',
       'react-dom': '19.2.0',
       tailwindcss: '^4.3.3',

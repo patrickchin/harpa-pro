@@ -17,7 +17,7 @@ describe('admin site smoke', () => {
 
     expect(pkg.name).toBe('@harpa/admin');
     expect(pkg.dependencies).not.toHaveProperty('astro');
-    expect(pkg.devDependencies.astro).toBe('^7.2.2');
+    expect(pkg.devDependencies.astro).toBe('^7.2.9');
     expect(pkg.engines.node).toBe('>=22.12.0');
     expect(config).toMatch(/site:\s*['"]https:\/\/admin\.harpapro\.com['"]/);
     expect(config).toMatch(/output:\s*['"]static['"]/);
@@ -36,7 +36,7 @@ describe('admin site smoke', () => {
     });
     expect(pkg.devDependencies).toMatchObject({
       '@astrojs/check': '^0.9.10',
-      '@astrojs/react': '^6.0.2',
+      '@astrojs/react': '^6.0.4',
       '@tailwindcss/vite': '^4.3.3',
       '@types/react': '^19.2.18',
       '@types/react-dom': '~19.2.4',

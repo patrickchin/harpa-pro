@@ -1,11 +1,5 @@
-More reliable report generation and uploads, with safer retries and account
-switching.
+Diagnostic build information is now easier to read: API commit IDs use a
+short form in the app while the full ID remains available to copy.
 
-Project permissions now keep viewers read-only and reserve owner actions for
-project owners.
-
-On iOS, site photos are captured in Harpa Pro without browsing your photo
-library. This update also removes profile-photo controls.
-
-This release also includes account-deletion cleanup, stability improvements,
-and security hardening.
+Persisted mobile data is now isolated by signed-in account. This release also
+includes reliability and dependency improvements.

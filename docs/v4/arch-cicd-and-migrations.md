@@ -47,9 +47,10 @@ recovery points. The image contains the required migration heads.
   `app._migrations`. Fly's HTTP check is moved to `/readyz`. `/healthz`
   stays as cheap liveness (no DB) but now also returns `version` /
   `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args.
-  `GIT_COMMIT` is the full 40-character SHA
-  so the mobile BuildBadge (and ops dashboards) can show which commit
-  is serving traffic. CI separately checks `/admin/readyz` against
+  `GIT_COMMIT` is the full 40-character SHA so exact deployment identity
+  remains available to CI and ops dashboards. The mobile BuildBadge shows
+  the first seven characters but keeps the full value for long-press copy.
+  CI separately checks `/admin/readyz` against
   `ADMIN_MIGRATIONS_REQUIRED_HEAD`; it is deliberately not a Fly routing
   health check, so an admin-only outage cannot remove the product API.
 

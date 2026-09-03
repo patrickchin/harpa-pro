@@ -112,8 +112,10 @@ permissions, Sentry, and the production iPhone-only setting.
 email-OTP plugins. Better Auth 1.7 uses SecureStore's synchronous and
 asynchronous reads and writes; the development adapter exposes all four and
 shares one in-memory fallback across them. Local unsigned simulator builds use
-that fallback only when SecureStore has no signing entitlement. Production
-passes SecureStore directly so persistence failures remain visible.
+that fallback only when SecureStore has no signing entitlement. Successful
+reads and writes refresh the fallback so a later storage error cannot restore
+an older cookie. Production passes SecureStore directly so persistence failures
+remain visible.
 
 `AuthSessionProvider` maps `authClient.useSession()` into:
 
@@ -201,17 +203,17 @@ Snapshots that contain optimistic note IDs do not persist. A sign-out,
 
 ## Client state
 
-| Concern                           | Owner                                      |
-| --------------------------------- | ------------------------------------------ |
-| Server resources                  | TanStack Query                             |
-| Screen interaction state          | React state and reducers                   |
-| Better Auth cookie                | SecureStore through `@better-auth/expo`    |
-| Query snapshots                   | User-scoped MMKV keys                      |
-| Upload jobs                       | User-scoped MMKV keys                      |
-| Generate Debug tab flag           | AsyncStorage                               |
-| Save-to-camera-roll preference    | AsyncStorage                               |
-| Dialogs                           | `DialogSheetProvider` and `AppDialogSheet` |
-| Audio playback                    | `AudioPlaybackProvider`                    |
+| Concern                        | Owner                                      |
+| ------------------------------ | ------------------------------------------ |
+| Server resources               | TanStack Query                             |
+| Screen interaction state       | React state and reducers                   |
+| Better Auth cookie             | SecureStore through `@better-auth/expo`    |
+| Query snapshots                | User-scoped MMKV keys                      |
+| Upload jobs                    | User-scoped MMKV keys                      |
+| Generate Debug tab flag        | AsyncStorage                               |
+| Save-to-camera-roll preference | AsyncStorage                               |
+| Dialogs                        | `DialogSheetProvider` and `AppDialogSheet` |
+| Audio playback                 | `AudioPlaybackProvider`                    |
 
 ## Upload pipeline
 

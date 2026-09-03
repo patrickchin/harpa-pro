@@ -93,12 +93,15 @@ const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
  */
 type AuthInternalContext = {
   internalAdapter: {
-    findUserByEmail: (email: string) => Promise<{ user: { id: string } } | null | undefined>;
+    findUserByEmail: (
+      email: string,
+    ) => Promise<{ user: { id: string; emailVerified: boolean } } | null | undefined>;
     createUser: (input: {
       email: string;
       name: string;
       emailVerified: boolean;
     }) => Promise<{ id: string } | null | undefined>;
+    updateUser: (userId: string, input: { emailVerified: boolean }) => Promise<unknown>;
     linkAccount: (input: {
       userId: string;
       providerId: string;

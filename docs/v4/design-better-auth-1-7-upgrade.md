@@ -314,6 +314,7 @@ The focused auth suite must cover:
 - email-OTP account creation and sign-in;
 - password sign-in for the seeded smoke-test account;
 - demo-account credential creation/update and password sign-in;
+- existing unverified demo-user promotion before credential refresh and OTP;
 - seed create, update, and repeat/idempotence paths with the new identity;
 - an existing bearer session before the upgrade remaining usable afterward;
 - sign-out revoking the session as before; and

@@ -35,7 +35,10 @@ export function createAuthStorage(isDevelopment: boolean): ExpoClientStorage {
   return {
     getItem: (key: string, options?: SecureStore.SecureStoreOptions): string | null => {
       try {
-        return SecureStore.getItem(key, options);
+        const value = SecureStore.getItem(key, options);
+        if (value === null) memCache.delete(key);
+        else memCache.set(key, value);
+        return value;
       } catch (err) {
         console.warn('[auth] SecureStore.getItem failed, using in-memory fallback', err);
         return memCache.get(key) ?? null;
@@ -46,7 +49,10 @@ export function createAuthStorage(isDevelopment: boolean): ExpoClientStorage {
       options?: SecureStore.SecureStoreOptions,
     ): Promise<string | null> => {
       try {
-        return await SecureStore.getItemAsync(key, options);
+        const value = await SecureStore.getItemAsync(key, options);
+        if (value === null) memCache.delete(key);
+        else memCache.set(key, value);
+        return value;
       } catch (err) {
         console.warn('[auth] SecureStore.getItemAsync failed, using in-memory fallback', err);
         return memCache.get(key) ?? null;
@@ -57,6 +63,7 @@ export function createAuthStorage(isDevelopment: boolean): ExpoClientStorage {
         SecureStore.setItem(key, value, options);
       } catch (err) {
         console.warn('[auth] SecureStore.setItem failed, using in-memory fallback', err);
+      } finally {
         memCache.set(key, value);
       }
     },
@@ -69,6 +76,7 @@ export function createAuthStorage(isDevelopment: boolean): ExpoClientStorage {
         await SecureStore.setItemAsync(key, value, options);
       } catch (err) {
         console.warn('[auth] SecureStore.setItemAsync failed, using in-memory fallback', err);
+      } finally {
         memCache.set(key, value);
       }
     },

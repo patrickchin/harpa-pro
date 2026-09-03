@@ -94,6 +94,9 @@ async function seedPasswordAccounts(input: SeedGroup): Promise<void> {
       const passwordHash = await ctx.password.hash(input.password);
 
       if (existing?.user) {
+        if (input.emailVerified && !existing.user.emailVerified) {
+          await ctx.internalAdapter.updateUser(existing.user.id, { emailVerified: true });
+        }
         const action = await ensureCredentialAccount(ctx, existing.user.id, passwordHash);
         console.log(
           `[seed-test-account] ${input.label} ${email} user exists; credential ${action}`,

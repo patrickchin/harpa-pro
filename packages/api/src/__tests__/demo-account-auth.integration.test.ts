@@ -1,3 +1,6 @@
+import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLocalAccountIssuer } from 'better-auth/db';
 import type { PgFixture } from './setup-pg.js';
@@ -8,6 +11,8 @@ const DEMO_PASSWORD = 'demo-password-12345';
 const TEST_EMAIL = 'test@harpapro.com';
 const TEST_PASSWORD = 'test-password-12345';
 const CREDENTIAL_ISSUER = createLocalAccountIssuer('credential');
+const API_DIR = fileURLToPath(new URL('../..', import.meta.url));
+const execFileAsync = promisify(execFile);
 
 let fx: PgFixture;
 let createApp: typeof import('../app.js').createApp;
@@ -85,6 +90,25 @@ async function seedPasswordUser(email: string, password: string): Promise<void> 
     issuer: CREDENTIAL_ISSUER,
     accountId: userId,
     password: passwordHash,
+  });
+}
+
+async function runDemoSeedCli(): Promise<void> {
+  const commandEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    DATABASE_URL: fx.url,
+    NODE_ENV: 'test',
+    EMAIL_OTP_LIVE: '0',
+    DEMO_ACCOUNT_EMAILS: DEMO_EMAIL,
+    DEMO_ACCOUNT_PASSWORD: DEMO_PASSWORD,
+  };
+  delete commandEnv.TEST_ACCOUNT_EMAILS;
+  delete commandEnv.TEST_ACCOUNT_PASSWORD;
+
+  await execFileAsync('pnpm', ['db:seed-test-account'], {
+    cwd: API_DIR,
+    env: commandEnv,
+    timeout: 60_000,
   });
 }
 
@@ -264,4 +288,37 @@ describe('Password account access', () => {
     expect(passwordSignIn.status).toBe(200);
     expect(passwordSignIn.headers.get('set-auth-token')).toBeTruthy();
   });
+
+  it('verifies an existing demo user before seeding its credential', async () => {
+    const ctx = await auth.$context;
+    const created = await ctx.internalAdapter.createUser({
+      email: DEMO_EMAIL,
+      name: DEMO_EMAIL,
+      emailVerified: false,
+    });
+    expect(created?.id).toBeTruthy();
+
+    const unverified = await getPool().query<{ email_verified: boolean }>(
+      `SELECT email_verified FROM public."user" WHERE email = $1`,
+      [DEMO_EMAIL],
+    );
+    expect(unverified.rows).toEqual([{ email_verified: false }]);
+
+    await runDemoSeedCli();
+
+    const verified = await getPool().query<{ email_verified: boolean }>(
+      `SELECT email_verified FROM public."user" WHERE email = $1`,
+      [DEMO_EMAIL],
+    );
+    expect(verified.rows).toEqual([{ email_verified: true }]);
+
+    const app = createApp();
+    expect((await sendSignInOtp(app, DEMO_EMAIL)).status).toBe(200);
+    const otp = await readLatestOtp(DEMO_EMAIL);
+    expect((await signInEmailOtp(app, DEMO_EMAIL, otp)).status).toBe(200);
+
+    const passwordSignIn = await signInPassword(app, DEMO_EMAIL, DEMO_PASSWORD);
+    expect(passwordSignIn.status).toBe(200);
+    expect(passwordSignIn.headers.get('set-auth-token')).toBeTruthy();
+  }, 120_000);
 });

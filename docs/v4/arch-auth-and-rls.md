@@ -771,6 +771,10 @@ The deploy seed script (`packages/api/scripts/seed-test-account.ts`)
 creates or refreshes credential accounts for both groups. Successful
 demo password sign-in creates a normal better-auth session, so all
 authenticated API routes behave the same as they do for a regular user.
+The seed marks an existing configured demo user as email-verified before
+refreshing its credential; this keeps the standard email-OTP fallback from
+classifying and removing that credential as unproven. Test-account verification
+state is not promoted by the seed.
 
 Normal users still receive and enter six-digit email OTPs. The demo
 password path does not change the email-OTP route; if that route is

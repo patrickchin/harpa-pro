@@ -107,4 +107,40 @@ describe('Better Auth Expo storage', () => {
     expect(warn).toHaveBeenCalledTimes(4);
     warn.mockRestore();
   });
+
+  it('replaces a failed-write fallback after SecureStore recovers', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = createAuthStorage(true);
+
+    mocks.secureStore.setItemAsync.mockRejectedValueOnce(new Error('write failed'));
+    await storage.setItemAsync('session-key', 'stale-session');
+    await storage.setItemAsync('session-key', '{}');
+
+    mocks.secureStore.getItemAsync.mockRejectedValueOnce(new Error('read failed'));
+    await expect(storage.getItemAsync('session-key')).resolves.toBe('{}');
+
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it('refreshes and clears the fallback after successful SecureStore reads', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage = createAuthStorage(true);
+
+    mocks.secureStore.setItemAsync.mockRejectedValueOnce(new Error('write failed'));
+    await storage.setItemAsync('read-through-key', 'stale-session');
+
+    mocks.secureStore.getItemAsync.mockResolvedValueOnce('stored-session');
+    await expect(storage.getItemAsync('read-through-key')).resolves.toBe('stored-session');
+    mocks.secureStore.getItemAsync.mockRejectedValueOnce(new Error('read failed'));
+    await expect(storage.getItemAsync('read-through-key')).resolves.toBe('stored-session');
+
+    mocks.secureStore.getItemAsync.mockResolvedValueOnce(null);
+    await expect(storage.getItemAsync('read-through-key')).resolves.toBeNull();
+    mocks.secureStore.getItemAsync.mockRejectedValueOnce(new Error('read failed'));
+    await expect(storage.getItemAsync('read-through-key')).resolves.toBeNull();
+
+    expect(warn).toHaveBeenCalledTimes(3);
+    warn.mockRestore();
+  });
 });

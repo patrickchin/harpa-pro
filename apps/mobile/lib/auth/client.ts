@@ -12,7 +12,7 @@
  */
 import { createAuthClient } from 'better-auth/react';
 import type { BetterAuthClientPlugin } from 'better-auth/client';
-import { expoClient } from '@better-auth/expo/client';
+import { expoClient, type ExpoClientStorage } from '@better-auth/expo/client';
 import { emailOTPClient } from 'better-auth/client/plugins';
 import * as SecureStore from 'expo-secure-store';
 
@@ -26,30 +26,64 @@ import { env } from '@/lib/config/env';
 // Gated on __DEV__ on purpose: in production we want SecureStore failures to
 // surface (e.g. to Sentry / via the auth client's own error handling) rather
 // than silently dropping users into an in-memory session that vanishes on
-// every app restart. @better-auth/expo's storage interface only needs
-// getItem + setItem.
+// every app restart. Sync and async operations share the same fallback cache.
 const memCache = new Map<string, string>();
 
-const storage = __DEV__
-  ? {
-      getItem: (key: string, options?: SecureStore.SecureStoreOptions): string | null => {
-        try {
-          return SecureStore.getItem(key, options);
-        } catch (err) {
-          console.warn('[auth] SecureStore.getItem failed, using in-memory fallback', err);
-          return memCache.get(key) ?? null;
-        }
-      },
-      setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions): void => {
-        try {
-          SecureStore.setItem(key, value, options);
-        } catch (err) {
-          console.warn('[auth] SecureStore.setItem failed, using in-memory fallback', err);
-          memCache.set(key, value);
-        }
-      },
-    }
-  : SecureStore;
+export function createAuthStorage(isDevelopment: boolean): ExpoClientStorage {
+  if (!isDevelopment) return SecureStore;
+
+  return {
+    getItem: (key: string, options?: SecureStore.SecureStoreOptions): string | null => {
+      try {
+        const value = SecureStore.getItem(key, options);
+        if (value === null) memCache.delete(key);
+        else memCache.set(key, value);
+        return value;
+      } catch (err) {
+        console.warn('[auth] SecureStore.getItem failed, using in-memory fallback', err);
+        return memCache.get(key) ?? null;
+      }
+    },
+    getItemAsync: async (
+      key: string,
+      options?: SecureStore.SecureStoreOptions,
+    ): Promise<string | null> => {
+      try {
+        const value = await SecureStore.getItemAsync(key, options);
+        if (value === null) memCache.delete(key);
+        else memCache.set(key, value);
+        return value;
+      } catch (err) {
+        console.warn('[auth] SecureStore.getItemAsync failed, using in-memory fallback', err);
+        return memCache.get(key) ?? null;
+      }
+    },
+    setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions): void => {
+      try {
+        SecureStore.setItem(key, value, options);
+      } catch (err) {
+        console.warn('[auth] SecureStore.setItem failed, using in-memory fallback', err);
+      } finally {
+        memCache.set(key, value);
+      }
+    },
+    setItemAsync: async (
+      key: string,
+      value: string,
+      options?: SecureStore.SecureStoreOptions,
+    ): Promise<void> => {
+      try {
+        await SecureStore.setItemAsync(key, value, options);
+      } catch (err) {
+        console.warn('[auth] SecureStore.setItemAsync failed, using in-memory fallback', err);
+      } finally {
+        memCache.set(key, value);
+      }
+    },
+  };
+}
+
+const storage = createAuthStorage(__DEV__);
 
 const expoPluginBase = expoClient({
   scheme: 'harpa',

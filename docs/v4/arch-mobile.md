@@ -109,9 +109,13 @@ permissions, Sentry, and the production iPhone-only setting.
 ## Authentication
 
 `lib/auth/client.ts` creates the Better Auth client with the Expo and
-email-OTP plugins. The Expo plugin stores cookies in SecureStore. Local
-unsigned simulator builds use an in-memory fallback only when
-SecureStore has no signing entitlement.
+email-OTP plugins. Better Auth 1.7 uses SecureStore's synchronous and
+asynchronous reads and writes; the development adapter exposes all four and
+shares one in-memory fallback across them. Local unsigned simulator builds use
+that fallback only when SecureStore has no signing entitlement. Successful
+reads and writes refresh the fallback so a later storage error cannot restore
+an older cookie. Production passes SecureStore directly so persistence failures
+remain visible.
 
 `AuthSessionProvider` maps `authClient.useSession()` into:
 
@@ -123,9 +127,11 @@ A missing `displayName` produces `needs-onboarding`. `companyName` is
 optional.
 
 The existing typed API client uses bearer authentication. The session
-provider reads the Better Auth session token from the stored cookie and
-installs it through `setAuthTokenGetter()`. The API accepts that bearer
-token and validates the backing Better Auth session.
+provider awaits Better Auth's asynchronous stored-cookie read, extracts the
+session token, and installs the promise-returning getter through
+`setAuthTokenGetter()`. The API client already awaits that getter before
+building `Authorization`. The API accepts the bearer token and validates the
+backing Better Auth session.
 
 Every API 401 triggers the same local boundary:
 
@@ -197,17 +203,17 @@ Snapshots that contain optimistic note IDs do not persist. A sign-out,
 
 ## Client state
 
-| Concern                           | Owner                                      |
-| --------------------------------- | ------------------------------------------ |
-| Server resources                  | TanStack Query                             |
-| Screen interaction state          | React state and reducers                   |
-| Better Auth cookie                | SecureStore through `@better-auth/expo`    |
-| Query snapshots                   | User-scoped MMKV keys                      |
-| Upload jobs                       | User-scoped MMKV keys                      |
-| Generate Debug tab flag           | AsyncStorage                               |
-| Save-to-camera-roll preference    | AsyncStorage                               |
-| Dialogs                           | `DialogSheetProvider` and `AppDialogSheet` |
-| Audio playback                    | `AudioPlaybackProvider`                    |
+| Concern                        | Owner                                      |
+| ------------------------------ | ------------------------------------------ |
+| Server resources               | TanStack Query                             |
+| Screen interaction state       | React state and reducers                   |
+| Better Auth cookie             | SecureStore through `@better-auth/expo`    |
+| Query snapshots                | User-scoped MMKV keys                      |
+| Upload jobs                    | User-scoped MMKV keys                      |
+| Generate Debug tab flag        | AsyncStorage                               |
+| Save-to-camera-roll preference | AsyncStorage                               |
+| Dialogs                        | `DialogSheetProvider` and `AppDialogSheet` |
+| Audio playback                 | `AudioPlaybackProvider`                    |
 
 ## Upload pipeline
 

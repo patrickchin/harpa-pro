@@ -12,8 +12,10 @@
  *    Expo CLI start (dev) or EAS-build time.
  *  - Backend: injected at Docker build time via the `GIT_COMMIT`
  *    build-arg (see `infra/fly/Dockerfile`) and returned by
- *    `/healthz`. Renders `?` while the fetch is in flight or if the
- *    request fails (badge stays best-effort, never blocks UI).
+ *    `/healthz`. The visible badge abbreviates it to seven characters;
+ *    long press still copies the full commit. Renders `?` while the
+ *    fetch is in flight or if the request fails (badge stays
+ *    best-effort, never blocks UI).
  */
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -56,7 +58,7 @@ export function BuildBadge({ testID = 'build-badge' }: { testID?: string }) {
   const readyz = useBackendReadyz(isPr ? apiUrl : null);
   const frontLabel = `v${buildInfo.version}+${buildInfo.gitCommit}`;
   const backLabel = backend
-    ? `api v${backend.version}+${backend.gitCommit}`
+    ? `api v${backend.version}+${backend.gitCommit.slice(0, 7)}`
     : apiUrl
     ? 'api v?'
     : 'api …';

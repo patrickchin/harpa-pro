@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import * as Clipboard from 'expo-clipboard';
 
 vi.mock('@/lib/api/base-url', () => ({
   getApiBaseUrl: vi.fn(async () => 'https://harpa-pro-api-dev.fly.dev'),
@@ -48,7 +49,7 @@ describe('BuildBadge', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the backend commit as a short hash in the version label', async () => {
+  it('renders a short backend hash but copies the full commit', async () => {
     const tree = render(<BuildBadge />);
 
     await act(async () => {
@@ -61,6 +62,14 @@ describe('BuildBadge', () => {
     expect(versionText.props.accessibilityLabel).not.toContain(`api v1.2.3+${FULL_SHA}`);
     expect(JSON.stringify(tree.toJSON())).toContain(
       'v0.0.0+testsha · api v1.2.3+1234567 · dev',
+    );
+
+    await act(async () => {
+      await versionText.props.onLongPress();
+    });
+
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
+      `front testsha · back ${FULL_SHA}`,
     );
   });
 });

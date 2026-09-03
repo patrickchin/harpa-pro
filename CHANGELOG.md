@@ -10,6 +10,8 @@ in the repository's Git history and tags.
 
 ## [Unreleased]
 
+## [0.1.66] - 2026-09-03
+
 ### Added
 
 - Added the office dashboard for project/member management and keyboard-first
@@ -24,6 +26,8 @@ in the repository's Git history and tags.
 
 ### Fixed
 
+- Shortened the API commit shown in the mobile build badge while preserving
+  the full commit for copying and deployment verification.
 - Persisted mobile query data is now isolated by signed-in account.
 
 ## [0.1.65] - 2026-07-31
@@ -63,6 +67,7 @@ in the repository's Git history and tags.
 - Aligned the Report and Review tabs with report actions and simplified the
   review comment composer.
 
-[Unreleased]: https://github.com/patrickchin/harpa-pro/compare/v0.1.65...HEAD
+[Unreleased]: https://github.com/patrickchin/harpa-pro/compare/v0.1.66...HEAD
+[0.1.66]: https://github.com/patrickchin/harpa-pro/compare/v0.1.65...v0.1.66
 [0.1.65]: https://github.com/patrickchin/harpa-pro/compare/v0.1.56...v0.1.65
 [0.1.56]: https://github.com/patrickchin/harpa-pro/compare/v0.1.55...v0.1.56

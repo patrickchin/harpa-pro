@@ -28,3 +28,7 @@ checks.
 strand security patches within already-compatible dependency ranges. Pin the
 smallest safe edge, make the resolved graph reviewable, and remove an override
 when its parent declares the secure floor.
+
+**2026-09-03 follow-up.** The grouped dependency refresh advanced the compatible
+transitive resolutions to `js-yaml@3.15.2` and `svgo@4.1.0`. Their range-scoped
+overrides now retain those newer floors without changing parent packages.

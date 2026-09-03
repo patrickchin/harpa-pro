@@ -1,4 +1,8 @@
+import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createLocalAccountIssuer } from 'better-auth/db';
 import type { PgFixture } from './setup-pg.js';
 
 const DEMO_EMAIL = 'demo@harpapro.com';
@@ -6,6 +10,9 @@ const DEMO_EMAIL_2 = 'demo2@harpapro.com';
 const DEMO_PASSWORD = 'demo-password-12345';
 const TEST_EMAIL = 'test@harpapro.com';
 const TEST_PASSWORD = 'test-password-12345';
+const CREDENTIAL_ISSUER = createLocalAccountIssuer('credential');
+const API_DIR = fileURLToPath(new URL('../..', import.meta.url));
+const execFileAsync = promisify(execFile);
 
 let fx: PgFixture;
 let createApp: typeof import('../app.js').createApp;
@@ -67,18 +74,41 @@ async function seedPasswordUser(email: string, password: string): Promise<void> 
   const ctx = await auth.$context;
   const passwordHash = await ctx.password.hash(password);
   const existing = await ctx.internalAdapter.findUserByEmail(email);
-  const userId = existing?.user.id
-    ?? (await ctx.internalAdapter.createUser({
-      email,
-      name: email,
-      emailVerified: true,
-    }))?.id;
+  const userId =
+    existing?.user.id ??
+    (
+      await ctx.internalAdapter.createUser({
+        email,
+        name: email,
+        emailVerified: true,
+      })
+    )?.id;
   if (!userId) throw new Error(`unable to seed ${email}`);
   await ctx.internalAdapter.linkAccount({
     userId,
     providerId: 'credential',
+    issuer: CREDENTIAL_ISSUER,
     accountId: userId,
     password: passwordHash,
+  });
+}
+
+async function runDemoSeedCli(): Promise<void> {
+  const commandEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    DATABASE_URL: fx.url,
+    NODE_ENV: 'test',
+    EMAIL_OTP_LIVE: '0',
+    DEMO_ACCOUNT_EMAILS: DEMO_EMAIL,
+    DEMO_ACCOUNT_PASSWORD: DEMO_PASSWORD,
+  };
+  delete commandEnv.TEST_ACCOUNT_EMAILS;
+  delete commandEnv.TEST_ACCOUNT_PASSWORD;
+
+  await execFileAsync('pnpm', ['db:seed-test-account'], {
+    cwd: API_DIR,
+    env: commandEnv,
+    timeout: 60_000,
   });
 }
 
@@ -158,6 +188,40 @@ describe('Password account access', () => {
     expect(me.status).toBe(200);
   });
 
+  it('revokes a password session on sign-out', async () => {
+    const app = createApp();
+    await seedPasswordUser(DEMO_EMAIL, DEMO_PASSWORD);
+    const signIn = await signInPassword(app, DEMO_EMAIL, DEMO_PASSWORD);
+    const token = signIn.headers.get('set-auth-token');
+    expect(signIn.status).toBe(200);
+    expect(token).toBeTruthy();
+
+    const before = await app.request('/me', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(before.status).toBe(200);
+
+    const signOut = await app.request('/api/auth/sign-out', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    });
+    expect(signOut.status).toBe(200);
+
+    const after = await app.request('/me', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(after.status).toBe(401);
+
+    const sessions = await getPool().query(`SELECT id FROM public.session WHERE token = $1`, [
+      token,
+    ]);
+    expect(sessions.rowCount).toBe(0);
+  });
+
   it('signs in a second configured demo email with the same password', async () => {
     const app = createApp();
     await seedPasswordUser(DEMO_EMAIL_2, DEMO_PASSWORD);
@@ -211,4 +275,50 @@ describe('Password account access', () => {
     expect(verifyRes.status).toBe(200);
     expect(verifyRes.headers.get('set-auth-token')).toBeTruthy();
   });
+
+  it('keeps a demo credential usable after email OTP verification', async () => {
+    const app = createApp();
+    await seedPasswordUser(DEMO_EMAIL, DEMO_PASSWORD);
+
+    expect((await sendSignInOtp(app, DEMO_EMAIL)).status).toBe(200);
+    const otp = await readLatestOtp(DEMO_EMAIL);
+    expect((await signInEmailOtp(app, DEMO_EMAIL, otp)).status).toBe(200);
+
+    const passwordSignIn = await signInPassword(app, DEMO_EMAIL, DEMO_PASSWORD);
+    expect(passwordSignIn.status).toBe(200);
+    expect(passwordSignIn.headers.get('set-auth-token')).toBeTruthy();
+  });
+
+  it('verifies an existing demo user before seeding its credential', async () => {
+    const ctx = await auth.$context;
+    const created = await ctx.internalAdapter.createUser({
+      email: DEMO_EMAIL,
+      name: DEMO_EMAIL,
+      emailVerified: false,
+    });
+    expect(created?.id).toBeTruthy();
+
+    const unverified = await getPool().query<{ email_verified: boolean }>(
+      `SELECT email_verified FROM public."user" WHERE email = $1`,
+      [DEMO_EMAIL],
+    );
+    expect(unverified.rows).toEqual([{ email_verified: false }]);
+
+    await runDemoSeedCli();
+
+    const verified = await getPool().query<{ email_verified: boolean }>(
+      `SELECT email_verified FROM public."user" WHERE email = $1`,
+      [DEMO_EMAIL],
+    );
+    expect(verified.rows).toEqual([{ email_verified: true }]);
+
+    const app = createApp();
+    expect((await sendSignInOtp(app, DEMO_EMAIL)).status).toBe(200);
+    const otp = await readLatestOtp(DEMO_EMAIL);
+    expect((await signInEmailOtp(app, DEMO_EMAIL, otp)).status).toBe(200);
+
+    const passwordSignIn = await signInPassword(app, DEMO_EMAIL, DEMO_PASSWORD);
+    expect(passwordSignIn.status).toBe(200);
+    expect(passwordSignIn.headers.get('set-auth-token')).toBeTruthy();
+  }, 120_000);
 });

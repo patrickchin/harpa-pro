@@ -368,12 +368,28 @@ the same database. Prefer an immediate or event-driven path plus a
 traffic-appropriate reconciliation sweep, and test the observable elapsed
 schedule rather than only checking configuration text.
 
+### R20 — Import-time reflection crosses an external boundary
+
+A library can inspect a lazily wrapped collaborator while its adapter is being
+constructed. If a generic proxy forwards every metadata property, a harmless
+reflection probe can initialize a database or network client during module
+evaluation. The application then fails before a request or explicit operation
+exists. Keep known construction-time metadata local, provide explicit schema or
+configuration to the adapter, and prove a cold import succeeds with the
+external credential absent. This is the reflection variant of the earlier
+[`routes/dev.ts` boot crash](2026-06-06-routes-dev-boot-crash.md).
+
 ## Bugs
 
 - **2026-06-06** _(R3)_ — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-09-03** _(R20)_ — Better Auth 1.7's Drizzle adapter probed `db._`
+  during construction, and the API's catch-all lazy proxy treated that
+  reflection as a real query, requiring `DATABASE_URL` at import time. Fix:
+  keep adapter metadata local and pin a database-free auth import.
+  [detail](2026-09-03-better-auth-drizzle-metadata-probe.md)
 - **2026-09-01** — The dashboard live-preview gate rejected a healthy exact-head
   Fly preview because it still expected GitHub's synthetic merge SHA. Fix:
   verify the immutable pull-request head used by both Fly and Pages, and pin

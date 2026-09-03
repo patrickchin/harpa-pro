@@ -113,6 +113,26 @@ describe('app boot: no module-load side effects', () => {
     BOOT_IMPORT_TIMEOUT_MS,
   );
 
+  it(
+    'constructs the Better Auth Drizzle adapter without initializing a database',
+    async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.HARPAPRO_PR_BUILD = '1';
+      process.env.EMAIL_OTP_LIVE = '0';
+      process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
+      process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
+      process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
+      process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
+      process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-pr-42.fly.dev';
+      process.env.ADMIN_CORS_ORIGINS = 'https://pr-42.harpa-pro-admin.pages.dev';
+
+      vi.resetModules();
+      const mod = await import('../auth/auth.js');
+      expect(typeof mod.auth.handler).toBe('function');
+    },
+    BOOT_IMPORT_TIMEOUT_MS,
+  );
+
   it('does not mount the retired dev OTP route', async () => {
     process.env.NODE_ENV = 'production';
     process.env.HARPAPRO_PR_BUILD = '1';

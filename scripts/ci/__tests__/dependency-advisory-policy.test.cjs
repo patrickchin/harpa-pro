@@ -91,9 +91,9 @@ assertDeclaredFloor(
   'transitive nanoid 3.x consumers must resolve the patched floor',
 );
 assertDeclaredFloor(
-  overrides['js-yaml@>=3.0.0 <3.15.1'],
+  overrides['js-yaml@>=3.0.0 <3.15.2'],
   3,
-  '3.15.1',
+  '3.15.2',
   'transitive js-yaml 3.x consumers must resolve the patched floor',
 );
 
@@ -136,7 +136,7 @@ assert.ok(
 
 assertNoAffectedVersions('js-yaml', resolvedVersions('js-yaml'), (version) => {
   const [major] = parseVersion(version);
-  if (major === 3) return compareVersions(version, '3.15.1') < 0;
+  if (major === 3) return compareVersions(version, '3.15.2') < 0;
   return false;
 });
 

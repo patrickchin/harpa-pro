@@ -24,7 +24,7 @@
     "@harpa/api-contract": "workspace:*",
     "@marsidev/react-turnstile": "^1.6.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.2.9",
+    "astro": "^7.3.1",
     "lucide-static": "^0.469.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",

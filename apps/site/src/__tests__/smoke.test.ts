@@ -66,6 +66,7 @@ describe('site smoke', () => {
   });
 
   it('publishes discovery, not-found, and legacy redirect routes', () => {
+    expect(existsSync(resolve(here, '../pages/agents.astro'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/404.astro'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/robots.txt.ts'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/sitemap.xml.ts'))).toBe(true);
@@ -80,6 +81,26 @@ describe('site smoke', () => {
 
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
     expect(layout).toContain('noindex');
+  });
+
+  it('publishes the human sourcing agent page in navigation and discovery', () => {
+    const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
+    const header = readFileSync(
+      resolve(here, '../components/landing/Header.astro'),
+      'utf8',
+    );
+    const footer = readFileSync(
+      resolve(here, '../components/landing/Footer.astro'),
+      'utf8',
+    );
+    const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
+
+    expect(page).toContain('Human sourcing support');
+    expect(page).toContain('Get local help buying from China.');
+    expect(page).toContain('Send a sourcing brief');
+    expect(header).toContain('href="/agents"');
+    expect(footer).toContain('href="/agents"');
+    expect(sitemap).toContain('"/agents"');
   });
 
   it('does not ship the separate admin application', () => {

@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import {
-  FIRST_REVISION_DOC_REDIRECTS,
-  LEGACY_DOC_REDIRECTS,
-} from '../lib/docs';
+import { FIRST_REVISION_DOC_REDIRECTS, LEGACY_DOC_REDIRECTS } from '../lib/docs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -43,19 +40,12 @@ describe('site smoke', () => {
     expect(pkg.engines.node).toBe('>=22.12.0');
   });
 
-  it('imports Zod from Astro\'s canonical module', () => {
-    const contentConfig = readFileSync(
-      resolve(here, '../content.config.ts'),
-      'utf8',
-    );
+  it("imports Zod from Astro's canonical module", () => {
+    const contentConfig = readFileSync(resolve(here, '../content.config.ts'), 'utf8');
 
-    expect(contentConfig).toContain(
-      'import { defineCollection } from "astro:content";',
-    );
+    expect(contentConfig).toContain('import { defineCollection } from "astro:content";');
     expect(contentConfig).toContain('import { z } from "astro/zod";');
-    expect(contentConfig).not.toContain(
-      'import { defineCollection, z } from "astro:content";',
-    );
+    expect(contentConfig).not.toContain('import { defineCollection, z } from "astro:content";');
   });
 
   it('astro config targets static output for harpapro.com', () => {
@@ -83,21 +73,18 @@ describe('site smoke', () => {
     expect(layout).toContain('noindex');
   });
 
-  it('publishes the human sourcing agent page in navigation and discovery', () => {
+  it('publishes the static procurement agents page in navigation and discovery', () => {
     const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
-    const header = readFileSync(
-      resolve(here, '../components/landing/Header.astro'),
-      'utf8',
-    );
-    const footer = readFileSync(
-      resolve(here, '../components/landing/Footer.astro'),
-      'utf8',
-    );
+    const header = readFileSync(resolve(here, '../components/landing/Header.astro'), 'utf8');
+    const footer = readFileSync(resolve(here, '../components/landing/Footer.astro'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
-    expect(page).toContain('Human sourcing support');
-    expect(page).toContain('Get local help buying from China.');
-    expect(page).toContain('Send a sourcing brief');
+    expect(page).toContain('Procurement agents');
+    expect(page).toContain('Procurement support from brief to delivery.');
+    expect(page).toContain('Choose an agent');
+    expect(page).toContain('Meet your procurement agents.');
+    expect(page).not.toContain('Send a sourcing brief');
+    expect(page).not.toContain('mailto:');
     expect(header).toContain('href="/agents"');
     expect(footer).toContain('href="/agents"');
     expect(sitemap).toContain('"/agents"');
@@ -120,8 +107,6 @@ describe('site smoke', () => {
     );
 
     expect(workflow).toContain('bash scripts/ci/verify-pages-deployment.sh');
-    expect(verifyScript).toContain(
-      "--write-out '%{http_code} %{redirect_url}\\n'",
-    );
+    expect(verifyScript).toContain("--write-out '%{http_code} %{redirect_url}\\n'");
   });
 });

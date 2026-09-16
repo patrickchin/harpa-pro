@@ -1,62 +1,55 @@
-# Public site sourcing agent page
+# Static procurement agents page
 
-Status: draft for development review.
+Status: implemented.
 
 ## Context
 
-Harpa Pro's public site currently describes the reporting product and the two
-people behind it. It does not explain that Haruna Bayoh can also help buyers
-outside China source goods through a local, person-to-person service.
+The supplied procurement website concept establishes a useful hierarchy for
+the Agents page: explain the procurement journey first, then introduce the
+people who can guide it. Its forms, live availability, scheduling controls,
+newsletter, pricing, and service-booking content are not part of this revision.
 
-The first revision must be useful without inventing details that have not yet
-been supplied by Haruna. In particular, it must not claim specific supplier
-relationships, factory coverage, fees, turnaround times, testimonials, or
-guaranteed outcomes.
+The page must not claim supplier relationships, factory coverage, fees,
+turnaround times, testimonials, guaranteed outcomes, or live service state.
 
 ## Decision
 
-Add a dedicated `/agents` route and link it as **Agents** in the public header
-and footer. Keep the name even though it may overlap with AI terminology; the
-page immediately clarifies that this is a human sourcing service.
+Keep the existing `/agents` route and **Agents** links in the public header,
+mobile menu, footer, and sitemap. Replace the single-agent lead-generation page
+with a static overview that presents the procurement journey and two agent
+profiles without a page-specific call to action.
 
-The audience is a buyer outside China who has a product in mind but needs a
-trusted person in China to help find suppliers, gather evidence, and coordinate
-the next step. The page has one job: invite that buyer to send a sourcing brief.
+The page contains only authored HTML and checked-in assets. It does not add
+selection state, live availability, meeting controls, forms, authentication,
+checkout, API calls, or a content-management dependency.
 
 ## Content
 
 The page presents:
 
-- a direct hero introducing Haruna as a human sourcing contact in China;
-- a four-stage service outline: share the brief, search and compare, check and
-  document, and coordinate logistics;
-- Haruna's existing public biography and portrait;
-- a short expectation note that scope, location, timing, and fees are agreed
-  before work begins;
-- an email call to action using the site's existing public contact address.
+- a short hero explaining what a procurement agent coordinates;
+- eight ordered stages from choosing an agent through sign-off;
+- profile cards for Haruna Bayoh and Hashy, showing focus, education, and
+  experience;
+- Haruna's existing checked-in portrait and a neutral monogram for Hashy,
+  because the reference does not provide a second portrait.
 
-Copy uses "can help" and "where practical" for work that depends on the
-product, supplier location, and agreed scope. It does not present draft service
-details as unconditional guarantees.
+Profile facts and process labels come from the supplied concept. The page does
+not invent missing names, photos, contact details, or availability.
 
 ## Visual direction
 
-Reuse the site's warm-paper, navy, and orange tokens and its Inter typography.
-The page should feel like a concise buyer's field brief: a large plain-language
-thesis, Haruna's portrait as the primary evidence, and the sourcing stages set
-as a connected route rather than generic feature cards. Monospaced route labels
-provide a second utility voice without adding a font dependency.
-
-The memorable element is the route from the buyer's brief to documented local
-checks. Decoration stays restrained so the person and the process remain the
-focus. The page is responsive, keyboard accessible, usable without JavaScript,
-and respects the site's existing focus treatment.
+Reuse the site's warm-paper, navy, and orange tokens, Inter typography, spacing,
+cards, header, and footer. The layout is one column on small screens and expands
+into compact grids on larger screens. Ordered cards make the process readable
+without connector lines, JavaScript, or animation.
 
 ## Discovery and validation
 
-Add `/agents` to the sitemap. Browser coverage verifies the route's title,
-human-service clarification, sourcing sequence, contact link, desktop and
-mobile navigation, and absence of horizontal overflow at a phone viewport.
+`/agents` remains in the sitemap. Browser coverage verifies one clear page
+heading, eight ordered steps, two agent profiles, shared desktop/mobile
+navigation, the absence of forms and booking controls, and no horizontal
+overflow at a 390 px viewport.
 
 Run the public site's tests, type check, lint, production build, and Playwright
 suite before merging to `dev`.

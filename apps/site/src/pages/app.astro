@@ -18,7 +18,7 @@ const reportWorkflow = [
   },
   {
     title: "Review",
-    description: "Check and edit the report before export or sharing.",
+    description: "Check and edit the report before you export or share it.",
   },
 ];
 ---
@@ -34,15 +34,12 @@ const reportWorkflow = [
         <Container padding="lg">
           <div class="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,1.1fr)] lg:items-center lg:gap-16">
             <div class="max-w-2xl">
-              <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
-                Harpa Pro app
-              </p>
-              <h1 class="mt-3 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-                Construction site reporting.
+              <h1 class="text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+                Construction site reporting
               </h1>
               <p class="mt-5 text-base leading-relaxed text-ink-soft sm:text-lg">
                 Turn voice notes, photos, and text updates into a daily report
-                draft. Review and edit the draft before export or sharing.
+                draft. Review and edit the draft before you export or share it.
               </p>
               <div class="mt-8 flex flex-wrap gap-3">
                 <a
@@ -70,7 +67,7 @@ const reportWorkflow = [
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div>
-                      <h2 class="text-base font-semibold text-ink">{item.title}</h2>
+                      <p class="text-base font-semibold text-ink">{item.title}</p>
                       <p class="mt-1 text-sm leading-relaxed text-ink-soft">
                         {item.description}
                       </p>
@@ -86,19 +83,16 @@ const reportWorkflow = [
       <Section tone="paper-2" bordered="top">
         <Container padding="lg">
           <div class="max-w-2xl">
-            <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+            <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               App resources
-            </p>
-            <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Current guidance and planned work.
             </h2>
           </div>
           <div class="mt-10 grid gap-5 md:grid-cols-2">
             <article class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
               <h3 class="text-xl font-semibold text-ink">App guides</h3>
               <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-                Instructions for capture, report generation, editing, export,
-                projects, members, and account settings.
+                Learn how to capture updates, draft reports, edit content,
+                export files, and manage projects, members, and accounts.
               </p>
               <a
                 href="/docs"
@@ -110,7 +104,7 @@ const reportWorkflow = [
             <article class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
               <h3 class="text-xl font-semibold text-ink">App roadmap</h3>
               <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-                Current capabilities and the areas planned for later app
+                See the current capabilities and the work planned for later
                 releases.
               </p>
               <a

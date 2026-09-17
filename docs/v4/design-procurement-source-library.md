@@ -56,16 +56,31 @@ Do not copy a factory's logo system or brand colors as the Harpa Pro design.
 Do not make a dense product grid. Each product image must support a clear
 example or a factual factory profile.
 
+## Heading and copy hierarchy
+
+Use one `h1` for the page title. Use `h2` for each main section. Use `h3`
+only when a section contains a distinct content group. Product, factory, and
+document names can use lower heading levels when they identify an item.
+
+Each section introduction contains its heading and, when needed, one short
+sentence. Do not place an eyebrow, tagline, subtitle, and body paragraph above
+the same content. Do not repeat a tab label inside its labelled panel.
+
+Use direct, factual copy based on Simplified Technical English. Prefer active
+voice, common words, and one subject per sentence. Do not use promotional
+claims, decorative labels, or punctuation at the end of headings.
+
 ## Haruna profile
 
 Haruna Bayoh is the only procurement lead. The profile must not look like one
 remaining card from an agent directory.
 
 Use one wide editorial profile. Show a large portrait, a concise role summary,
-credentials, and four areas of responsibility. Do not add selection controls,
-availability, ratings, or other marketplace patterns.
+credentials, four areas of responsibility, and a link to Haruna's public
+LinkedIn profile. Do not add selection controls, availability, ratings, or
+other marketplace patterns.
 
-The profile uses this role name: `China-based procurement lead`.
+The profile describes Haruna as Harpa Pro's `procurement lead in China`.
 
 ## Factory profiles
 

@@ -4,31 +4,31 @@ const CONSIDERATIONS = [
   {
     title: 'Design and specification',
     description:
-      'Drawings, dimensions, finishes, quantities, and approval requirements are checked together before production information is issued.',
+      'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
     image: 'Revit A104 coordination sheet with 3D interior views',
   },
   {
     title: 'Factory and product fit',
     description:
-      'Factory capability, product range, production capacity, and the supplied records are reviewed against the project brief.',
+      "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: 'AIS Smarti headquarters and factory in Foshan, China',
   },
   {
     title: 'Materials and compliance',
     description:
-      'Material declarations and test reports are checked against the specified performance, emissions, fire, and maintenance requirements.',
+      "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: 'First page of the AIS marine HDF formaldehyde test report',
   },
   {
     title: 'Production quality',
     description:
-      'Inspection points cover materials, workmanship, dimensions, finishes, and the condition of finished goods.',
+      'We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.',
     image: 'AIS Smarti production lines and factory floor',
   },
   {
     title: 'Packing and delivery',
     description:
-      'Packing, labels, collection, freight documents, and delivery records are checked against the order.',
+      'We check packing, labels, collection, freight documents, and delivery records against the order.',
     image: 'AIS Smarti pallet and flat-pack packing examples',
   },
 ] as const;
@@ -93,7 +93,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Interior procurement in China.',
+      name: 'Interior procurement in China',
     }),
   ).toBeVisible();
 
@@ -127,15 +127,41 @@ test('presents Haruna and procurement considerations with matching evidence', as
   const profiles = page.locator('[data-single-agent-profile]');
   await expect(profiles).toHaveCount(1);
   await expect(profiles).toContainText('Haruna Bayoh');
-  await expect(profiles).toContainText('China-based procurement lead');
-  await expect(profiles).toContainText('One lead from brief to dispatch.');
+  await expect(profiles).toContainText("Haruna is Harpa Pro's procurement lead in China.");
   await expect(profiles).toContainText("Master's degree");
   await expect(profiles).toContainText('6 years');
   await expect(profiles).toContainText('Technical coordination');
   await expect(profiles).toContainText('Factory coordination');
   await expect(profiles).toContainText('Order control');
   await expect(profiles).toContainText('Document record');
+  await expect(profiles.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
+    'href',
+    'https://www.linkedin.com/in/harunabayoh/',
+  );
+  await expect(profiles.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
+    'target',
+    '_blank',
+  );
   await expect(page.locator('[data-agent-card]')).toHaveCount(0);
+
+  const main = page.locator('main');
+  await expect(main.getByRole('heading', { level: 2, name: 'Project evidence' })).toBeVisible();
+  await expect(main.getByText('Harpa Pro procurement', { exact: true })).toHaveCount(0);
+  await expect(main.getByText('Service scope', { exact: true })).toHaveCount(0);
+  await expect(main.getByText('Procurement review', { exact: true })).toHaveCount(0);
+  await expect(main.getByText('Factory source library', { exact: true })).toHaveCount(0);
+  await expect(main.getByText('Review area', { exact: true })).toHaveCount(0);
+
+  const headingLevels = await main.locator('h1, h2, h3, h4, h5, h6').evaluateAll((headings) =>
+    headings
+      .filter((heading) => heading.getClientRects().length > 0)
+      .map((heading) => Number(heading.tagName.slice(1))),
+  );
+  expect(headingLevels.filter((level) => level === 1)).toHaveLength(1);
+  for (const [index, level] of headingLevels.entries()) {
+    if (index === 0) continue;
+    expect(level - headingLevels[index - 1]!).toBeLessThanOrEqual(1);
+  }
 
   await expect(page.getByText('Hashy', { exact: true })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/choose (an|your) agent|select your agent/i);
@@ -172,7 +198,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
     }),
   ).toBeVisible();
   const drawingCaption = drawingDialog.getByText(
-    'Three-dimensional room views coordinate the layout, finishes, and interfaces before factory information is approved.',
+    'We use three-dimensional room views to check the layout, finishes, and interfaces before we approve the factory information.',
     { exact: true },
   );
   await expect(drawingCaption).toBeVisible();
@@ -268,14 +294,13 @@ test('shows source factories, representative briefs, and original records', asyn
     await expect(card).toContainText(factory.name);
     await expect(card).toContainText(factory.scope);
     await expect(card.getByRole('img')).toBeVisible();
-    await expect(card).toContainText('Factory-supplied source material');
+    await expect(card).toContainText('Source files');
   }
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
 
-  await expect(page.getByRole('heading', { name: 'Representative product briefs' })).toBeVisible();
-  await expect(page.getByText('Examples, not a live catalogue.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Product examples' })).toBeVisible();
   for (const label of BUYER_INFORMATION) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
@@ -286,7 +311,7 @@ test('shows source factories, representative briefs, and original records', asyn
     await expect(briefs.nth(index).getByRole('img')).toBeVisible();
   }
 
-  await expect(page.getByRole('heading', { name: 'Original factory documents' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Factory documents' })).toBeVisible();
   const suppliedRecords = page.locator('[data-credential-record]');
   await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
   for (const [index, title] of CREDENTIALS.entries()) {

@@ -16,12 +16,10 @@ test('separates procurement from the Harpa Pro app', async ({ page }) => {
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Construction site reporting.',
+      name: 'Construction site reporting',
     }),
   ).toBeVisible();
-  await expect(
-    page.locator('main').getByText('Harpa Pro app', { exact: true }).first(),
-  ).toBeVisible();
+  await expect(page.locator('main').getByText('Harpa Pro app', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'App guides', exact: true }).first()).toHaveAttribute(
     'href',
     '/docs',

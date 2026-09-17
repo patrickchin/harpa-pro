@@ -10,7 +10,7 @@ const considerations = [
   {
     title: "Design and specification",
     description:
-      "Drawings, dimensions, finishes, quantities, and approval requirements are checked together before production information is issued.",
+      "We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.",
     image: revitCoordinationImg,
     alt: "Revit A104 coordination sheet with 3D interior views",
     fit: "object-contain bg-white p-2",
@@ -18,7 +18,7 @@ const considerations = [
   {
     title: "Factory and product fit",
     description:
-      "Factory capability, product range, production capacity, and the supplied records are reviewed against the project brief.",
+      "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: aisFactoryImg,
     alt: "AIS Smarti headquarters and factory in Foshan, China",
     fit: "object-cover",
@@ -26,7 +26,7 @@ const considerations = [
   {
     title: "Materials and compliance",
     description:
-      "Material declarations and test reports are checked against the specified performance, emissions, fire, and maintenance requirements.",
+      "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: aisHdfReportImg,
     alt: "First page of the AIS marine HDF formaldehyde test report",
     fit: "object-contain bg-white p-2",
@@ -34,7 +34,7 @@ const considerations = [
   {
     title: "Production quality",
     description:
-      "Inspection points cover materials, workmanship, dimensions, finishes, and the condition of finished goods.",
+      "We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.",
     image: aisProductionImg,
     alt: "AIS Smarti production lines and factory floor",
     fit: "object-contain bg-white",
@@ -42,7 +42,7 @@ const considerations = [
   {
     title: "Packing and delivery",
     description:
-      "Packing, labels, collection, freight documents, and delivery records are checked against the order.",
+      "We check packing, labels, collection, freight documents, and delivery records against the order.",
     image: aisPackingImg,
     alt: "AIS Smarti pallet and flat-pack packing examples",
     fit: "object-contain bg-white",
@@ -104,11 +104,7 @@ const considerations = [
             class={`aspect-[16/9] w-full ${consideration.fit}`}
           />
           <div class="border-t border-hairline p-6 sm:p-8">
-            <p class="font-mono text-xs text-accent-ink">Review area</p>
-            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-ink">
-              {consideration.title}
-            </h3>
-            <p class="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+            <p class="max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
               {consideration.description}
             </p>
           </div>

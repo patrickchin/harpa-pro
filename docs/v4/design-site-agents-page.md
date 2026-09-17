@@ -27,8 +27,11 @@ checkout, API calls, or a content-management dependency.
 
 The page presents:
 
-- a short hero explaining what a procurement agent coordinates;
+- a short hero explaining what a procurement agent coordinates, paired with an
+  original editorial interior image;
 - eight ordered stages from choosing an agent through sign-off;
+- original material-review and production images that clarify the physical
+  procurement work;
 - profile cards for Haruna Bayoh and Hashy, showing focus, education, and
   experience;
 - Haruna's existing checked-in portrait and a neutral monogram for Hashy,
@@ -40,16 +43,23 @@ not invent missing names, photos, contact details, or availability.
 ## Visual direction
 
 Reuse the site's warm-paper, navy, and orange tokens, Inter typography, spacing,
-cards, header, and footer. The layout is one column on small screens and expands
-into compact grids on larger screens. Ordered cards make the process readable
-without connector lines, JavaScript, or animation.
+cards, header, and footer. Add three checked-in, original editorial photographs
+that echo the supplied concept's warm, architectural mood without reproducing
+its source photography: a contemporary interior, hands reviewing material
+samples, and a clean furniture workshop. The images contain no embedded text,
+logos, availability claims, or controls.
+
+The layout is one column on small screens and expands into compact grids on
+larger screens. Ordered cards make the process readable without connector
+lines, JavaScript, or animation.
 
 ## Discovery and validation
 
 `/agents` remains in the sitemap. Browser coverage verifies one clear page
-heading, eight ordered steps, two agent profiles, shared desktop/mobile
-navigation, the absence of forms and booking controls, and no horizontal
-overflow at a 390 px viewport.
+heading, eight ordered steps, three optimized editorial images with meaningful
+alternative text, two agent profiles, shared desktop/mobile navigation, the
+absence of forms and booking controls, and no horizontal overflow at a 390 px
+viewport.
 
 Run the public site's tests, type check, lint, production build, and Playwright
 suite before merging to `dev`.

@@ -39,6 +39,17 @@ test('presents a static procurement journey and agent profiles', async ({ page }
   await expect(profiles.nth(1)).toContainText("Bachelor's degree");
   await expect(profiles.nth(1)).toContainText('4 years');
 
+  const editorialImages = page.locator('[data-procurement-image] img');
+  await expect(editorialImages).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    const image = editorialImages.nth(index);
+    await expect(image).toHaveAttribute('alt', /\S+/);
+    await expect(image).toHaveAttribute('src', /\/_astro\//);
+    await expect
+      .poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth))
+      .toBeGreaterThan(0);
+  }
+
   await expect(page.locator('main form')).toHaveCount(0);
   await expect(page.locator('main button')).toHaveCount(0);
   await expect(

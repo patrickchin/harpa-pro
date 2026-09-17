@@ -10,7 +10,7 @@ import Layout from "../layouts/Layout.astro";
   noindex
 >
   <div class="min-h-screen bg-background text-ink">
-    <Header hideCta />
+    <Header />
     <main class="mx-auto flex max-w-3xl flex-col px-4 py-20 sm:px-6 sm:py-28">
       <p class="text-xs font-bold uppercase tracking-wider text-accent-ink">
         Error 404
@@ -19,21 +19,20 @@ import Layout from "../layouts/Layout.astro";
         That page is not here.
       </h1>
       <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft">
-        The link may be old, or the page may have moved into the Harpa Pro
-        guides.
+        The link may be old, or the page may have moved.
       </p>
       <div class="mt-8 flex flex-wrap gap-3">
         <a
-          href="/docs"
+          href="/procurement"
           class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground ring-focus"
         >
-          Browse guides
+          Procurement overview
         </a>
         <a
-          href="/"
+          href="/docs"
           class="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-semibold ring-focus"
         >
-          Go to Harpa Pro
+          App guides
         </a>
         <a
           href="mailto:patrick@harpapro.com"

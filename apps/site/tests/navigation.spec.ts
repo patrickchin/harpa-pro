@@ -19,7 +19,9 @@ test('separates procurement from the Harpa Pro app', async ({ page }) => {
       name: 'Construction site reporting.',
     }),
   ).toBeVisible();
-  await expect(page.getByText('Harpa Pro app', { exact: true }).first()).toBeVisible();
+  await expect(
+    page.locator('main').getByText('Harpa Pro app', { exact: true }).first(),
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'App guides', exact: true }).first()).toHaveAttribute(
     'href',
     '/docs',

@@ -25,14 +25,22 @@ const reportSteps = [
           Record a voice note, add photos, and turn the update into a daily
           report draft. Review the draft before you share it.
         </p>
-        <a
-          href={APP_STORE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="mt-7 inline-flex h-11 items-center gap-2 rounded-md border border-primary/30 bg-card px-5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
-        >
-          Get the app <Icon name="external-link" class="h-4 w-4" />
-        </a>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a
+            href="/app"
+            class="inline-flex h-11 items-center gap-2 rounded-md border border-primary/30 bg-card px-5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+          >
+            App overview <Icon name="arrow-right" class="h-4 w-4" />
+          </a>
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline px-5 text-sm font-medium text-primary transition-colors hover:bg-card ring-focus"
+          >
+            Get the app <Icon name="external-link" class="h-4 w-4" />
+          </a>
+        </div>
       </div>
 
       <ol class="grid gap-3" aria-label="Reporting app workflow">

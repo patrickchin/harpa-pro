@@ -138,6 +138,11 @@ test('opens evidence images in an accessible dialog without leaving the page', a
       name: 'Revit A104 3D coordination review sheet',
     }),
   ).toBeVisible();
+  const drawingCaption = drawingDialog.getByText(
+    'Three-dimensional room views used to coordinate layout, finishes, and interfaces.',
+    { exact: true },
+  );
+  await expect(drawingCaption).toBeVisible();
 
   const desktopFit = await drawingDialog.evaluate((dialog) => {
     const bounds = dialog.getBoundingClientRect();
@@ -154,6 +159,11 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   expect(desktopFit.top).toBeGreaterThanOrEqual(0);
   expect(desktopFit.right).toBeLessThanOrEqual(desktopFit.clientWidth);
   expect(desktopFit.bottom).toBeLessThanOrEqual(desktopFit.clientHeight);
+  const captionBounds = await drawingCaption.boundingBox();
+  expect(captionBounds).not.toBeNull();
+  expect(
+    (captionBounds?.y ?? Number.POSITIVE_INFINITY) + (captionBounds?.height ?? 0),
+  ).toBeLessThanOrEqual(desktopFit.bottom);
 
   await drawingDialog
     .getByRole('button', { name: 'Close evidence image' })

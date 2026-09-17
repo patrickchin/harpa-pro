@@ -18,7 +18,8 @@ not be available for download from the website. Individual images can be
 extracted from it and displayed as evidence while the original Revit files,
 certificates, and factory submissions are being collected.
 
-The former public PDF path must permanently redirect to `/agents#evidence`.
+The former public PDF path must permanently redirect to
+`/procurement#evidence`.
 This tombstone replaces retained CDN copies and sends old bookmarks to the
 visible source material.
 
@@ -29,14 +30,14 @@ review, not independent validation by Harpa Pro.
 ## Decision
 
 The home page introduces interior procurement first. Its main action opens
-`/agents`. A short app section follows the procurement introduction and links
-to the existing App Store page.
+`/procurement`. A short app section follows the procurement introduction and
+links to the app overview and App Store page.
 
 The shared navigation uses **Procurement** instead of **Agents**. Its main
 action opens the evidence section. The app uses a plain navigation link. The
 footer uses the same product order.
 
-The `/agents` page uses formal service labels. It contains one profile for
+The `/procurement` page uses formal service labels. It contains one profile for
 Haruna and no selection or comparison language.
 
 ## Procurement considerations
@@ -118,9 +119,12 @@ Use the supplied PDF assets and current factory-source images. The page should
 show ordinary Chinese manufacturing and inspection conditions. Do not use
 boutique workshops or idealized woodworking studios.
 
-Large evidence images should remain legible, use descriptive alternative text,
-and allow the browser to open the source-size image in a new tab. Thumbnail
-layouts must not crop certificate or drawing content.
+Large evidence images should remain legible and use descriptive alternative
+text. Technical reviews and supplied records open at source size in an
+accessible, viewport-bounded dialog. The dialog keeps the reader on the page,
+supports landscape drawings and portrait documents, and returns focus to the
+image trigger when it closes. Thumbnail layouts must not crop certificate or
+drawing content.
 
 ## Writing
 

@@ -33,14 +33,14 @@ const groups: {
   {
     id: "available",
     label: "Available now",
-    heading: "What you can use today.",
+    heading: "Current reporting workflow.",
     blurb:
       "Harpa Pro focuses on one job: turning field captures into daily site reports.",
   },
   {
     id: "planned",
     label: "Planned",
-    heading: "Where it's going.",
+    heading: "Planned capability areas.",
     blurb:
       "Built on the same field captures — so the office sees more without crews doing more work.",
   },
@@ -48,7 +48,7 @@ const groups: {
 ---
 
 <Layout
-  title="Roadmap — Harpa Pro"
+  title="Harpa Pro app roadmap — Harpa Pro"
   description="See what Harpa Pro does today and what we're building next: Android, offline mode, materials, inventory, equipment, people, costs, and cross-project insights."
 >
   <div class="min-h-screen bg-background text-ink">
@@ -60,12 +60,12 @@ const groups: {
             <span
               class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
             >
-              Roadmap
+              Harpa Pro app roadmap
             </span>
             <h1
               class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
             >
-              Where Harpa Pro is going.
+              Current and planned app capabilities.
             </h1>
             <p class="mt-4 text-base leading-relaxed text-ink-soft">
               Harpa Pro starts with the core workflow: capture voice notes,
@@ -128,17 +128,25 @@ const groups: {
             class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <p class="text-sm text-ink-soft">
-              Ready to make a report? Get Harpa Pro. Interested in
-              Android? Join the updates list on the home page.
+              The app is available from the App Store. The app guides explain
+              the current reporting workflow.
             </p>
-            <a
-              href={APP_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex h-10 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
-            >
-              Get the app
-            </a>
+            <div class="flex flex-wrap gap-3">
+              <a
+                href="/docs"
+                class="inline-flex h-10 items-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-primary transition-colors hover:bg-secondary ring-focus"
+              >
+                App guides
+              </a>
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex h-10 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+              >
+                Get the app
+              </a>
+            </div>
           </div>
         </Container>
       </Section>

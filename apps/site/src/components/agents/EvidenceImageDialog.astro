@@ -1,0 +1,92 @@
+<dialog
+  class="evidence-image-dialog"
+  aria-labelledby="evidence-image-dialog-title"
+  data-evidence-image-dialog
+>
+  <div class="evidence-image-dialog-panel">
+    <header>
+      <h2 id="evidence-image-dialog-title" data-evidence-image-dialog-title>
+        Evidence image
+      </h2>
+      <button
+        type="button"
+        aria-label="Close evidence image"
+        class="evidence-image-dialog-close"
+        data-evidence-image-dialog-close
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+    <figure>
+      <div
+        class="evidence-image-dialog-region"
+        data-evidence-image-dialog-region
+      >
+        <img data-evidence-image-dialog-image alt="" decoding="async" />
+      </div>
+      <figcaption data-evidence-image-dialog-caption></figcaption>
+    </figure>
+  </div>
+</dialog>
+
+<script>
+  const evidenceDialog = document.querySelector<HTMLDialogElement>(
+    "[data-evidence-image-dialog]",
+  );
+
+  if (evidenceDialog) {
+    const image = evidenceDialog.querySelector<HTMLImageElement>(
+      "[data-evidence-image-dialog-image]",
+    );
+    const title = evidenceDialog.querySelector<HTMLElement>(
+      "[data-evidence-image-dialog-title]",
+    );
+    const caption = evidenceDialog.querySelector<HTMLElement>(
+      "[data-evidence-image-dialog-caption]",
+    );
+    const closeButton = evidenceDialog.querySelector<HTMLButtonElement>(
+      "[data-evidence-image-dialog-close]",
+    );
+    let activeTrigger: HTMLButtonElement | null = null;
+
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-evidence-image-trigger]")
+      .forEach((trigger) => {
+        trigger.addEventListener("click", () => {
+          if (!image || !title || !caption || !evidenceDialog.showModal) {
+            return;
+          }
+
+          const source = trigger.dataset.evidenceImageSrc;
+          if (!source) return;
+
+          activeTrigger = trigger;
+          const imageTitle = trigger.dataset.evidenceImageTitle ?? "Evidence image";
+          image.src = source;
+          image.alt = trigger.dataset.evidenceImageAlt ?? "";
+          if (trigger.dataset.evidenceImageWidth) {
+            image.width = Number(trigger.dataset.evidenceImageWidth);
+          }
+          if (trigger.dataset.evidenceImageHeight) {
+            image.height = Number(trigger.dataset.evidenceImageHeight);
+          }
+          title.textContent = `Full view: ${imageTitle}`;
+          caption.textContent = trigger.dataset.evidenceImageCaption ?? imageTitle;
+          evidenceDialog.showModal();
+        });
+      });
+
+    closeButton?.addEventListener("click", () => evidenceDialog.close());
+    evidenceDialog.addEventListener("click", (event) => {
+      if (event.target === evidenceDialog) evidenceDialog.close();
+    });
+    evidenceDialog.addEventListener("close", () => {
+      image?.removeAttribute("src");
+      image?.removeAttribute("width");
+      image?.removeAttribute("height");
+      if (image) image.alt = "";
+      activeTrigger?.focus();
+      activeTrigger = null;
+    });
+  }
+</script>

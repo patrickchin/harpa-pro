@@ -20,9 +20,15 @@ test("presents two core workflows and concise supporting tasks", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "What do you want to do?",
+      name: "Guides and workflows.",
     }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", {
+      name: "App",
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/app");
   await expect(page.locator("#core-workflows-heading")).toBeVisible();
   await expect(page.locator(".docs-core-grid > *")).toHaveCount(2);
   await expect(page.locator(".docs-everyday-grid > *")).toHaveCount(5);
@@ -265,7 +271,7 @@ test("keeps tier navigation usable on a phone viewport", async ({ page }) => {
   await page.goto("/docs/guides/generate-ai-report");
 
   const mobileNav = page.locator(".docs-mobile-nav");
-  await mobileNav.getByText("Browse guides", { exact: true }).click();
+  await mobileNav.getByText("Browse app guides", { exact: true }).click();
   await expect(
     mobileNav.getByRole("link", { name: "Export and share a PDF" }),
   ).toBeVisible();
@@ -329,5 +335,6 @@ test("uses the branded not-found page for an unknown guide", async ({ page }) =>
   await expect(
     page.getByRole("heading", { level: 1, name: "That page is not here." }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Browse guides" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Procurement overview" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "App guides" })).toBeVisible();
 });

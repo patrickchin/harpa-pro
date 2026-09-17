@@ -34,6 +34,7 @@ describe('marketing claim copy', () => {
       'content.config.ts',
       'layouts/Layout.astro',
       'pages/index.astro',
+      'pages/app.astro',
       'pages/confirm.astro',
       'pages/roadmap.astro',
       'lib/links.ts',

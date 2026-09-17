@@ -47,12 +47,12 @@ const FACTORY_PARTNERS = [
   {
     name: 'Haining Mingyuan',
     scope: 'SPC and PVC flooring, matching profiles, and floor accessories.',
-    source: 'https://www.mayerfloor.com/',
+    source: 'https://mayerfloor.en.made-in-china.com/',
   },
   {
     name: 'Foshan Zhenglian / JLA',
     scope: 'Patterned and project ceramic tiles for interior wall and floor applications.',
-    source: 'https://www.jlaceramics.com/en/',
+    source: 'https://jlaceramic.en.made-in-china.com/',
   },
 ] as const;
 
@@ -108,13 +108,104 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(page.getByText('This is your agent.', { exact: true })).toHaveCount(0);
 
   await expect(page.locator('main form')).toHaveCount(0);
-  await expect(page.locator('main button')).toHaveCount(CONSIDERATIONS.length);
   await expect(
     page.getByRole('link', {
       name: /schedule (an )?(online )?meeting|join now/i,
     }),
   ).toHaveCount(0);
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
+});
+
+test('opens evidence images in an accessible dialog without leaving the page', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/agents#evidence');
+
+  const pageUrl = page.url();
+  const drawingTrigger = page.getByRole('button', {
+    name: 'Open full view of Revit A104 coordination review',
+  });
+  await drawingTrigger.click();
+
+  await expect(page).toHaveURL(pageUrl);
+  const drawingDialog = page.getByRole('dialog', {
+    name: 'Full view: Revit A104 coordination review',
+  });
+  await expect(drawingDialog).toBeVisible();
+  await expect(
+    drawingDialog.getByRole('img', {
+      name: 'Revit A104 3D coordination review sheet',
+    }),
+  ).toBeVisible();
+
+  const desktopFit = await drawingDialog.evaluate((dialog) => {
+    const bounds = dialog.getBoundingClientRect();
+    return {
+      bottom: bounds.bottom,
+      clientHeight: document.documentElement.clientHeight,
+      clientWidth: document.documentElement.clientWidth,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+    };
+  });
+  expect(desktopFit.left).toBeGreaterThanOrEqual(0);
+  expect(desktopFit.top).toBeGreaterThanOrEqual(0);
+  expect(desktopFit.right).toBeLessThanOrEqual(desktopFit.clientWidth);
+  expect(desktopFit.bottom).toBeLessThanOrEqual(desktopFit.clientHeight);
+
+  await drawingDialog
+    .getByRole('button', { name: 'Close evidence image' })
+    .click();
+  await expect(drawingDialog).not.toBeVisible();
+  await expect(drawingTrigger).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const recordTrigger = page.getByRole('button', {
+    name: 'Open full view of Factory production control certificate',
+  });
+  await recordTrigger.click();
+  const recordDialog = page.getByRole('dialog', {
+    name: 'Full view: Factory production control certificate',
+  });
+  await expect(recordDialog).toBeVisible();
+  await expect(
+    recordDialog.getByRole('img', {
+      name: 'Factory production control certificate supplied in the AIS material package',
+    }),
+  ).toBeVisible();
+
+  const mobileOverflow = await recordDialog.evaluate((dialog) => {
+    const imageRegion = dialog.querySelector<HTMLElement>(
+      '[data-evidence-image-dialog-region]',
+    );
+    if (!imageRegion) throw new Error('Evidence image region is missing');
+    return {
+      dialogOverflow: dialog.scrollWidth - dialog.clientWidth,
+      pageOverflow:
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+      regionOverflow: imageRegion.scrollWidth - imageRegion.clientWidth,
+    };
+  });
+  expect(mobileOverflow.dialogOverflow).toBeLessThanOrEqual(1);
+  expect(mobileOverflow.pageOverflow).toBeLessThanOrEqual(1);
+  expect(mobileOverflow.regionOverflow).toBeLessThanOrEqual(1);
+
+  await page.keyboard.press('Escape');
+  await expect(recordDialog).not.toBeVisible();
+  await expect(recordTrigger).toBeFocused();
+
+  await drawingTrigger.click();
+  await drawingDialog.evaluate((dialog) => {
+    dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+  await expect(drawingDialog).not.toBeVisible();
+  await expect(drawingTrigger).toBeFocused();
+
+  await expect(page.locator('[data-technical-review] > a')).toHaveCount(0);
+  await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
 });
 
 test('shows technical reviews, factory scope, and supplied records directly', async ({ page }) => {
@@ -174,7 +265,19 @@ test('links the evidence page from shared navigation without mobile overflow', a
       name: 'App',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/#app');
+  ).toHaveAttribute('href', '/app');
+  await expect(
+    page.locator('header nav').getByRole('link', {
+      name: 'App guides',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/docs');
+  await expect(
+    page.locator('header nav').getByRole('link', {
+      name: 'App roadmap',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/roadmap');
   await expect(
     page.locator('header nav').getByRole('link', {
       name: 'View evidence',
@@ -183,10 +286,11 @@ test('links the evidence page from shared navigation without mobile overflow', a
   ).toHaveAttribute('href', '/agents#evidence');
   await expect(
     page.locator('footer').getByRole('link', {
-      name: 'Procurement',
+      name: 'Overview',
       exact: true,
-    }),
+    }).first(),
   ).toHaveAttribute('href', '/agents');
+  await expect(page.locator('footer').getByText('Harpa Pro app', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
@@ -197,7 +301,7 @@ test('links the evidence page from shared navigation without mobile overflow', a
   );
   await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveAttribute(
     'href',
-    '/#app',
+    '/app',
   );
   await expect(
     mobileMenu.getByRole('link', { name: 'View evidence', exact: true }),

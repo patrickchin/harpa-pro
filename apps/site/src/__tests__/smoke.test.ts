@@ -88,6 +88,7 @@ describe('site smoke', () => {
 
   it('publishes the procurement-first site in navigation and discovery', () => {
     const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
+    const app = readFileSync(resolve(here, '../pages/app.astro'), 'utf8');
     const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
     const considerations = readFileSync(
       resolve(here, '../components/agents/ProcurementConsiderations.astro'),
@@ -109,6 +110,8 @@ describe('site smoke', () => {
 
     expect(home).toContain('Interior procurement in China.');
     expect(home).toContain('AppOverview');
+    expect(app).toContain('Harpa Pro app');
+    expect(app).toContain('Construction site reporting.');
     expect(page).toContain('Harpa Pro procurement');
     expect(page).toContain('Interior procurement in China.');
     expect(considerations).toContain('Design and specification');
@@ -130,8 +133,11 @@ describe('site smoke', () => {
     expect(page).not.toContain('Send a sourcing brief');
     expect(page).not.toContain('mailto:');
     expect(header).toContain('href="/agents"');
+    expect(header).toContain('href="/app"');
     expect(footer).toContain('href="/agents"');
+    expect(footer).toContain('href="/app"');
     expect(sitemap).toContain('"/agents"');
+    expect(sitemap).toContain('"/app"');
 
     expect(
       existsSync(

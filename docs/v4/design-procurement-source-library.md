@@ -1,6 +1,6 @@
 # Factory source library and single-agent profile
 
-Status: accepted for implementation.
+Status: implemented.
 
 ## Context
 
@@ -8,8 +8,7 @@ Harpa Pro helps overseas buyers purchase products from factories in China.
 Harpa Pro acts as the buyer's procurement representative. The public site must
 show the quality of the information that a buyer receives.
 
-The source package is the `Furniture Factories` folder supplied on 17 September
-2026. It contains material from five factory groups:
+The source package is the `Furniture Factories` folder supplied on 17 September 2026. It contains material from five factory groups:
 
 - AIS Smarti, for custom cabinetry and project joinery;
 - J2S, for hospitality furniture;
@@ -17,8 +16,8 @@ The source package is the `Furniture Factories` folder supplied on 17 September
 - Masyounger, for metal office furniture and storage;
 - Rong Shuo, for bathroom cabinets and shower enclosures.
 
-The package contains 30 PDF files. Four files are exact duplicates. It also
-contains factory images and four image copies of certificate pages.
+The package contains 30 PDF files, including exact duplicates. It also contains
+factory images and four image copies of certificate pages.
 
 The current site uses images extracted from an earlier internal presentation.
 It also lists factories that are not in the new source package. The new package

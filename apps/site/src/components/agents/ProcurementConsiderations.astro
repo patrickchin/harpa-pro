@@ -1,10 +1,10 @@
 ---
 import { Image } from "astro:assets";
-import aisFactoryImg from "../../assets/agents/procurement/ais-factory.jpg";
-import aisLoadingImg from "../../assets/agents/procurement/ais-loading.jpg";
-import aisQualityReviewImg from "../../assets/agents/procurement/ais-quality-review.jpg";
-import aisSgsFiberboardReportImg from "../../assets/agents/procurement/ais-sgs-fiberboard-report.jpg";
 import revitCoordinationImg from "../../assets/agents/procurement/revit-a104-coordination.jpg";
+import aisFactoryImg from "../../assets/procurement/factories/ais-factory-exterior.webp";
+import aisProductionImg from "../../assets/procurement/factories/ais-production-overview.webp";
+import aisPackingImg from "../../assets/procurement/factories/catalogues/ais-packing-p41.webp";
+import aisHdfReportImg from "../../assets/procurement/factories/credentials/ais-hdf-formaldehyde-e0-2026.webp";
 
 const considerations = [
   {
@@ -20,32 +20,32 @@ const considerations = [
     description:
       "Factory capability, product range, production capacity, and the supplied records are reviewed against the project brief.",
     image: aisFactoryImg,
-    alt: "AIS joinery factory building in Foshan, China",
+    alt: "AIS Smarti headquarters and factory in Foshan, China",
     fit: "object-cover",
   },
   {
     title: "Materials and compliance",
     description:
       "Material declarations and test reports are checked against the specified performance, emissions, fire, and maintenance requirements.",
-    image: aisSgsFiberboardReportImg,
-    alt: "SGS test report supplied for an AIS joinery material package",
+    image: aisHdfReportImg,
+    alt: "First page of the AIS marine HDF formaldehyde test report",
     fit: "object-contain bg-white p-2",
   },
   {
     title: "Production quality",
     description:
       "Inspection points cover materials, workmanship, dimensions, finishes, and the condition of finished goods.",
-    image: aisQualityReviewImg,
-    alt: "AIS factory worker reviewing finished white cabinet panels",
-    fit: "object-cover",
+    image: aisProductionImg,
+    alt: "AIS Smarti production lines and factory floor",
+    fit: "object-contain bg-white",
   },
   {
     title: "Packing and delivery",
     description:
       "Packing, labels, collection, freight documents, and delivery records are checked against the order.",
-    image: aisLoadingImg,
-    alt: "Crated AIS joinery being loaded into a delivery truck",
-    fit: "object-cover",
+    image: aisPackingImg,
+    alt: "AIS Smarti pallet and flat-pack packing examples",
+    fit: "object-contain bg-white",
   },
 ];
 ---

@@ -24,7 +24,19 @@
       >
         <img data-evidence-image-dialog-image alt="" decoding="async" />
       </div>
-      <figcaption data-evidence-image-dialog-caption></figcaption>
+      <figcaption>
+        <span data-evidence-image-dialog-caption></span>
+        <a
+          href="/"
+          target="_blank"
+          rel="noreferrer"
+          class="evidence-image-dialog-document-link ring-focus"
+          hidden
+          data-evidence-document-link
+        >
+          Open original document
+        </a>
+      </figcaption>
     </figure>
   </div>
 </dialog>
@@ -46,6 +58,9 @@
     );
     const closeButton = evidenceDialog.querySelector<HTMLButtonElement>(
       "[data-evidence-image-dialog-close]",
+    );
+    const documentLink = evidenceDialog.querySelector<HTMLAnchorElement>(
+      "[data-evidence-document-link]",
     );
     let activeTrigger: HTMLButtonElement | null = null;
 
@@ -72,6 +87,16 @@
           }
           title.textContent = `Full view: ${imageTitle}`;
           caption.textContent = trigger.dataset.evidenceImageCaption ?? imageTitle;
+          const documentHref = trigger.dataset.evidenceDocumentHref;
+          if (documentLink && documentHref) {
+            documentLink.href = documentHref;
+            documentLink.textContent =
+              trigger.dataset.evidenceDocumentLabel ?? "Open original document";
+            documentLink.hidden = false;
+          } else if (documentLink) {
+            documentLink.removeAttribute("href");
+            documentLink.hidden = true;
+          }
           evidenceDialog.showModal();
         });
       });
@@ -85,6 +110,8 @@
       image?.removeAttribute("width");
       image?.removeAttribute("height");
       if (image) image.alt = "";
+      documentLink?.removeAttribute("href");
+      if (documentLink) documentLink.hidden = true;
       activeTrigger?.focus();
       activeTrigger = null;
     });

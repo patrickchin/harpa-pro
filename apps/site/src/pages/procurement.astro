@@ -86,47 +86,81 @@ import harunaImg from "../assets/team/haruna.jpg";
 
       <Section id="agent" bordered="top">
         <Container padding="lg">
-          <div class="max-w-2xl">
-            <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
-              Procurement lead
-            </p>
-            <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Haruna Bayoh
-            </h2>
-            <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-              Haruna applies architecture and materials experience to the
-              technical and production stages of each order.
-            </p>
-          </div>
-
           <article
-            data-agent-profile
-            class="mt-10 grid max-w-3xl gap-6 rounded-xl border border-hairline bg-card p-6 shadow-sm sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start"
+            data-single-agent-profile
+            class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
           >
-            <Image
-              src={harunaImg}
-              alt="Haruna Bayoh"
-              width={320}
-              height={320}
-              densities={[1, 2]}
-              class="aspect-square w-36 rounded-xl object-cover"
-            />
+            <figure class="min-h-80 bg-primary">
+              <Image
+                src={harunaImg}
+                alt="Haruna Bayoh"
+                widths={[480, 720, 960]}
+                sizes="(min-width: 64rem) 35vw, calc(100vw - 3rem)"
+                format="webp"
+                quality={90}
+                loading="lazy"
+                decoding="async"
+                class="h-full min-h-80 w-full object-cover object-top"
+              />
+            </figure>
 
-            <div class="min-w-0">
-              <h3 class="text-xl font-semibold text-ink">Haruna Bayoh</h3>
-              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                Architecture and material procurement
+            <div class="min-w-0 p-7 sm:p-10 lg:p-12">
+              <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+                China-based procurement lead
               </p>
-              <dl class="mt-6 grid gap-3 border-t border-hairline pt-5 text-sm">
-                <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
-                  <dt class="text-ink-soft">Education</dt>
-                  <dd class="font-medium text-ink">Master's degree</dd>
+              <h2 class="mt-3 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+                Haruna Bayoh
+              </h2>
+              <p class="mt-6 max-w-xl text-xl font-medium leading-snug text-ink sm:text-2xl">
+                One lead from brief to dispatch.
+              </p>
+              <p class="mt-4 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+                Haruna receives the project brief, coordinates the selected
+                factories, records approvals and inspections, and keeps the
+                order and shipping documents together.
+              </p>
+
+              <dl class="mt-8 grid gap-4 border-y border-hairline py-5 text-sm sm:grid-cols-3">
+                <div>
+                  <dt class="text-ink-soft">Discipline</dt>
+                  <dd class="mt-1 font-medium text-ink">Architecture and materials</dd>
                 </div>
-                <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
+                <div>
+                  <dt class="text-ink-soft">Education</dt>
+                  <dd class="mt-1 font-medium text-ink">Master's degree</dd>
+                </div>
+                <div>
                   <dt class="text-ink-soft">Experience</dt>
-                  <dd class="font-medium text-ink">6 years</dd>
+                  <dd class="mt-1 font-medium text-ink">6 years</dd>
                 </div>
               </dl>
+
+              <div class="mt-8 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-ink">Technical coordination</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-ink-soft">
+                    Drawings, dimensions, finishes, and approval records.
+                  </p>
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold text-ink">Factory coordination</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-ink-soft">
+                    Capability, samples, quotations, and production questions.
+                  </p>
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold text-ink">Order control</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-ink-soft">
+                    Quantities, inspections, packing, and delivery checks.
+                  </p>
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold text-ink">Document record</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-ink-soft">
+                    Product data, certificates, approvals, and shipping files.
+                  </p>
+                </div>
+              </div>
             </div>
           </article>
         </Container>

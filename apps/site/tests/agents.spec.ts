@@ -11,32 +11,33 @@ const CONSIDERATIONS = [
     title: 'Factory and product fit',
     description:
       'Factory capability, product range, production capacity, and the supplied records are reviewed against the project brief.',
-    image: 'AIS joinery factory building in Foshan, China',
+    image: 'AIS Smarti headquarters and factory in Foshan, China',
   },
   {
     title: 'Materials and compliance',
     description:
       'Material declarations and test reports are checked against the specified performance, emissions, fire, and maintenance requirements.',
-    image: 'SGS test report supplied for an AIS joinery material package',
+    image: 'First page of the AIS marine HDF formaldehyde test report',
   },
   {
     title: 'Production quality',
     description:
       'Inspection points cover materials, workmanship, dimensions, finishes, and the condition of finished goods.',
-    image: 'AIS factory worker reviewing finished white cabinet panels',
+    image: 'AIS Smarti production lines and factory floor',
   },
   {
     title: 'Packing and delivery',
     description:
       'Packing, labels, collection, freight documents, and delivery records are checked against the order.',
-    image: 'Crated AIS joinery being loaded into a delivery truck',
+    image: 'AIS Smarti pallet and flat-pack packing examples',
   },
 ] as const;
 
 const FACTORY_PARTNERS = [
   {
     name: 'AIS Smarti',
-    scope: 'Custom cabinetry, wardrobes, bathroom cabinets, doors, wall panels, and project joinery.',
+    scope:
+      'Custom cabinetry, wardrobes, bathroom cabinets, doors, wall panels, and project joinery.',
   },
   {
     name: 'J2S',
@@ -117,9 +118,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await tabs.first().press('ArrowDown');
   await expect(tabs.nth(1)).toBeFocused();
   await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
-  await expect(
-    page.getByRole('tabpanel', { name: CONSIDERATIONS[1].title }),
-  ).toBeVisible();
+  await expect(page.getByRole('tabpanel', { name: CONSIDERATIONS[1].title })).toBeVisible();
 
   const considerationSection = page.locator('#considerations');
   await expect(considerationSection).not.toContainText(/\bstage\b|\bstep\b/i);
@@ -152,9 +151,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
 });
 
-test('opens evidence images in an accessible dialog without leaving the page', async ({
-  page,
-}) => {
+test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('/procurement#evidence');
 
@@ -175,7 +172,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
     }),
   ).toBeVisible();
   const drawingCaption = drawingDialog.getByText(
-    'Three-dimensional room views used to coordinate layout, finishes, and interfaces.',
+    'Three-dimensional room views coordinate the layout, finishes, and interfaces before factory information is approved.',
     { exact: true },
   );
   await expect(drawingCaption).toBeVisible();
@@ -201,9 +198,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
     (captionBounds?.y ?? Number.POSITIVE_INFINITY) + (captionBounds?.height ?? 0),
   ).toBeLessThanOrEqual(desktopFit.bottom);
 
-  await drawingDialog
-    .getByRole('button', { name: 'Close evidence image' })
-    .click();
+  await drawingDialog.getByRole('button', { name: 'Close evidence image' }).click();
   await expect(drawingDialog).not.toBeVisible();
   await expect(drawingTrigger).toBeFocused();
 
@@ -221,23 +216,17 @@ test('opens evidence images in an accessible dialog without leaving the page', a
       name: 'First page of the AIS marine HDF formaldehyde test report',
     }),
   ).toBeVisible();
-  await expect(
-    recordDialog.getByRole('link', { name: 'Open original PDF' }),
-  ).toHaveAttribute(
+  await expect(recordDialog.getByRole('link', { name: 'Open original PDF' })).toHaveAttribute(
     'href',
     '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
   );
 
   const mobileOverflow = await recordDialog.evaluate((dialog) => {
-    const imageRegion = dialog.querySelector<HTMLElement>(
-      '[data-evidence-image-dialog-region]',
-    );
+    const imageRegion = dialog.querySelector<HTMLElement>('[data-evidence-image-dialog-region]');
     if (!imageRegion) throw new Error('Evidence image region is missing');
     return {
       dialogOverflow: dialog.scrollWidth - dialog.clientWidth,
-      pageOverflow:
-        document.documentElement.scrollWidth -
-        document.documentElement.clientWidth,
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       regionOverflow: imageRegion.scrollWidth - imageRegion.clientWidth,
     };
   });
@@ -264,8 +253,12 @@ test('shows source factories, representative briefs, and original records', asyn
   await page.goto('/procurement#evidence');
 
   await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Revit A103 chair shop drawing review sheet' })).toBeVisible();
+  await expect(
+    page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('img', { name: 'Revit A103 chair shop drawing review sheet' }),
+  ).toBeVisible();
   await expect(page.locator('[data-technical-review]')).toHaveCount(2);
 
   const factories = page.locator('[data-factory-partner]');
@@ -281,9 +274,7 @@ test('shows source factories, representative briefs, and original records', asyn
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
 
-  await expect(
-    page.getByRole('heading', { name: 'Representative product briefs' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Representative product briefs' })).toBeVisible();
   await expect(page.getByText('Examples, not a live catalogue.', { exact: true })).toBeVisible();
   for (const label of BUYER_INFORMATION) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
@@ -303,6 +294,19 @@ test('shows source factories, representative briefs, and original records', asyn
     await expect(record).toContainText(title);
     await expect(record.getByRole('img')).toBeVisible();
     await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+  }
+
+  const originalDocuments = await suppliedRecords
+    .locator('[data-evidence-document-href]')
+    .evaluateAll((triggers) =>
+      triggers.map((trigger) => (trigger as HTMLElement).dataset.evidenceDocumentHref),
+    );
+  expect(new Set(originalDocuments).size).toBe(CREDENTIALS.length);
+  for (const href of originalDocuments) {
+    expect(href).toBeTruthy();
+    const response = await page.request.get(href!);
+    expect(response.status(), href).toBe(200);
+    expect(response.headers()['content-type'], href).toMatch(/application\/pdf|image\/jpeg/);
   }
 
   await expect(
@@ -357,10 +361,13 @@ test('links the evidence page from shared navigation without mobile overflow', a
     }),
   ).toHaveAttribute('href', '/procurement#evidence');
   await expect(
-    page.locator('footer').getByRole('link', {
-      name: 'Overview',
-      exact: true,
-    }).first(),
+    page
+      .locator('footer')
+      .getByRole('link', {
+        name: 'Overview',
+        exact: true,
+      })
+      .first(),
   ).toHaveAttribute('href', '/procurement');
   await expect(page.locator('footer').getByText('Harpa Pro app', { exact: true })).toBeVisible();
 

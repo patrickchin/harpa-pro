@@ -6,23 +6,33 @@ const year = new Date().getFullYear();
 
 <footer class="border-t border-hairline">
   <div
-    class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center"
+    class="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(8rem,1fr))]"
   >
     <div class="flex flex-col gap-2">
       <Wordmark />
       <p class="text-xs text-ink-soft">
-        Construction site reporting made easy
+        Technical procurement and factory records in China.
       </p>
     </div>
-    <div
-      class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-ink-soft"
-    >
-      <a href="/agents" class="hover:text-ink">Agents</a>
+    <nav aria-label="Procurement" class="grid content-start gap-2 text-xs text-ink-soft">
+      <h2 class="font-semibold uppercase tracking-wider text-ink">Procurement</h2>
+      <a href="/procurement" class="hover:text-ink">Overview</a>
+      <a href="/procurement#considerations" class="hover:text-ink">What we consider</a>
+      <a href="/procurement#evidence" class="hover:text-ink">Project evidence</a>
+      <a href="/procurement#contact" class="hover:text-ink">Contact Haruna</a>
+    </nav>
+    <nav aria-label="Site reporting" class="grid content-start gap-2 text-xs text-ink-soft">
+      <h2 class="font-semibold uppercase tracking-wider text-ink">Site reporting</h2>
+      <a href="/app" class="hover:text-ink">Overview</a>
+      <a href="/docs" class="hover:text-ink">Guides</a>
       <a href="/roadmap" class="hover:text-ink">Roadmap</a>
-      <a href="/docs" class="hover:text-ink">Docs</a>
+      <a href="/account-deletion" class="hover:text-ink">Account deletion</a>
+    </nav>
+    <nav aria-label="Company" class="grid content-start gap-2 text-xs text-ink-soft">
+      <h2 class="font-semibold uppercase tracking-wider text-ink">Company</h2>
       <a href="/privacy" class="hover:text-ink">Privacy</a>
-      <a href="mailto:patrick@harpapro.com" class="hover:text-ink">Contact</a>
-      <span class="hidden sm:inline">© {year} Harpa Pro</span>
-    </div>
+      <a href="/procurement#contact" class="hover:text-ink">Contact</a>
+      <span>© {year} Harpa Pro</span>
+    </nav>
   </div>
 </footer>

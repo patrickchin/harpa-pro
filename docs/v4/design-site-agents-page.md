@@ -1,62 +1,155 @@
-# Public site sourcing agent page
+# Procurement-first public site
 
-Status: draft for development review.
+Status: implemented.
 
 ## Context
 
-Harpa Pro's public site currently describes the reporting product and the two
-people behind it. It does not explain that Haruna Bayoh can also help buyers
-outside China source goods through a local, person-to-person service.
+Harpa Pro presents interior procurement as its main public service. The
+site-reporting app remains available as a secondary product.
 
-The first revision must be useful without inventing details that have not yet
-been supplied by Haruna. In particular, it must not claim specific supplier
-relationships, factory coverage, fees, turnaround times, testimonials, or
-guaranteed outcomes.
+Haruna Bayoh is the only procurement agent. The site must not ask visitors to
+choose or compare agents. It must also remain static. Forms, booking, live
+availability, accounts, checkout, and other server-backed features are outside
+this revision.
+
+The user supplied an internal nine-page interior procurement PDF. It is a
+design and content source for the website. It is not a public document and must
+not be available for download from the website. Individual images can be
+extracted from it and displayed as evidence while the original Revit files,
+certificates, and factory submissions are being collected.
+
+The former public PDF path must permanently redirect to
+`/procurement#evidence`.
+This tombstone replaces retained CDN copies and sends old bookmarks to the
+visible source material.
+
+The site must not claim fees, turnaround times, testimonials, guaranteed
+outcomes, or live service state. Factory documents are records supplied for
+review, not independent validation by Harpa Pro.
 
 ## Decision
 
-Add a dedicated `/agents` route and link it as **Agents** in the public header
-and footer. Keep the name even though it may overlap with AI terminology; the
-page immediately clarifies that this is a human sourcing service.
+The home page introduces interior procurement first. Its main action opens
+`/procurement`. A short app section follows the procurement introduction and
+links to the app overview and App Store page.
 
-The audience is a buyer outside China who has a product in mind but needs a
-trusted person in China to help find suppliers, gather evidence, and coordinate
-the next step. The page has one job: invite that buyer to send a sourcing brief.
+The shared navigation uses **Procurement** instead of **Agents**. Its main
+action opens the evidence section. The app uses a plain navigation link. The
+footer uses the same product order.
 
-## Content
+The `/procurement` page uses formal service labels. It contains one profile for
+Haruna and no selection or comparison language.
 
-The page presents:
+## Procurement considerations
 
-- a direct hero introducing Haruna as a human sourcing contact in China;
-- a four-stage service outline: share the brief, search and compare, check and
-  document, and coordinate logistics;
-- Haruna's existing public biography and portrait;
-- a short expectation note that scope, location, timing, and fees are agreed
-  before work begins;
-- an email call to action using the site's existing public contact address.
+The page presents five review areas as considerations, not as numbered steps
+or a long sequence:
 
-Copy uses "can help" and "where practical" for work that depends on the
-product, supplier location, and agreed scope. It does not present draft service
-details as unconditional guarantees.
+- design and specification;
+- factory and product fit;
+- materials and compliance;
+- production quality;
+- packing and delivery.
 
-## Visual direction
+On large screens, the consideration names form a compact list on the left. The
+selected consideration shows a short explanation and one directly relevant
+image on the right. On small screens, the list appears above the detail panel.
 
-Reuse the site's warm-paper, navy, and orange tokens and its Inter typography.
-The page should feel like a concise buyer's field brief: a large plain-language
-thesis, Haruna's portrait as the primary evidence, and the sourcing stages set
-as a connected route rather than generic feature cards. Monospaced route labels
-provide a second utility voice without adding a font dependency.
+The control uses an accessible tab pattern and a small local script. It makes
+no network request and stores no user data. The first consideration remains
+visible if the script does not run. The interface does not show numbers,
+"stage", or "step" labels.
 
-The memorable element is the route from the buyer's brief to documented local
-checks. Decoration stays restrained so the person and the process remain the
-focus. The page is responsive, keyboard accessible, usable without JavaScript,
-and respects the site's existing focus treatment.
+Each image must show the selected subject:
 
-## Discovery and validation
+- a Revit coordination sheet for design and specification;
+- the current AIS factory for factory and product fit;
+- a supplied test report for materials and compliance;
+- an AIS factory quality-review photograph for production quality;
+- an AIS factory loading photograph for packing and delivery.
 
-Add `/agents` to the sitemap. Browser coverage verifies the route's title,
-human-service clarification, sourcing sequence, contact link, desktop and
-mobile navigation, and absence of horizontal overflow at a phone viewport.
+Source evidence is preferred to generated imagery. Generate a replacement only
+when no appropriate source image exists.
 
-Run the public site's tests, type check, lint, production build, and Playwright
-suite before merging to `dev`.
+## Visible project evidence
+
+The website shows the source material itself instead of reducing it to status
+labels or hiding it in a downloadable PDF.
+
+### Technical reviews
+
+Show the two extracted Revit review sheets from the supplied PDF:
+
+- A104, 3D coordination views;
+- A103, chair shop drawing and dimensions.
+
+Also show factory product submissions where useful, including the Langyao ZYLO
+panel-light and STAPE bulkhead specification sheets. These extracted images are
+temporary. The original documents will replace them when available.
+
+### Factory partners and product scope
+
+Show the four current factory partners with an image, their relevant product
+scope, and a link to an official or public manufacturer page:
+
+- AIS: custom kitchens, wardrobes, bathroom vanities, interior doors, and
+  joinery;
+- Ningbo Langyao Lighting: LED panel, ceiling, bulkhead, and solar lights;
+- Haining Mingyuan: SPC and PVC flooring and matching profiles;
+- Foshan Zhenglian / JLA: patterned and project ceramic tiles.
+
+The content should integrate products and capabilities published by each
+manufacturer. It must not imply that a public listing is an endorsement.
+
+### Supplied records
+
+Show certificate and test-report scans in a visible image gallery grouped by
+factory or material package. Use captions that identify the document shown.
+Do not state that a certificate is current, complete, or independently
+verified unless the original document supports that statement.
+
+One scan placed under JLA in the supplied PDF names Wanhua Ecoboard and a
+particle-board factory-production certificate. Do not label that scan as a JLA
+certificate. Omit it from the JLA group until the original files establish the
+correct attribution.
+
+## Images
+
+Use the supplied PDF assets and current factory-source images. The page should
+show ordinary Chinese manufacturing and inspection conditions. Do not use
+boutique workshops or idealized woodworking studios.
+
+Large evidence images should remain legible and use descriptive alternative
+text. Technical reviews and supplied records open at source size in an
+accessible, viewport-bounded dialog. The dialog keeps the reader on the page,
+supports landscape drawings and portrait documents, and returns focus to the
+image trigger when it closes. Thumbnail layouts must not crop certificate or
+drawing content.
+
+## Writing
+
+Use short sentences, active voice, and one name for each part of the service.
+Use formal labels instead of conversational headings or prompts. Remove
+marketing filler and unsupported claims. Keep each consideration description
+to one or two sentences.
+
+## Validation
+
+Browser coverage verifies:
+
+- interior procurement is the main home-page subject;
+- the app appears as a secondary section;
+- all five considerations have a short description and a matching image;
+- mouse and keyboard input change the selected consideration;
+- the interface contains no numbered stage or step language;
+- the page contains one Haruna profile and no agent-choice language;
+- Revit sheets and factory product submissions are visible;
+- factory partners include their product scope and source links;
+- certificate and test-report scans are visible rather than represented only by
+  badges;
+- the internal procurement PDF is not published or linked;
+- the page contains no forms, booking controls, or API links;
+- the shared navigation works without horizontal overflow at 390 px.
+
+Run the site unit tests, type check, lint, production build, and Playwright suite
+before the pull request is ready for review.

@@ -1,0 +1,165 @@
+---
+import { Image } from "astro:assets";
+import revitCoordinationImg from "../../assets/agents/procurement/revit-a104-coordination.jpg";
+import aisFactoryImg from "../../assets/procurement/factories/ais-factory-exterior.webp";
+import aisProductionImg from "../../assets/procurement/factories/ais-production-overview.webp";
+import aisPackingImg from "../../assets/procurement/factories/catalogues/ais-packing-p41.webp";
+import aisHdfReportImg from "../../assets/procurement/factories/credentials/ais-hdf-formaldehyde-e0-2026.webp";
+
+const considerations = [
+  {
+    title: "Design and specification",
+    description:
+      "We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.",
+    image: revitCoordinationImg,
+    alt: "Revit A104 coordination sheet with 3D interior views",
+    fit: "object-contain bg-white p-2",
+  },
+  {
+    title: "Factory and product fit",
+    description:
+      "We compare the factory's capability, product range, production capacity, and records with the project brief.",
+    image: aisFactoryImg,
+    alt: "AIS Smarti headquarters and factory in Foshan, China",
+    fit: "object-cover",
+  },
+  {
+    title: "Materials and compliance",
+    description:
+      "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
+    image: aisHdfReportImg,
+    alt: "First page of the AIS marine HDF formaldehyde test report",
+    fit: "object-contain bg-white p-2",
+  },
+  {
+    title: "Production quality",
+    description:
+      "We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.",
+    image: aisProductionImg,
+    alt: "AIS Smarti production lines and factory floor",
+    fit: "object-contain bg-white",
+  },
+  {
+    title: "Packing and delivery",
+    description:
+      "We check packing, labels, collection, freight documents, and delivery records against the order.",
+    image: aisPackingImg,
+    alt: "AIS Smarti pallet and flat-pack packing examples",
+    fit: "object-contain bg-white",
+  },
+];
+---
+
+<div
+  data-considerations
+  class="mt-10 grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-8"
+>
+  <ul
+    role="tablist"
+    aria-label="Procurement considerations"
+    aria-orientation="vertical"
+    class="grid content-start gap-2"
+  >
+    {
+      considerations.map((consideration, index) => (
+        <li>
+          <button
+            id={`consideration-tab-${index + 1}`}
+            type="button"
+            role="tab"
+            aria-selected={index === 0 ? "true" : "false"}
+            aria-controls={`consideration-panel-${index + 1}`}
+            tabindex={index === 0 ? 0 : -1}
+            data-consideration-tab
+            class="w-full rounded-lg border border-transparent px-4 py-3 text-left text-sm text-ink-soft transition-colors hover:border-hairline hover:bg-card hover:text-ink aria-selected:border-accent aria-selected:bg-card aria-selected:font-medium aria-selected:text-ink aria-selected:shadow-sm ring-focus"
+          >
+            {consideration.title}
+          </button>
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="min-w-0">
+    {
+      considerations.map((consideration, index) => (
+        <article
+          id={`consideration-panel-${index + 1}`}
+          role="tabpanel"
+          aria-labelledby={`consideration-tab-${index + 1}`}
+          tabindex="0"
+          hidden={index !== 0}
+          data-consideration-panel
+          class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm ring-focus"
+        >
+          <Image
+            src={consideration.image}
+            alt={consideration.alt}
+            widths={[480, 720, 960, 1200]}
+            sizes="(min-width: 64rem) 48rem, calc(100vw - 3rem)"
+            format="webp"
+            quality={86}
+            loading={index === 0 ? "eager" : "lazy"}
+            decoding="async"
+            class={`aspect-[16/9] w-full ${consideration.fit}`}
+          />
+          <div class="border-t border-hairline p-6 sm:p-8">
+            <p class="max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+              {consideration.description}
+            </p>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  function initializeConsiderations(root: HTMLElement) {
+    const tabs = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("[data-consideration-tab]"),
+    );
+    const panels = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-consideration-panel]"),
+    );
+
+    function activate(index: number, moveFocus = false) {
+      tabs.forEach((tab, tabIndex) => {
+        const isSelected = tabIndex === index;
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.tabIndex = isSelected ? 0 : -1;
+        const panel = panels[tabIndex];
+        if (panel) panel.hidden = !isSelected;
+      });
+
+      const nextTab = tabs[index];
+      if (moveFocus && nextTab) nextTab.focus();
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activate(index));
+      tab.addEventListener("keydown", (event) => {
+        let nextIndex = index;
+
+        if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+          nextIndex = (index + 1) % tabs.length;
+        } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+          nextIndex = (index - 1 + tabs.length) % tabs.length;
+        } else if (event.key === "Home") {
+          nextIndex = 0;
+        } else if (event.key === "End") {
+          nextIndex = tabs.length - 1;
+        } else {
+          return;
+        }
+
+        event.preventDefault();
+        activate(nextIndex, true);
+      });
+    });
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-considerations]")
+    .forEach(initializeConsiderations);
+</script>

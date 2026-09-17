@@ -1,8 +1,8 @@
 @layer rnw, theme, base, components, utilities;
 
-@import "tailwindcss" source(none);
+@import 'tailwindcss' source(none);
 @source "../";
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,8 +18,8 @@
  */
 
 @theme inline {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -163,7 +163,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: 'ss01', 'cv11';
   }
 }
 
@@ -195,8 +195,13 @@
  * style; the keyframe scales it vertically.
  */
 @keyframes wave-bar {
-  0%, 100% { transform: scaleY(0.25); }
-  50% { transform: scaleY(1); }
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 .wave-bar {
   animation: wave-bar 1.1s ease-in-out infinite;
@@ -204,7 +209,10 @@
   will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
-  .wave-bar { animation: none; transform: scaleY(0.6); }
+  .wave-bar {
+    animation: none;
+    transform: scaleY(0.6);
+  }
 }
 
 @layer components {
@@ -273,7 +281,7 @@
   }
 
   .docs-sidebar-nav a:hover,
-  .docs-sidebar-nav a[aria-current="page"] {
+  .docs-sidebar-nav a[aria-current='page'] {
     background: var(--color-secondary);
     color: var(--color-foreground);
   }
@@ -292,6 +300,8 @@
   .docs-montage-card:focus-visible,
   .docs-step-media:focus-visible,
   .docs-screenshot-dialog-close:focus-visible,
+  .evidence-image-trigger:focus-visible,
+  .evidence-image-dialog-close:focus-visible,
   .docs-search-field input:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
@@ -502,7 +512,7 @@
 
   .docs-core-card h3 a::after,
   .docs-everyday-card h3 a::after {
-    content: "";
+    content: '';
     inset: 0;
     position: absolute;
   }
@@ -604,7 +614,7 @@
   }
 
   .docs-guide-card h2 a::after {
-    content: " →";
+    content: ' →';
     color: var(--color-accent-ink);
   }
 
@@ -870,6 +880,137 @@
     padding: 0.65rem 1rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .evidence-image-trigger {
+    color: inherit;
+    cursor: zoom-in;
+  }
+
+  .evidence-image-dialog {
+    background: transparent;
+    border: 0;
+    box-sizing: border-box;
+    color: var(--color-foreground);
+    margin: auto;
+    max-height: calc(100dvh - 1rem);
+    max-width: calc(100vw - 1rem);
+    padding: 0;
+    width: min(72rem, calc(100vw - 1rem));
+  }
+
+  .evidence-image-dialog::backdrop {
+    backdrop-filter: blur(3px);
+    background: oklch(0.13 0.03 265 / 0.82);
+  }
+
+  .evidence-image-dialog-panel {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 1.5rem 5rem oklch(0.13 0.03 265 / 0.38);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: calc(100dvh - 1rem);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .evidence-image-dialog-panel > header {
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 0.75rem 0.85rem 0.75rem 1rem;
+  }
+
+  .evidence-image-dialog-panel h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .evidence-image-dialog-close {
+    align-items: center;
+    background: var(--color-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-foreground);
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 1.35rem;
+    height: 2.5rem;
+    justify-content: center;
+    line-height: 1;
+    width: 2.5rem;
+  }
+
+  .evidence-image-dialog-close:hover {
+    border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-border));
+  }
+
+  .evidence-image-dialog-panel figure {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .evidence-image-dialog-region {
+    align-items: center;
+    background: var(--color-secondary);
+    display: flex;
+    justify-content: center;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.75rem;
+  }
+
+  .evidence-image-dialog-region img {
+    display: block;
+    height: auto;
+    margin: 0 auto;
+    max-height: calc(100dvh - 8rem);
+    max-width: 100%;
+    object-fit: contain;
+    width: auto;
+  }
+
+  .evidence-image-dialog-panel figcaption {
+    align-items: center;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-muted-foreground);
+    display: flex;
+    font-size: 0.78rem;
+    gap: 0.75rem 1.25rem;
+    justify-content: space-between;
+    line-height: 1.4;
+    padding: 0.65rem 1rem;
+  }
+
+  .evidence-image-dialog-document-link {
+    color: var(--color-foreground);
+    flex: 0 0 auto;
+    font-weight: 650;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+    text-underline-offset: 0.2rem;
+  }
+
+  .evidence-image-dialog-document-link:hover {
+    text-decoration-color: var(--color-accent);
+  }
+
+  @media (max-width: 39.99rem) {
+    .evidence-image-dialog-panel figcaption {
+      align-items: flex-start;
+      flex-direction: column;
+    }
   }
 
   .docs-prose h2 {

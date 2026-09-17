@@ -56,6 +56,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.firecrawl/
 
 # Expo prebuild output run from repo root by mistake — the real
 # native project lives at apps/mobile/ios/ (already ignored there).

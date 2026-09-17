@@ -1,0 +1,62 @@
+---
+import Icon from "../Icon.astro";
+import Container from "../primitives/Container.astro";
+import Section from "../primitives/Section.astro";
+import { APP_STORE_URL } from "../../lib/links";
+
+const reportSteps = [
+  ["Capture", "Record a voice note and add photos or text."],
+  ["Draft", "Harpa Pro puts the update into a daily report draft."],
+  ["Review", "Check and edit the report before you share it."],
+];
+---
+
+<Section id="app" tone="paper-2" bordered="top">
+  <Container padding="lg">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,1.1fr)] lg:items-center lg:gap-16">
+      <div class="max-w-xl">
+        <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          Construction site reporting
+        </h2>
+        <p class="mt-4 text-base leading-relaxed text-ink-soft">
+          Record a voice note, add photos, and turn the update into a daily
+          report draft. Review the draft before you share it.
+        </p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a
+            href="/app"
+            class="inline-flex h-11 items-center gap-2 rounded-md border border-primary/30 bg-card px-5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+          >
+            Site reporting overview <Icon name="arrow-right" class="h-4 w-4" />
+          </a>
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline px-5 text-sm font-medium text-primary transition-colors hover:bg-card ring-focus"
+          >
+            Get the app <Icon name="external-link" class="h-4 w-4" />
+          </a>
+        </div>
+      </div>
+
+      <ol class="grid gap-3" aria-label="Reporting app workflow">
+        {
+          reportSteps.map(([title, description], index) => (
+            <li class="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-4 rounded-xl border border-hairline bg-card p-5 shadow-sm">
+              <span class="font-mono text-xs text-accent-ink">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h3 class="text-base font-semibold text-ink">{title}</h3>
+                <p class="mt-1 text-sm leading-relaxed text-ink-soft">
+                  {description}
+                </p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </Container>
+</Section>

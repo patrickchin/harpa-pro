@@ -3,25 +3,43 @@ import { expect, test } from "@playwright/test";
 const APP_STORE_URL =
   "https://apps.apple.com/us/app/harpa-pro/id6776759817";
 
-test("leads with the report workflow instead of platform launch copy", async ({
+test("leads with Haruna and keeps the reporting app secondary", async ({
   page,
 }) => {
   await page.goto("/");
 
   const hero = page.locator("#top");
-  await expect(hero.locator("h1")).toContainText(
-    /Site Reports.*you talk, we write\./s,
-  );
-  await expect(hero.locator("p").first()).toContainText(
-    "Capture voice notes, photos, and text updates as work happens.",
-  );
+  await expect(hero.locator("h1")).toHaveText("Interior procurement in China");
   await expect(
-    hero.getByRole("link", { name: "Get the app", exact: true }),
-  ).toHaveAttribute("href", APP_STORE_URL);
+    hero.getByText(
+      "Haruna manages specifications, factory coordination, quality checks, shipping records, and approvals from China.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(
+    hero.getByRole("link", { name: "Procurement overview", exact: true }),
+  ).toHaveAttribute("href", "/procurement");
+  await expect(
+    hero.getByRole("link", { name: "What we consider", exact: true }),
+  ).toHaveAttribute("href", "/procurement#considerations");
+  await expect(hero.locator('a[href="/agents#journey"]')).toHaveCount(0);
+  await expect(hero.getByText("Meet Haruna", { exact: true })).toHaveCount(0);
+  await expect(hero.getByRole("link", { name: "Get the app", exact: true })).toHaveCount(0);
+
+  const app = page.locator("#app");
+  await expect(app.getByRole("heading", { name: "Construction site reporting" })).toBeVisible();
+  await expect(app.getByRole("link", { name: "Site reporting overview", exact: true })).toHaveAttribute(
+    "href",
+    "/app",
+  );
+  await expect(app.getByRole("link", { name: "Get the app", exact: true })).toHaveAttribute(
+    "href",
+    APP_STORE_URL,
+  );
 
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Use Harpa Pro to turn voice notes, photos, and field updates into daily construction reports you can review, edit, finalize, and share.",
+    "Haruna Bayoh coordinates specifications, factories, quality checks, shipping records, and project approvals in China.",
   );
   await expect(page.getByText(/now available for iPhone/i)).toHaveCount(0);
 });

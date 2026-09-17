@@ -6,6 +6,7 @@ const APP_STORE_URL =
 test("uses the complete procurement page as home without a reporting promotion", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
 
   const hero = page.locator("main > section").first();
@@ -29,4 +30,21 @@ test("uses the complete procurement page as home without a reporting promotion",
     "Haruna Bayoh coordinates specifications, factories, quality checks, shipping records, and project approvals in China.",
   );
   await expect(page.getByText(/now available for iPhone/i)).toHaveCount(0);
+
+  const agent = page.locator("#agent");
+  const [heroBox, agentBox] = await Promise.all([hero.boundingBox(), agent.boundingBox()]);
+  expect(heroBox).not.toBeNull();
+  expect(agentBox).not.toBeNull();
+  expect(heroBox!.height).toBeGreaterThan(agentBox!.height);
+
+  const divider = await page.evaluate(() => {
+    const heroSection = document.querySelector<HTMLElement>("#top");
+    const agentSection = document.querySelector<HTMLElement>("#agent");
+    if (!heroSection || !agentSection) throw new Error("Homepage sections are missing");
+    return {
+      heroBottom: Number.parseFloat(getComputedStyle(heroSection).borderBottomWidth),
+      agentTop: Number.parseFloat(getComputedStyle(agentSection).borderTopWidth),
+    };
+  });
+  expect(divider.heroBottom + divider.agentTop).toBeLessThanOrEqual(1);
 });

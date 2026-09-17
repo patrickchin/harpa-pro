@@ -6,30 +6,35 @@ const CONSIDERATIONS = [
     description:
       'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
     image: 'Revit A104 coordination sheet with 3D interior views',
+    fit: 'contain',
   },
   {
     title: 'Factory and product fit',
     description:
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: 'AIS Smarti headquarters and factory in Foshan, China',
+    fit: 'cover',
   },
   {
     title: 'Materials and compliance',
     description:
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: 'First page of the AIS marine HDF formaldehyde test report',
+    fit: 'contain',
   },
   {
     title: 'Production quality',
     description:
       'We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.',
     image: 'AIS Smarti production lines and factory floor',
+    fit: 'cover',
   },
   {
     title: 'Packing and delivery',
     description:
       'We check packing, labels, collection, freight documents, and delivery records against the order.',
     image: 'AIS Smarti pallet and flat-pack packing examples',
+    fit: 'cover',
   },
 ] as const;
 
@@ -69,9 +74,9 @@ const BUYER_INFORMATION = [
 ] as const;
 
 const PRODUCT_BRIEFS = [
-  'AIS custom kitchen joinery',
-  'J2S JSBC hospitality seating',
-  'Rong Shuo SW-011 shower enclosure',
+  { title: 'AIS custom kitchen joinery', imageMode: 'cover' },
+  { title: 'J2S JSBC hospitality seating', imageMode: 'cover' },
+  { title: 'Rong Shuo SW-011 shower enclosure', imageMode: 'source-content' },
 ] as const;
 
 const CREDENTIALS = [
@@ -116,7 +121,11 @@ test('presents Haruna and procurement considerations with matching evidence', as
     const panel = page.getByRole('tabpanel', { name: consideration.title });
     await expect(panel).toBeVisible();
     await expect(panel).toContainText(consideration.description);
-    await expect(panel.getByRole('img', { name: consideration.image })).toBeVisible();
+    const image = panel.getByRole('img', { name: consideration.image });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((element) => getComputedStyle(element).objectFit)).toBe(
+      consideration.fit,
+    );
   }
 
   await tabs.first().focus();
@@ -322,9 +331,19 @@ test('shows compact factory examples and progressively discloses document previe
   }
   const briefs = page.locator('[data-product-brief]');
   await expect(briefs).toHaveCount(PRODUCT_BRIEFS.length);
-  for (const [index, title] of PRODUCT_BRIEFS.entries()) {
-    await expect(briefs.nth(index)).toContainText(title);
-    await expect(briefs.nth(index).getByRole('img')).toBeVisible();
+  for (const [index, brief] of PRODUCT_BRIEFS.entries()) {
+    const card = briefs.nth(index);
+    await expect(card).toContainText(brief.title);
+    const frame = card.locator('[data-product-image-frame]');
+    const image = frame.getByRole('img');
+    await expect(frame).toHaveAttribute('data-product-image-mode', brief.imageMode);
+    await expect(image).toBeVisible();
+
+    const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
+    expect(frameBox).not.toBeNull();
+    expect(imageBox).not.toBeNull();
+    expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
+    expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
   }
 
   await expect(page.getByRole('heading', { name: 'Factory documents' })).toBeVisible();
@@ -413,7 +432,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
 
   const contact = page.locator('#contact');
   await expect(contact.getByRole('heading', { level: 2, name: 'Contact Haruna' })).toBeVisible();
-  await expect(contact.getByText('haru@harpapro.com', { exact: true })).toBeVisible();
+  await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
   await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
   const emailActions = contact.locator('[data-contact-email-actions]');
@@ -422,12 +441,12 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await copyEmail.click();
   await expect(contact.getByRole('status')).toHaveText('Email copied');
   expect(await page.evaluate(() => window.localStorage.getItem('copied-email'))).toBe(
-    'haru@harpapro.com',
+    'haruna@harpapro.com',
   );
 
   await expect(emailActions.getByRole('link', { name: 'Open email app' })).toHaveAttribute(
     'href',
-    'mailto:haru@harpapro.com',
+    'mailto:haruna@harpapro.com',
   );
   await expect(contact.getByRole('link', { name: 'Message on WhatsApp' })).toHaveAttribute(
     'href',

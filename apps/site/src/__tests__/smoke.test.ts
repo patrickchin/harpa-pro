@@ -111,7 +111,7 @@ describe('site smoke', () => {
     expect(considerations).toContain('Packing and delivery');
     expect(considerations).not.toContain('Stage ');
     expect(home).toContain('Contact Haruna');
-    expect(home).toContain('haru@harpapro.com');
+    expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('https://wa.me/861937283726');
     expect(home).toContain('data-single-agent-profile');
     expect(home).toContain("Haruna is Harpa Pro's procurement lead in China.");
@@ -137,7 +137,7 @@ describe('site smoke', () => {
     expect(home).not.toContain('This is your agent.');
     expect(home).not.toContain('Hashy');
     expect(home).not.toContain('Send a sourcing brief');
-    expect(home).toContain('mailto:haru@harpapro.com');
+    expect(home).toContain('mailto:haruna@harpapro.com');
     expect(header).toContain('href="/"');
     expect(header).toContain('href="/app"');
     expect(header).toContain('Site reporting');

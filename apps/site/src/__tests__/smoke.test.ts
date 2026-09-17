@@ -56,7 +56,7 @@ describe('site smoke', () => {
   });
 
   it('publishes discovery, not-found, and legacy redirect routes', () => {
-    expect(existsSync(resolve(here, '../pages/procurement.astro'))).toBe(true);
+    expect(existsSync(resolve(here, '../pages/procurement.astro'))).toBe(false);
     expect(existsSync(resolve(here, '../pages/404.astro'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/robots.txt.ts'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/sitemap.xml.ts'))).toBe(true);
@@ -69,9 +69,10 @@ describe('site smoke', () => {
       expect(redirects).toContain(`${from} ${to} 301`);
     }
     expect(redirects).toContain(
-      '/downloads/harpa-pro-interior-procurement.pdf /procurement#evidence 301',
+      '/downloads/harpa-pro-interior-procurement.pdf /#evidence 301',
     );
-    expect(redirects).toContain('/documents/factories/* /procurement#evidence 301');
+    expect(redirects).toContain('/documents/factories/* /#evidence 301');
+    expect(redirects).toContain('/procurement / 301');
 
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
     expect(layout).toContain('noindex');
@@ -80,7 +81,6 @@ describe('site smoke', () => {
   it('publishes the procurement-first site in navigation and discovery', () => {
     const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
     const app = readFileSync(resolve(here, '../pages/app.astro'), 'utf8');
-    const page = readFileSync(resolve(here, '../pages/procurement.astro'), 'utf8');
     const considerations = readFileSync(
       resolve(here, '../components/agents/ProcurementConsiderations.astro'),
       'utf8',
@@ -94,7 +94,11 @@ describe('site smoke', () => {
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
     expect(home).toContain('Interior procurement in China');
-    expect(home).toContain('AppOverview');
+    expect(home).toContain('ProcurementConsiderations');
+    expect(home).toContain('ProcurementEvidence');
+    expect(home).toContain('id="contact"');
+    expect(home).not.toContain('AppOverview');
+    expect(home).not.toContain('SiteReportingHero');
     expect(app).toContain('SiteReportingHero');
     expect(app).toContain('HowItWorks');
     expect(app).toContain('Features');
@@ -102,19 +106,15 @@ describe('site smoke', () => {
     expect(app).toContain('FAQ');
     expect(app).not.toContain('WaitlistForm');
     expect(app).not.toContain('Current guidance and planned work.');
-    expect(page).not.toContain('Harpa Pro procurement');
-    expect(page).toContain('Interior procurement in China');
+    expect(home).not.toContain('Harpa Pro procurement');
     expect(considerations).toContain('Design and specification');
     expect(considerations).toContain('Packing and delivery');
     expect(considerations).not.toContain('Stage ');
-    expect(page).toContain('ProcurementConsiderations');
-    expect(page).toContain('ProcurementEvidence');
-    expect(page).toContain('id="contact"');
-    expect(page).toContain('Contact Haruna');
-    expect(page).toContain('haru@harpapro.com');
-    expect(page).toContain('https://wa.me/861937283726');
-    expect(page).toContain('data-single-agent-profile');
-    expect(page).toContain("Haruna is Harpa Pro's procurement lead in China.");
+    expect(home).toContain('Contact Haruna');
+    expect(home).toContain('haru@harpapro.com');
+    expect(home).toContain('https://wa.me/861937283726');
+    expect(home).toContain('data-single-agent-profile');
+    expect(home).toContain("Haruna is Harpa Pro's procurement lead in China.");
     expect(evidence).toContain('Technical reviews');
     expect(evidence).toContain('AIS Smarti');
     expect(evidence).toContain('J2S');
@@ -132,21 +132,21 @@ describe('site smoke', () => {
     expect(evidence).not.toContain('Haining Mingyuan');
     expect(evidence).not.toContain('Foshan Zhenglian / JLA');
     expect(evidence).not.toContain('Download procurement PDF');
-    expect(page).not.toContain('Choose an agent');
-    expect(page).not.toContain('Meet Haruna.');
-    expect(page).not.toContain('This is your agent.');
-    expect(page).not.toContain('Hashy');
-    expect(page).not.toContain('Send a sourcing brief');
-    expect(page).toContain('mailto:haru@harpapro.com');
-    expect(header).toContain('href="/procurement"');
+    expect(home).not.toContain('Choose an agent');
+    expect(home).not.toContain('Meet Haruna.');
+    expect(home).not.toContain('This is your agent.');
+    expect(home).not.toContain('Hashy');
+    expect(home).not.toContain('Send a sourcing brief');
+    expect(home).toContain('mailto:haru@harpapro.com');
+    expect(header).toContain('href="/"');
     expect(header).toContain('href="/app"');
     expect(header).toContain('Site reporting');
-    expect(header).toContain('href="/procurement#contact"');
+    expect(header).toContain('href="/#contact"');
     expect(header).not.toContain('View evidence');
-    expect(footer).toContain('href="/procurement"');
+    expect(footer).toContain('href="/"');
     expect(footer).toContain('href="/app"');
     expect(footer).toContain('Site reporting');
-    expect(sitemap).toContain('"/procurement"');
+    expect(sitemap).not.toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');
     expect(sitemap).toContain('"/app"');
 

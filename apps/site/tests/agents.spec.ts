@@ -90,7 +90,7 @@ const CREDENTIALS = [
 const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
 
 test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
-  await page.goto('/procurement');
+  await page.goto('/');
 
   await expect(
     page.getByRole('heading', {
@@ -183,7 +183,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
 
 test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/procurement#evidence');
+  await page.goto('/#evidence');
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
@@ -279,7 +279,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
 test('shows compact factory examples and progressively discloses document previews', async ({
   page,
 }) => {
-  await page.goto('/procurement#evidence');
+  await page.goto('/#evidence');
 
   await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
   await expect(
@@ -388,7 +388,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
       },
     });
   });
-  await page.goto('/procurement#contact');
+  await page.goto('/#contact');
 
   const contact = page.locator('#contact');
   await expect(contact.getByRole('heading', { level: 2, name: 'Contact Haruna' })).toBeVisible();
@@ -418,7 +418,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
 test('uses accessible mega navigation and closes it after outside interaction', async ({
   page,
 }) => {
-  await page.goto('/procurement');
+  await page.goto('/');
 
   const desktopNav = page.locator('header nav[aria-label="Primary"]');
   const procurementMenu = desktopNav.locator('[data-mega-menu="procurement"]');
@@ -430,10 +430,10 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(procurementMenu).toHaveAttribute('open', '');
   await expect(
     procurementMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
-  ).toHaveAttribute('href', '/procurement');
+  ).toHaveAttribute('href', '/');
   await expect(
     procurementMenu.getByRole('link', { name: 'Selected factory partners', exact: true }),
-  ).toHaveAttribute('href', '/procurement#factory-partners');
+  ).toHaveAttribute('href', '/#factory-partners');
 
   await siteReportingSummary.hover();
   await expect(siteReportingMenu).toHaveAttribute('open', '');
@@ -462,7 +462,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
       name: 'Contact Haruna',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/procurement#contact');
+  ).toHaveAttribute('href', '/#contact');
   await expect(
     page
       .locator('footer')
@@ -471,7 +471,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
         exact: true,
       })
       .first(),
-  ).toHaveAttribute('href', '/procurement');
+  ).toHaveAttribute('href', '/');
   await expect(page.locator('footer').getByText('Site reporting', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -479,10 +479,10 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(
     mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
-  ).toHaveAttribute('href', '/procurement');
+  ).toHaveAttribute('href', '/');
   await expect(
     mobileMenu.getByRole('link', { name: 'Contact Haruna', exact: true }),
-  ).toHaveAttribute('href', '/procurement#contact');
+  ).toHaveAttribute('href', '/#contact');
   const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
   await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();
   await expect(
@@ -499,7 +499,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
 
   await expect(
     mobileMenu.getByRole('link', { name: 'Factory documents', exact: true }),
-  ).toHaveAttribute('href', '/procurement#factory-documents');
+  ).toHaveAttribute('href', '/#factory-documents');
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

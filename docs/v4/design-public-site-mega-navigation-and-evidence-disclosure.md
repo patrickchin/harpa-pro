@@ -36,11 +36,21 @@ site-reporting destination **Harpa Pro app**.
 
 ## Site reporting page
 
-Keep `/` procurement-first. Restore the previous app presentation under
-`/app`, including the local voice-note demonstration, reporting workflow,
-feature summary, team information, questions, and links to guides and the
-roadmap. Use a dedicated site-reporting hero so the procurement hero remains
-unchanged.
+The root route `/` owns the complete procurement presentation: introduction,
+Haruna's profile, procurement considerations, project evidence, factory
+examples, document previews, and contact details. Do not place a site-reporting
+promotion or app overview in the homepage body. Site reporting remains visible
+in the shared navigation and lives under `/app`.
+
+Treat `/` as the canonical procurement URL. All procurement navigation links
+and fragments start at `/`, `/procurement` redirects to `/`, and the sitemap
+lists only the canonical route. Legacy document redirects point to
+`/#evidence`.
+
+Keep the app presentation under `/app`, including the local voice-note
+demonstration, reporting workflow, feature summary, team information,
+questions, and links to guides and the roadmap. Use a dedicated site-reporting
+hero so it stays separate from procurement.
 
 The restored page must remain static. Do not restore the waitlist, Turnstile,
 form submission, account controls, or any other server-backed action. Review
@@ -70,7 +80,7 @@ also offer **Show fewer documents**.
 The evidence dialog shows only the selected preview image and its caption.
 Remove links and data attributes for original documents. Remove the original
 files from the public site. Redirect old `/documents/factories/*` requests to
-`/procurement#evidence`; do not return a document body.
+`/#evidence`; do not return a document body.
 
 A visitor can still save an image that the browser displays. This design stops
 the site from publishing the full source files; it does not claim to prevent
@@ -80,6 +90,10 @@ capture of the preview images or remove files from old immutable deployments.
 
 Browser coverage must verify:
 
+- the complete procurement presentation is on `/` with no site-reporting
+  promotion in the page body;
+- procurement navigation uses root-relative fragments, `/procurement`
+  redirects to `/`, and the sitemap has no duplicate procurement route;
 - both desktop mega panels and the explicit **Harpa Pro app** destination;
 - hover switching, outside-click close, Escape close with focus restoration,
   keyboard activation, and one open panel at a time;

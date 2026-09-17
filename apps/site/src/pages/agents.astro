@@ -5,8 +5,8 @@ import Header from "../components/landing/Header.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
-import furnitureWorkshopImg from "../assets/agents/furniture-workshop.jpg";
-import materialReviewImg from "../assets/agents/material-review.jpg";
+import chinaFactoryQualityControlImg from "../assets/agents/china-factory-quality-control.jpg";
+import chinaFurnitureProductionImg from "../assets/agents/china-furniture-production.jpg";
 import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
 
@@ -168,32 +168,8 @@ const agents = [
               class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
             >
               <Image
-                src={materialReviewImg}
-                alt="Procurement specialist comparing stone, timber, fabric, and metal samples"
-                widths={[480, 720, 960]}
-                sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
-                format="webp"
-                quality={84}
-                loading="lazy"
-                decoding="async"
-                class="aspect-[3/2] w-full object-cover"
-              />
-              <figcaption class="border-t border-hairline p-5 sm:p-6">
-                <p class="font-mono text-xs text-accent-ink">Material review</p>
-                <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                  Compare finishes, textures, and specifications before an order
-                  moves into production.
-                </p>
-              </figcaption>
-            </figure>
-
-            <figure
-              data-procurement-image
-              class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
-            >
-              <Image
-                src={furnitureWorkshopImg}
-                alt="Modern cabinetry workshop with timber panels and a craftsperson checking a cabinet"
+                src={chinaFactoryQualityControlImg}
+                alt="Chinese quality inspector checking laminated furniture panels inside a production factory"
                 widths={[480, 720, 960]}
                 sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
                 format="webp"
@@ -204,11 +180,37 @@ const agents = [
               />
               <figcaption class="border-t border-hairline p-5 sm:p-6">
                 <p class="font-mono text-xs text-accent-ink">
-                  Factory coordination
+                  Factory quality control
                 </p>
                 <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                  Keep the design brief, production milestones, and quality
-                  expectations aligned.
+                  Check panel dimensions, edge finish, and surface consistency
+                  before a batch moves to packing.
+                </p>
+              </figcaption>
+            </figure>
+
+            <figure
+              data-procurement-image
+              class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+            >
+              <Image
+                src={chinaFurnitureProductionImg}
+                alt="Furniture production floor in China with machinery, stacked panels, and workers"
+                widths={[480, 720, 960]}
+                sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
+                format="webp"
+                quality={84}
+                loading="lazy"
+                decoding="async"
+                class="aspect-[3/2] w-full object-cover"
+              />
+              <figcaption class="border-t border-hairline p-5 sm:p-6">
+                <p class="font-mono text-xs text-accent-ink">
+                  Production coordination
+                </p>
+                <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                  Track fabrication, assembly, packing, and the handover between
+                  factory milestones.
                 </p>
               </figcaption>
             </figure>

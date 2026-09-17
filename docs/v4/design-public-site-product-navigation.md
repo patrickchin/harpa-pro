@@ -21,28 +21,31 @@ drawing or certificate with its caption.
 ## Decision
 
 Use `/procurement` as the procurement URL. The former `/agents` route is not
-preserved because the site has no established traffic or external links. Add
-`/app` as a compact app overview. Do not restore the old waitlist or other
-server-backed controls.
+preserved because the site has no established traffic or external links. Use
+`/app` for the full static site-reporting presentation. Do not restore the old
+waitlist or other server-backed controls.
 
 The shared header names each offer by its purpose:
 
-- **Procurement** opens `/procurement`;
-- **Site reporting** opens a compact menu with **Overview**, **Guides**, and
-  **Roadmap** links;
+- **Procurement** opens a full-width panel with the procurement overview,
+  consideration, example, evidence, and contact links;
+- **Site reporting** opens a full-width panel with **Harpa Pro app**,
+  **Guides**, **Roadmap**, and App Store links;
 - **Contact Haruna** opens `/procurement#contact`.
 
 Do not show **App**, **App guides**, and **App roadmap** as three peer links.
 They describe one product and compete with the primary procurement offer.
 
-The mobile menu already acts as a dropdown. It uses separate **Procurement**
-and **Site reporting** groups. The footer uses the same names. Child links use
-**Overview**, **Guides**, and **Roadmap** without repeating “App.”
+The desktop panels close when the visitor follows a link, clicks outside the
+header, or presses Escape. Only one panel opens at a time. The mobile menu uses
+separate **Procurement** and **Site reporting** groups. The first site-reporting
+link is **Harpa Pro app** so the product type remains clear.
 
 The home page remains procurement-first. Its app section is a short secondary
-summary that links to `/app` and the App Store. The app page contains only the
-current Capture, Draft, and Review workflow plus links to the guides and
-roadmap.
+summary that links to `/app` and the App Store. The app page restores the
+static voice demonstration, reporting workflow, features, team information,
+questions, and resource links from the former home page. It does not restore
+the waitlist, Turnstile, or any API-backed control.
 
 `/docs` is labelled **Site reporting guides** in its page title and sidebar.
 Its breadcrumbs use **Site reporting** and **Guides**. `/roadmap` is labelled
@@ -65,7 +68,7 @@ section does not use a form, account, scheduler, or API.
 
 ## Evidence image dialog
 
-Technical-review images and supplied-record scans open in one shared native
+Technical-review images and supplied-record previews open in one shared native
 `<dialog>`. The dialog:
 
 - keeps the visitor on the procurement page;
@@ -74,6 +77,9 @@ Technical-review images and supplied-record scans open in one shared native
 - closes from its button, Escape, or a backdrop click;
 - returns focus to the image trigger;
 - clears the full-size image after closing.
+
+The dialog does not link to a full certificate, test report, or other original
+factory file. The public site contains selected preview images only.
 
 The triggers are buttons, not raw-asset links. The dialog is a local static
 enhancement and makes no network request other than loading the selected image.
@@ -95,6 +101,6 @@ enough for CI.
 
 Run the site unit tests, type check, lint, production build, and Playwright
 suite. Browser coverage verifies the product grouping at desktop and mobile
-widths, the site-reporting menu, the static contact actions, the `/app`
-overview, mixed-aspect evidence dialogs, focus restoration, and all
+widths, both mega panels, the static contact actions, the full static `/app`
+page, mixed-aspect evidence dialogs, focus restoration, and all
 sitemap-discovered internal links and fragments.

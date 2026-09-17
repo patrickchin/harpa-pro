@@ -993,19 +993,6 @@
     padding: 0.65rem 1rem;
   }
 
-  .evidence-image-dialog-document-link {
-    color: var(--color-foreground);
-    flex: 0 0 auto;
-    font-weight: 650;
-    text-decoration: underline;
-    text-decoration-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
-    text-underline-offset: 0.2rem;
-  }
-
-  .evidence-image-dialog-document-link:hover {
-    text-decoration-color: var(--color-accent);
-  }
-
   @media (max-width: 39.99rem) {
     .evidence-image-dialog-panel figcaption {
       align-items: flex-start;

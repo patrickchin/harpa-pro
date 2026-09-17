@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import {
-  FIRST_REVISION_DOC_REDIRECTS,
-  LEGACY_DOC_REDIRECTS,
-} from '../lib/docs';
+import { FIRST_REVISION_DOC_REDIRECTS, LEGACY_DOC_REDIRECTS } from '../lib/docs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -43,19 +40,12 @@ describe('site smoke', () => {
     expect(pkg.engines.node).toBe('>=22.12.0');
   });
 
-  it('imports Zod from Astro\'s canonical module', () => {
-    const contentConfig = readFileSync(
-      resolve(here, '../content.config.ts'),
-      'utf8',
-    );
+  it("imports Zod from Astro's canonical module", () => {
+    const contentConfig = readFileSync(resolve(here, '../content.config.ts'), 'utf8');
 
-    expect(contentConfig).toContain(
-      'import { defineCollection } from "astro:content";',
-    );
+    expect(contentConfig).toContain('import { defineCollection } from "astro:content";');
     expect(contentConfig).toContain('import { z } from "astro/zod";');
-    expect(contentConfig).not.toContain(
-      'import { defineCollection, z } from "astro:content";',
-    );
+    expect(contentConfig).not.toContain('import { defineCollection, z } from "astro:content";');
   });
 
   it('astro config targets static output for harpapro.com', () => {
@@ -81,6 +71,7 @@ describe('site smoke', () => {
     expect(redirects).toContain(
       '/downloads/harpa-pro-interior-procurement.pdf /procurement#evidence 301',
     );
+    expect(redirects).toContain('/documents/factories/* /procurement#evidence 301');
 
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
     expect(layout).toContain('noindex');
@@ -98,19 +89,18 @@ describe('site smoke', () => {
       resolve(here, '../components/agents/ProcurementEvidence.astro'),
       'utf8',
     );
-    const header = readFileSync(
-      resolve(here, '../components/landing/Header.astro'),
-      'utf8',
-    );
-    const footer = readFileSync(
-      resolve(here, '../components/landing/Footer.astro'),
-      'utf8',
-    );
+    const header = readFileSync(resolve(here, '../components/landing/Header.astro'), 'utf8');
+    const footer = readFileSync(resolve(here, '../components/landing/Footer.astro'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
     expect(home).toContain('Interior procurement in China');
     expect(home).toContain('AppOverview');
-    expect(app).toContain('Construction site reporting');
+    expect(app).toContain('SiteReportingHero');
+    expect(app).toContain('HowItWorks');
+    expect(app).toContain('Features');
+    expect(app).toContain('About');
+    expect(app).toContain('FAQ');
+    expect(app).not.toContain('WaitlistForm');
     expect(app).not.toContain('Current guidance and planned work.');
     expect(page).not.toContain('Harpa Pro procurement');
     expect(page).toContain('Interior procurement in China');
@@ -135,7 +125,9 @@ describe('site smoke', () => {
     expect(evidence).toContain('Factory documents');
     expect(evidence).toContain('Project evidence');
     expect(evidence).not.toContain('Factory source library');
-    expect(evidence).toContain('Open original PDF');
+    expect(evidence).not.toContain('Open original PDF');
+    expect(evidence).toContain('Show 7 more documents');
+    expect(evidence).toContain('Selected factory partners');
     expect(evidence).not.toContain('Ningbo Langyao Lighting');
     expect(evidence).not.toContain('Haining Mingyuan');
     expect(evidence).not.toContain('Foshan Zhenglian / JLA');
@@ -159,26 +151,18 @@ describe('site smoke', () => {
     expect(sitemap).toContain('"/app"');
 
     expect(
+      existsSync(resolve(here, '../../public/downloads/harpa-pro-interior-procurement.pdf')),
+    ).toBe(false);
+    expect(
       existsSync(
-        resolve(here, '../../public/downloads/harpa-pro-interior-procurement.pdf'),
+        resolve(here, '../../public/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf'),
       ),
     ).toBe(false);
     expect(
       existsSync(
-        resolve(
-          here,
-          '../../public/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
-        ),
+        resolve(here, '../../public/documents/factories/j2s/j2s-sofa-e1-certificate-2020.pdf'),
       ),
-    ).toBe(true);
-    expect(
-      existsSync(
-        resolve(
-          here,
-          '../../public/documents/factories/j2s/j2s-sofa-e1-certificate-2020.pdf',
-        ),
-      ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('does not ship the separate admin application', () => {
@@ -198,8 +182,6 @@ describe('site smoke', () => {
     );
 
     expect(workflow).toContain('bash scripts/ci/verify-pages-deployment.sh');
-    expect(verifyScript).toContain(
-      "--write-out '%{http_code} %{redirect_url}\\n'",
-    );
+    expect(verifyScript).toContain("--write-out '%{http_code} %{redirect_url}\\n'");
   });
 });

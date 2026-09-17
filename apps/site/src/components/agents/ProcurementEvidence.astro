@@ -24,68 +24,43 @@ import j2sEuRepresentativeImg from "../../assets/procurement/factories/credentia
 
 const factories = [
   {
-    index: "01",
     name: "AIS Smarti",
     location: "Foshan and Jiangmen, Guangdong",
     scope:
       "Custom cabinetry, wardrobes, bathroom cabinets, doors, wall panels, and project joinery.",
-    material:
-      "Three catalogues, factory images, project examples, packing details, and seven records.",
-    use:
-      "We use the drawings, finish ranges, and material reports to prepare a joinery package for the project.",
     image: aisFactoryImg,
     alt: "AIS Smarti headquarters and factory in Foshan, China",
     featured: true,
   },
   {
-    index: "02",
     name: "J2S",
     location: "Foshan, Guangdong",
     scope:
       "Custom furniture for restaurants, cafes, bars, hotel lobbies, and public areas.",
-    material:
-      "A 45-page hospitality catalogue and three certificate or test-report files.",
-    use:
-      "We use the project references and model ranges to specify seating, tables, finishes, quantities, and packing.",
     image: j2sProjectImg,
     alt: "J2S restaurant project and hospitality furniture catalogue spread",
   },
   {
-    index: "03",
     name: "Kenuo",
     location: "Guangdong, China",
     scope:
       "Wood office desks, workstations, meeting tables, storage, and seating.",
-    material:
-      "Office, leather-chair, PVC, and series catalogues with product images and model references.",
-    use:
-      "We use the series pages to compare layouts, finishes, sizes, seating, and quantities.",
     image: kenuoOfficeImg,
     alt: "Kenuo executive office desk and storage catalogue page",
   },
   {
-    index: "04",
     name: "Masyounger",
     location: "Luoyang, Henan",
     scope:
       "Steel filing cabinets, lockers, shelving, workbenches, and school furniture.",
-    material:
-      "Product catalogues with model numbers, dimensions, construction notes, and storage configurations.",
-    use:
-      "We use the model and dimension data to compare capacity, construction, finish, packing, and quantities.",
     image: masyoungerStorageImg,
     alt: "Masyounger steel storage cabinet models and dimensions",
   },
   {
-    index: "05",
     name: "Rong Shuo",
     location: "Pinghu, Zhejiang",
     scope:
       "Bathroom cabinets, mirrors, shower enclosures, and prefabricated bathroom systems.",
-    material:
-      "Three catalogues with model references, size ranges, glass, frame, hardware, and bathroom options.",
-    use:
-      "We use the product data to confirm dimensions, finishes, glass, hardware, interfaces, packing, and quantities.",
     image: rongshuoBathroomImg,
     alt: "Rong Shuo bathroom cabinet models from the supplied catalogue",
   },
@@ -151,118 +126,98 @@ const productBriefs = [
   },
 ];
 
-const credentialGroups = [
+const credentials = [
   {
-    name: "AIS Smarti source package",
-    documents: [
-      {
-        title: "Marine HDF formaldehyde test",
-        meta: "SGS SDHL260400719601HI | 15 June 2026 | 3 pages",
-        description:
-          "The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.",
-        image: aisHdfReportImg,
-        alt: "First page of the AIS marine HDF formaldehyde test report",
-        href: "/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "HMR particleboard formaldehyde test",
-        meta: "SGS SDHL260400719501HI | 15 June 2026 | 3 pages",
-        description:
-          "The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for HMR particleboard.",
-        image: aisHmrReportImg,
-        alt: "First page of the AIS HMR particleboard formaldehyde test report",
-        href: "/documents/factories/ais/ais-hmr-particleboard-formaldehyde-e0-2026.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "OSB formaldehyde test",
-        meta: "SGS SDHL260400719701HI | 15 June 2026 | 3 pages",
-        description:
-          "The report names AIS JOINERY PTY LTD as the applicant. It records a GB/T 39600-2021 ENF pass result for oriented strand board.",
-        image: aisOsbReportImg,
-        alt: "First page of the AIS oriented strand board formaldehyde test report",
-        href: "/documents/factories/ais/ais-osb-formaldehyde-enf-2026.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "PUR adhesive VOC test",
-        meta: "SGS CANEC24022609601 | 21 October 2024 | 3 pages",
-        description:
-          "This supplier report covers polyurethane adhesive and records compliance with the GB 33372-2020 VOC limit.",
-        image: aisPurVocReportImg,
-        alt: "First page of the polyurethane adhesive VOC test report",
-        href: "/documents/factories/ais/ais-supplied-pur-adhesive-voc-2024.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "Hot-melt adhesive RoHS test",
-        meta: "NPS2024030040 | 1 April 2024 | 6 pages",
-        description:
-          "This supplier report covers Foshan Yuetai hot-melt adhesive and records compliance with the stated EU RoHS limits.",
-        image: aisRohsReportImg,
-        alt: "Cover of the hot-melt adhesive RoHS test report",
-        href: "/documents/factories/ais/ais-supplied-hot-melt-adhesive-rohs-2024.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "E1 board formaldehyde report",
-        meta: "Chinese-language supplier report | 18 April 2020 | 3 pages",
-        description:
-          "The AIS package included this Chinese-language board report. Review the original before applying it to an order.",
-        image: aisBoardE1ReportImg,
-        alt: "Cover of the Chinese-language E1 board formaldehyde report",
-        href: "/documents/factories/ais/ais-supplied-board-e1-2020.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "Wanhua Ecoboard production-control certificate",
-        meta: "EPH 0766-CPR-338 | 4 June 2015 | image",
-        description:
-          "The certificate names Wanhua Ecoboard and particle board. It does not certify the AIS factory.",
-        image: aisWanhuaCertificateImg,
-        alt: "Wanhua Ecoboard factory production-control certificate",
-        href: "/documents/factories/ais/ais-supplied-wanhua-production-control-2015.jpg",
-        linkLabel: "Open original image",
-      },
-    ],
+    source: "AIS Smarti source package",
+    title: "Marine HDF formaldehyde test",
+    meta: "SGS SDHL260400719601HI | 15 June 2026 | 3 pages",
+    description:
+      "The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.",
+    image: aisHdfReportImg,
+    alt: "First page of the AIS marine HDF formaldehyde test report",
   },
   {
-    name: "J2S source package",
-    documents: [
-      {
-        title: "Sofa formaldehyde test",
-        meta: "ENC2012255GZ25E1 | 4 January 2021 | 5 pages",
-        description:
-          "The report covers J2S JS and YX sofa series and tests formaldehyde emissions to EN 717-1:2004.",
-        image: j2sFormaldehydeReportImg,
-        alt: "Cover of the J2S sofa formaldehyde test report",
-        href: "/documents/factories/j2s/j2s-sofa-formaldehyde-e1-test-2021.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "Sofa E1 certificate",
-        meta: "ENC2012255GZ25 | 29 December 2020 | 1 page",
-        description:
-          "The certificate covers J2S JS and YX sofa series. It links its approval to test report ENC2012255GZ25E1.",
-        image: j2sE1CertificateImg,
-        alt: "J2S sofa E1 certification of conformity",
-        href: "/documents/factories/j2s/j2s-sofa-e1-certificate-2020.pdf",
-        linkLabel: "Open original PDF",
-      },
-      {
-        title: "European representative appointment",
-        meta: "EUREP-2025071609543457399 | 16 July 2025 | 1 page",
-        description:
-          "The appointment names EUREP ENV S.L. as the European representative for J2S. The document expired on 15 July 2026.",
-        status: "expired",
-        statusLabel: "Expired 15 July 2026",
-        image: j2sEuRepresentativeImg,
-        alt: "J2S European representative appointment certificate",
-        href: "/documents/factories/j2s/j2s-eu-representative-appointment-2025-2026.pdf",
-        linkLabel: "Open original PDF",
-      },
-    ],
+    source: "AIS Smarti source package",
+    title: "Hot-melt adhesive RoHS test",
+    meta: "NPS2024030040 | 1 April 2024 | 6 pages",
+    description:
+      "This supplier report covers Foshan Yuetai hot-melt adhesive and records compliance with the stated EU RoHS limits.",
+    image: aisRohsReportImg,
+    alt: "Cover of the hot-melt adhesive RoHS test report",
+  },
+  {
+    source: "J2S source package",
+    title: "Sofa E1 certificate",
+    meta: "ENC2012255GZ25 | 29 December 2020 | 1 page",
+    description:
+      "The certificate covers J2S JS and YX sofa series. It links its approval to test report ENC2012255GZ25E1.",
+    image: j2sE1CertificateImg,
+    alt: "J2S sofa E1 certification of conformity",
+  },
+  {
+    source: "AIS Smarti source package",
+    title: "HMR particleboard formaldehyde test",
+    meta: "SGS SDHL260400719501HI | 15 June 2026 | 3 pages",
+    description:
+      "The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for HMR particleboard.",
+    image: aisHmrReportImg,
+    alt: "First page of the AIS HMR particleboard formaldehyde test report",
+  },
+  {
+    source: "AIS Smarti source package",
+    title: "OSB formaldehyde test",
+    meta: "SGS SDHL260400719701HI | 15 June 2026 | 3 pages",
+    description:
+      "The report names AIS JOINERY PTY LTD as the applicant. It records a GB/T 39600-2021 ENF pass result for oriented strand board.",
+    image: aisOsbReportImg,
+    alt: "First page of the AIS oriented strand board formaldehyde test report",
+  },
+  {
+    source: "AIS Smarti source package",
+    title: "PUR adhesive VOC test",
+    meta: "SGS CANEC24022609601 | 21 October 2024 | 3 pages",
+    description:
+      "This supplier report covers polyurethane adhesive and records compliance with the GB 33372-2020 VOC limit.",
+    image: aisPurVocReportImg,
+    alt: "First page of the polyurethane adhesive VOC test report",
+  },
+  {
+    source: "AIS Smarti source package",
+    title: "E1 board formaldehyde report",
+    meta: "Chinese-language supplier report | 18 April 2020 | 3 pages",
+    description:
+      "The AIS package included this Chinese-language board report. Review the source before you apply it to an order.",
+    image: aisBoardE1ReportImg,
+    alt: "Cover of the Chinese-language E1 board formaldehyde report",
+  },
+  {
+    source: "AIS Smarti source package",
+    title: "Wanhua Ecoboard production-control certificate",
+    meta: "EPH 0766-CPR-338 | 4 June 2015 | image",
+    description:
+      "The certificate names Wanhua Ecoboard and particle board. It does not certify the AIS factory.",
+    image: aisWanhuaCertificateImg,
+    alt: "Wanhua Ecoboard factory production-control certificate",
+  },
+  {
+    source: "J2S source package",
+    title: "Sofa formaldehyde test",
+    meta: "ENC2012255GZ25E1 | 4 January 2021 | 5 pages",
+    description:
+      "The report covers J2S JS and YX sofa series and tests formaldehyde emissions to EN 717-1:2004.",
+    image: j2sFormaldehydeReportImg,
+    alt: "Cover of the J2S sofa formaldehyde test report",
+  },
+  {
+    source: "J2S source package",
+    title: "European representative appointment",
+    meta: "EUREP-2025071609543457399 | 16 July 2025 | 1 page",
+    description:
+      "The appointment names EUREP ENV S.L. as the European representative for J2S. The document expired on 15 July 2026.",
+    status: "expired",
+    statusLabel: "Expired 15 July 2026",
+    image: j2sEuRepresentativeImg,
+    alt: "J2S European representative appointment certificate",
   },
 ];
 
@@ -294,71 +249,82 @@ const technicalReviews = [
   </p>
 </div>
 
-<section aria-labelledby="factory-partners-heading" class="mt-16">
+<section
+  id="factory-partners"
+  aria-labelledby="factory-partners-heading"
+  class="mt-16 scroll-mt-24"
+>
   <div class="max-w-3xl">
     <h3
       id="factory-partners-heading"
       class="text-2xl font-semibold tracking-tight text-ink"
     >
-      Factory partners
+      Selected factory partners
     </h3>
     <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-      The current source package covers five factory groups. We confirm the
-      final product, specification, and document scope for each order.
+      These are selected examples, not a complete factory directory. We match
+      each order with the required product, specification, and document scope.
     </p>
   </div>
 
-  <div class="mt-10 grid gap-6 lg:grid-cols-2">
+  <div class="mt-8 grid gap-5">
     {
-      factories.map((factory) => (
+      factories.filter((factory) => factory.featured).map((factory) => (
         <article
           data-factory-partner
-          class:list={[
-            "overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm",
-            factory.featured && "lg:col-span-2 lg:grid lg:grid-cols-[1.15fr_0.85fr]",
-          ]}
+          data-factory-featured="true"
+          class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm sm:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.55fr)]"
         >
           <Image
             src={factory.image}
             alt={factory.alt}
             widths={[520, 760, 1040, 1440]}
-            sizes={
-              factory.featured
-                ? "(min-width: 64rem) 44rem, calc(100vw - 3rem)"
-                : "(min-width: 64rem) 35rem, calc(100vw - 3rem)"
-            }
+            sizes="(min-width: 64rem) 44rem, calc(100vw - 3rem)"
             format="webp"
             quality={88}
             loading="lazy"
             decoding="async"
-            class:list={[
-              "w-full bg-white object-cover",
-              factory.featured ? "h-full min-h-72" : "aspect-[16/10]",
-            ]}
+            class="h-52 w-full bg-white object-cover sm:h-64"
           />
-          <div class="border-t border-hairline p-6 sm:p-8 lg:border-l lg:border-t-0">
-            <div class="flex items-center justify-between gap-4">
-              <span class="font-mono text-xs text-accent-ink">{factory.index}</span>
-              <span class="font-mono text-xs text-ink-soft">{factory.location}</span>
-            </div>
-            <h4 class="mt-5 text-2xl font-semibold tracking-tight text-ink">
+          <div class="border-t border-hairline p-5 sm:border-l sm:border-t-0 sm:p-6">
+            <p class="font-mono text-xs text-ink-soft">{factory.location}</p>
+            <h4 class="mt-3 text-xl font-semibold tracking-tight text-ink">
               {factory.name}
             </h4>
             <p class="mt-3 text-sm leading-relaxed text-ink-soft">{factory.scope}</p>
-            <dl class="mt-6 grid gap-5 border-t border-hairline pt-5 text-sm">
-              <div>
-                <dt class="font-medium text-ink">Source files</dt>
-                <dd class="mt-1 leading-relaxed text-ink-soft">{factory.material}</dd>
-              </div>
-              <div>
-                <dt class="font-medium text-ink">How we use them</dt>
-                <dd class="mt-1 leading-relaxed text-ink-soft">{factory.use}</dd>
-              </div>
-            </dl>
           </div>
         </article>
       ))
     }
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        factories.filter((factory) => !factory.featured).map((factory) => (
+          <article
+            data-factory-partner
+            class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+          >
+            <Image
+              src={factory.image}
+              alt={factory.alt}
+              widths={[360, 520, 720]}
+              sizes="(min-width: 64rem) 17rem, (min-width: 40rem) 45vw, calc(100vw - 3rem)"
+              format="webp"
+              quality={86}
+              loading="lazy"
+              decoding="async"
+              class="aspect-[16/9] w-full bg-white object-cover"
+            />
+            <div class="border-t border-hairline p-4">
+              <p class="font-mono text-[0.68rem] leading-relaxed text-ink-soft">
+                {factory.location}
+              </p>
+              <h4 class="mt-2 text-base font-semibold text-ink">{factory.name}</h4>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">{factory.scope}</p>
+            </div>
+          </article>
+        ))
+      }
+    </div>
   </div>
 </section>
 
@@ -391,7 +357,11 @@ const technicalReviews = [
   </div>
 </section>
 
-<section aria-labelledby="product-briefs-heading" class="mt-20">
+<section
+  id="product-examples"
+  aria-labelledby="product-briefs-heading"
+  class="mt-20 scroll-mt-24"
+>
   <div class="max-w-3xl">
     <h3
       id="product-briefs-heading"
@@ -463,7 +433,11 @@ const technicalReviews = [
   </div>
 </section>
 
-<section aria-labelledby="factory-documents-heading" class="mt-24">
+<section
+  id="factory-documents"
+  aria-labelledby="factory-documents-heading"
+  class="mt-24 scroll-mt-24"
+>
   <div class="max-w-3xl">
     <h3
       id="factory-documents-heading"
@@ -472,7 +446,8 @@ const technicalReviews = [
       Factory documents
     </h3>
     <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-      Select a document to view its first page and open the original file.
+      Select a document to view its first-page image. Full source files are not
+      published on this website.
       <span class="mt-1 block">
         Factory-supplied document. Harpa Pro has not independently verified its
         current status or scope.
@@ -480,71 +455,75 @@ const technicalReviews = [
     </p>
   </div>
 
-  <div class="mt-10 grid gap-14">
+  <div
+    id="factory-document-grid"
+    class="mt-8 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3"
+  >
     {
-      credentialGroups.map((group) => (
-        <section aria-label={`${group.name} records`}>
-          <h4 class="border-b border-hairline pb-3 text-lg font-semibold text-ink">
-            {group.name}
-          </h4>
-          <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
-            {group.documents.map((document) => (
-              <article
-                data-credential-record
-                data-credential-status={document.status}
-                class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
-              >
-                <button
-                  type="button"
-                  aria-label={`Open full view of ${document.title}`}
-                  class="evidence-image-trigger block w-full border-0 bg-white p-0 ring-focus"
-                  data-evidence-image-trigger
-                  data-evidence-image-src={document.image.src}
-                  data-evidence-image-alt={document.alt}
-                  data-evidence-image-title={document.title}
-                  data-evidence-image-caption={`${document.meta}. ${document.description}`}
-                  data-evidence-image-width={document.image.width}
-                  data-evidence-image-height={document.image.height}
-                  data-evidence-document-href={document.href}
-                  data-evidence-document-label={document.linkLabel}
-                >
-                  <Image
-                    src={document.image}
-                    alt={document.alt}
-                    widths={[320, 480, 640]}
-                    sizes="(min-width: 80rem) 22rem, (min-width: 48rem) 44vw, 44vw"
-                    format="webp"
-                    quality={92}
-                    loading="lazy"
-                    decoding="async"
-                    class="aspect-[4/5] w-full object-contain p-2"
-                  />
-                </button>
-                <div class="border-t border-hairline p-3 sm:p-5">
-                  <div class="flex flex-wrap items-start justify-between gap-2">
-                    <p class="text-sm font-semibold leading-snug text-ink sm:text-base">
-                      {document.title}
-                    </p>
-                    {document.statusLabel && (
-                      <span class="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 font-mono text-[0.65rem] font-semibold uppercase tracking-wide text-accent-ink">
-                        {document.statusLabel}
-                      </span>
-                    )}
-                  </div>
-                  <p class="mt-3 break-words font-mono text-[0.62rem] leading-relaxed text-ink-soft sm:text-[0.68rem]">
-                    {document.meta}
-                  </p>
-                  <p class="mt-3 hidden text-sm leading-relaxed text-ink-soft sm:block">
-                    {document.description}
-                  </p>
-                </div>
-              </article>
-            ))}
+      credentials.map((document, index) => (
+        <article
+          data-credential-record
+          data-credential-status={document.status}
+          data-additional-document={index >= 3 ? "true" : undefined}
+          hidden={index >= 3}
+          class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+        >
+          <button
+            type="button"
+            aria-label={`Open full view of ${document.title}`}
+            class="evidence-image-trigger block w-full border-0 bg-white p-0 ring-focus"
+            data-evidence-image-trigger
+            data-evidence-image-src={document.image.src}
+            data-evidence-image-alt={document.alt}
+            data-evidence-image-title={document.title}
+            data-evidence-image-caption={`${document.meta}. ${document.description}`}
+            data-evidence-image-width={document.image.width}
+            data-evidence-image-height={document.image.height}
+          >
+            <Image
+              src={document.image}
+              alt={document.alt}
+              widths={[320, 480, 640]}
+              sizes="(min-width: 80rem) 22rem, (min-width: 48rem) 44vw, 44vw"
+              format="webp"
+              quality={92}
+              loading="lazy"
+              decoding="async"
+              class="aspect-[4/5] w-full object-contain p-2"
+            />
+          </button>
+          <div class="border-t border-hairline p-3 sm:p-5">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <h4 class="text-sm font-semibold leading-snug text-ink sm:text-base">
+                {document.title}
+              </h4>
+              {document.statusLabel && (
+                <span class="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 font-mono text-[0.65rem] font-semibold uppercase tracking-wide text-accent-ink">
+                  {document.statusLabel}
+                </span>
+              )}
+            </div>
+            <p class="mt-2 text-xs font-medium text-ink">{document.source}</p>
+            <p class="mt-2 break-words font-mono text-[0.62rem] leading-relaxed text-ink-soft sm:text-[0.68rem]">
+              {document.meta}
+            </p>
+            <p class="mt-3 hidden text-sm leading-relaxed text-ink-soft sm:block">
+              {document.description}
+            </p>
           </div>
-        </section>
+        </article>
       ))
     }
   </div>
+  <button
+    type="button"
+    aria-expanded="false"
+    aria-controls="factory-document-grid"
+    class="mt-6 inline-flex h-11 items-center rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
+    data-document-disclosure
+  >
+    Show 7 more documents
+  </button>
 </section>
 
 <section aria-labelledby="technical-reviews-heading" class="mt-24">
@@ -605,3 +584,23 @@ const technicalReviews = [
 </section>
 
 <EvidenceImageDialog />
+
+<script>
+  const documentDisclosure = document.querySelector<HTMLButtonElement>(
+    "[data-document-disclosure]",
+  );
+  const additionalDocuments = document.querySelectorAll<HTMLElement>(
+    "[data-additional-document]",
+  );
+
+  documentDisclosure?.addEventListener("click", () => {
+    const expanded = documentDisclosure.getAttribute("aria-expanded") === "true";
+    additionalDocuments.forEach((documentCard) => {
+      documentCard.hidden = expanded;
+    });
+    documentDisclosure.setAttribute("aria-expanded", String(!expanded));
+    documentDisclosure.textContent = expanded
+      ? "Show 7 more documents"
+      : "Show fewer documents";
+  });
+</script>

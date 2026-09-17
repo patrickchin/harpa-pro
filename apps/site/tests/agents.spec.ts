@@ -76,16 +76,18 @@ const PRODUCT_BRIEFS = [
 
 const CREDENTIALS = [
   'Marine HDF formaldehyde test',
+  'Hot-melt adhesive RoHS test',
+  'Sofa E1 certificate',
   'HMR particleboard formaldehyde test',
   'OSB formaldehyde test',
   'PUR adhesive VOC test',
-  'Hot-melt adhesive RoHS test',
   'E1 board formaldehyde report',
   'Wanhua Ecoboard production-control certificate',
   'Sofa formaldehyde test',
-  'Sofa E1 certificate',
   'European representative appointment',
 ] as const;
+
+const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
 
 test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
   await page.goto('/procurement');
@@ -152,11 +154,13 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(main.getByText('Factory source library', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Review area', { exact: true })).toHaveCount(0);
 
-  const headingLevels = await main.locator('h1, h2, h3, h4, h5, h6').evaluateAll((headings) =>
-    headings
-      .filter((heading) => heading.getClientRects().length > 0)
-      .map((heading) => Number(heading.tagName.slice(1))),
-  );
+  const headingLevels = await main
+    .locator('h1, h2, h3, h4, h5, h6')
+    .evaluateAll((headings) =>
+      headings
+        .filter((heading) => heading.getClientRects().length > 0)
+        .map((heading) => Number(heading.tagName.slice(1))),
+    );
   expect(headingLevels.filter((level) => level === 1)).toHaveLength(1);
   for (const [index, level] of headingLevels.entries()) {
     if (index === 0) continue;
@@ -242,10 +246,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
       name: 'First page of the AIS marine HDF formaldehyde test report',
     }),
   ).toBeVisible();
-  await expect(recordDialog.getByRole('link', { name: 'Open original PDF' })).toHaveAttribute(
-    'href',
-    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
-  );
+  await expect(recordDialog.getByRole('link')).toHaveCount(0);
 
   const mobileOverflow = await recordDialog.evaluate((dialog) => {
     const imageRegion = dialog.querySelector<HTMLElement>('[data-evidence-image-dialog-region]');
@@ -275,7 +276,9 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
 });
 
-test('shows source factories, representative briefs, and original records', async ({ page }) => {
+test('shows compact factory examples and progressively discloses document previews', async ({
+  page,
+}) => {
   await page.goto('/procurement#evidence');
 
   await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
@@ -289,13 +292,23 @@ test('shows source factories, representative briefs, and original records', asyn
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
+  await expect(
+    page.getByRole('heading', { level: 3, name: 'Selected factory partners' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('These are selected examples, not a complete factory directory.', {
+      exact: false,
+    }),
+  ).toBeVisible();
   for (const [index, factory] of FACTORY_PARTNERS.entries()) {
     const card = factories.nth(index);
     await expect(card).toContainText(factory.name);
     await expect(card).toContainText(factory.scope);
     await expect(card.getByRole('img')).toBeVisible();
-    await expect(card).toContainText('Source files');
+    await expect(card).not.toContainText('Source files');
+    await expect(card).not.toContainText('How we use them');
   }
+  await expect(factories.first()).toHaveAttribute('data-factory-featured', 'true');
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
@@ -314,25 +327,37 @@ test('shows source factories, representative briefs, and original records', asyn
   await expect(page.getByRole('heading', { name: 'Factory documents' })).toBeVisible();
   const suppliedRecords = page.locator('[data-credential-record]');
   await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
-  for (const [index, title] of CREDENTIALS.entries()) {
-    const record = suppliedRecords.nth(index);
+  for (const title of INITIAL_CREDENTIALS) {
+    const record = suppliedRecords.filter({ hasText: title });
     await expect(record).toContainText(title);
     await expect(record.getByRole('img')).toBeVisible();
     await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
   }
 
-  const originalDocuments = await suppliedRecords
-    .locator('[data-evidence-document-href]')
-    .evaluateAll((triggers) =>
-      triggers.map((trigger) => (trigger as HTMLElement).dataset.evidenceDocumentHref),
-    );
-  expect(new Set(originalDocuments).size).toBe(CREDENTIALS.length);
-  for (const href of originalDocuments) {
-    expect(href).toBeTruthy();
-    const response = await page.request.get(href!);
-    expect(response.status(), href).toBe(200);
-    expect(response.headers()['content-type'], href).toMatch(/application\/pdf|image\/jpeg/);
+  for (const title of CREDENTIALS.slice(3)) {
+    await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();
   }
+
+  const moreDocuments = page.locator('[data-document-disclosure]');
+  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
+  await moreDocuments.click();
+  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'true');
+  await expect(moreDocuments).toHaveText('Show fewer documents');
+
+  for (const title of CREDENTIALS) {
+    const record = suppliedRecords.filter({ hasText: title });
+    await expect(record).toBeVisible();
+    await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+  }
+
+  await expect(page.locator('[data-evidence-document-href]')).toHaveCount(0);
+  await expect(page.locator('a[href^="/documents/factories/"]')).toHaveCount(0);
+
+  const oldDocument = await page.request.get(
+    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
+  );
+  expect(oldDocument.status()).not.toBe(200);
+  expect(oldDocument.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/);
 
   await expect(
     page.getByText(
@@ -352,9 +377,7 @@ test('shows source factories, representative briefs, and original records', asyn
   expect(pdfResponse.status()).toBe(404);
 });
 
-test('offers copy-first email and WhatsApp contact actions without a form', async ({
-  page,
-}) => {
+test('offers copy-first email and WhatsApp contact actions without a form', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -368,68 +391,55 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await page.goto('/procurement#contact');
 
   const contact = page.locator('#contact');
-  await expect(
-    contact.getByRole('heading', { level: 2, name: 'Contact Haruna' }),
-  ).toBeVisible();
-  await expect(
-    contact.getByText('haru@harpapro.com', { exact: true }),
-  ).toBeVisible();
-  await expect(
-    contact.getByText('+86 193 7283 7269', { exact: true }),
-  ).toBeVisible();
+  await expect(contact.getByRole('heading', { level: 2, name: 'Contact Haruna' })).toBeVisible();
+  await expect(contact.getByText('haru@harpapro.com', { exact: true })).toBeVisible();
+  await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
   const emailActions = contact.locator('[data-contact-email-actions]');
   const copyEmail = emailActions.getByRole('button', { name: 'Copy email' });
-  await expect(emailActions.locator('button, a').first()).toHaveAttribute(
-    'data-copy-email',
-    '',
-  );
+  await expect(emailActions.locator('button, a').first()).toHaveAttribute('data-copy-email', '');
   await copyEmail.click();
   await expect(contact.getByRole('status')).toHaveText('Email copied');
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('copied-email')),
-  ).toBe('haru@harpapro.com');
+  expect(await page.evaluate(() => window.localStorage.getItem('copied-email'))).toBe(
+    'haru@harpapro.com',
+  );
 
-  await expect(
-    emailActions.getByRole('link', { name: 'Open email app' }),
-  ).toHaveAttribute('href', 'mailto:haru@harpapro.com');
-  await expect(
-    contact.getByRole('link', { name: 'Message on WhatsApp' }),
-  ).toHaveAttribute('href', 'https://wa.me/861937283726');
+  await expect(emailActions.getByRole('link', { name: 'Open email app' })).toHaveAttribute(
+    'href',
+    'mailto:haru@harpapro.com',
+  );
+  await expect(contact.getByRole('link', { name: 'Message on WhatsApp' })).toHaveAttribute(
+    'href',
+    'https://wa.me/861937283726',
+  );
   await expect(contact.locator('form')).toHaveCount(0);
 });
 
-test('groups site reporting in shared navigation without mobile overflow', async ({
+test('uses accessible mega navigation and closes it after outside interaction', async ({
   page,
 }) => {
   await page.goto('/procurement');
 
   const desktopNav = page.locator('header nav[aria-label="Primary"]');
+  const procurementMenu = desktopNav.locator('[data-mega-menu="procurement"]');
+  const procurementSummary = procurementMenu.locator('summary');
+  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
+  const siteReportingSummary = siteReportingMenu.locator('summary');
+
+  await procurementSummary.hover();
+  await expect(procurementMenu).toHaveAttribute('open', '');
   await expect(
-    desktopNav.getByRole('link', {
-      name: 'Procurement',
-      exact: true,
-    }),
+    procurementMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
   ).toHaveAttribute('href', '/procurement');
   await expect(
-    desktopNav.getByRole('link', { name: 'App', exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    desktopNav.getByRole('link', { name: 'App guides', exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    desktopNav.getByRole('link', { name: 'App roadmap', exact: true }),
-  ).toHaveCount(0);
+    procurementMenu.getByRole('link', { name: 'Selected factory partners', exact: true }),
+  ).toHaveAttribute('href', '/procurement#factory-partners');
 
-  const siteReportingMenu = desktopNav.locator('details.site-reporting-menu');
-  const siteReportingSummary = siteReportingMenu.locator('summary');
-  await expect(siteReportingSummary).toContainText('Site reporting');
+  await siteReportingSummary.hover();
+  await expect(siteReportingMenu).toHaveAttribute('open', '');
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Overview' }),
-  ).not.toBeVisible();
-  await siteReportingSummary.click();
-  await expect(
-    siteReportingMenu.getByRole('link', { name: 'Overview', exact: true }),
+    siteReportingMenu.getByRole('link', { name: 'Harpa Pro app', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
@@ -437,6 +447,16 @@ test('groups site reporting in shared navigation without mobile overflow', async
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/roadmap');
+  await page.mouse.click(20, 700);
+  await expect(siteReportingMenu).not.toHaveAttribute('open', '');
+
+  await siteReportingSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(siteReportingMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(siteReportingMenu).not.toHaveAttribute('open', '');
+  await expect(siteReportingSummary).toBeFocused();
+
   await expect(
     desktopNav.getByRole('link', {
       name: 'Contact Haruna',
@@ -452,27 +472,21 @@ test('groups site reporting in shared navigation without mobile overflow', async
       })
       .first(),
   ).toHaveAttribute('href', '/procurement');
-  await expect(
-    page.locator('footer').getByText('Site reporting', { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator('footer').getByText('Site reporting', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(
-    mobileMenu.getByRole('link', { name: 'Procurement', exact: true }),
+    mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
   ).toHaveAttribute('href', '/procurement');
   await expect(
     mobileMenu.getByRole('link', { name: 'Contact Haruna', exact: true }),
   ).toHaveAttribute('href', '/procurement#contact');
-  const mobileSiteReporting = mobileMenu.locator(
-    '[data-mobile-site-reporting]',
-  );
+  const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
+  await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();
   await expect(
-    mobileSiteReporting.getByText('Site reporting', { exact: true }),
-  ).toBeVisible();
-  await expect(
-    mobileSiteReporting.getByRole('link', { name: 'Overview', exact: true }),
+    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro app', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
@@ -480,21 +494,15 @@ test('groups site reporting in shared navigation without mobile overflow', async
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/roadmap');
-  await expect(
-    mobileMenu.getByRole('link', { name: 'App', exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    mobileMenu.getByRole('link', { name: 'View evidence', exact: true }),
-  ).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
 
   await expect(
-    mobileMenu.getByRole('link', { name: 'Project evidence', exact: true }),
-  ).toHaveAttribute('href', '/procurement#evidence');
+    mobileMenu.getByRole('link', { name: 'Factory documents', exact: true }),
+  ).toHaveAttribute('href', '/procurement#factory-documents');
 
   const overflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
 });

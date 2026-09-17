@@ -480,17 +480,22 @@ const technicalReviews = [
             data-evidence-image-width={document.image.width}
             data-evidence-image-height={document.image.height}
           >
-            <Image
-              src={document.image}
-              alt={document.alt}
-              widths={[320, 480, 640]}
-              sizes="(min-width: 80rem) 22rem, (min-width: 48rem) 44vw, 44vw"
-              format="webp"
-              quality={92}
-              loading="lazy"
-              decoding="async"
-              class="aspect-[4/5] w-full object-contain p-2"
-            />
+            <div
+              data-document-preview-crop
+              class="aspect-[21/10] w-full overflow-hidden"
+            >
+              <Image
+                src={document.image}
+                alt={document.alt}
+                widths={[320, 480, 640]}
+                sizes="(min-width: 80rem) 22rem, (min-width: 48rem) 44vw, 44vw"
+                format="webp"
+                quality={92}
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full object-cover object-top"
+              />
+            </div>
           </button>
           <div class="border-t border-hairline p-3 sm:p-5">
             <div class="flex flex-wrap items-start justify-between gap-2">
@@ -506,9 +511,6 @@ const technicalReviews = [
             <p class="mt-2 text-xs font-medium text-ink">{document.source}</p>
             <p class="mt-2 break-words font-mono text-[0.62rem] leading-relaxed text-ink-soft sm:text-[0.68rem]">
               {document.meta}
-            </p>
-            <p class="mt-3 hidden text-sm leading-relaxed text-ink-soft sm:block">
-              {document.description}
             </p>
           </div>
         </article>

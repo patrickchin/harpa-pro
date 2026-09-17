@@ -14,6 +14,7 @@ describe('marketing claim copy', () => {
   it('does not publish stale or overbroad audited claims', () => {
     const files = [
       'components/landing/Hero.astro',
+      'components/landing/AppOverview.astro',
       'components/landing/Header.astro',
       'components/landing/Features.astro',
       'components/landing/WaitlistForm.astro',

@@ -83,7 +83,8 @@ describe('site smoke', () => {
     expect(layout).toContain('noindex');
   });
 
-  it('publishes the static procurement agents page in navigation and discovery', () => {
+  it('publishes the procurement-first site in navigation and discovery', () => {
+    const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
     const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
     const header = readFileSync(
       resolve(here, '../components/landing/Header.astro'),
@@ -95,10 +96,16 @@ describe('site smoke', () => {
     );
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
-    expect(page).toContain('Procurement agents');
-    expect(page).toContain('Procurement support from brief to delivery.');
-    expect(page).toContain('Choose an agent');
-    expect(page).toContain('Meet your procurement agents.');
+    expect(home).toContain('Your procurement agent in China.');
+    expect(home).toContain('AppOverview');
+    expect(page).toContain('Your procurement agent');
+    expect(page).toContain('Meet Haruna.');
+    expect(page).toContain('Match the right factory');
+    expect(page).toContain('Complete the handover');
+    expect(page).toContain('ProcurementJourney');
+    expect(page).not.toContain('Choose an agent');
+    expect(page).not.toContain('Meet your procurement agents.');
+    expect(page).not.toContain('Hashy');
     expect(page).not.toContain('Send a sourcing brief');
     expect(page).not.toContain('mailto:');
     expect(header).toContain('href="/agents"');

@@ -1,64 +1,68 @@
 import { expect, test } from '@playwright/test';
 
 const PROCESS_STEPS = [
-  'Choose an agent',
-  'Select a factory',
+  'Meet Haruna',
+  'Match the right factory',
   'Place the order',
-  'Monitor procurement',
-  'Confirm quality',
-  'Confirm shipment',
-  'Confirm delivery',
-  'Sign off',
+  'Track production',
+  'Check quality',
+  'Prepare shipment',
+  'Follow delivery',
+  'Complete the handover',
 ] as const;
 
-const EDITORIAL_IMAGE_ALTS = [
-  'Contemporary living room with stone, timber, and fabric samples arranged for review',
-  'Chinese quality inspector checking laminated furniture panels inside a production factory',
-  'Furniture production floor in China with machinery, stacked panels, and workers',
+const PROCESS_DESCRIPTIONS = [
+  'Haruna reviews your brief, drawings, priorities, and finish requirements. She then makes a sourcing plan for the project.',
+  'Haruna identifies factories that suit the product, materials, quantity, and finish requirements.',
+  'The order moves into production after you confirm the scope, sample, price, and terms.',
+  'Haruna follows the factory milestones and tells you when a change or delay needs a decision.',
+  'The finished work is checked against the agreed specification before shipment.',
+  'Haruna confirms the packing, quantities, documents, and collection details before the goods leave the factory.',
+  'Haruna follows the shipment through handover and delivery. She records any issues while the details are clear.',
+  'You review what arrived and record any open issues. The order closes after the handover is complete.',
 ] as const;
 
-test('presents a static procurement journey and agent profiles', async ({ page }) => {
+test('presents Haruna and an interactive static procurement journey', async ({ page }) => {
   await page.goto('/agents');
 
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Procurement support from brief to delivery.',
+      name: 'Meet Haruna.',
     }),
   ).toBeVisible();
 
-  const process = page.getByRole('list', { name: 'Procurement journey' });
-  const steps = process.getByRole('listitem');
+  const process = page.getByRole('tablist', { name: 'Procurement journey' });
+  const steps = process.getByRole('tab');
   await expect(steps).toHaveCount(PROCESS_STEPS.length);
   for (const [index, step] of PROCESS_STEPS.entries()) {
-    await expect(steps.nth(index)).toContainText(step);
+    const tab = steps.nth(index);
+    await expect(tab).toContainText(step);
+    await tab.click();
+    const panel = page.getByRole('tabpanel', { name: step });
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText(PROCESS_DESCRIPTIONS[index]);
+    await expect(panel.locator('img')).toHaveCount(1);
   }
+
+  await steps.first().focus();
+  await steps.first().press('ArrowDown');
+  await expect(steps.nth(1)).toBeFocused();
+  await expect(steps.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: PROCESS_STEPS[1] })).toBeVisible();
 
   const profiles = page.locator('[data-agent-profile]');
-  await expect(profiles).toHaveCount(2);
-  await expect(profiles.nth(0)).toContainText('Haruna Bayoh');
-  await expect(profiles.nth(0)).toContainText('Architecture and material procurement');
-  await expect(profiles.nth(0)).toContainText("Master's degree");
-  await expect(profiles.nth(0)).toContainText('6 years');
-  await expect(profiles.nth(1)).toContainText('Hashy');
-  await expect(profiles.nth(1)).toContainText('Material procurement');
-  await expect(profiles.nth(1)).toContainText("Bachelor's degree");
-  await expect(profiles.nth(1)).toContainText('4 years');
+  await expect(profiles).toHaveCount(1);
+  await expect(profiles).toContainText('Haruna Bayoh');
+  await expect(profiles).toContainText('Architecture and material procurement');
+  await expect(profiles).toContainText("Master's degree");
+  await expect(profiles).toContainText('6 years');
 
-  const editorialImages = page.locator('[data-procurement-image] img');
-  await expect(editorialImages).toHaveCount(EDITORIAL_IMAGE_ALTS.length);
-  for (const [index, alt] of EDITORIAL_IMAGE_ALTS.entries()) {
-    const image = editorialImages.nth(index);
-    await expect(image).toHaveAttribute('alt', alt);
-    await expect(image).toHaveAttribute('src', /\/_astro\//);
-    await image.scrollIntoViewIfNeeded();
-    await expect
-      .poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth))
-      .toBeGreaterThan(0);
-  }
+  await expect(page.getByText('Hashy', { exact: true })).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText(/choose (an|your) agent|select your agent/i);
 
   await expect(page.locator('main form')).toHaveCount(0);
-  await expect(page.locator('main button')).toHaveCount(0);
+  await expect(page.locator('main button')).toHaveCount(PROCESS_STEPS.length);
   await expect(
     page.getByText(/schedule (an )?(online )?meeting|available|busy|join now/i),
   ).toHaveCount(0);
@@ -75,6 +79,18 @@ test('links the agents page from shared navigation without mobile overflow', asy
     }),
   ).toHaveAttribute('href', '/agents');
   await expect(
+    page.locator('header nav').getByRole('link', {
+      name: 'App',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/#app');
+  await expect(
+    page.locator('header nav').getByRole('link', {
+      name: 'Meet Haruna',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/agents');
+  await expect(
     page.locator('footer').getByRole('link', {
       name: 'Agents',
       exact: true,
@@ -85,6 +101,14 @@ test('links the agents page from shared navigation without mobile overflow', asy
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(mobileMenu.getByRole('link', { name: 'Agents', exact: true })).toHaveAttribute(
+    'href',
+    '/agents',
+  );
+  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveAttribute(
+    'href',
+    '/#app',
+  );
+  await expect(mobileMenu.getByRole('link', { name: 'Meet Haruna', exact: true })).toHaveAttribute(
     'href',
     '/agents',
   );

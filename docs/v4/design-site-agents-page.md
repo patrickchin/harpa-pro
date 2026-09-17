@@ -30,8 +30,8 @@ The page presents:
 - a short hero explaining what a procurement agent coordinates, paired with an
   original editorial interior image;
 - eight ordered stages from choosing an agent through sign-off;
-- original material-review and production images that clarify the physical
-  procurement work;
+- original factory quality-control and production images that clarify the
+  physical procurement work in China;
 - profile cards for Haruna Bayoh and Hashy, showing focus, education, and
   experience;
 - Haruna's existing checked-in portrait and a neutral monogram for Hashy,
@@ -44,10 +44,14 @@ not invent missing names, photos, contact details, or availability.
 
 Reuse the site's warm-paper, navy, and orange tokens, Inter typography, spacing,
 cards, header, and footer. Add three checked-in, original editorial photographs
-that echo the supplied concept's warm, architectural mood without reproducing
-its source photography: a contemporary interior, hands reviewing material
-samples, and a clean furniture workshop. The images contain no embedded text,
-logos, availability claims, or controls.
+without reproducing the concept's source photography: a contemporary interior,
+a factory quality-control check, and a furniture production floor in mainland
+China. The factory photographs must look documentary rather than aspirational:
+utilitarian fluorescent lighting, worn concrete, industrial machinery, stacked
+materials and packaging, and the density of an ordinary working factory. Avoid
+boutique workshops, spotless showrooms, cinematic misery, unsafe caricatures,
+and stereotyped details. The images contain no embedded text, logos,
+availability claims, or controls.
 
 The layout is one column on small screens and expands into compact grids on
 larger screens. Ordered cards make the process readable without connector

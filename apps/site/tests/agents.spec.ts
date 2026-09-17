@@ -11,6 +11,12 @@ const PROCESS_STEPS = [
   'Sign off',
 ] as const;
 
+const EDITORIAL_IMAGE_ALTS = [
+  'Contemporary living room with stone, timber, and fabric samples arranged for review',
+  'Chinese quality inspector checking laminated furniture panels inside a production factory',
+  'Furniture production floor in China with machinery, stacked panels, and workers',
+] as const;
+
 test('presents a static procurement journey and agent profiles', async ({ page }) => {
   await page.goto('/agents');
 
@@ -40,10 +46,10 @@ test('presents a static procurement journey and agent profiles', async ({ page }
   await expect(profiles.nth(1)).toContainText('4 years');
 
   const editorialImages = page.locator('[data-procurement-image] img');
-  await expect(editorialImages).toHaveCount(3);
-  for (let index = 0; index < 3; index += 1) {
+  await expect(editorialImages).toHaveCount(EDITORIAL_IMAGE_ALTS.length);
+  for (const [index, alt] of EDITORIAL_IMAGE_ALTS.entries()) {
     const image = editorialImages.nth(index);
-    await expect(image).toHaveAttribute('alt', /\S+/);
+    await expect(image).toHaveAttribute('alt', alt);
     await expect(image).toHaveAttribute('src', /\/_astro\//);
     await image.scrollIntoViewIfNeeded();
     await expect

@@ -119,6 +119,10 @@ describe('site smoke', () => {
     expect(considerations).not.toContain('Stage ');
     expect(page).toContain('ProcurementConsiderations');
     expect(page).toContain('ProcurementEvidence');
+    expect(page).toContain('id="contact"');
+    expect(page).toContain('Contact Haruna');
+    expect(page).toContain('haru@harpapro.com');
+    expect(page).toContain('https://wa.me/861937283726');
     expect(page).toContain('data-single-agent-profile');
     expect(page).toContain("Haruna is Harpa Pro's procurement lead in China.");
     expect(evidence).toContain('Technical reviews');
@@ -141,11 +145,15 @@ describe('site smoke', () => {
     expect(page).not.toContain('This is your agent.');
     expect(page).not.toContain('Hashy');
     expect(page).not.toContain('Send a sourcing brief');
-    expect(page).not.toContain('mailto:');
+    expect(page).toContain('mailto:haru@harpapro.com');
     expect(header).toContain('href="/procurement"');
     expect(header).toContain('href="/app"');
+    expect(header).toContain('Site reporting');
+    expect(header).toContain('href="/procurement#contact"');
+    expect(header).not.toContain('View evidence');
     expect(footer).toContain('href="/procurement"');
     expect(footer).toContain('href="/app"');
+    expect(footer).toContain('Site reporting');
     expect(sitemap).toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');
     expect(sitemap).toContain('"/app"');

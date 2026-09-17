@@ -10,7 +10,7 @@ const REQUIRED_ROUTES = [
   '/account-deletion',
 ] as const;
 
-test('separates procurement from the Harpa Pro app', async ({ page }) => {
+test('separates procurement from site reporting', async ({ page }) => {
   await page.goto('/app');
 
   await expect(
@@ -20,11 +20,11 @@ test('separates procurement from the Harpa Pro app', async ({ page }) => {
     }),
   ).toBeVisible();
   await expect(page.locator('main').getByText('Harpa Pro app', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'App guides', exact: true }).first()).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'View guides', exact: true }).first()).toHaveAttribute(
     'href',
     '/docs',
   );
-  await expect(page.getByRole('link', { name: 'App roadmap', exact: true }).first()).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'View roadmap', exact: true }).first()).toHaveAttribute(
     'href',
     '/roadmap',
   );
@@ -32,7 +32,7 @@ test('separates procurement from the Harpa Pro app', async ({ page }) => {
   await expect(page.getByText(/waitlist|schedule a meeting/i)).toHaveCount(0);
 
   await page.goto('/roadmap');
-  await expect(page.getByText('Harpa Pro app roadmap', { exact: true })).toBeVisible();
+  await expect(page.getByText('Site reporting roadmap', { exact: true })).toBeVisible();
 });
 
 test('all sitemap pages, internal links, assets, and fragments resolve', async ({

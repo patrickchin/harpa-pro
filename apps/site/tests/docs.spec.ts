@@ -20,12 +20,12 @@ test("presents two core workflows and concise supporting tasks", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Guides and workflows.",
+      name: "Guides and workflows",
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", {
-      name: "App",
+      name: "Site reporting",
       exact: true,
     }),
   ).toHaveAttribute("href", "/app");
@@ -271,7 +271,7 @@ test("keeps tier navigation usable on a phone viewport", async ({ page }) => {
   await page.goto("/docs/guides/generate-ai-report");
 
   const mobileNav = page.locator(".docs-mobile-nav");
-  await mobileNav.getByText("Browse app guides", { exact: true }).click();
+  await mobileNav.getByText("Browse site reporting guides", { exact: true }).click();
   await expect(
     mobileNav.getByRole("link", { name: "Export and share a PDF" }),
   ).toBeVisible();
@@ -337,6 +337,6 @@ test("uses the branded not-found page for an unknown guide", async ({ page }) =>
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Procurement overview" })).toBeVisible();
   await expect(
-    page.getByRole("main").getByRole("link", { name: "App guides" }),
+    page.getByRole("main").getByRole("link", { name: "Site reporting guides" }),
   ).toBeVisible();
 });

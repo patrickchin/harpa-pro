@@ -82,6 +82,10 @@ other marketplace patterns.
 
 The profile describes Haruna as Harpa Pro's `procurement lead in China`.
 
+The page ends with the static contact section defined in
+`design-public-site-product-navigation.md`. It provides copy-first email and
+WhatsApp actions without adding a form or scheduling flow.
+
 ## Factory profiles
 
 Show five factory profiles from the source package. Each profile includes:
@@ -158,6 +162,7 @@ Browser tests must verify:
 - original document links for each PDF record;
 - an expired label on the J2S European representative appointment;
 - evidence dialogs that keep the user on the procurement page;
+- a contact section with copy-email, email-client, and WhatsApp actions;
 - no full factory catalogue download;
 - no form, booking, checkout, stock, or live-price feature.
 

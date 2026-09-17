@@ -158,7 +158,100 @@ import harunaImg from "../assets/team/haruna.jpg";
           <ProcurementEvidence />
         </Container>
       </Section>
+
+      <Section id="contact" tone="paper-2" bordered="top" class="scroll-mt-16">
+        <Container padding="lg">
+          <div class="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(32rem,1.22fr)] lg:gap-16">
+            <div class="max-w-xl">
+              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+                Contact Haruna
+              </h2>
+              <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+                Email or message Haruna about an interior procurement project
+                in China.
+              </p>
+            </div>
+
+            <dl class="grid gap-5 sm:grid-cols-2">
+              <div class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
+                <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Icon name="mail" class="h-4 w-4 text-accent-ink" />
+                  Email
+                </dt>
+                <dd class="mt-4">
+                  <p class="select-all break-all font-mono text-sm text-ink">
+                    haru@harpapro.com
+                  </p>
+                  <div
+                    class="mt-5 flex flex-wrap gap-3"
+                    data-contact-email-actions
+                  >
+                    <button
+                      type="button"
+                      class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
+                      data-copy-email
+                      data-email="haru@harpapro.com"
+                    >
+                      <Icon name="copy" class="h-4 w-4" />
+                      Copy email
+                    </button>
+                    <a
+                      href="mailto:haru@harpapro.com"
+                      class="inline-flex h-10 items-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus"
+                    >
+                      Open email app
+                    </a>
+                  </div>
+                  <p
+                    class="mt-3 min-h-5 text-xs text-ink-soft"
+                    role="status"
+                    aria-live="polite"
+                    data-copy-email-status
+                  ></p>
+                </dd>
+              </div>
+
+              <div class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
+                <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Icon name="message-circle" class="h-4 w-4 text-accent-ink" />
+                  WhatsApp
+                </dt>
+                <dd class="mt-4">
+                  <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
+                  <a
+                    href="https://wa.me/861937283726"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-5 inline-flex h-10 items-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-card ring-focus"
+                  >
+                    Message on WhatsApp
+                    <Icon name="external-link" class="h-4 w-4" />
+                  </a>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </Container>
+      </Section>
     </main>
     <Footer />
   </div>
+
+  <script>
+    const copyEmailButton = document.querySelector<HTMLButtonElement>("[data-copy-email]");
+    const copyEmailStatus = document.querySelector<HTMLElement>("[data-copy-email-status]");
+
+    copyEmailButton?.addEventListener("click", async () => {
+      const email = copyEmailButton.dataset.email;
+      if (!email || !copyEmailStatus) return;
+
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(email);
+        copyEmailStatus.textContent = "Email copied";
+      } catch {
+        copyEmailStatus.textContent = "Select and copy the email address above";
+      }
+    });
+  </script>
 </Layout>

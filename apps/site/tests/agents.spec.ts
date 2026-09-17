@@ -352,39 +352,97 @@ test('shows source factories, representative briefs, and original records', asyn
   expect(pdfResponse.status()).toBe(404);
 });
 
-test('links the evidence page from shared navigation without mobile overflow', async ({ page }) => {
-  await page.goto('/procurement');
+test('offers copy-first email and WhatsApp contact actions without a form', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          window.localStorage.setItem('copied-email', value);
+        },
+      },
+    });
+  });
+  await page.goto('/procurement#contact');
+
+  const contact = page.locator('#contact');
+  await expect(
+    contact.getByRole('heading', { level: 2, name: 'Contact Haruna' }),
+  ).toBeVisible();
+  await expect(
+    contact.getByText('haru@harpapro.com', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    contact.getByText('+86 193 7283 7269', { exact: true }),
+  ).toBeVisible();
+
+  const emailActions = contact.locator('[data-contact-email-actions]');
+  const copyEmail = emailActions.getByRole('button', { name: 'Copy email' });
+  await expect(emailActions.locator('button, a').first()).toHaveAttribute(
+    'data-copy-email',
+    '',
+  );
+  await copyEmail.click();
+  await expect(contact.getByRole('status')).toHaveText('Email copied');
+  expect(
+    await page.evaluate(() => window.localStorage.getItem('copied-email')),
+  ).toBe('haru@harpapro.com');
 
   await expect(
-    page.locator('header nav').getByRole('link', {
+    emailActions.getByRole('link', { name: 'Open email app' }),
+  ).toHaveAttribute('href', 'mailto:haru@harpapro.com');
+  await expect(
+    contact.getByRole('link', { name: 'Message on WhatsApp' }),
+  ).toHaveAttribute('href', 'https://wa.me/861937283726');
+  await expect(contact.locator('form')).toHaveCount(0);
+});
+
+test('groups site reporting in shared navigation without mobile overflow', async ({
+  page,
+}) => {
+  await page.goto('/procurement');
+
+  const desktopNav = page.locator('header nav[aria-label="Primary"]');
+  await expect(
+    desktopNav.getByRole('link', {
       name: 'Procurement',
       exact: true,
     }),
   ).toHaveAttribute('href', '/procurement');
   await expect(
-    page.locator('header nav').getByRole('link', {
-      name: 'App',
-      exact: true,
-    }),
+    desktopNav.getByRole('link', { name: 'App', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    desktopNav.getByRole('link', { name: 'App guides', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    desktopNav.getByRole('link', { name: 'App roadmap', exact: true }),
+  ).toHaveCount(0);
+
+  const siteReportingMenu = desktopNav.locator('details.site-reporting-menu');
+  const siteReportingSummary = siteReportingMenu.locator('summary');
+  await expect(siteReportingSummary).toContainText('Site reporting');
+  await expect(
+    siteReportingMenu.getByRole('link', { name: 'Overview' }),
+  ).not.toBeVisible();
+  await siteReportingSummary.click();
+  await expect(
+    siteReportingMenu.getByRole('link', { name: 'Overview', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
-    page.locator('header nav').getByRole('link', {
-      name: 'App guides',
-      exact: true,
-    }),
+    siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
   ).toHaveAttribute('href', '/docs');
   await expect(
-    page.locator('header nav').getByRole('link', {
-      name: 'App roadmap',
-      exact: true,
-    }),
+    siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/roadmap');
   await expect(
-    page.locator('header nav').getByRole('link', {
-      name: 'View evidence',
+    desktopNav.getByRole('link', {
+      name: 'Contact Haruna',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/procurement#evidence');
+  ).toHaveAttribute('href', '/procurement#contact');
   await expect(
     page
       .locator('footer')
@@ -394,25 +452,49 @@ test('links the evidence page from shared navigation without mobile overflow', a
       })
       .first(),
   ).toHaveAttribute('href', '/procurement');
-  await expect(page.locator('footer').getByText('Harpa Pro app', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('footer').getByText('Site reporting', { exact: true }),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
-  await expect(mobileMenu.getByRole('link', { name: 'Procurement', exact: true })).toHaveAttribute(
-    'href',
-    '/procurement',
-  );
-  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveAttribute(
-    'href',
-    '/app',
+  await expect(
+    mobileMenu.getByRole('link', { name: 'Procurement', exact: true }),
+  ).toHaveAttribute('href', '/procurement');
+  await expect(
+    mobileMenu.getByRole('link', { name: 'Contact Haruna', exact: true }),
+  ).toHaveAttribute('href', '/procurement#contact');
+  const mobileSiteReporting = mobileMenu.locator(
+    '[data-mobile-site-reporting]',
   );
   await expect(
+    mobileSiteReporting.getByText('Site reporting', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    mobileSiteReporting.getByRole('link', { name: 'Overview', exact: true }),
+  ).toHaveAttribute('href', '/app');
+  await expect(
+    mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
+  ).toHaveAttribute('href', '/docs');
+  await expect(
+    mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
+  ).toHaveAttribute('href', '/roadmap');
+  await expect(
+    mobileMenu.getByRole('link', { name: 'App', exact: true }),
+  ).toHaveCount(0);
+  await expect(
     mobileMenu.getByRole('link', { name: 'View evidence', exact: true }),
+  ).toHaveCount(0);
+
+  await expect(
+    mobileMenu.getByRole('link', { name: 'Project evidence', exact: true }),
   ).toHaveAttribute('href', '/procurement#evidence');
 
   const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
 });

@@ -25,26 +25,43 @@ preserved because the site has no established traffic or external links. Add
 `/app` as a compact app overview. Do not restore the old waitlist or other
 server-backed controls.
 
-The shared header uses explicit links instead of a dropdown:
+The shared header names each offer by its purpose:
 
 - **Procurement** opens `/procurement`;
-- **App** opens `/app`;
-- **App guides** opens `/docs`;
-- **App roadmap** opens `/roadmap`;
-- **View evidence** opens `/procurement#evidence`.
+- **Site reporting** opens a compact menu with **Overview**, **Guides**, and
+  **Roadmap** links;
+- **Contact Haruna** opens `/procurement#contact`.
 
-The mobile menu and footer make the relationship clearer with separate
-**Procurement** and **Harpa Pro app** groups. The footer also includes a small
-**Company** group for privacy and contact links.
+Do not show **App**, **App guides**, and **App roadmap** as three peer links.
+They describe one product and compete with the primary procurement offer.
+
+The mobile menu already acts as a dropdown. It uses separate **Procurement**
+and **Site reporting** groups. The footer uses the same names. Child links use
+**Overview**, **Guides**, and **Roadmap** without repeating “App.”
 
 The home page remains procurement-first. Its app section is a short secondary
 summary that links to `/app` and the App Store. The app page contains only the
-current Capture, Draft, and Review workflow plus links to the app guides and
-app roadmap.
+current Capture, Draft, and Review workflow plus links to the guides and
+roadmap.
 
-`/docs` is labelled **Harpa Pro app guides** in its page heading, sidebar, and
-breadcrumbs. `/roadmap` is labelled **Harpa Pro app roadmap**. Their URLs stay
-unchanged to preserve existing links.
+`/docs` is labelled **Site reporting guides** in its page title and sidebar.
+Its breadcrumbs use **Site reporting** and **Guides**. `/roadmap` is labelled
+**Site reporting roadmap**. The URLs stay unchanged to preserve existing
+links.
+
+## Contact section
+
+Add a static contact section at `/procurement#contact`. The section identifies
+Haruna as the procurement contact and gives three actions:
+
+1. **Copy email** copies `haru@harpapro.com` and confirms the action on the
+   page.
+2. **Open email app** uses `mailto:haru@harpapro.com` as a secondary action.
+3. **Message on WhatsApp** opens `https://wa.me/861937283726` in a new tab and
+   displays `+86 193 7283 7269` beside the action.
+
+The copy action comes first because it does not open another application. The
+section does not use a form, account, scheduler, or API.
 
 ## Evidence image dialog
 
@@ -78,5 +95,6 @@ enough for CI.
 
 Run the site unit tests, type check, lint, production build, and Playwright
 suite. Browser coverage verifies the product grouping at desktop and mobile
-widths, the `/app` overview, mixed-aspect evidence dialogs, focus restoration,
-and all sitemap-discovered internal links and fragments.
+widths, the site-reporting menu, the static contact actions, the `/app`
+overview, mixed-aspect evidence dialogs, focus restoration, and all
+sitemap-discovered internal links and fragments.

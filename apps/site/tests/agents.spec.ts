@@ -506,3 +506,46 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   );
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+test('uses valid tab semantics and accessible contrast for procurement actions', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const tabs = page.getByRole('tab');
+  await expect(tabs).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    expect(
+      await tabs.nth(index).evaluate((tab) => tab.parentElement?.getAttribute('role')),
+    ).toBe('tablist');
+  }
+
+  const panel = page.getByRole('tabpanel').first();
+  await expect(panel).toHaveJSProperty('tagName', 'DIV');
+
+  const contrastRatios = await page
+    .locator('header a[href="/#contact"], [data-copy-email]')
+    .evaluateAll((elements) => {
+      const luminance = (color: string) => {
+        const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+        const [red = 0, green = 0, blue = 0] = channels.map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.03928
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+
+      return elements.map((element) => {
+        const styles = window.getComputedStyle(element);
+        const foreground = luminance(styles.color);
+        const background = luminance(styles.backgroundColor);
+        return (Math.max(foreground, background) + 0.05) /
+          (Math.min(foreground, background) + 0.05);
+      });
+    });
+
+  expect(contrastRatios).toHaveLength(2);
+  for (const ratio of contrastRatios) expect(ratio).toBeGreaterThanOrEqual(4.5);
+});

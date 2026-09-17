@@ -86,12 +86,12 @@ describe('site smoke', () => {
   it('publishes the procurement-first site in navigation and discovery', () => {
     const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
     const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
-    const journey = readFileSync(
-      resolve(here, '../components/agents/ProcurementJourney.astro'),
+    const considerations = readFileSync(
+      resolve(here, '../components/agents/ProcurementConsiderations.astro'),
       'utf8',
     );
-    const documents = readFileSync(
-      resolve(here, '../components/agents/ProcurementDocuments.astro'),
+    const evidence = readFileSync(
+      resolve(here, '../components/agents/ProcurementEvidence.astro'),
       'utf8',
     );
     const header = readFileSync(
@@ -108,14 +108,18 @@ describe('site smoke', () => {
     expect(home).toContain('AppOverview');
     expect(page).toContain('Harpa Pro procurement');
     expect(page).toContain('Interior procurement in China.');
-    expect(journey).toContain('Factory vetting');
-    expect(journey).toContain('Client approval');
-    expect(page).toContain('ProcurementJourney');
-    expect(page).toContain('ProcurementDocuments');
-    expect(documents).toContain('AIS Factory Furniture');
-    expect(documents).toContain('Langyao Factory LED Lighting');
-    expect(documents).toContain('Mingyuan Factory Floor Panels');
-    expect(documents).toContain('JLA Factory Ceramic Tiles');
+    expect(considerations).toContain('Design and specification');
+    expect(considerations).toContain('Packing and delivery');
+    expect(considerations).not.toContain('Stage ');
+    expect(page).toContain('ProcurementConsiderations');
+    expect(page).toContain('ProcurementEvidence');
+    expect(evidence).toContain('Technical reviews');
+    expect(evidence).toContain('AIS Joinery');
+    expect(evidence).toContain('Ningbo Langyao Lighting');
+    expect(evidence).toContain('Haining Mingyuan');
+    expect(evidence).toContain('Foshan Zhenglian / JLA');
+    expect(evidence).toContain('Documents supplied for review');
+    expect(evidence).not.toContain('Download procurement PDF');
     expect(page).not.toContain('Choose an agent');
     expect(page).not.toContain('Meet Haruna.');
     expect(page).not.toContain('This is your agent.');
@@ -126,12 +130,11 @@ describe('site smoke', () => {
     expect(footer).toContain('href="/agents"');
     expect(sitemap).toContain('"/agents"');
 
-    const procurementPdf = resolve(
-      here,
-      '../../public/downloads/harpa-pro-interior-procurement.pdf',
-    );
-    expect(existsSync(procurementPdf)).toBe(true);
-    expect(readFileSync(procurementPdf).subarray(0, 4).toString()).toBe('%PDF');
+    expect(
+      existsSync(
+        resolve(here, '../../public/downloads/harpa-pro-interior-procurement.pdf'),
+      ),
+    ).toBe(false);
   });
 
   it('does not ship the separate admin application', () => {

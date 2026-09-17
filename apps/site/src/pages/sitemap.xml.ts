@@ -7,7 +7,6 @@ export const prerender = true;
 
 const STATIC_PATHS = [
   "/",
-  "/procurement",
   "/app",
   "/roadmap",
   "/privacy",

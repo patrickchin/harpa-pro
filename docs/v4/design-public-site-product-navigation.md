@@ -20,10 +20,10 @@ drawing or certificate with its caption.
 
 ## Decision
 
-Use `/procurement` as the procurement URL. The former `/agents` route is not
-preserved because the site has no established traffic or external links. Use
-`/app` for the full static site-reporting presentation. Do not restore the old
-waitlist or other server-backed controls.
+Use `/` as the canonical procurement URL. Redirect `/procurement` to `/`; the
+former `/agents` route is not preserved because the site has no established
+traffic or external links. Use `/app` for the full static site-reporting
+presentation. Do not restore the old waitlist or other server-backed controls.
 
 The shared header names each offer by its purpose:
 
@@ -31,7 +31,7 @@ The shared header names each offer by its purpose:
   consideration, example, evidence, and contact links;
 - **Site reporting** opens a full-width panel with **Harpa Pro app**,
   **Guides**, **Roadmap**, and App Store links;
-- **Contact Haruna** opens `/procurement#contact`.
+- **Contact Haruna** opens `/#contact`.
 
 Do not show **App**, **App guides**, and **App roadmap** as three peer links.
 They describe one product and compete with the primary procurement offer.
@@ -41,11 +41,12 @@ header, or presses Escape. Only one panel opens at a time. The mobile menu uses
 separate **Procurement** and **Site reporting** groups. The first site-reporting
 link is **Harpa Pro app** so the product type remains clear.
 
-The home page remains procurement-first. Its app section is a short secondary
-summary that links to `/app` and the App Store. The app page restores the
-static voice demonstration, reporting workflow, features, team information,
-questions, and resource links from the former home page. It does not restore
-the waitlist, Turnstile, or any API-backed control.
+The home page contains the complete procurement presentation and no
+site-reporting promotion in its body. Site reporting remains in the shared
+navigation. The app page restores the static voice demonstration, reporting
+workflow, features, team information, questions, and resource links from the
+former home page. It does not restore the waitlist, Turnstile, or any
+API-backed control.
 
 `/docs` is labelled **Site reporting guides** in its page title and sidebar.
 Its breadcrumbs use **Site reporting** and **Guides**. `/roadmap` is labelled
@@ -54,7 +55,7 @@ links.
 
 ## Contact section
 
-Add a static contact section at `/procurement#contact`. The section identifies
+Add a static contact section at `/#contact`. The section identifies
 Haruna as the procurement contact and gives three actions:
 
 1. **Copy email** copies `haru@harpapro.com` and confirms the action on the
@@ -88,7 +89,7 @@ portrait certificates.
 
 ## Link integrity
 
-The home procurement link targets `/procurement#considerations`. Factory
+The home procurement link targets `/#considerations`. Factory
 source links use current HTTPS pages that resolve without a certificate error.
 
 Browser coverage reads the sitemap, visits every listed page, checks every

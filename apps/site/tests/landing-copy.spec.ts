@@ -23,7 +23,7 @@ test("leads with Haruna and keeps the reporting app secondary", async ({
   await expect(hero.getByRole("link", { name: "Get the app", exact: true })).toHaveCount(0);
 
   const app = page.locator("#app");
-  await expect(app.getByRole("heading", { name: "Site reports, when you need them." })).toBeVisible();
+  await expect(app.getByRole("heading", { name: "Construction site reporting." })).toBeVisible();
   await expect(app.getByRole("link", { name: "Get the app", exact: true })).toHaveAttribute(
     "href",
     APP_STORE_URL,

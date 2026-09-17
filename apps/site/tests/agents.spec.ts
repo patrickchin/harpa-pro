@@ -98,7 +98,9 @@ test('presents Haruna and an interactive static procurement journey', async ({ p
   await expect(page.locator('main form')).toHaveCount(0);
   await expect(page.locator('main button')).toHaveCount(PROCESS_STEPS.length);
   await expect(
-    page.getByText(/schedule (an )?(online )?meeting|available|busy|join now/i),
+    page.getByRole('link', {
+      name: /schedule (an )?(online )?meeting|join now/i,
+    }),
   ).toHaveCount(0);
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
 });

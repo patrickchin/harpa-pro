@@ -89,6 +89,9 @@ const CREDENTIALS = [
 
 const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
 
+const FIRST_CREDENTIAL_DESCRIPTION =
+  'The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.';
+
 test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
   await page.goto('/');
 
@@ -332,7 +335,25 @@ test('shows compact factory examples and progressively discloses document previe
     await expect(record).toContainText(title);
     await expect(record.getByRole('img')).toBeVisible();
     await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+
+    const preview = record.locator('[data-document-preview-crop]');
+    await expect(preview).toBeVisible();
+    const previewStyle = await preview.evaluate((region) => {
+      const image = region.querySelector('img');
+      if (!image) throw new Error('Document preview image is missing');
+      const style = window.getComputedStyle(image);
+      return {
+        aspectRatio: region.clientWidth / region.clientHeight,
+        objectFit: style.objectFit,
+        objectPosition: style.objectPosition,
+      };
+    });
+    expect(previewStyle.aspectRatio).toBeGreaterThan(2);
+    expect(previewStyle.objectFit).toBe('cover');
+    expect(previewStyle.objectPosition).toMatch(/50% 0%/);
   }
+
+  await expect(suppliedRecords.first()).not.toContainText(FIRST_CREDENTIAL_DESCRIPTION);
 
   for (const title of CREDENTIALS.slice(3)) {
     await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();

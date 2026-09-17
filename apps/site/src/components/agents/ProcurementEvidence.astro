@@ -86,6 +86,8 @@ const productBriefs = [
       "The factory page provides a style reference. A quote adds the approved drawings, dimensions, board grade, finishes, hardware, interfaces, quantity, and packing.",
     image: aisStyleImg,
     alt: "AIS Smarti modern kitchen style selection page",
+    imageMode: "cover",
+    imageClass: "h-full w-full object-cover",
     details: [
       ["Reference", "Project-specific joinery package"],
       ["Application", "Custom kitchen cabinetry"],
@@ -101,6 +103,8 @@ const productBriefs = [
       "The catalogue identifies the JSBC bar-chair series. A quote identifies one model and records its dimensions, frame, upholstery, finish, quantity, and packing.",
     image: j2sBarChairsImg,
     alt: "J2S JSBC bar-chair series catalogue spread",
+    imageMode: "cover",
+    imageClass: "h-full w-full object-cover",
     details: [
       ["Reference", "JSBC hospitality seating series"],
       ["Application", "Bar and lounge seating"],
@@ -116,6 +120,9 @@ const productBriefs = [
       "The catalogue provides data for the first comparison. A quote also records the handing, site dimensions, finish, quantity, and packing.",
     image: rongshuoShowerImg,
     alt: "Rong Shuo SW-011 shower enclosure catalogue page",
+    imageMode: "source-content",
+    imageClass:
+      "absolute -left-[8%] -top-[18%] h-auto w-[300%] max-w-none",
     details: [
       ["Reference", "SW-011"],
       ["Size", "(800-900) x (800-1200) x 2000 mm"],
@@ -383,21 +390,25 @@ const technicalReviews = [
           class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm lg:grid-cols-2"
         >
           <figure
+            data-product-image-frame
+            data-product-image-mode={brief.imageMode}
             class:list={[
-              "h-80 bg-white sm:h-96 lg:h-[30rem]",
+              "relative h-80 overflow-hidden bg-white sm:h-96 lg:h-[30rem]",
               index % 2 === 1 && "lg:order-2",
             ]}
           >
             <Image
               src={brief.image}
               alt={brief.alt}
-              widths={[520, 760, 1040, 1400]}
-              sizes="(min-width: 64rem) 36rem, calc(100vw - 3rem)"
+              widths={[520, 760, 1040, 1400, 2000, 2400]}
+              sizes={brief.imageMode === "source-content"
+                ? "(min-width: 64rem) 108rem, 300vw"
+                : "(min-width: 64rem) 36rem, calc(100vw - 3rem)"}
               format="webp"
               quality={90}
               loading="lazy"
               decoding="async"
-              class="h-full w-full object-contain p-3"
+              class={brief.imageClass}
             />
           </figure>
           <div

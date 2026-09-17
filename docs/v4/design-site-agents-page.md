@@ -39,6 +39,10 @@ footer uses the same product order.
 The root page uses formal service labels. It contains one profile for Haruna
 and no selection or comparison language. `/procurement` redirects to `/`.
 
+On large screens, the procurement hero is slightly taller than the Haruna
+profile section. The boundary between them uses one hairline, not borders on
+both adjacent sections.
+
 ## Procurement considerations
 
 The page presents five review areas as considerations, not as numbered steps
@@ -124,6 +128,11 @@ accessible, viewport-bounded dialog. The dialog keeps the reader on the page,
 supports landscape drawings and portrait documents, and returns focus to the
 image trigger when it closes. Thumbnail layouts must not crop certificate or
 drawing content.
+
+Photos and catalogue collages fill their image frames. Preserve full drawings
+and certificates when they are the subject. The Rong Shuo shower source page
+has unused page area, so its product-example preview crops to the supplied
+product grid instead of shrinking the grid inside the card.
 
 ## Writing
 

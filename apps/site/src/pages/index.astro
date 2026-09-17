@@ -19,10 +19,10 @@ import harunaImg from "../assets/team/haruna.jpg";
   <div class="min-h-screen bg-background text-ink">
     <Header />
     <main class="agents-page">
-      <section id="top" class="border-b border-hairline">
+      <section id="top">
         <Container padding="lg">
           <div
-            class="grid items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:gap-16"
+            class="grid items-center gap-10 lg:min-h-[40rem] lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:gap-16"
           >
             <div class="max-w-3xl">
               <h1
@@ -36,7 +36,7 @@ import harunaImg from "../assets/team/haruna.jpg";
               </p>
             </div>
 
-            <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm">
+            <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm lg:h-[36rem]">
               <Image
                 src={procurementInteriorImg}
                 alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
@@ -46,7 +46,7 @@ import harunaImg from "../assets/team/haruna.jpg";
                 quality={84}
                 loading="eager"
                 decoding="async"
-                class="aspect-[3/2] w-full object-cover"
+                class="aspect-[3/2] w-full object-cover lg:h-full lg:aspect-auto"
               />
             </figure>
           </div>
@@ -180,7 +180,7 @@ import harunaImg from "../assets/team/haruna.jpg";
                 </dt>
                 <dd class="mt-4">
                   <p class="select-all break-all font-mono text-sm text-ink">
-                    haru@harpapro.com
+                    haruna@harpapro.com
                   </p>
                   <div
                     class="mt-5 flex flex-wrap gap-3"
@@ -190,13 +190,13 @@ import harunaImg from "../assets/team/haruna.jpg";
                       type="button"
                       class="inline-flex h-10 items-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
                       data-copy-email
-                      data-email="haru@harpapro.com"
+                      data-email="haruna@harpapro.com"
                     >
                       <Icon name="copy" class="h-4 w-4" />
                       Copy email
                     </button>
                     <a
-                      href="mailto:haru@harpapro.com"
+                      href="mailto:haruna@harpapro.com"
                       class="inline-flex h-10 items-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus"
                     >
                       Open email app

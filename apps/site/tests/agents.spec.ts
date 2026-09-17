@@ -41,7 +41,7 @@ test('presents Haruna and an interactive static procurement journey', async ({ p
     await tab.click();
     const panel = page.getByRole('tabpanel', { name: step });
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText(PROCESS_DESCRIPTIONS[index]);
+    await expect(panel).toContainText(PROCESS_DESCRIPTIONS[index]!);
     await expect(panel.locator('img')).toHaveCount(1);
   }
 

@@ -86,6 +86,10 @@ describe('site smoke', () => {
   it('publishes the procurement-first site in navigation and discovery', () => {
     const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
     const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
+    const journey = readFileSync(
+      resolve(here, '../components/agents/ProcurementJourney.astro'),
+      'utf8',
+    );
     const header = readFileSync(
       resolve(here, '../components/landing/Header.astro'),
       'utf8',
@@ -100,8 +104,8 @@ describe('site smoke', () => {
     expect(home).toContain('AppOverview');
     expect(page).toContain('Your procurement agent');
     expect(page).toContain('Meet Haruna.');
-    expect(page).toContain('Match the right factory');
-    expect(page).toContain('Complete the handover');
+    expect(journey).toContain('Match the right factory');
+    expect(journey).toContain('Complete the handover');
     expect(page).toContain('ProcurementJourney');
     expect(page).not.toContain('Choose an agent');
     expect(page).not.toContain('Meet your procurement agents.');

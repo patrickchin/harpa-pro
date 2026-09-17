@@ -1,49 +1,18 @@
 ---
 import { Image } from "astro:assets";
+import ProcurementJourney from "../components/agents/ProcurementJourney.astro";
 import Footer from "../components/landing/Footer.astro";
 import Header from "../components/landing/Header.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
-import chinaFactoryQualityControlImg from "../assets/agents/china-factory-quality-control.jpg";
-import chinaFurnitureProductionImg from "../assets/agents/china-furniture-production.jpg";
 import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
-
-const processSteps = [
-  "Choose an agent",
-  "Select a factory",
-  "Place the order",
-  "Monitor procurement",
-  "Confirm quality",
-  "Confirm shipment",
-  "Confirm delivery",
-  "Sign off",
-];
-
-const agents = [
-  {
-    name: "Haruna Bayoh",
-    focus: "Architecture and material procurement",
-    education: "Master's degree",
-    experience: "6 years",
-    portrait: harunaImg,
-    initials: null,
-  },
-  {
-    name: "Hashy",
-    focus: "Material procurement",
-    education: "Bachelor's degree",
-    experience: "4 years",
-    portrait: null,
-    initials: "H",
-  },
-];
 ---
 
 <Layout
-  title="Procurement agents — Harpa Pro"
-  description="Meet Harpa Pro procurement agents and see the journey from design brief and factory selection through quality checks, delivery, and sign-off."
+  title="Haruna, your procurement agent — Harpa Pro"
+  description="Meet Haruna and follow the procurement journey from your design brief and factory match to quality checks, shipment, delivery, and handover."
 >
   <div class="min-h-screen bg-background text-ink">
     <Header />
@@ -54,30 +23,22 @@ const agents = [
             class="grid items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:gap-16"
           >
             <div class="max-w-3xl">
-              <p
-                class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
-              >
-                Procurement agents
+              <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+                Your procurement agent
               </p>
               <h1
                 class="mt-3 text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
               >
-                Procurement support from brief to delivery.
+                Meet Haruna.
               </h1>
-              <p
-                class="mt-5 max-w-2xl text-base leading-relaxed text-ink-soft sm:text-lg"
-              >
-                Work with specialists who understand design intent, material
-                sourcing, and manufacturing in China. Your agent helps translate
-                the brief, identify suitable factories, and keep each stage
-                moving through sign-off.
+              <p class="mt-5 max-w-2xl text-base leading-relaxed text-ink-soft sm:text-lg">
+                Haruna works from your design brief and follows the order from
+                factory matching to delivery. You have one person to contact at
+                each stage.
               </p>
             </div>
 
-            <figure
-              data-procurement-image
-              class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
-            >
+            <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm">
               <Image
                 src={procurementInteriorImg}
                 alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
@@ -97,25 +58,22 @@ const agents = [
             class="mt-8 rounded-xl border border-hairline bg-card p-6 shadow-sm lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8"
           >
             <div>
-              <p class="font-mono text-xs text-ink-soft">Agent role</p>
-              <h2
-                id="agent-role-heading"
-                class="mt-3 text-xl font-semibold text-ink"
-              >
-                One point of coordination.
+              <p class="font-mono text-xs text-ink-soft">Haruna's role</p>
+              <h2 id="agent-role-heading" class="mt-3 text-xl font-semibold text-ink">
+                One point of contact.
               </h2>
             </div>
             <ul
               class="mt-5 grid gap-3 text-sm leading-relaxed text-ink-soft sm:grid-cols-2 lg:mt-0"
             >
               <li class="border-t border-hairline pt-3">
-                Translate design specifications
+                Read the design specifications
               </li>
               <li class="border-t border-hairline pt-3">
-                Match the project with suitable factories
+                Match the work with a suitable factory
               </li>
               <li class="border-t border-hairline pt-3">
-                Track procurement and product quality
+                Follow production and quality checks
               </li>
               <li class="border-t border-hairline pt-3">
                 Coordinate shipment and delivery milestones
@@ -125,163 +83,70 @@ const agents = [
         </Container>
       </section>
 
-      <Section id="process" tone="paper-2" bordered="top">
+      <Section id="agent" bordered="top">
         <Container padding="lg">
           <div class="max-w-2xl">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
-            >
-              The journey
+            <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+              Your agent
             </p>
-            <h2
-              class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-            >
-              Eight clear stages, one continuous handover.
+            <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              This is your agent.
             </h2>
             <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-              Follow the work from the first introduction to final acceptance,
-              with every handover made explicit.
+              Haruna focuses on architecture, materials, and the practical work
+              needed to move an order through production.
             </p>
           </div>
 
-          <ol
-            aria-label="Procurement journey"
-            class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          <article
+            data-agent-profile
+            class="mt-10 grid max-w-3xl gap-6 rounded-xl border border-hairline bg-card p-6 shadow-sm sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start"
           >
-            {
-              processSteps.map((step, index) => (
-                <li class="min-h-36 rounded-xl border border-hairline bg-card p-5 shadow-sm">
-                  <span class="font-mono text-xs text-accent-ink">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <h3 class="mt-7 text-base font-semibold leading-snug text-ink">
-                    {step}
-                  </h3>
-                </li>
-              ))
-            }
-          </ol>
+            <Image
+              src={harunaImg}
+              alt="Haruna Bayoh"
+              width={320}
+              height={320}
+              densities={[1, 2]}
+              class="aspect-square w-36 rounded-xl object-cover"
+            />
 
-          <div class="mt-12 grid gap-5 lg:grid-cols-2">
-            <figure
-              data-procurement-image
-              class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
-            >
-              <Image
-                src={chinaFactoryQualityControlImg}
-                alt="Chinese quality inspector checking laminated furniture panels inside a production factory"
-                widths={[480, 720, 960]}
-                sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
-                format="webp"
-                quality={84}
-                loading="lazy"
-                decoding="async"
-                class="aspect-[3/2] w-full object-cover"
-              />
-              <figcaption class="border-t border-hairline p-5 sm:p-6">
-                <p class="font-mono text-xs text-accent-ink">
-                  Factory quality control
-                </p>
-                <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                  Check panel dimensions, edge finish, and surface consistency
-                  before a batch moves to packing.
-                </p>
-              </figcaption>
-            </figure>
-
-            <figure
-              data-procurement-image
-              class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
-            >
-              <Image
-                src={chinaFurnitureProductionImg}
-                alt="Furniture production floor in China with machinery, stacked panels, and workers"
-                widths={[480, 720, 960]}
-                sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
-                format="webp"
-                quality={84}
-                loading="lazy"
-                decoding="async"
-                class="aspect-[3/2] w-full object-cover"
-              />
-              <figcaption class="border-t border-hairline p-5 sm:p-6">
-                <p class="font-mono text-xs text-accent-ink">
-                  Production coordination
-                </p>
-                <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                  Track fabrication, assembly, packing, and the handover between
-                  factory milestones.
-                </p>
-              </figcaption>
-            </figure>
-          </div>
+            <div class="min-w-0">
+              <h3 class="text-xl font-semibold text-ink">Haruna Bayoh</h3>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                Architecture and material procurement
+              </p>
+              <dl class="mt-6 grid gap-3 border-t border-hairline pt-5 text-sm">
+                <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
+                  <dt class="text-ink-soft">Education</dt>
+                  <dd class="font-medium text-ink">Master's degree</dd>
+                </div>
+                <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
+                  <dt class="text-ink-soft">Experience</dt>
+                  <dd class="font-medium text-ink">6 years</dd>
+                </div>
+              </dl>
+            </div>
+          </article>
         </Container>
       </Section>
 
-      <Section id="agents" bordered="top">
+      <Section id="journey" tone="paper-2" bordered="top">
         <Container padding="lg">
           <div class="max-w-2xl">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
-            >
-              The people
+            <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+              The journey
             </p>
-            <h2
-              class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-            >
-              Meet your procurement agents.
+            <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              What happens at each stage.
             </h2>
             <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-              Compare each agent's background and experience to understand who
-              is best aligned with your project.
+              Select a stage to see the work, the handover, and the next
+              decision.
             </p>
           </div>
 
-          <div class="mt-10 grid gap-5 lg:grid-cols-2">
-            {
-              agents.map((agent) => (
-                <article
-                  data-agent-profile
-                  class="grid gap-6 rounded-xl border border-hairline bg-card p-6 shadow-sm sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start"
-                >
-                  {agent.portrait ? (
-                    <Image
-                      src={agent.portrait}
-                      alt={agent.name}
-                      width={320}
-                      height={320}
-                      densities={[1, 2]}
-                      class="aspect-square w-36 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      class="grid aspect-square w-36 place-items-center rounded-xl border border-hairline bg-paper-2 text-4xl font-semibold text-ink"
-                    >
-                      {agent.initials}
-                    </div>
-                  )}
-
-                  <div class="min-w-0">
-                    <h3 class="text-xl font-semibold text-ink">{agent.name}</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                      {agent.focus}
-                    </p>
-                    <dl class="mt-6 grid gap-3 border-t border-hairline pt-5 text-sm">
-                      <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
-                        <dt class="text-ink-soft">Education</dt>
-                        <dd class="font-medium text-ink">{agent.education}</dd>
-                      </div>
-                      <div class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
-                        <dt class="text-ink-soft">Experience</dt>
-                        <dd class="font-medium text-ink">{agent.experience}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                </article>
-              ))
-            }
-          </div>
+          <ProcurementJourney />
         </Container>
       </Section>
     </main>

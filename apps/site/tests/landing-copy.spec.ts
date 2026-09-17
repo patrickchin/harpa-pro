@@ -10,9 +10,12 @@ test("leads with Haruna and keeps the reporting app secondary", async ({
 
   const hero = page.locator("#top");
   await expect(hero.locator("h1")).toHaveText("Your procurement agent in China.");
-  await expect(hero.locator("p").first()).toContainText(
-    "Haruna turns your design brief into a practical plan for sourcing and production.",
-  );
+  await expect(
+    hero.getByText(
+      "Haruna turns your design brief into a practical plan for sourcing and production.",
+      { exact: false },
+    ),
+  ).toBeVisible();
   await expect(
     hero.getByRole("link", { name: "Meet Haruna", exact: true }),
   ).toHaveAttribute("href", "/agents");

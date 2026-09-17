@@ -1,64 +1,69 @@
 ---
+import { Image } from "astro:assets";
+import procurementInteriorImg from "../../assets/agents/procurement-interior.jpg";
 import Icon from "../Icon.astro";
-import VoiceDemo from "../VoiceDemo.tsx";
-import { APP_STORE_URL } from "../../lib/links";
 ---
 
 <section id="top" class="relative border-b border-hairline">
   <div
-    class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-12"
+    class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:gap-16"
   >
-    <div class="flex flex-col justify-center">
+    <div class="max-w-2xl">
+      <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+        Harpa Pro procurement
+      </p>
       <h1
-        class="mt-5 text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
+        class="mt-3 text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
       >
-      Site Reports &mdash;<br>you talk, we write.
+        Your procurement agent in China.
       </h1>
-      <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-        Capture voice notes, photos, and text updates as work happens. Harpa Pro
-        turns those captures into a draft daily report you can review, edit,
-        finalize, and share.
+      <p class="mt-5 text-base leading-relaxed text-ink-soft sm:text-lg">
+        Haruna turns your design brief into a practical plan for sourcing and
+        production. She follows the work through quality checks, shipment, and
+        delivery.
       </p>
       <div class="mt-8 flex flex-wrap items-center gap-3">
         <a
-          href={APP_STORE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/agents"
           class="inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
         >
-          Get the app <Icon name="external-link" class="h-4 w-4" />
+          Meet Haruna <Icon name="arrow-right" class="h-4 w-4" />
         </a>
         <a
-          href="#how"
+          href="/agents#journey"
           class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
         >
-          See how it works <Icon name="arrow-right" class="h-4 w-4" />
+          See the eight stages
         </a>
       </div>
-      <div
-        class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-ink-soft"
-      >
-        <span class="inline-flex items-center gap-1.5">
-          <Icon name="circle-check" class="h-3.5 w-3.5 text-ink" />
-          Voice, photo, and text capture
-        </span>
-        <span class="inline-flex items-center gap-1.5">
-          <Icon name="circle-check" class="h-3.5 w-3.5 text-ink" />
-          AI-assisted report drafts
-        </span>
-        <span class="inline-flex items-center gap-1.5">
-          <Icon name="circle-check" class="h-3.5 w-3.5 text-ink" />
-          Review before you share
-        </span>
-      </div>
+      <ul class="mt-8 grid gap-2 text-sm text-ink-soft sm:grid-cols-3">
+        <li class="flex items-center gap-2">
+          <Icon name="circle-check" class="h-3.5 w-3.5 shrink-0 text-ink" />
+          Factory matching
+        </li>
+        <li class="flex items-center gap-2">
+          <Icon name="circle-check" class="h-3.5 w-3.5 shrink-0 text-ink" />
+          Production follow-up
+        </li>
+        <li class="flex items-center gap-2">
+          <Icon name="circle-check" class="h-3.5 w-3.5 shrink-0 text-ink" />
+          Quality and delivery
+        </li>
+      </ul>
     </div>
 
-    <!-- min-h matches the VoiceDemo card's fixed 640px height so the grid
-         column reserves space before the React island hydrates, preventing
-         the layout shift that caused CLS 0.125. client:only is required
-         because VoiceDemo depends on NativeWind/RN-Web which cannot SSR. -->
-    <div class="relative min-h-[640px] lg:pl-6">
-      <VoiceDemo client:only="react" />
-    </div>
+    <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm">
+      <Image
+        src={procurementInteriorImg}
+        alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
+        widths={[480, 720, 960, 1200]}
+        sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
+        format="webp"
+        quality={84}
+        loading="eager"
+        decoding="async"
+        class="aspect-[3/2] w-full object-cover"
+      />
+    </figure>
   </div>
 </section>

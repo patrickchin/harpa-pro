@@ -1,69 +1,80 @@
-# Static procurement agents page
+# Procurement-first public site
 
 Status: implemented.
 
 ## Context
 
-The supplied procurement website concept establishes a useful hierarchy for
-the Agents page: explain the procurement journey first, then introduce the
-people who can guide it. Its forms, live availability, scheduling controls,
-newsletter, pricing, and service-booking content are not part of this revision.
+Harpa Pro now presents two products on the public site. The procurement service
+is the primary product. The site-reporting app is a secondary product.
 
-The page must not claim supplier relationships, factory coverage, fees,
+Haruna Bayoh is the only procurement agent. The site must not ask visitors to
+choose or compare agents. It must also remain a static site. Forms, booking,
+live availability, accounts, checkout, and other server-backed features are not
+part of this revision.
+
+The site must not claim supplier relationships, factory coverage, fees,
 turnaround times, testimonials, guaranteed outcomes, or live service state.
 
 ## Decision
 
-Keep the existing `/agents` route and **Agents** links in the public header,
-mobile menu, footer, and sitemap. Replace the single-agent lead-generation page
-with a static overview that presents the procurement journey and two agent
-profiles without a page-specific call to action.
+The home page will introduce Haruna and the procurement service first. Its main
+action will open `/agents`. A short app section will follow the procurement
+introduction and link to the existing App Store page.
 
-The page contains only authored HTML and checked-in assets. It does not add
-selection state, live availability, meeting controls, forms, authentication,
-checkout, API calls, or a content-management dependency.
+The shared header will use **Meet Haruna** as its main action. The app will use a
+plain navigation link. The footer will use the same product order.
 
-## Content
+The `/agents` page will introduce Haruna as the visitor's agent. It will contain
+one profile and no selection or comparison language.
 
-The page presents:
+## Procurement journey
 
-- a short hero explaining what a procurement agent coordinates, paired with an
-  original editorial interior image;
-- eight ordered stages from choosing an agent through sign-off;
-- original factory quality-control and production images that clarify the
-  physical procurement work in China;
-- profile cards for Haruna Bayoh and Hashy, showing focus, education, and
-  experience;
-- Haruna's existing checked-in portrait and a neutral monogram for Hashy,
-  because the reference does not provide a second portrait.
+The page will describe eight stages:
 
-Profile facts and process labels come from the supplied concept. The page does
-not invent missing names, photos, contact details, or availability.
+1. Meet Haruna.
+2. Match the right factory.
+3. Place the order.
+4. Track production.
+5. Check quality.
+6. Prepare shipment.
+7. Follow delivery.
+8. Complete the handover.
 
-## Visual direction
+On large screens, the stage names will form a vertical list on the left. The
+selected stage will show a short description and an image on the right. On
+small screens, the list will appear above the detail panel.
 
-Reuse the site's warm-paper, navy, and orange tokens, Inter typography, spacing,
-cards, header, and footer. Add three checked-in, original editorial photographs
-without reproducing the concept's source photography: a contemporary interior,
-a factory quality-control check, and a furniture production floor in mainland
-China. The factory photographs must look documentary rather than aspirational:
-utilitarian fluorescent lighting, worn concrete, industrial machinery, stacked
-materials and packaging, and the density of an ordinary working factory. Avoid
-boutique workshops, spotless showrooms, cinematic misery, unsafe caricatures,
-and stereotyped details. The images contain no embedded text, logos,
-availability claims, or controls.
+The control will use an accessible tab pattern and a small local script. It
+will not make a network request or store user data. The first stage will remain
+visible if the script does not run.
 
-The layout is one column on small screens and expands into compact grids on
-larger screens. Ordered cards make the process readable without connector
-lines, JavaScript, or animation.
+## Images
 
-## Discovery and validation
+Reuse the checked-in Haruna portrait, interior image, production-floor image,
+and quality-control image. A stage can reuse an image when it represents the
+same part of the work. This keeps the page small and avoids decorative images
+that do not add information.
 
-`/agents` remains in the sitemap. Browser coverage verifies one clear page
-heading, eight ordered steps, three optimized editorial images with meaningful
-alternative text, two agent profiles, shared desktop/mobile navigation, the
-absence of forms and booking controls, and no horizontal overflow at a 390 px
-viewport.
+The factory images must continue to show ordinary furniture production in
+China. They must not look like boutique workshops or idealized showrooms.
 
-Run the public site's tests, type check, lint, production build, and Playwright
-suite before merging to `dev`.
+## Writing
+
+Use short sentences, active voice, and one name for each part of the service.
+Remove marketing filler and unsupported claims. Keep each stage description to
+one or two sentences.
+
+## Validation
+
+Browser coverage will verify:
+
+- procurement and Haruna are the main home-page subject;
+- the app appears as a secondary section;
+- all eight journey stages have a short description and an image;
+- mouse and keyboard input change the selected stage;
+- the page contains one Haruna profile and no agent-choice language;
+- the page contains no forms, booking controls, or API links;
+- the shared navigation works without horizontal overflow at 390 px.
+
+Run the site unit tests, type check, lint, production build, and Playwright suite
+before the pull request is ready for review.

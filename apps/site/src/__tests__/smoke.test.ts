@@ -119,12 +119,20 @@ describe('site smoke', () => {
     expect(considerations).not.toContain('Stage ');
     expect(page).toContain('ProcurementConsiderations');
     expect(page).toContain('ProcurementEvidence');
+    expect(page).toContain('data-single-agent-profile');
+    expect(page).toContain('China-based procurement lead');
     expect(evidence).toContain('Technical reviews');
-    expect(evidence).toContain('AIS Joinery');
-    expect(evidence).toContain('Ningbo Langyao Lighting');
-    expect(evidence).toContain('Haining Mingyuan');
-    expect(evidence).toContain('Foshan Zhenglian / JLA');
-    expect(evidence).toContain('Documents supplied for review');
+    expect(evidence).toContain('AIS Smarti');
+    expect(evidence).toContain('J2S');
+    expect(evidence).toContain('Kenuo');
+    expect(evidence).toContain('Masyounger');
+    expect(evidence).toContain('Rong Shuo');
+    expect(evidence).toContain('Representative product briefs');
+    expect(evidence).toContain('Original factory documents');
+    expect(evidence).toContain('Open original PDF');
+    expect(evidence).not.toContain('Ningbo Langyao Lighting');
+    expect(evidence).not.toContain('Haining Mingyuan');
+    expect(evidence).not.toContain('Foshan Zhenglian / JLA');
     expect(evidence).not.toContain('Download procurement PDF');
     expect(page).not.toContain('Choose an agent');
     expect(page).not.toContain('Meet Haruna.');
@@ -145,6 +153,22 @@ describe('site smoke', () => {
         resolve(here, '../../public/downloads/harpa-pro-interior-procurement.pdf'),
       ),
     ).toBe(false);
+    expect(
+      existsSync(
+        resolve(
+          here,
+          '../../public/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(
+        resolve(
+          here,
+          '../../public/documents/factories/j2s/j2s-sofa-e1-certificate-2020.pdf',
+        ),
+      ),
+    ).toBe(true);
   });
 
   it('does not ship the separate admin application', () => {

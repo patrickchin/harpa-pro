@@ -35,25 +35,55 @@ const CONSIDERATIONS = [
 
 const FACTORY_PARTNERS = [
   {
-    name: 'AIS Joinery',
-    scope: 'Custom kitchens, wardrobes, bathroom vanities, interior doors, and project joinery.',
-    source: 'https://www.aiskitchen.com/',
+    name: 'AIS Smarti',
+    scope: 'Custom cabinetry, wardrobes, bathroom cabinets, doors, wall panels, and project joinery.',
   },
   {
-    name: 'Ningbo Langyao Lighting',
-    scope: 'LED panel, ceiling, bulkhead, and solar lights.',
-    source: 'https://langyaolighting.en.made-in-china.com/',
+    name: 'J2S',
+    scope: 'Custom furniture for restaurants, cafes, bars, hotel lobbies, and public areas.',
   },
   {
-    name: 'Haining Mingyuan',
-    scope: 'SPC and PVC flooring, matching profiles, and floor accessories.',
-    source: 'https://mayerfloor.en.made-in-china.com/',
+    name: 'Kenuo',
+    scope: 'Wood office desks, workstations, meeting tables, storage, and seating.',
   },
   {
-    name: 'Foshan Zhenglian / JLA',
-    scope: 'Patterned and project ceramic tiles for interior wall and floor applications.',
-    source: 'https://jlaceramic.en.made-in-china.com/',
+    name: 'Masyounger',
+    scope: 'Steel filing cabinets, lockers, shelving, workbenches, and school furniture.',
   },
+  {
+    name: 'Rong Shuo',
+    scope: 'Bathroom cabinets, mirrors, shower enclosures, and prefabricated bathroom systems.',
+  },
+] as const;
+
+const BUYER_INFORMATION = [
+  'Product or model reference',
+  'Intended use and configuration',
+  'Dimensions and permitted variation',
+  'Materials and construction',
+  'Finish, color, and hardware',
+  'Applicable test reports or certificates',
+  'Quantity and packing method',
+  'Quotation basis, lead time, and items to confirm',
+] as const;
+
+const PRODUCT_BRIEFS = [
+  'AIS custom kitchen joinery',
+  'J2S JSBC hospitality seating',
+  'Rong Shuo SW-011 shower enclosure',
+] as const;
+
+const CREDENTIALS = [
+  'Marine HDF formaldehyde test',
+  'HMR particleboard formaldehyde test',
+  'OSB formaldehyde test',
+  'PUR adhesive VOC test',
+  'Hot-melt adhesive RoHS test',
+  'E1 board formaldehyde report',
+  'Wanhua Ecoboard production-control certificate',
+  'Sofa formaldehyde test',
+  'Sofa E1 certificate',
+  'European representative appointment',
 ] as const;
 
 test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
@@ -95,12 +125,18 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(considerationSection).not.toContainText(/\bstage\b|\bstep\b/i);
   await expect(considerationSection.locator('ol')).toHaveCount(0);
 
-  const profiles = page.locator('[data-agent-profile]');
+  const profiles = page.locator('[data-single-agent-profile]');
   await expect(profiles).toHaveCount(1);
   await expect(profiles).toContainText('Haruna Bayoh');
-  await expect(profiles).toContainText('Architecture and material procurement');
+  await expect(profiles).toContainText('China-based procurement lead');
+  await expect(profiles).toContainText('One lead from brief to dispatch.');
   await expect(profiles).toContainText("Master's degree");
   await expect(profiles).toContainText('6 years');
+  await expect(profiles).toContainText('Technical coordination');
+  await expect(profiles).toContainText('Factory coordination');
+  await expect(profiles).toContainText('Order control');
+  await expect(profiles).toContainText('Document record');
+  await expect(page.locator('[data-agent-card]')).toHaveCount(0);
 
   await expect(page.getByText('Hashy', { exact: true })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/choose (an|your) agent|select your agent/i);
@@ -173,18 +209,24 @@ test('opens evidence images in an accessible dialog without leaving the page', a
 
   await page.setViewportSize({ width: 390, height: 844 });
   const recordTrigger = page.getByRole('button', {
-    name: 'Open full view of Factory production control certificate',
+    name: 'Open full view of Marine HDF formaldehyde test',
   });
   await recordTrigger.click();
   const recordDialog = page.getByRole('dialog', {
-    name: 'Full view: Factory production control certificate',
+    name: 'Full view: Marine HDF formaldehyde test',
   });
   await expect(recordDialog).toBeVisible();
   await expect(
     recordDialog.getByRole('img', {
-      name: 'Factory production control certificate supplied in the AIS material package',
+      name: 'First page of the AIS marine HDF formaldehyde test report',
     }),
   ).toBeVisible();
+  await expect(
+    recordDialog.getByRole('link', { name: 'Open original PDF' }),
+  ).toHaveAttribute(
+    'href',
+    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
+  );
 
   const mobileOverflow = await recordDialog.evaluate((dialog) => {
     const imageRegion = dialog.querySelector<HTMLElement>(
@@ -218,15 +260,13 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
 });
 
-test('shows technical reviews, factory scope, and supplied records directly', async ({ page }) => {
+test('shows source factories, representative briefs, and original records', async ({ page }) => {
   await page.goto('/procurement#evidence');
 
   await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Revit A103 chair shop drawing review sheet' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Langyao ZYLO LED panel light specification sheet' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'Langyao STAPE LED bulkhead specification sheet' })).toBeVisible();
-  await expect(page.locator('[data-technical-review]')).toHaveCount(4);
+  await expect(page.locator('[data-technical-review]')).toHaveCount(2);
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
@@ -235,27 +275,49 @@ test('shows technical reviews, factory scope, and supplied records directly', as
     await expect(card).toContainText(factory.name);
     await expect(card).toContainText(factory.scope);
     await expect(card.getByRole('img')).toBeVisible();
-    await expect(card.getByRole('link', { name: 'Manufacturer source' })).toHaveAttribute(
-      'href',
-      factory.source,
-    );
+    await expect(card).toContainText('Factory-supplied source material');
+  }
+  await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
+
+  await expect(
+    page.getByRole('heading', { name: 'Representative product briefs' }),
+  ).toBeVisible();
+  await expect(page.getByText('Examples, not a live catalogue.', { exact: true })).toBeVisible();
+  for (const label of BUYER_INFORMATION) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+  const briefs = page.locator('[data-product-brief]');
+  await expect(briefs).toHaveCount(PRODUCT_BRIEFS.length);
+  for (const [index, title] of PRODUCT_BRIEFS.entries()) {
+    await expect(briefs.nth(index)).toContainText(title);
+    await expect(briefs.nth(index).getByRole('img')).toBeVisible();
   }
 
-  await expect(page.getByRole('heading', { name: 'Documents supplied for review' })).toBeVisible();
-  const suppliedRecords = page.locator('[data-document-scan]');
-  await expect(suppliedRecords).toHaveCount(13);
-  for (let index = 0; index < 13; index += 1) {
-    await expect(suppliedRecords.nth(index).getByRole('img')).toBeVisible();
-    await expect(suppliedRecords.nth(index).locator('figcaption')).not.toBeEmpty();
+  await expect(page.getByRole('heading', { name: 'Original factory documents' })).toBeVisible();
+  const suppliedRecords = page.locator('[data-credential-record]');
+  await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
+  for (const [index, title] of CREDENTIALS.entries()) {
+    const record = suppliedRecords.nth(index);
+    await expect(record).toContainText(title);
+    await expect(record.getByRole('img')).toBeVisible();
+    await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
   }
 
-  await expect(page.getByText('Factory production control certificate', { exact: true })).toBeVisible();
-  await expect(page.getByText('RoHS test report', { exact: true })).toBeVisible();
-  await expect(page.getByText('SPC flooring test report', { exact: true })).toBeVisible();
-  await expect(page.getByText('Glazed tile performance report', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(
+      'Factory-supplied document. Harpa Pro has not independently verified its current status or scope.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  const expiredRecord = page.locator('[data-credential-status="expired"]');
+  await expect(expiredRecord).toHaveCount(1);
+  await expect(expiredRecord).toContainText('Expired 15 July 2026');
 
   await expect(page.getByRole('link', { name: /download procurement pdf/i })).toHaveCount(0);
-  await expect(page.locator('a[href$=".pdf"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="/catalogues/"]')).toHaveCount(0);
 
   const pdfResponse = await page.request.get('/downloads/harpa-pro-interior-procurement.pdf');
   expect(pdfResponse.status()).toBe(404);

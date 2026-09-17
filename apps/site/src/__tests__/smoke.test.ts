@@ -90,6 +90,10 @@ describe('site smoke', () => {
       resolve(here, '../components/agents/ProcurementJourney.astro'),
       'utf8',
     );
+    const documents = readFileSync(
+      resolve(here, '../components/agents/ProcurementDocuments.astro'),
+      'utf8',
+    );
     const header = readFileSync(
       resolve(here, '../components/landing/Header.astro'),
       'utf8',
@@ -100,21 +104,34 @@ describe('site smoke', () => {
     );
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
-    expect(home).toContain('Your procurement agent in China.');
+    expect(home).toContain('Interior procurement in China.');
     expect(home).toContain('AppOverview');
-    expect(page).toContain('Your procurement agent');
-    expect(page).toContain('Meet Haruna.');
-    expect(journey).toContain('Match the right factory');
-    expect(journey).toContain('Complete the handover');
+    expect(page).toContain('Harpa Pro procurement');
+    expect(page).toContain('Interior procurement in China.');
+    expect(journey).toContain('Factory vetting');
+    expect(journey).toContain('Client approval');
     expect(page).toContain('ProcurementJourney');
+    expect(page).toContain('ProcurementDocuments');
+    expect(documents).toContain('AIS Factory Furniture');
+    expect(documents).toContain('Langyao Factory LED Lighting');
+    expect(documents).toContain('Mingyuan Factory Floor Panels');
+    expect(documents).toContain('JLA Factory Ceramic Tiles');
     expect(page).not.toContain('Choose an agent');
-    expect(page).not.toContain('Meet your procurement agents.');
+    expect(page).not.toContain('Meet Haruna.');
+    expect(page).not.toContain('This is your agent.');
     expect(page).not.toContain('Hashy');
     expect(page).not.toContain('Send a sourcing brief');
     expect(page).not.toContain('mailto:');
     expect(header).toContain('href="/agents"');
     expect(footer).toContain('href="/agents"');
     expect(sitemap).toContain('"/agents"');
+
+    const procurementPdf = resolve(
+      here,
+      '../../public/downloads/harpa-pro-interior-procurement.pdf',
+    );
+    expect(existsSync(procurementPdf)).toBe(true);
+    expect(readFileSync(procurementPdf).subarray(0, 4).toString()).toBe('%PDF');
   });
 
   it('does not ship the separate admin application', () => {

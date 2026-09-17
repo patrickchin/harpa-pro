@@ -1,25 +1,32 @@
 import { expect, test } from '@playwright/test';
 
 const PROCESS_STEPS = [
-  'Meet Haruna',
-  'Match the right factory',
-  'Place the order',
-  'Track production',
-  'Check quality',
-  'Prepare shipment',
-  'Follow delivery',
-  'Complete the handover',
+  'Design brief',
+  'Factory vetting',
+  'Specification control',
+  'Compliance review',
+  'Production inspection',
+  'Documentation',
+  'Logistics and shipping',
+  'Client approval',
 ] as const;
 
 const PROCESS_DESCRIPTIONS = [
-  'Haruna reviews your brief, drawings, priorities, and finish requirements. She then makes a sourcing plan for the project.',
-  'Haruna identifies factories that suit the product, materials, quantity, and finish requirements.',
-  'The order moves into production after you confirm the scope, sample, price, and terms.',
-  'Haruna follows the factory milestones and tells you when a change or delay needs a decision.',
-  'The finished work is checked against the agreed specification before shipment.',
-  'Haruna confirms the packing, quantities, documents, and collection details before the goods leave the factory.',
-  'Haruna follows the shipment through handover and delivery. She records any issues while the details are clear.',
-  'You review what arrived and record any open issues. The order closes after the handover is complete.',
+  'Haruna records the design intent, drawings, finishes, quantities, and approval requirements.',
+  'Haruna reviews factory capability, product fit, production capacity, and the available compliance documents.',
+  'Production drawings and specifications define dimensions, materials, finishes, fire performance, and maintenance requirements.',
+  'Haruna checks health, safety, emissions, and product test documents against the project requirements.',
+  'Inspection points cover pre-production, active production, and the finished goods before shipment.',
+  'Drawings, approvals, inspection records, packing lists, and shipping documents stay with the order.',
+  'Haruna checks packing, collection, freight, and delivery milestones against the shipping plan.',
+  'The final record captures the delivery review, open items, decision, and sign-off.',
+] as const;
+
+const FACTORY_RECORDS = [
+  ['AIS Factory Furniture', ['CE', 'E1', 'REACH', 'VOC']],
+  ['Langyao Factory LED Lighting', ['CE', 'LVD', 'RoHS']],
+  ['Mingyuan Factory Floor Panels', ['CE', 'E1', 'Fire test', 'VOC']],
+  ['JLA Factory Ceramic Tiles', ['CE', 'Performance report', 'Test report']],
 ] as const;
 
 test('presents Haruna and an interactive static procurement journey', async ({ page }) => {
@@ -28,7 +35,7 @@ test('presents Haruna and an interactive static procurement journey', async ({ p
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Meet Haruna.',
+      name: 'Interior procurement in China.',
     }),
   ).toBeVisible();
 
@@ -60,6 +67,33 @@ test('presents Haruna and an interactive static procurement journey', async ({ p
 
   await expect(page.getByText('Hashy', { exact: true })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/choose (an|your) agent|select your agent/i);
+  await expect(page.getByText('Meet Haruna.', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('This is your agent.', { exact: true })).toHaveCount(0);
+
+  await expect(page.getByRole('heading', { name: 'Technical package' })).toBeVisible();
+  await expect(page.getByText('Project-specific Revit files', { exact: true })).toBeVisible();
+  await expect(page.locator('a[href*="/downloads/revit/"]')).toHaveCount(0);
+
+  const factories = page.locator('[data-factory-record]');
+  await expect(factories).toHaveCount(FACTORY_RECORDS.length);
+  for (const [index, [factory, documents]] of FACTORY_RECORDS.entries()) {
+    await expect(factories.nth(index)).toContainText(factory);
+    for (const document of documents) {
+      await expect(factories.nth(index)).toContainText(document);
+    }
+  }
+
+  const download = page.getByRole('link', { name: 'Download procurement PDF', exact: true });
+  await expect(download).toHaveAttribute(
+    'href',
+    '/downloads/harpa-pro-interior-procurement.pdf',
+  );
+  await expect(download).toHaveAttribute('download', '');
+
+  const pdfResponse = await page.request.get('/downloads/harpa-pro-interior-procurement.pdf');
+  expect(pdfResponse.ok()).toBe(true);
+  expect(pdfResponse.headers()['content-type']).toContain('application/pdf');
+  expect((await pdfResponse.body()).subarray(0, 4).toString()).toBe('%PDF');
 
   await expect(page.locator('main form')).toHaveCount(0);
   await expect(page.locator('main button')).toHaveCount(PROCESS_STEPS.length);
@@ -74,7 +108,7 @@ test('links the agents page from shared navigation without mobile overflow', asy
 
   await expect(
     page.locator('header nav').getByRole('link', {
-      name: 'Agents',
+      name: 'Procurement',
       exact: true,
     }),
   ).toHaveAttribute('href', '/agents');
@@ -86,13 +120,13 @@ test('links the agents page from shared navigation without mobile overflow', asy
   ).toHaveAttribute('href', '/#app');
   await expect(
     page.locator('header nav').getByRole('link', {
-      name: 'Meet Haruna',
+      name: 'View documents',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/agents');
+  ).toHaveAttribute('href', '/agents#documents');
   await expect(
     page.locator('footer').getByRole('link', {
-      name: 'Agents',
+      name: 'Procurement',
       exact: true,
     }),
   ).toHaveAttribute('href', '/agents');
@@ -100,7 +134,7 @@ test('links the agents page from shared navigation without mobile overflow', asy
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
-  await expect(mobileMenu.getByRole('link', { name: 'Agents', exact: true })).toHaveAttribute(
+  await expect(mobileMenu.getByRole('link', { name: 'Procurement', exact: true })).toHaveAttribute(
     'href',
     '/agents',
   );
@@ -108,10 +142,9 @@ test('links the agents page from shared navigation without mobile overflow', asy
     'href',
     '/#app',
   );
-  await expect(mobileMenu.getByRole('link', { name: 'Meet Haruna', exact: true })).toHaveAttribute(
-    'href',
-    '/agents',
-  );
+  await expect(
+    mobileMenu.getByRole('link', { name: 'View documents', exact: true }),
+  ).toHaveAttribute('href', '/agents#documents');
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

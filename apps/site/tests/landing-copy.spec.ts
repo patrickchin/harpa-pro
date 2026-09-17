@@ -9,16 +9,17 @@ test("leads with Haruna and keeps the reporting app secondary", async ({
   await page.goto("/");
 
   const hero = page.locator("#top");
-  await expect(hero.locator("h1")).toHaveText("Your procurement agent in China.");
+  await expect(hero.locator("h1")).toHaveText("Interior procurement in China.");
   await expect(
     hero.getByText(
-      "Haruna turns your design brief into a practical plan for sourcing and production.",
+      "Haruna manages technical specifications, factory coordination, quality control, and shipping documents from China.",
       { exact: false },
     ),
   ).toBeVisible();
   await expect(
-    hero.getByRole("link", { name: "Meet Haruna", exact: true }),
+    hero.getByRole("link", { name: "Procurement overview", exact: true }),
   ).toHaveAttribute("href", "/agents");
+  await expect(hero.getByText("Meet Haruna", { exact: true })).toHaveCount(0);
   await expect(hero.getByRole("link", { name: "Get the app", exact: true })).toHaveCount(0);
 
   const app = page.locator("#app");
@@ -30,7 +31,7 @@ test("leads with Haruna and keeps the reporting app secondary", async ({
 
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Meet Haruna, your procurement agent in China. Follow each stage from the design brief and factory match to quality checks, shipment, and delivery.",
+    "Interior procurement in China, with technical specifications, factory records, quality control, shipping documents, and project approvals.",
   );
   await expect(page.getByText(/now available for iPhone/i)).toHaveCount(0);
 });

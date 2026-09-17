@@ -15,6 +15,7 @@ describe('marketing claim copy', () => {
     const files = [
       'components/landing/Hero.astro',
       'components/landing/AppOverview.astro',
+      'components/agents/ProcurementDocuments.astro',
       'components/landing/Header.astro',
       'components/landing/Features.astro',
       'components/landing/WaitlistForm.astro',

@@ -1,0 +1,439 @@
+---
+import { Image } from "astro:assets";
+import aisFactoryImg from "../../assets/agents/procurement/ais-factory.jpg";
+import aisNpsReportImg from "../../assets/agents/procurement/ais-nps-report.jpg";
+import aisProductionControlCertificateImg from "../../assets/agents/procurement/ais-production-control-certificate.jpg";
+import aisProjectsImg from "../../assets/agents/procurement/ais-projects.jpg";
+import aisSgsFiberboardReportImg from "../../assets/agents/procurement/ais-sgs-fiberboard-report.jpg";
+import aisSgsMaterialReportImg from "../../assets/agents/procurement/ais-sgs-material-report.jpg";
+import jlaCompanyIntroImg from "../../assets/agents/procurement/jla-company-intro.jpg";
+import jlaFlowerTilesImg from "../../assets/agents/procurement/jla-flower-tiles.jpg";
+import jlaPerformanceReportImg from "../../assets/agents/procurement/jla-performance-report.jpg";
+import jlaTestReportImg from "../../assets/agents/procurement/jla-test-report.jpg";
+import langyaoCeReportImg from "../../assets/agents/procurement/langyao-ce-report.jpg";
+import langyaoLvdReportImg from "../../assets/agents/procurement/langyao-lvd-report.jpg";
+import langyaoRohsReportImg from "../../assets/agents/procurement/langyao-rohs-report.jpg";
+import langyaoStapeSpecificationImg from "../../assets/agents/procurement/langyao-stape-specification.jpg";
+import langyaoZyloSpecificationImg from "../../assets/agents/procurement/langyao-zylo-specification.jpg";
+import mingyuanCeReportImg from "../../assets/agents/procurement/mingyuan-ce-report.jpg";
+import mingyuanFlooringImg from "../../assets/agents/procurement/mingyuan-flooring.jpg";
+import mingyuanProfileImg from "../../assets/agents/procurement/mingyuan-profile.jpg";
+import mingyuanSgsFlooringReportImg from "../../assets/agents/procurement/mingyuan-sgs-flooring-report.jpg";
+import mingyuanTestReportImg from "../../assets/agents/procurement/mingyuan-test-report.jpg";
+import mingyuanVocReportImg from "../../assets/agents/procurement/mingyuan-voc-report.jpg";
+import revitShopDrawingImg from "../../assets/agents/procurement/revit-a103-shop-drawing.jpg";
+import revitCoordinationImg from "../../assets/agents/procurement/revit-a104-coordination.jpg";
+
+const technicalReviews = [
+  {
+    title: "Revit A104 coordination review",
+    description: "Three-dimensional room views used to coordinate layout, finishes, and interfaces.",
+    image: revitCoordinationImg,
+    alt: "Revit A104 3D coordination review sheet",
+  },
+  {
+    title: "Revit A103 shop-drawing review",
+    description: "Chair elevations and dimensions used to review the factory drawing before production.",
+    image: revitShopDrawingImg,
+    alt: "Revit A103 chair shop drawing review sheet",
+  },
+  {
+    title: "ZYLO panel-light submission",
+    description: "Langyao product sheet with dimensions, electrical data, and installation details.",
+    image: langyaoZyloSpecificationImg,
+    alt: "Langyao ZYLO LED panel light specification sheet",
+  },
+  {
+    title: "STAPE bulkhead submission",
+    description: "Langyao product sheet with dimensions, electrical data, and mounting details.",
+    image: langyaoStapeSpecificationImg,
+    alt: "Langyao STAPE LED bulkhead specification sheet",
+  },
+];
+
+const factories = [
+  {
+    name: "AIS Joinery",
+    location: "Foshan, Guangdong",
+    scope: "Custom kitchens, wardrobes, bathroom vanities, interior doors, and project joinery.",
+    evidence:
+      "Current material includes project cabinetry, product applications, factory records, inspection, packing, and loading.",
+    image: aisFactoryImg,
+    alt: "AIS joinery factory exterior in Foshan, China",
+    source: "https://www.aiskitchen.com/",
+    fit: "object-cover",
+  },
+  {
+    name: "Ningbo Langyao Lighting",
+    location: "Ningbo, Zhejiang",
+    scope: "LED panel, ceiling, bulkhead, and solar lights.",
+    evidence:
+      "Current material includes panel and bulkhead specifications with CE, LVD, and RoHS records.",
+    image: langyaoZyloSpecificationImg,
+    alt: "Langyao LED panel light product submission",
+    source: "https://langyaolighting.en.made-in-china.com/",
+    fit: "object-contain bg-white p-3",
+  },
+  {
+    name: "Haining Mingyuan",
+    location: "Haining, Zhejiang",
+    scope: "SPC and PVC flooring, matching profiles, and floor accessories.",
+    evidence:
+      "Current material shows extrusion, coating, profiling, underlay, inspection, packaging, and finished flooring.",
+    image: mingyuanProfileImg,
+    alt: "Haining Mingyuan factory and flooring production profile",
+    source: "https://www.mayerfloor.com/",
+    fit: "object-contain bg-white",
+  },
+  {
+    name: "Foshan Zhenglian / JLA",
+    location: "Foshan, Guangdong",
+    scope: "Patterned and project ceramic tiles for interior wall and floor applications.",
+    evidence:
+      "Current material includes patterned tile collections, interior applications, and two tile test records.",
+    image: jlaCompanyIntroImg,
+    alt: "JLA ceramic tile company and interior application profile",
+    source: "https://www.jlaceramics.com/en/",
+    fit: "object-contain bg-white",
+  },
+];
+
+const documentGroups = [
+  {
+    name: "AIS material package",
+    documents: [
+      {
+        title: "Factory production control certificate",
+        image: aisProductionControlCertificateImg,
+        alt: "Factory production control certificate supplied in the AIS material package",
+      },
+      {
+        title: "SGS fiberboard test report",
+        image: aisSgsFiberboardReportImg,
+        alt: "SGS fiberboard test report supplied for AIS Joinery",
+      },
+      {
+        title: "NPS material report",
+        image: aisNpsReportImg,
+        alt: "NPS material report supplied in the AIS material package",
+      },
+      {
+        title: "SGS material test report",
+        image: aisSgsMaterialReportImg,
+        alt: "SGS material test report supplied in the AIS material package",
+      },
+    ],
+  },
+  {
+    name: "Ningbo Langyao Lighting",
+    documents: [
+      {
+        title: "CE and EMC certificate",
+        image: langyaoCeReportImg,
+        alt: "CE and EMC certificate supplied by Ningbo Langyao Lighting",
+      },
+      {
+        title: "LVD test report",
+        image: langyaoLvdReportImg,
+        alt: "LVD lighting test report supplied by Ningbo Langyao Lighting",
+      },
+      {
+        title: "RoHS test report",
+        image: langyaoRohsReportImg,
+        alt: "RoHS test report supplied by Ningbo Langyao Lighting",
+      },
+    ],
+  },
+  {
+    name: "Haining Mingyuan",
+    documents: [
+      {
+        title: "Attestation certificate",
+        image: mingyuanCeReportImg,
+        alt: "Attestation certificate supplied by Haining Mingyuan",
+      },
+      {
+        title: "SPC flooring test report",
+        image: mingyuanSgsFlooringReportImg,
+        alt: "SGS SPC flooring test report supplied by Haining Mingyuan",
+      },
+      {
+        title: "Flooring test report",
+        image: mingyuanTestReportImg,
+        alt: "Flooring test report supplied by Haining Mingyuan",
+      },
+      {
+        title: "VOC test report",
+        image: mingyuanVocReportImg,
+        alt: "VOC test report supplied by Haining Mingyuan",
+      },
+    ],
+  },
+  {
+    name: "Foshan Zhenglian / JLA",
+    documents: [
+      {
+        title: "Glazed tile performance report",
+        image: jlaPerformanceReportImg,
+        alt: "Glazed tile performance report supplied by Foshan Zhenglian",
+      },
+      {
+        title: "Ceramic tile test report",
+        image: jlaTestReportImg,
+        alt: "Ceramic tile test report supplied by Foshan Zhenglian",
+      },
+    ],
+  },
+];
+---
+
+<div class="max-w-3xl">
+  <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+    Project evidence
+  </p>
+  <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+    Source material, shown directly.
+  </h2>
+  <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+    Drawings, product submissions, factory information, and supplied records
+    remain visible for review. Original files will replace these extracted
+    working copies when they are available.
+  </p>
+</div>
+
+<section aria-labelledby="technical-reviews-heading" class="mt-14">
+  <div class="max-w-3xl">
+    <p class="font-mono text-xs text-accent-ink">Design and product review</p>
+    <h3
+      id="technical-reviews-heading"
+      class="mt-3 text-2xl font-semibold tracking-tight text-ink"
+    >
+      Technical reviews
+    </h3>
+    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
+      Revit coordination sheets sit beside the product information submitted
+      by the factory. Select an image to inspect the full source size.
+    </p>
+  </div>
+
+  <div class="mt-8 grid gap-5 md:grid-cols-2">
+    {
+      technicalReviews.map((review) => (
+        <figure
+          data-technical-review
+          class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+        >
+          <a
+            href={review.image.src}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open ${review.title} image`}
+            class="block bg-white ring-focus"
+          >
+            <Image
+              src={review.image}
+              alt={review.alt}
+              widths={[480, 720, 960, 1400]}
+              sizes="(min-width: 48rem) 36rem, calc(100vw - 3rem)"
+              format="webp"
+              quality={88}
+              loading="lazy"
+              decoding="async"
+              class="aspect-[4/3] w-full object-contain"
+            />
+          </a>
+          <figcaption class="border-t border-hairline p-5">
+            <h4 class="font-semibold text-ink">{review.title}</h4>
+            <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+              {review.description}
+            </p>
+          </figcaption>
+        </figure>
+      ))
+    }
+  </div>
+</section>
+
+<section aria-labelledby="factory-partners-heading" class="mt-20">
+  <div class="max-w-3xl">
+    <p class="font-mono text-xs text-accent-ink">Current manufacturing partners</p>
+    <h3
+      id="factory-partners-heading"
+      class="mt-3 text-2xl font-semibold tracking-tight text-ink"
+    >
+      Factories and product scope
+    </h3>
+    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
+      The listed products and capabilities come from current factory material
+      and public manufacturer information. Each source link opens the relevant
+      manufacturer page.
+    </p>
+  </div>
+
+  <div class="mt-8 grid gap-5 lg:grid-cols-2">
+    {
+      factories.map((factory) => (
+        <article
+          data-factory-partner
+          class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+        >
+          <Image
+            src={factory.image}
+            alt={factory.alt}
+            widths={[420, 640, 820]}
+            sizes="(min-width: 64rem) 35rem, calc(100vw - 3rem)"
+            format="webp"
+            quality={86}
+            loading="lazy"
+            decoding="async"
+            class={`aspect-[16/10] w-full ${factory.fit}`}
+          />
+          <div class="border-t border-hairline p-6">
+            <p class="font-mono text-xs text-accent-ink">{factory.location}</p>
+            <h4 class="mt-2 text-xl font-semibold text-ink">{factory.name}</h4>
+            <dl class="mt-5 grid gap-4 text-sm">
+              <div>
+                <dt class="font-medium text-ink">Product scope</dt>
+                <dd class="mt-1 leading-relaxed text-ink-soft">{factory.scope}</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-ink">Current evidence</dt>
+                <dd class="mt-1 leading-relaxed text-ink-soft">{factory.evidence}</dd>
+              </div>
+            </dl>
+            <a
+              href={factory.source}
+              target="_blank"
+              rel="noreferrer"
+              class="mt-5 inline-flex text-sm font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary ring-focus"
+            >
+              Manufacturer source
+            </a>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</section>
+
+<section aria-labelledby="supplied-records-heading" class="mt-20">
+  <div class="max-w-3xl">
+    <p class="font-mono text-xs text-accent-ink">Factory records</p>
+    <h3
+      id="supplied-records-heading"
+      class="mt-3 text-2xl font-semibold tracking-tight text-ink"
+    >
+      Documents supplied for review
+    </h3>
+    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
+      These images record documents supplied with the current factory material.
+      They do not replace review of the original, current document for a
+      specific order. Select any scan to inspect the full source size.
+    </p>
+  </div>
+
+  <div class="mt-10 grid gap-12">
+    {
+      documentGroups.map((group) => (
+        <section aria-label={`${group.name} records`}>
+          <h4 class="border-b border-hairline pb-3 text-lg font-semibold text-ink">
+            {group.name}
+          </h4>
+          <div class="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {group.documents.map((document) => (
+              <figure
+                data-document-scan
+                class="overflow-hidden rounded-lg border border-hairline bg-card shadow-sm"
+              >
+                <a
+                  href={document.image.src}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open ${document.title} image`}
+                  class="block bg-white ring-focus"
+                >
+                  <Image
+                    src={document.image}
+                    alt={document.alt}
+                    widths={[240, 360, 520]}
+                    sizes="(min-width: 64rem) 16rem, 46vw"
+                    format="webp"
+                    quality={90}
+                    loading="lazy"
+                    decoding="async"
+                    class="aspect-[4/5] w-full object-contain p-1"
+                  />
+                </a>
+                <figcaption class="border-t border-hairline p-3 text-sm leading-snug text-ink">
+                  <span>{document.title}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</section>
+
+<section aria-labelledby="factory-material-heading" class="mt-20">
+  <div class="max-w-3xl">
+    <p class="font-mono text-xs text-accent-ink">Product material</p>
+    <h3
+      id="factory-material-heading"
+      class="mt-3 text-2xl font-semibold tracking-tight text-ink"
+    >
+      Factory product references
+    </h3>
+  </div>
+  <div class="mt-8 grid gap-5 md:grid-cols-3">
+    <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm">
+      <Image
+        src={aisProjectsImg}
+        alt="AIS kitchen and joinery project references"
+        widths={[420, 640, 820]}
+        sizes="(min-width: 48rem) 24rem, calc(100vw - 3rem)"
+        format="webp"
+        quality={86}
+        loading="lazy"
+        decoding="async"
+        class="aspect-[4/3] w-full bg-white object-contain"
+      />
+      <figcaption class="border-t border-hairline p-4 text-sm text-ink">
+        AIS joinery applications
+      </figcaption>
+    </figure>
+    <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm">
+      <Image
+        src={mingyuanFlooringImg}
+        alt="Mingyuan SPC flooring product reference"
+        widths={[420, 640, 820]}
+        sizes="(min-width: 48rem) 24rem, calc(100vw - 3rem)"
+        format="webp"
+        quality={86}
+        loading="lazy"
+        decoding="async"
+        class="aspect-[4/3] w-full bg-white object-contain"
+      />
+      <figcaption class="border-t border-hairline p-4 text-sm text-ink">
+        Mingyuan flooring range
+      </figcaption>
+    </figure>
+    <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm">
+      <Image
+        src={jlaFlowerTilesImg}
+        alt="JLA patterned ceramic tile product range"
+        widths={[420, 640, 820]}
+        sizes="(min-width: 48rem) 24rem, calc(100vw - 3rem)"
+        format="webp"
+        quality={86}
+        loading="lazy"
+        decoding="async"
+        class="aspect-[4/3] w-full bg-white object-contain"
+      />
+      <figcaption class="border-t border-hairline p-4 text-sm text-ink">
+        JLA patterned tile range
+      </figcaption>
+    </figure>
+  </div>
+</section>

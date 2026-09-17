@@ -1,7 +1,7 @@
 ---
 import { Image } from "astro:assets";
-import ProcurementDocuments from "../components/agents/ProcurementDocuments.astro";
-import ProcurementJourney from "../components/agents/ProcurementJourney.astro";
+import ProcurementConsiderations from "../components/agents/ProcurementConsiderations.astro";
+import ProcurementEvidence from "../components/agents/ProcurementEvidence.astro";
 import Footer from "../components/landing/Footer.astro";
 import Header from "../components/landing/Header.astro";
 import Container from "../components/primitives/Container.astro";
@@ -132,28 +132,29 @@ import harunaImg from "../assets/team/haruna.jpg";
         </Container>
       </Section>
 
-      <Section id="journey" tone="paper-2" bordered="top">
+      <Section id="considerations" tone="paper-2" bordered="top">
         <Container padding="lg">
           <div class="max-w-2xl">
             <p class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
-              Controlled process
+              Procurement review
             </p>
             <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Procurement workflow.
+              What we consider.
             </h2>
             <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-              Each stage records the checks, documents, and approvals required
-              before the order moves forward.
+              Design, factory capability, materials, quality, packing, and
+              records are reviewed together. The selected area shows the
+              evidence used for that review.
             </p>
           </div>
 
-          <ProcurementJourney />
+          <ProcurementConsiderations />
         </Container>
       </Section>
 
-      <Section id="documents" bordered="top">
+      <Section id="evidence" bordered="top">
         <Container padding="lg">
-          <ProcurementDocuments />
+          <ProcurementEvidence />
         </Container>
       </Section>
     </main>

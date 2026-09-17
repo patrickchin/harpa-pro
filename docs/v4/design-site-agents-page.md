@@ -1,6 +1,6 @@
 # Procurement-first public site
 
-Status: revised design.
+Status: implemented.
 
 ## Context
 

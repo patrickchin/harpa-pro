@@ -45,6 +45,7 @@ test('presents a static procurement journey and agent profiles', async ({ page }
     const image = editorialImages.nth(index);
     await expect(image).toHaveAttribute('alt', /\S+/);
     await expect(image).toHaveAttribute('src', /\/_astro\//);
+    await image.scrollIntoViewIfNeeded();
     await expect
       .poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth))
       .toBeGreaterThan(0);

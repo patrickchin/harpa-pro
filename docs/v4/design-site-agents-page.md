@@ -18,8 +18,7 @@ not be available for download from the website. Individual images can be
 extracted from it and displayed as evidence while the original Revit files,
 certificates, and factory submissions are being collected.
 
-The former public PDF path must permanently redirect to
-`/procurement#evidence`.
+The former public PDF path must permanently redirect to `/#evidence`.
 This tombstone replaces retained CDN copies and sends old bookmarks to the
 visible source material.
 
@@ -29,16 +28,20 @@ review, not independent validation by Harpa Pro.
 
 ## Decision
 
-The home page introduces interior procurement first. Its main action opens
-`/procurement`. A short app section follows the procurement introduction and
-links to the app overview and App Store page.
+The home page contains the complete procurement presentation. Site reporting
+does not appear in the page body; it remains available from the shared
+navigation and `/app`.
 
 The shared navigation uses **Procurement** instead of **Agents**. Its main
 action opens the evidence section. The app uses a plain navigation link. The
 footer uses the same product order.
 
-The `/procurement` page uses formal service labels. It contains one profile for
-Haruna and no selection or comparison language.
+The root page uses formal service labels. It contains one profile for Haruna
+and no selection or comparison language. `/procurement` redirects to `/`.
+
+On large screens, the procurement hero is slightly taller than the Haruna
+profile section. The boundary between them uses one hairline, not borders on
+both adjacent sections.
 
 ## Procurement considerations
 
@@ -125,6 +128,11 @@ accessible, viewport-bounded dialog. The dialog keeps the reader on the page,
 supports landscape drawings and portrait documents, and returns focus to the
 image trigger when it closes. Thumbnail layouts must not crop certificate or
 drawing content.
+
+Photos and catalogue collages fill their image frames. Preserve full drawings
+and certificates when they are the subject. The Rong Shuo shower source page
+has unused page area, so its product-example preview crops to the supplied
+product grid instead of shrinking the grid inside the card.
 
 ## Writing
 

@@ -33,7 +33,8 @@ The site must answer four buyer questions:
 1. Who manages the order in China?
 2. Which product categories can the factories supply?
 3. What information will a buyer receive for each quoted item?
-4. Which original documents support the stated material or product claims?
+4. Which supplied document previews support the stated material or product
+   claims?
 
 The site remains static. It does not add accounts, live stock, prices, booking,
 checkout, or other server features.
@@ -88,13 +89,17 @@ WhatsApp actions without adding a form or scheduling flow.
 
 ## Factory profiles
 
-Show five factory profiles from the source package. Each profile includes:
+Show five factory examples from the source package. State that these are
+selected examples, not a complete directory. Each example includes:
 
 - the factory name;
 - the main product scope;
 - a representative source image or catalogue spread;
-- the supplied material types;
-- a short note about how Harpa Pro uses the material.
+- the factory location;
+- one concise product-scope description.
+
+Keep AIS as a short full-width feature. Show the other examples as compact
+cards. Remove numbering and repeated source-file and internal-use blocks.
 
 Remove the Langyao, Mingyuan, and JLA profiles from this page. Their earlier
 presentation extracts are not part of the new furniture source package.
@@ -120,21 +125,20 @@ Show three representative briefs. Use source pages for custom joinery,
 hospitality furniture, and a shower enclosure. Mark the section as examples,
 not a live catalogue.
 
-## Original documents
+## Factory document previews
 
-Publish the original certificate and test-report files that are in the source
-package. Show a rendered first page in the website. Open that image in the
-existing evidence dialog. Provide an explicit link to the original file from
-the dialog.
+Publish selected first-page images, not the original certificate and
+test-report files. Open a preview in the existing evidence dialog. Do not add a
+link to the full PDF, image source, or other original document.
 
-Do not publish duplicate page images when the original PDF exists. The four
-image files named `E0 report`, `RoHS`, and `VOC` duplicate pages from supplied
-PDF reports. Use the PDF files as the source. The Wanhua Ecoboard production
-control certificate is a separate image and can remain visible.
+Show three visually different previews first: the marine HDF formaldehyde
+test, the hot-melt adhesive RoHS test, and the J2S sofa E1 certificate. Put the
+other seven previews under **Show 7 more documents**. Identify the source
+package on each card instead of adding separate factory-package sections.
 
-Group documents by the factory package that supplied them. The group does not
-prove that the named factory owns or issued every document. State the named
-applicant, manufacturer, supplier, or issuer where the document provides it.
+The source package does not prove that the named factory owns or issued every
+document. State the named applicant, manufacturer, supplier, or issuer where
+the document provides it.
 
 Show the report number and issue date where available. Do not state that a
 document is current unless the document proves it. Mark the J2S European
@@ -158,8 +162,8 @@ Browser tests must verify:
 - no Langyao, Mingyuan, or JLA profile;
 - three representative product briefs and the eight buyer-information fields;
 - two Revit review sheets;
-- ten unique factory credential records;
-- original document links for each PDF record;
+- three initially visible and ten total factory credential previews;
+- no original factory-document links or public files;
 - an expired label on the J2S European representative appointment;
 - evidence dialogs that keep the user on the procurement page;
 - a contact section with copy-email, email-client, and WhatsApp actions;

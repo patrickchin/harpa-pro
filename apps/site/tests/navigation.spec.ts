@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test';
 
 const REQUIRED_ROUTES = [
   '/',
-  '/procurement',
   '/app',
   '/docs',
   '/roadmap',
@@ -16,20 +15,29 @@ test('separates procurement from site reporting', async ({ page }) => {
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Construction site reporting',
+      name: 'Site reports from voice, photos, and text',
     }),
   ).toBeVisible();
-  await expect(page.locator('main').getByText('Harpa Pro app', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'View guides', exact: true }).first()).toHaveAttribute(
-    'href',
-    '/docs',
-  );
-  await expect(page.getByRole('link', { name: 'View roadmap', exact: true }).first()).toHaveAttribute(
-    'href',
-    '/roadmap',
-  );
+  await expect(page.locator('[data-voice-demo]')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'From site update to daily report' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Reporting tools' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'The team behind Harpa Pro' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Questions' })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'View guides', exact: true }).first(),
+  ).toHaveAttribute('href', '/docs');
+  await expect(
+    page.getByRole('link', { name: 'View roadmap', exact: true }).first(),
+  ).toHaveAttribute('href', '/roadmap');
   await expect(page.locator('form')).toHaveCount(0);
-  await expect(page.getByText(/waitlist|schedule a meeting/i)).toHaveCount(0);
+  await expect(
+    page.getByText(/waitlist|schedule a meeting|join the product updates list/i),
+  ).toHaveCount(0);
+  await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
 
   await page.goto('/roadmap');
   await expect(page.getByText('Site reporting roadmap', { exact: true })).toBeVisible();
@@ -57,9 +65,9 @@ test('all sitemap pages, internal links, assets, and fragments resolve', async (
     const response = await page.goto(route);
     expect(response?.status(), route).toBeLessThan(400);
 
-    const links = await page.locator('a[href]').evaluateAll((anchors) =>
-      anchors.map((anchor) => (anchor as HTMLAnchorElement).href),
-    );
+    const links = await page
+      .locator('a[href]')
+      .evaluateAll((anchors) => anchors.map((anchor) => (anchor as HTMLAnchorElement).href));
 
     for (const href of links) {
       const target = new URL(href);

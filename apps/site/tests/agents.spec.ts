@@ -6,30 +6,35 @@ const CONSIDERATIONS = [
     description:
       'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
     image: 'Revit A104 coordination sheet with 3D interior views',
+    fit: 'contain',
   },
   {
     title: 'Factory and product fit',
     description:
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: 'AIS Smarti headquarters and factory in Foshan, China',
+    fit: 'cover',
   },
   {
     title: 'Materials and compliance',
     description:
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: 'First page of the AIS marine HDF formaldehyde test report',
+    fit: 'contain',
   },
   {
     title: 'Production quality',
     description:
       'We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.',
     image: 'AIS Smarti production lines and factory floor',
+    fit: 'cover',
   },
   {
     title: 'Packing and delivery',
     description:
       'We check packing, labels, collection, freight documents, and delivery records against the order.',
     image: 'AIS Smarti pallet and flat-pack packing examples',
+    fit: 'cover',
   },
 ] as const;
 
@@ -69,26 +74,31 @@ const BUYER_INFORMATION = [
 ] as const;
 
 const PRODUCT_BRIEFS = [
-  'AIS custom kitchen joinery',
-  'J2S JSBC hospitality seating',
-  'Rong Shuo SW-011 shower enclosure',
+  { title: 'AIS custom kitchen joinery', imageMode: 'cover' },
+  { title: 'J2S JSBC hospitality seating', imageMode: 'cover' },
+  { title: 'Rong Shuo SW-011 shower enclosure', imageMode: 'source-content' },
 ] as const;
 
 const CREDENTIALS = [
   'Marine HDF formaldehyde test',
+  'Hot-melt adhesive RoHS test',
+  'Sofa E1 certificate',
   'HMR particleboard formaldehyde test',
   'OSB formaldehyde test',
   'PUR adhesive VOC test',
-  'Hot-melt adhesive RoHS test',
   'E1 board formaldehyde report',
   'Wanhua Ecoboard production-control certificate',
   'Sofa formaldehyde test',
-  'Sofa E1 certificate',
   'European representative appointment',
 ] as const;
 
+const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
+
+const FIRST_CREDENTIAL_DESCRIPTION =
+  'The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.';
+
 test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
-  await page.goto('/procurement');
+  await page.goto('/');
 
   await expect(
     page.getByRole('heading', {
@@ -111,7 +121,11 @@ test('presents Haruna and procurement considerations with matching evidence', as
     const panel = page.getByRole('tabpanel', { name: consideration.title });
     await expect(panel).toBeVisible();
     await expect(panel).toContainText(consideration.description);
-    await expect(panel.getByRole('img', { name: consideration.image })).toBeVisible();
+    const image = panel.getByRole('img', { name: consideration.image });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((element) => getComputedStyle(element).objectFit)).toBe(
+      consideration.fit,
+    );
   }
 
   await tabs.first().focus();
@@ -152,11 +166,13 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(main.getByText('Factory source library', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Review area', { exact: true })).toHaveCount(0);
 
-  const headingLevels = await main.locator('h1, h2, h3, h4, h5, h6').evaluateAll((headings) =>
-    headings
-      .filter((heading) => heading.getClientRects().length > 0)
-      .map((heading) => Number(heading.tagName.slice(1))),
-  );
+  const headingLevels = await main
+    .locator('h1, h2, h3, h4, h5, h6')
+    .evaluateAll((headings) =>
+      headings
+        .filter((heading) => heading.getClientRects().length > 0)
+        .map((heading) => Number(heading.tagName.slice(1))),
+    );
   expect(headingLevels.filter((level) => level === 1)).toHaveLength(1);
   for (const [index, level] of headingLevels.entries()) {
     if (index === 0) continue;
@@ -179,7 +195,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
 
 test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/procurement#evidence');
+  await page.goto('/#evidence');
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
@@ -242,10 +258,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
       name: 'First page of the AIS marine HDF formaldehyde test report',
     }),
   ).toBeVisible();
-  await expect(recordDialog.getByRole('link', { name: 'Open original PDF' })).toHaveAttribute(
-    'href',
-    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
-  );
+  await expect(recordDialog.getByRole('link')).toHaveCount(0);
 
   const mobileOverflow = await recordDialog.evaluate((dialog) => {
     const imageRegion = dialog.querySelector<HTMLElement>('[data-evidence-image-dialog-region]');
@@ -275,8 +288,10 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
 });
 
-test('shows source factories, representative briefs, and original records', async ({ page }) => {
-  await page.goto('/procurement#evidence');
+test('shows compact factory examples and progressively discloses document previews', async ({
+  page,
+}) => {
+  await page.goto('/#evidence');
 
   await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
   await expect(
@@ -289,13 +304,23 @@ test('shows source factories, representative briefs, and original records', asyn
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
+  await expect(
+    page.getByRole('heading', { level: 3, name: 'Selected factory partners' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('These are selected examples, not a complete factory directory.', {
+      exact: false,
+    }),
+  ).toBeVisible();
   for (const [index, factory] of FACTORY_PARTNERS.entries()) {
     const card = factories.nth(index);
     await expect(card).toContainText(factory.name);
     await expect(card).toContainText(factory.scope);
     await expect(card.getByRole('img')).toBeVisible();
-    await expect(card).toContainText('Source files');
+    await expect(card).not.toContainText('Source files');
+    await expect(card).not.toContainText('How we use them');
   }
+  await expect(factories.first()).toHaveAttribute('data-factory-featured', 'true');
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
@@ -306,33 +331,73 @@ test('shows source factories, representative briefs, and original records', asyn
   }
   const briefs = page.locator('[data-product-brief]');
   await expect(briefs).toHaveCount(PRODUCT_BRIEFS.length);
-  for (const [index, title] of PRODUCT_BRIEFS.entries()) {
-    await expect(briefs.nth(index)).toContainText(title);
-    await expect(briefs.nth(index).getByRole('img')).toBeVisible();
+  for (const [index, brief] of PRODUCT_BRIEFS.entries()) {
+    const card = briefs.nth(index);
+    await expect(card).toContainText(brief.title);
+    const frame = card.locator('[data-product-image-frame]');
+    const image = frame.getByRole('img');
+    await expect(frame).toHaveAttribute('data-product-image-mode', brief.imageMode);
+    await expect(image).toBeVisible();
+
+    const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
+    expect(frameBox).not.toBeNull();
+    expect(imageBox).not.toBeNull();
+    expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
+    expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
   }
 
   await expect(page.getByRole('heading', { name: 'Factory documents' })).toBeVisible();
   const suppliedRecords = page.locator('[data-credential-record]');
   await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
-  for (const [index, title] of CREDENTIALS.entries()) {
-    const record = suppliedRecords.nth(index);
+  for (const title of INITIAL_CREDENTIALS) {
+    const record = suppliedRecords.filter({ hasText: title });
     await expect(record).toContainText(title);
     await expect(record.getByRole('img')).toBeVisible();
     await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+
+    const preview = record.locator('[data-document-preview-crop]');
+    await expect(preview).toBeVisible();
+    const previewStyle = await preview.evaluate((region) => {
+      const image = region.querySelector('img');
+      if (!image) throw new Error('Document preview image is missing');
+      const style = window.getComputedStyle(image);
+      return {
+        aspectRatio: region.clientWidth / region.clientHeight,
+        objectFit: style.objectFit,
+        objectPosition: style.objectPosition,
+      };
+    });
+    expect(previewStyle.aspectRatio).toBeGreaterThan(2);
+    expect(previewStyle.objectFit).toBe('cover');
+    expect(previewStyle.objectPosition).toMatch(/50% 0%/);
   }
 
-  const originalDocuments = await suppliedRecords
-    .locator('[data-evidence-document-href]')
-    .evaluateAll((triggers) =>
-      triggers.map((trigger) => (trigger as HTMLElement).dataset.evidenceDocumentHref),
-    );
-  expect(new Set(originalDocuments).size).toBe(CREDENTIALS.length);
-  for (const href of originalDocuments) {
-    expect(href).toBeTruthy();
-    const response = await page.request.get(href!);
-    expect(response.status(), href).toBe(200);
-    expect(response.headers()['content-type'], href).toMatch(/application\/pdf|image\/jpeg/);
+  await expect(suppliedRecords.first()).not.toContainText(FIRST_CREDENTIAL_DESCRIPTION);
+
+  for (const title of CREDENTIALS.slice(3)) {
+    await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();
   }
+
+  const moreDocuments = page.locator('[data-document-disclosure]');
+  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
+  await moreDocuments.click();
+  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'true');
+  await expect(moreDocuments).toHaveText('Show fewer documents');
+
+  for (const title of CREDENTIALS) {
+    const record = suppliedRecords.filter({ hasText: title });
+    await expect(record).toBeVisible();
+    await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+  }
+
+  await expect(page.locator('[data-evidence-document-href]')).toHaveCount(0);
+  await expect(page.locator('a[href^="/documents/factories/"]')).toHaveCount(0);
+
+  const oldDocument = await page.request.get(
+    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
+  );
+  expect(oldDocument.status()).not.toBe(200);
+  expect(oldDocument.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/);
 
   await expect(
     page.getByText(
@@ -352,9 +417,7 @@ test('shows source factories, representative briefs, and original records', asyn
   expect(pdfResponse.status()).toBe(404);
 });
 
-test('offers copy-first email and WhatsApp contact actions without a form', async ({
-  page,
-}) => {
+test('offers copy-first email and WhatsApp contact actions without a form', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -365,71 +428,58 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
       },
     });
   });
-  await page.goto('/procurement#contact');
+  await page.goto('/#contact');
 
   const contact = page.locator('#contact');
-  await expect(
-    contact.getByRole('heading', { level: 2, name: 'Contact Haruna' }),
-  ).toBeVisible();
-  await expect(
-    contact.getByText('haru@harpapro.com', { exact: true }),
-  ).toBeVisible();
-  await expect(
-    contact.getByText('+86 193 7283 7269', { exact: true }),
-  ).toBeVisible();
+  await expect(contact.getByRole('heading', { level: 2, name: 'Contact Haruna' })).toBeVisible();
+  await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
+  await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
   const emailActions = contact.locator('[data-contact-email-actions]');
   const copyEmail = emailActions.getByRole('button', { name: 'Copy email' });
-  await expect(emailActions.locator('button, a').first()).toHaveAttribute(
-    'data-copy-email',
-    '',
-  );
+  await expect(emailActions.locator('button, a').first()).toHaveAttribute('data-copy-email', '');
   await copyEmail.click();
   await expect(contact.getByRole('status')).toHaveText('Email copied');
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('copied-email')),
-  ).toBe('haru@harpapro.com');
+  expect(await page.evaluate(() => window.localStorage.getItem('copied-email'))).toBe(
+    'haruna@harpapro.com',
+  );
 
-  await expect(
-    emailActions.getByRole('link', { name: 'Open email app' }),
-  ).toHaveAttribute('href', 'mailto:haru@harpapro.com');
-  await expect(
-    contact.getByRole('link', { name: 'Message on WhatsApp' }),
-  ).toHaveAttribute('href', 'https://wa.me/861937283726');
+  await expect(emailActions.getByRole('link', { name: 'Open email app' })).toHaveAttribute(
+    'href',
+    'mailto:haruna@harpapro.com',
+  );
+  await expect(contact.getByRole('link', { name: 'Message on WhatsApp' })).toHaveAttribute(
+    'href',
+    'https://wa.me/861937283726',
+  );
   await expect(contact.locator('form')).toHaveCount(0);
 });
 
-test('groups site reporting in shared navigation without mobile overflow', async ({
+test('uses accessible mega navigation and closes it after outside interaction', async ({
   page,
 }) => {
-  await page.goto('/procurement');
+  await page.goto('/');
 
   const desktopNav = page.locator('header nav[aria-label="Primary"]');
-  await expect(
-    desktopNav.getByRole('link', {
-      name: 'Procurement',
-      exact: true,
-    }),
-  ).toHaveAttribute('href', '/procurement');
-  await expect(
-    desktopNav.getByRole('link', { name: 'App', exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    desktopNav.getByRole('link', { name: 'App guides', exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    desktopNav.getByRole('link', { name: 'App roadmap', exact: true }),
-  ).toHaveCount(0);
-
-  const siteReportingMenu = desktopNav.locator('details.site-reporting-menu');
+  const procurementMenu = desktopNav.locator('[data-mega-menu="procurement"]');
+  const procurementSummary = procurementMenu.locator('summary');
+  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
   const siteReportingSummary = siteReportingMenu.locator('summary');
-  await expect(siteReportingSummary).toContainText('Site reporting');
+
+  await procurementSummary.hover();
+  await expect(procurementMenu).toHaveAttribute('open', '');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Overview' }),
-  ).not.toBeVisible();
-  await siteReportingSummary.click();
+    procurementMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
+  ).toHaveAttribute('href', '/');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Overview', exact: true }),
+    procurementMenu.getByRole('link', { name: 'Selected factory partners', exact: true }),
+  ).toHaveAttribute('href', '/#factory-partners');
+
+  await siteReportingSummary.hover();
+  await expect(siteReportingMenu).toHaveAttribute('open', '');
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
+  await expect(
+    siteReportingMenu.getByRole('link', { name: 'Harpa Pro app', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
@@ -437,12 +487,22 @@ test('groups site reporting in shared navigation without mobile overflow', async
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/roadmap');
+  await page.mouse.click(20, 700);
+  await expect(siteReportingMenu).not.toHaveAttribute('open', '');
+
+  await siteReportingSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(siteReportingMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(siteReportingMenu).not.toHaveAttribute('open', '');
+  await expect(siteReportingSummary).toBeFocused();
+
   await expect(
     desktopNav.getByRole('link', {
       name: 'Contact Haruna',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/procurement#contact');
+  ).toHaveAttribute('href', '/#contact');
   await expect(
     page
       .locator('footer')
@@ -451,28 +511,22 @@ test('groups site reporting in shared navigation without mobile overflow', async
         exact: true,
       })
       .first(),
-  ).toHaveAttribute('href', '/procurement');
-  await expect(
-    page.locator('footer').getByText('Site reporting', { exact: true }),
-  ).toBeVisible();
+  ).toHaveAttribute('href', '/');
+  await expect(page.locator('footer').getByText('Site reporting', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(
-    mobileMenu.getByRole('link', { name: 'Procurement', exact: true }),
-  ).toHaveAttribute('href', '/procurement');
+    mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
+  ).toHaveAttribute('href', '/');
   await expect(
     mobileMenu.getByRole('link', { name: 'Contact Haruna', exact: true }),
-  ).toHaveAttribute('href', '/procurement#contact');
-  const mobileSiteReporting = mobileMenu.locator(
-    '[data-mobile-site-reporting]',
-  );
+  ).toHaveAttribute('href', '/#contact');
+  const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
+  await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();
   await expect(
-    mobileSiteReporting.getByText('Site reporting', { exact: true }),
-  ).toBeVisible();
-  await expect(
-    mobileSiteReporting.getByRole('link', { name: 'Overview', exact: true }),
+    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro app', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
@@ -480,21 +534,41 @@ test('groups site reporting in shared navigation without mobile overflow', async
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/roadmap');
-  await expect(
-    mobileMenu.getByRole('link', { name: 'App', exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    mobileMenu.getByRole('link', { name: 'View evidence', exact: true }),
-  ).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
 
   await expect(
-    mobileMenu.getByRole('link', { name: 'Project evidence', exact: true }),
-  ).toHaveAttribute('href', '/procurement#evidence');
+    mobileMenu.getByRole('link', { name: 'Factory documents', exact: true }),
+  ).toHaveAttribute('href', '/#factory-documents');
 
   const overflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('uses valid tab semantics and accessible contrast for procurement actions', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const tabs = page.getByRole('tab');
+  await expect(tabs).toHaveCount(5);
+  for (let index = 0; index < 5; index += 1) {
+    expect(
+      await tabs.nth(index).evaluate((tab) => tab.parentElement?.getAttribute('role')),
+    ).toBe('tablist');
+  }
+
+  const panel = page.getByRole('tabpanel').first();
+  await expect(panel).toHaveJSProperty('tagName', 'DIV');
+
+  const procurementActions = page.locator(
+    'nav[aria-label="Primary"] > a[href="/#contact"], button[data-copy-email]',
+  );
+  await expect(procurementActions).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
+    await expect(procurementActions.nth(index)).toHaveClass(/\bbg-accent-ink\b/);
+    await expect(procurementActions.nth(index)).toHaveClass(/\btext-accent-foreground\b/);
+  }
 });

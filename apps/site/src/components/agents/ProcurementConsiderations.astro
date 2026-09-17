@@ -54,7 +54,7 @@ const considerations = [
   data-considerations
   class="mt-10 grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-8"
 >
-  <ul
+  <div
     role="tablist"
     aria-label="Procurement considerations"
     aria-orientation="vertical"
@@ -62,28 +62,26 @@ const considerations = [
   >
     {
       considerations.map((consideration, index) => (
-        <li>
-          <button
-            id={`consideration-tab-${index + 1}`}
-            type="button"
-            role="tab"
-            aria-selected={index === 0 ? "true" : "false"}
-            aria-controls={`consideration-panel-${index + 1}`}
-            tabindex={index === 0 ? 0 : -1}
-            data-consideration-tab
-            class="w-full rounded-lg border border-transparent px-4 py-3 text-left text-sm text-ink-soft transition-colors hover:border-hairline hover:bg-card hover:text-ink aria-selected:border-accent aria-selected:bg-card aria-selected:font-medium aria-selected:text-ink aria-selected:shadow-sm ring-focus"
-          >
-            {consideration.title}
-          </button>
-        </li>
+        <button
+          id={`consideration-tab-${index + 1}`}
+          type="button"
+          role="tab"
+          aria-selected={index === 0 ? "true" : "false"}
+          aria-controls={`consideration-panel-${index + 1}`}
+          tabindex={index === 0 ? 0 : -1}
+          data-consideration-tab
+          class="w-full rounded-lg border border-transparent px-4 py-3 text-left text-sm text-ink-soft transition-colors hover:border-hairline hover:bg-card hover:text-ink aria-selected:border-accent aria-selected:bg-card aria-selected:font-medium aria-selected:text-ink aria-selected:shadow-sm ring-focus"
+        >
+          {consideration.title}
+        </button>
       ))
     }
-  </ul>
+  </div>
 
   <div class="min-w-0">
     {
       considerations.map((consideration, index) => (
-        <article
+        <div
           id={`consideration-panel-${index + 1}`}
           role="tabpanel"
           aria-labelledby={`consideration-tab-${index + 1}`}
@@ -108,7 +106,7 @@ const considerations = [
               {consideration.description}
             </p>
           </div>
-        </article>
+        </div>
       ))
     }
   </div>

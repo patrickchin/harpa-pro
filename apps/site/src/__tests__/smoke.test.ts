@@ -78,6 +78,9 @@ describe('site smoke', () => {
     for (const [from, to] of Object.entries(FIRST_REVISION_DOC_REDIRECTS)) {
       expect(redirects).toContain(`${from} ${to} 301`);
     }
+    expect(redirects).toContain(
+      '/downloads/harpa-pro-interior-procurement.pdf /agents#evidence 301',
+    );
 
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
     expect(layout).toContain('noindex');

@@ -18,6 +18,10 @@ not be available for download from the website. Individual images can be
 extracted from it and displayed as evidence while the original Revit files,
 certificates, and factory submissions are being collected.
 
+The former public PDF path must permanently redirect to `/agents#evidence`.
+This tombstone replaces retained CDN copies and sends old bookmarks to the
+visible source material.
+
 The site must not claim fees, turnaround times, testimonials, guaranteed
 outcomes, or live service state. Factory documents are records supplied for
 review, not independent validation by Harpa Pro.

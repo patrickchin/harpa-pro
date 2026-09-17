@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const REQUIRED_ROUTES = [
   '/',
-  '/agents',
+  '/procurement',
   '/app',
   '/docs',
   '/roadmap',

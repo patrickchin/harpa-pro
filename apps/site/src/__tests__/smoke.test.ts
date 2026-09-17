@@ -66,7 +66,7 @@ describe('site smoke', () => {
   });
 
   it('publishes discovery, not-found, and legacy redirect routes', () => {
-    expect(existsSync(resolve(here, '../pages/agents.astro'))).toBe(true);
+    expect(existsSync(resolve(here, '../pages/procurement.astro'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/404.astro'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/robots.txt.ts'))).toBe(true);
     expect(existsSync(resolve(here, '../pages/sitemap.xml.ts'))).toBe(true);
@@ -79,7 +79,7 @@ describe('site smoke', () => {
       expect(redirects).toContain(`${from} ${to} 301`);
     }
     expect(redirects).toContain(
-      '/downloads/harpa-pro-interior-procurement.pdf /agents#evidence 301',
+      '/downloads/harpa-pro-interior-procurement.pdf /procurement#evidence 301',
     );
 
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
@@ -89,7 +89,7 @@ describe('site smoke', () => {
   it('publishes the procurement-first site in navigation and discovery', () => {
     const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
     const app = readFileSync(resolve(here, '../pages/app.astro'), 'utf8');
-    const page = readFileSync(resolve(here, '../pages/agents.astro'), 'utf8');
+    const page = readFileSync(resolve(here, '../pages/procurement.astro'), 'utf8');
     const considerations = readFileSync(
       resolve(here, '../components/agents/ProcurementConsiderations.astro'),
       'utf8',
@@ -132,11 +132,12 @@ describe('site smoke', () => {
     expect(page).not.toContain('Hashy');
     expect(page).not.toContain('Send a sourcing brief');
     expect(page).not.toContain('mailto:');
-    expect(header).toContain('href="/agents"');
+    expect(header).toContain('href="/procurement"');
     expect(header).toContain('href="/app"');
-    expect(footer).toContain('href="/agents"');
+    expect(footer).toContain('href="/procurement"');
     expect(footer).toContain('href="/app"');
-    expect(sitemap).toContain('"/agents"');
+    expect(sitemap).toContain('"/procurement"');
+    expect(sitemap).not.toContain('"/agents"');
     expect(sitemap).toContain('"/app"');
 
     expect(

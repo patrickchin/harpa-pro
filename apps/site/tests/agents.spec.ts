@@ -57,7 +57,7 @@ const FACTORY_PARTNERS = [
 ] as const;
 
 test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
-  await page.goto('/agents');
+  await page.goto('/procurement');
 
   await expect(
     page.getByRole('heading', {
@@ -120,7 +120,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   page,
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/agents#evidence');
+  await page.goto('/procurement#evidence');
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
@@ -209,7 +209,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
 });
 
 test('shows technical reviews, factory scope, and supplied records directly', async ({ page }) => {
-  await page.goto('/agents#evidence');
+  await page.goto('/procurement#evidence');
 
   await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' })).toBeVisible();
@@ -252,14 +252,14 @@ test('shows technical reviews, factory scope, and supplied records directly', as
 });
 
 test('links the evidence page from shared navigation without mobile overflow', async ({ page }) => {
-  await page.goto('/agents');
+  await page.goto('/procurement');
 
   await expect(
     page.locator('header nav').getByRole('link', {
       name: 'Procurement',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/agents');
+  ).toHaveAttribute('href', '/procurement');
   await expect(
     page.locator('header nav').getByRole('link', {
       name: 'App',
@@ -283,13 +283,13 @@ test('links the evidence page from shared navigation without mobile overflow', a
       name: 'View evidence',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/agents#evidence');
+  ).toHaveAttribute('href', '/procurement#evidence');
   await expect(
     page.locator('footer').getByRole('link', {
       name: 'Overview',
       exact: true,
     }).first(),
-  ).toHaveAttribute('href', '/agents');
+  ).toHaveAttribute('href', '/procurement');
   await expect(page.locator('footer').getByText('Harpa Pro app', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -297,7 +297,7 @@ test('links the evidence page from shared navigation without mobile overflow', a
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(mobileMenu.getByRole('link', { name: 'Procurement', exact: true })).toHaveAttribute(
     'href',
-    '/agents',
+    '/procurement',
   );
   await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveAttribute(
     'href',
@@ -305,7 +305,7 @@ test('links the evidence page from shared navigation without mobile overflow', a
   );
   await expect(
     mobileMenu.getByRole('link', { name: 'View evidence', exact: true }),
-  ).toHaveAttribute('href', '/agents#evidence');
+  ).toHaveAttribute('href', '/procurement#evidence');
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

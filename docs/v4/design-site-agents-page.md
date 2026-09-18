@@ -134,6 +134,12 @@ and certificates when they are the subject. The Rong Shuo shower source page
 has unused page area, so its product-example preview crops to the supplied
 product grid instead of shrinking the grid inside the card.
 
+Some supplied photo exports include a white catalogue caption or footer inside
+the bitmap. Crop that source furniture out of compact photo frames; it must not
+look like empty space below the photograph. Side-by-side photo frames stretch
+to the full height of their card. Full-sheet catalogue examples, drawings, and
+certificates keep their document context.
+
 ## Writing
 
 Use short sentences, active voice, and one name for each part of the service.
@@ -148,6 +154,7 @@ Browser coverage verifies:
 - interior procurement is the main home-page subject;
 - the app appears as a secondary section;
 - all five considerations have a short description and a matching image;
+- photographic frames cover their containers without embedded caption bands;
 - mouse and keyboard input change the selected consideration;
 - the interface contains no numbered stage or step language;
 - the page contains one Haruna profile and no agent-choice language;

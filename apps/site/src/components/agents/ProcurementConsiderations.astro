@@ -13,7 +13,8 @@ const considerations = [
       "We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.",
     image: revitCoordinationImg,
     alt: "Revit A104 coordination sheet with 3D interior views",
-    fit: "object-contain bg-white p-2",
+    crop: "contain",
+    fit: "h-full w-full object-contain bg-white p-2",
   },
   {
     title: "Factory and product fit",
@@ -21,7 +22,8 @@ const considerations = [
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: aisFactoryImg,
     alt: "AIS Smarti headquarters and factory in Foshan, China",
-    fit: "object-cover",
+    crop: "embedded-caption",
+    fit: "h-full w-full origin-top scale-[1.18] object-cover object-top",
   },
   {
     title: "Materials and compliance",
@@ -29,7 +31,8 @@ const considerations = [
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: aisHdfReportImg,
     alt: "First page of the AIS marine HDF formaldehyde test report",
-    fit: "object-contain bg-white p-2",
+    crop: "contain",
+    fit: "h-full w-full object-contain bg-white p-2",
   },
   {
     title: "Production quality",
@@ -37,7 +40,8 @@ const considerations = [
       "We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.",
     image: aisProductionImg,
     alt: "AIS Smarti production lines and factory floor",
-    fit: "object-cover",
+    crop: "cover",
+    fit: "h-full w-full object-cover",
   },
   {
     title: "Packing and delivery",
@@ -45,7 +49,8 @@ const considerations = [
       "We check packing, labels, collection, freight documents, and delivery records against the order.",
     image: aisPackingImg,
     alt: "AIS Smarti pallet and flat-pack packing examples",
-    fit: "object-cover",
+    crop: "cover",
+    fit: "h-full w-full object-cover",
   },
 ];
 ---
@@ -90,17 +95,23 @@ const considerations = [
           data-consideration-panel
           class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm ring-focus"
         >
-          <Image
-            src={consideration.image}
-            alt={consideration.alt}
-            widths={[480, 720, 960, 1200]}
-            sizes="(min-width: 64rem) 48rem, calc(100vw - 3rem)"
-            format="webp"
-            quality={86}
-            loading={index === 0 ? "eager" : "lazy"}
-            decoding="async"
-            class={`aspect-[16/9] w-full ${consideration.fit}`}
-          />
+          <div
+            data-consideration-image-frame
+            data-image-crop={consideration.crop}
+            class="aspect-[16/9] w-full overflow-hidden bg-white"
+          >
+            <Image
+              src={consideration.image}
+              alt={consideration.alt}
+              widths={[480, 720, 960, 1200]}
+              sizes="(min-width: 64rem) 48rem, calc(100vw - 3rem)"
+              format="webp"
+              quality={86}
+              loading={index === 0 ? "eager" : "lazy"}
+              decoding="async"
+              class={consideration.fit}
+            />
+          </div>
           <div class="border-t border-hairline p-6 sm:p-8">
             <p class="max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
               {consideration.description}

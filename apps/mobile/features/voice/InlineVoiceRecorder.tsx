@@ -213,7 +213,7 @@ export function InlineVoiceRecorder({
     <View
       testID="voice-record-strip"
       accessibilityLabel="Recording voice note"
-      className={`flex-row items-center gap-2 rounded-full border bg-card px-1 py-2.5 ${
+      className={`flex-row items-center gap-2 rounded-full border bg-card p-2.5 ${
         isWarning ? 'border-destructive/60' : 'border-border'
       }`}
       style={getSurfaceDepthStyle('floating')}

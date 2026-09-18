@@ -18,6 +18,7 @@ export function GenerateReportInputBar() {
   const { notes, voice, photo, ui } = useGenerateReport();
   const insets = useSafeAreaInsets();
   const [isTextComposerVisible, setIsTextComposerVisible] = useState(false);
+  const isWorkingMode = voice.isRecording || isTextComposerVisible;
 
   const handleAddNote = () => {
     if (!notes.input.trim()) return;
@@ -36,7 +37,10 @@ export function GenerateReportInputBar() {
       className="bg-background px-4 pt-3"
       style={{ paddingBottom: Math.max(insets.bottom, 12) }}
     >
-      <View testID="input-note-container" className="w-4/5 max-w-sm self-center">
+      <View
+        testID="input-note-container"
+        className={`${isWorkingMode ? 'w-full' : 'w-4/5'} max-w-sm self-center`}
+      >
         {voice.isRecording ? (
           <InlineVoiceRecorder
             durationMs={voice.snapshot.durationMs}
@@ -47,7 +51,7 @@ export function GenerateReportInputBar() {
           />
         ) : isTextComposerVisible ? (
           <View
-            className="flex-row items-center rounded-full border border-border bg-card px-1 py-2.5"
+            className="flex-row items-center rounded-full border border-border bg-card p-2.5"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable

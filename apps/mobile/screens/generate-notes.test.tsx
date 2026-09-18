@@ -71,11 +71,16 @@ vi.mock('@/lib/camera/photo-library-policy', () => ({
 // `<QueueProvider>` + `<AudioPlaybackProvider>` and is covered by the
 // dedicated integration tests for those modules.
 vi.mock('@/features/voice/useInlineRecorder', () => ({
+  HISTORY_SIZE: 30,
   RECORDER_START_FAILED_MESSAGE: "Couldn't start recording. Please try again.",
   useInlineRecorder: () => inlineRecorderMock,
 }));
 vi.mock('@/features/voice/useVoiceNotePipeline', () => ({
   useVoiceNotePipeline: () => voicePipelineMock,
+}));
+vi.mock('@/features/voice/InlineVoiceRecorder', () => ({
+  MAX_DURATION_MS: 15 * 60 * 1000,
+  InlineVoiceRecorder: () => null,
 }));
 vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/audio/AudioPlaybackProvider')>();
@@ -151,6 +156,7 @@ describe('GenerateNotes', () => {
     voicePipelineMock.capture.mockClear();
     voicePipelineMock.retry.mockClear();
     voicePipelineMock.reset.mockClear();
+    inlineRecorderMock.isRecording = false;
     inlineRecorderMock.start.mockClear();
   });
   afterEach(() => {
@@ -258,6 +264,30 @@ describe('GenerateNotes', () => {
     expect(() => tree.root.findByProps({ testID: 'btn-camera-capture' })).not.toThrow();
     expect(() => tree.root.findByProps({ testID: 'btn-record-start' })).not.toThrow();
     expect(() => tree.root.findByProps({ testID: 'btn-generate-report' })).not.toThrow();
+  });
+
+  it('expands text and voice working modes while keeping the selector compact', () => {
+    const props = { ...baseProps, reportId: 'rep_1' };
+    const tree = render(<GenerateNotes {...props} />);
+    const inputContainer = () => tree.root.findByProps({ testID: 'input-note-container' });
+
+    expect(inputContainer().props.className).toContain('w-4/5');
+
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onPress();
+    });
+    expect(inputContainer().props.className).toContain('w-full');
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-dismiss-text-note' }).props.onPress();
+    });
+    expect(inputContainer().props.className).toContain('w-4/5');
+
+    inlineRecorderMock.isRecording = true;
+    act(() => {
+      tree.update(<GenerateNotes {...props} />);
+    });
+    expect(inputContainer().props.className).toContain('w-full');
   });
 
   it('opens the text composer and calls onAddTextNote with the trimmed body', () => {

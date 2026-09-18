@@ -30,7 +30,7 @@ export function GenerateReportInputBar() {
       className="bg-background px-5 pt-3"
       style={{ paddingBottom: Math.max(insets.bottom, 12) }}
     >
-      <View testID="input-note-container" className="w-full max-w-lg self-center">
+      <View testID="input-note-container" className="w-full max-w-[320px] self-center">
         {voice.isRecording ? (
           <InlineVoiceRecorder
             durationMs={voice.snapshot.durationMs}
@@ -41,7 +41,7 @@ export function GenerateReportInputBar() {
           />
         ) : isTextComposerVisible ? (
           <View
-            className="min-h-[68px] flex-row items-center rounded-full border border-border bg-card p-1"
+            className="min-h-[60px] flex-row items-center rounded-full border border-border bg-card p-1"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable
@@ -82,7 +82,7 @@ export function GenerateReportInputBar() {
           </View>
         ) : (
           <View
-            className="min-h-[68px] flex-row items-stretch rounded-full border border-border bg-card p-1"
+            className="min-h-[60px] flex-row items-stretch rounded-full border border-border bg-card p-1"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable
@@ -90,7 +90,7 @@ export function GenerateReportInputBar() {
               testID="btn-attachment"
               accessibilityRole="button"
               accessibilityLabel="Add attachment"
-              className="flex-1 items-center justify-center rounded-full active:bg-secondary"
+              className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
             >
               <Paperclip size={20} color={colors.foreground} />
               <Text className="text-xs font-semibold text-foreground">Attach</Text>
@@ -100,7 +100,7 @@ export function GenerateReportInputBar() {
               testID="input-note"
               accessibilityRole="button"
               accessibilityLabel="Add text note"
-              className="flex-1 items-center justify-center rounded-full active:bg-secondary"
+              className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
             >
               <Pencil size={20} color={colors.foreground} />
               <Text className="text-xs font-semibold text-foreground">Text</Text>
@@ -110,7 +110,7 @@ export function GenerateReportInputBar() {
               testID="btn-camera-capture"
               accessibilityRole="button"
               accessibilityLabel="Take photo"
-              className="flex-1 items-center justify-center rounded-full active:bg-secondary"
+              className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
             >
               <Camera size={20} color={colors.foreground} />
               <Text className="text-xs font-semibold text-foreground">Photo</Text>
@@ -122,7 +122,7 @@ export function GenerateReportInputBar() {
               accessibilityRole="button"
               accessibilityLabel="Start voice recording"
               accessibilityState={{ disabled: voice.pipeline === null }}
-              className={`flex-1 items-center justify-center rounded-full active:bg-secondary ${
+              className={`min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary ${
                 voice.pipeline === null ? 'opacity-50' : ''
               }`}
             >

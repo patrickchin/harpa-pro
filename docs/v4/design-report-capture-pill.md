@@ -32,9 +32,10 @@ new capture route:
 - Photo continues directly to the existing camera capture route.
 - Voice replaces the action pill with the existing inline voice recorder.
 
-On wider devices the pill caps at the existing readable control width rather
-than stretching across the entire screen. The bottom safe-area inset and
-timeline clearance remain intact.
+On phones, the pill caps at a compact 320px visual width with a 60pt profile
+in its idle, text, and voice-recording states, rather than stretching across
+the screen. Its actions still exceed the 44pt minimum hit area. The bottom
+safe-area inset and timeline clearance remain intact.
 
 ## Compatibility
 

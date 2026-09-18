@@ -18,6 +18,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
   <rn-KeyboardAvoidingView
     behavior="padding"
     className="flex-1"
+    enabled={false}
     keyboardVerticalOffset={0}
   >
     <rn-Animated.View
@@ -406,7 +407,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       </rn-View>
     </rn-ScrollView>
     <rn-View
-      className="border-t border-border bg-background px-5 pt-3"
+      className="bg-background px-4 pt-3"
       style={
         {
           "paddingBottom": 34,
@@ -414,96 +415,99 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       }
     >
       <rn-View
-        className="flex-row items-stretch gap-3"
+        className="w-4/5 max-w-sm self-center"
+        testID="input-note-container"
       >
         <rn-View
-          className="min-h-[68px] flex-1 rounded-xl border border-border bg-card px-4 py-3"
-          testID="input-note-container"
-        >
-          <rn-View
-            className="flex-row items-start gap-2"
-          >
-            <rn-Pressable
-              accessibilityLabel="Add attachment"
-              accessibilityRole="button"
-              className="min-h-[44px] items-center justify-center"
-              hitSlop={8}
-              onPress={[Function]}
-              testID="btn-attachment"
-            >
-              <lucide-Paperclip
-                color="#5f5b66"
-                size={20}
-              />
-            </rn-Pressable>
-            <rn-TextInput
-              blurOnSubmit={false}
-              className="min-h-[44px] flex-1 text-base text-foreground"
-              multiline={true}
-              onChangeText={[Function]}
-              placeholder="Type a site note…"
-              placeholderTextColor="#5f5b66"
-              returnKeyType="default"
-              testID="input-note"
-              textAlignVertical="top"
-              value=""
-            />
-          </rn-View>
-        </rn-View>
-        <rn-Pressable
-          accessibilityLabel="Take photo"
-          accessibilityRole="button"
-          onPress={[Function]}
-          testID="btn-camera-capture"
-        >
-          <rn-View
-            className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3"
-          >
-            <rn-View
-              className="items-center gap-1"
-            >
-              <lucide-Camera
-                color="#2d3a5a"
-                size={24}
-              />
-              <rn-Text
-                className="text-xs font-semibold text-foreground"
-              >
-                Photo
-              </rn-Text>
-            </rn-View>
-          </rn-View>
-        </rn-Pressable>
-        <rn-Pressable
-          accessibilityLabel="Start voice recording"
-          accessibilityRole="button"
-          accessibilityState={
+          className="flex-row items-stretch rounded-full border border-border bg-card px-1 py-2.5"
+          style={
             {
-              "disabled": true,
+              "elevation": 4,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 4,
+                "width": 0,
+              },
+              "shadowOpacity": 0.12,
+              "shadowRadius": 14,
             }
           }
-          disabled={true}
-          onPress={[Function]}
-          testID="btn-record-start"
         >
-          <rn-View
-            className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3 opacity-50"
+          <rn-Pressable
+            accessibilityLabel="Add attachment"
+            accessibilityRole="button"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
+            onPress={[Function]}
+            testID="btn-attachment"
           >
-            <rn-View
-              className="items-center gap-1"
+            <lucide-Paperclip
+              color="#2d3a5a"
+              size={20}
+            />
+            <rn-Text
+              className="text-xs font-semibold text-foreground"
             >
-              <lucide-Mic
-                color="#2d3a5a"
-                size={24}
-              />
-              <rn-Text
-                className="text-xs font-semibold text-foreground"
-              >
-                Voice
-              </rn-Text>
-            </rn-View>
-          </rn-View>
-        </rn-Pressable>
+              Attach
+            </rn-Text>
+          </rn-Pressable>
+          <rn-Pressable
+            accessibilityLabel="Add text note"
+            accessibilityRole="button"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
+            onPress={[Function]}
+            testID="input-note"
+          >
+            <lucide-Pencil
+              color="#2d3a5a"
+              size={20}
+            />
+            <rn-Text
+              className="text-xs font-semibold text-foreground"
+            >
+              Text
+            </rn-Text>
+          </rn-Pressable>
+          <rn-Pressable
+            accessibilityLabel="Take photo"
+            accessibilityRole="button"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
+            onPress={[Function]}
+            testID="btn-camera-capture"
+          >
+            <lucide-Camera
+              color="#2d3a5a"
+              size={20}
+            />
+            <rn-Text
+              className="text-xs font-semibold text-foreground"
+            >
+              Photo
+            </rn-Text>
+          </rn-Pressable>
+          <rn-Pressable
+            accessibilityLabel="Start voice recording"
+            accessibilityRole="button"
+            accessibilityState={
+              {
+                "disabled": true,
+              }
+            }
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary opacity-50"
+            disabled={true}
+            onPress={[Function]}
+            testID="btn-record-start"
+          >
+            <lucide-Mic
+              color="#2d3a5a"
+              size={20}
+            />
+            <rn-Text
+              className="text-xs font-semibold text-foreground"
+            >
+              Voice
+            </rn-Text>
+          </rn-Pressable>
+        </rn-View>
       </rn-View>
     </rn-View>
     <rn-Modal

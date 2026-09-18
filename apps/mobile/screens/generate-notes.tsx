@@ -88,9 +88,27 @@ export function GenerateNotes({
   showDebugTab = false,
   ...providerProps
 }: GenerateNotesProps) {
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']} testID={generationStateTestID}>
-      <KeyboardAvoidingView behavior="padding" className="flex-1" keyboardVerticalOffset={0}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        enabled={keyboardVisible}
+        className="flex-1"
+        keyboardVerticalOffset={0}
+      >
         <GenerateReportProvider {...providerProps}>
           <GenerateNotesLayout
             canWrite={canWrite}
@@ -99,6 +117,7 @@ export function GenerateNotes({
             isDeletingDraft={isDeletingDraft}
             actions={actions}
             showDebugTab={showDebugTab}
+            keyboardVisible={keyboardVisible}
           />
         </GenerateReportProvider>
       </KeyboardAvoidingView>
@@ -113,6 +132,7 @@ interface LayoutProps {
   isDeletingDraft: boolean;
   actions?: ReactNode;
   showDebugTab: boolean;
+  keyboardVisible: boolean;
 }
 
 /**
@@ -127,6 +147,7 @@ function GenerateNotesLayout({
   isDeletingDraft,
   actions,
   showDebugTab,
+  keyboardVisible,
 }: LayoutProps) {
   const { reportNumber, reportTitle, tabs, generation } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
@@ -167,7 +188,6 @@ function GenerateNotesLayout({
   // so its disabled state can't swallow taps that fall through.
   const chromeMeasuredHeight = useRef<number>(0);
   const chromeAnim = useRef(new Animated.Value(1)).current;
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const onChromeLayout = (event: LayoutChangeEvent) => {
     const height = event.nativeEvent.layout.height;
@@ -177,31 +197,13 @@ function GenerateNotesLayout({
   };
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, () => {
-      setKeyboardVisible(true);
-      Animated.timing(chromeAnim, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardVisible(false);
-      Animated.timing(chromeAnim, {
-        toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [chromeAnim]);
+    Animated.timing(chromeAnim, {
+      toValue: keyboardVisible ? 0 : 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [chromeAnim, keyboardVisible]);
 
   const animatedChromeStyle = {
     opacity: chromeAnim,

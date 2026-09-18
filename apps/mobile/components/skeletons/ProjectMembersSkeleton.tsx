@@ -31,7 +31,7 @@ function MemberRowSkeleton({ probeId }: { probeId?: string }) {
       <View className="min-w-0 flex-1 gap-0.5">
         <SkeletonRow className="gap-2">
           <Skeleton width="55%" height={20} />
-          <Skeleton width={56} height={18} radius={6} />
+          <Skeleton width={56} height={18} radius={10} />
         </SkeletonRow>
         <Skeleton width="40%" height={20} />
       </View>
@@ -47,7 +47,7 @@ function AddMemberAffordanceSkeleton() {
       style={{ opacity: 0.6 }}
     >
       <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-        <Skeleton width={20} height={20} radius={4} />
+        <Skeleton width={20} height={20} radius={8} />
       </View>
       <View className="flex-1 gap-1">
         <Skeleton width="40%" height={18} />

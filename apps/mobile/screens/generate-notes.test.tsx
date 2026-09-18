@@ -14,6 +14,7 @@
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { Keyboard } from 'react-native';
 
 const voicePipelineMock = vi.hoisted(
   (): {
@@ -46,6 +47,18 @@ const voicePipelineMock = vi.hoisted(
 );
 
 const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: false }));
+const inlineRecorderMock = vi.hoisted(() => ({
+  isRecording: false,
+  snapshot: { status: 'idle', durationMs: 0, amplitude: 0 },
+  historyBars: [],
+  permission: 'unknown',
+  error: null,
+  userErrorMessage: null,
+  start: vi.fn(async () => {}),
+  stopAndCapture: vi.fn(async () => null),
+  cancel: vi.fn(async () => {}),
+  dismissError: vi.fn(),
+}));
 
 vi.mock('@/lib/camera/photo-library-policy', () => ({
   isPhotoLibraryPickingEnabled: () => photoLibraryPolicyMock.enabled,
@@ -58,22 +71,16 @@ vi.mock('@/lib/camera/photo-library-policy', () => ({
 // `<QueueProvider>` + `<AudioPlaybackProvider>` and is covered by the
 // dedicated integration tests for those modules.
 vi.mock('@/features/voice/useInlineRecorder', () => ({
+  HISTORY_SIZE: 30,
   RECORDER_START_FAILED_MESSAGE: "Couldn't start recording. Please try again.",
-  useInlineRecorder: () => ({
-    isRecording: false,
-    snapshot: { status: 'idle', durationMs: 0, amplitude: 0 },
-    historyBars: [],
-    permission: 'unknown',
-    error: null,
-    userErrorMessage: null,
-    start: vi.fn(async () => {}),
-    stopAndCapture: vi.fn(async () => null),
-    cancel: vi.fn(async () => {}),
-    dismissError: vi.fn(),
-  }),
+  useInlineRecorder: () => inlineRecorderMock,
 }));
 vi.mock('@/features/voice/useVoiceNotePipeline', () => ({
   useVoiceNotePipeline: () => voicePipelineMock,
+}));
+vi.mock('@/features/voice/InlineVoiceRecorder', () => ({
+  MAX_DURATION_MS: 15 * 60 * 1000,
+  InlineVoiceRecorder: () => null,
 }));
 vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/audio/AudioPlaybackProvider')>();
@@ -149,6 +156,8 @@ describe('GenerateNotes', () => {
     voicePipelineMock.capture.mockClear();
     voicePipelineMock.retry.mockClear();
     voicePipelineMock.reset.mockClear();
+    inlineRecorderMock.isRecording = false;
+    inlineRecorderMock.start.mockClear();
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -248,31 +257,87 @@ describe('GenerateNotes', () => {
     expect(tree.root.findAllByProps({ testID: 'btn-generate-update-report' })).toHaveLength(0);
   });
 
-  it('shows input bar + action row when canWrite=true', () => {
+  it('shows the four-action capture pill + action row when canWrite=true', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(() => tree.root.findByProps({ testID: 'input-note' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-attachment' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-camera-capture' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-record-start' })).not.toThrow();
     expect(() => tree.root.findByProps({ testID: 'btn-generate-report' })).not.toThrow();
   });
 
-  it('calls onAddTextNote with the trimmed body when Add is pressed', () => {
+  it('expands text and voice working modes while keeping the selector compact', () => {
+    const props = { ...baseProps, reportId: 'rep_1' };
+    const tree = render(<GenerateNotes {...props} />);
+    const inputContainer = () => tree.root.findByProps({ testID: 'input-note-container' });
+
+    expect(inputContainer().props.className).toContain('w-4/5');
+
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onPress();
+    });
+    expect(inputContainer().props.className).toContain('w-full');
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-dismiss-text-note' }).props.onPress();
+    });
+    expect(inputContainer().props.className).toContain('w-4/5');
+
+    inlineRecorderMock.isRecording = true;
+    act(() => {
+      tree.update(<GenerateNotes {...props} />);
+    });
+    expect(inputContainer().props.className).toContain('w-full');
+  });
+
+  it('opens the text composer and calls onAddTextNote with the trimmed body', () => {
     const onAddTextNote = vi.fn();
     const tree = render(<GenerateNotes {...baseProps} onAddTextNote={onAddTextNote} />);
-    // Type into the input
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onPress();
+    });
     act(() => {
       tree.root.findByProps({ testID: 'input-note' }).props.onChangeText('  Slab pour scheduled  ');
     });
-    // Press Add (only rendered when input has non-whitespace content)
     act(() => {
       tree.root.findByProps({ testID: 'btn-add-note' }).props.onPress();
     });
     expect(onAddTextNote).toHaveBeenCalledWith('Slab pour scheduled');
+    expect(tree.root.findByProps({ testID: 'input-note' }).props.accessibilityRole).toBe('button');
   });
 
-  it('does NOT render the Add button while input is empty', () => {
+  it('does not render Add until a text note has content', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(tree.root.findAllByProps({ testID: 'btn-add-note' })).toHaveLength(0);
     expect(() => tree.root.findByProps({ testID: 'btn-camera-capture' })).not.toThrow();
     expect(() => tree.root.findByProps({ testID: 'btn-record-start' })).not.toThrow();
+
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onPress();
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'btn-add-note' })).toHaveLength(0);
+  });
+
+  it('keeps an unsent text note when returning to the capture pill', () => {
+    const dismissSpy = vi.spyOn(Keyboard, 'dismiss');
+    const tree = render(<GenerateNotes {...baseProps} />);
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onPress();
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onChangeText('Draft site note');
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-dismiss-text-note' }).props.onPress();
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'input-note' }).props.onPress();
+    });
+
+    expect(tree.root.findByProps({ testID: 'input-note' }).props.value).toBe('Draft site note');
+    expect(dismissSpy).toHaveBeenCalledOnce();
+    dismissSpy.mockRestore();
   });
 
   it('opens the attachment sheet with stable photo action testIDs', () => {
@@ -297,6 +362,23 @@ describe('GenerateNotes', () => {
     expect(tree.root.findAllByProps({ testID: 'btn-attachment-photo-library' })).toHaveLength(0);
     expect(() => tree.root.findByProps({ testID: 'btn-attachment-camera' })).not.toThrow();
     expect(() => tree.root.findByProps({ testID: 'btn-attachment-cancel' })).not.toThrow();
+  });
+
+  it('forwards photo and voice capture actions through their existing handlers', () => {
+    const onCameraCapture = vi.fn();
+    const tree = render(
+      <GenerateNotes {...baseProps} reportId="rep_1" onCameraCapture={onCameraCapture} />,
+    );
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-camera-capture' }).props.onPress();
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-record-start' }).props.onPress();
+    });
+
+    expect(onCameraCapture).toHaveBeenCalledTimes(1);
+    expect(inlineRecorderMock.start).toHaveBeenCalledTimes(1);
   });
 
   it('renders the back button when onBack is provided', () => {
@@ -441,5 +523,28 @@ describe('GenerateNotes', () => {
   it('renders the keyboard-collapsible chrome wrapper', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(() => tree.root.findByProps({ testID: 'generate-notes-chrome' })).not.toThrow();
+  });
+
+  it('enables keyboard avoidance only while the keyboard is visible', () => {
+    const listeners = new Map<string, () => void>();
+    const addListenerSpy = vi.spyOn(Keyboard, 'addListener').mockImplementation(
+      ((event: string, listener: () => void) => {
+        listeners.set(event, listener);
+        return { remove: vi.fn() };
+      }) as unknown as typeof Keyboard.addListener,
+    );
+    const tree = render(<GenerateNotes {...baseProps} />);
+    const keyboardAvoider = () =>
+      tree.root
+        .findAllByType('rn-KeyboardAvoidingView' as unknown as React.ComponentType)
+        .find((node) => node.props.enabled !== undefined)!;
+
+    expect(keyboardAvoider().props.enabled).toBe(false);
+    act(() => listeners.get('keyboardWillShow')?.());
+    expect(keyboardAvoider().props.enabled).toBe(true);
+    act(() => listeners.get('keyboardWillHide')?.());
+    expect(keyboardAvoider().props.enabled).toBe(false);
+
+    addListenerSpy.mockRestore();
   });
 });

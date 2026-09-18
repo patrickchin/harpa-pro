@@ -33,10 +33,10 @@ export function GenerateReportInputBar() {
 
   return (
     <View
-      className="bg-background px-4 pt-2"
-      style={{ paddingBottom: Math.max(insets.bottom, 8) }}
+      className="bg-background px-4 pt-3"
+      style={{ paddingBottom: Math.max(insets.bottom, 12) }}
     >
-      <View testID="input-note-container" className="w-full max-w-sm self-center">
+      <View testID="input-note-container" className="w-4/5 max-w-sm self-center">
         {voice.isRecording ? (
           <InlineVoiceRecorder
             durationMs={voice.snapshot.durationMs}
@@ -47,7 +47,7 @@ export function GenerateReportInputBar() {
           />
         ) : isTextComposerVisible ? (
           <View
-            className="flex-row items-center rounded-full border border-border bg-card p-1"
+            className="flex-row items-center rounded-full border border-border bg-card px-1 py-2.5"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable
@@ -86,7 +86,7 @@ export function GenerateReportInputBar() {
           </View>
         ) : (
           <View
-            className="flex-row items-stretch rounded-full border border-border bg-card p-1"
+            className="flex-row items-stretch rounded-full border border-border bg-card px-1 py-2.5"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable

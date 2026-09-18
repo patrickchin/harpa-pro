@@ -175,7 +175,7 @@ function Waveform({ bars }: { bars: readonly number[] }) {
   return (
     <View
       testID="voice-record-waveform"
-      className="h-10 flex-1 flex-row items-center justify-end"
+      className="h-10 flex-1 flex-row items-center justify-end overflow-hidden"
       style={{ gap: BAR_GAP }}
     >
       {padded.map((amp, idx) => {
@@ -213,7 +213,7 @@ export function InlineVoiceRecorder({
     <View
       testID="voice-record-strip"
       accessibilityLabel="Recording voice note"
-      className={`flex-row items-center gap-2 rounded-full border bg-card p-1 ${
+      className={`flex-row items-center gap-2 rounded-full border bg-card px-1 py-2.5 ${
         isWarning ? 'border-destructive/60' : 'border-border'
       }`}
       style={getSurfaceDepthStyle('floating')}

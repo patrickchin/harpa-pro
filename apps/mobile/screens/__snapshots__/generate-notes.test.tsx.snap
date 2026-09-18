@@ -407,7 +407,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       </rn-View>
     </rn-ScrollView>
     <rn-View
-      className="bg-background px-4 pt-2"
+      className="bg-background px-4 pt-3"
       style={
         {
           "paddingBottom": 34,
@@ -415,11 +415,11 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       }
     >
       <rn-View
-        className="w-full max-w-sm self-center"
+        className="w-4/5 max-w-sm self-center"
         testID="input-note-container"
       >
         <rn-View
-          className="flex-row items-stretch rounded-full border border-border bg-card p-1"
+          className="flex-row items-stretch rounded-full border border-border bg-card px-1 py-2.5"
           style={
             {
               "elevation": 4,

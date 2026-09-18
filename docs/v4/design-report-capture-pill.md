@@ -32,13 +32,13 @@ new capture route:
 - Photo continues directly to the existing camera capture route.
 - Voice replaces the action pill with the existing inline voice recorder.
 
-On phones, the pill uses the standard small max-width token inside the
-existing page gutter rather than stretching across the screen. Its height is
-content-driven: idle, text, and voice-recording states all use the same 44pt
-touch target plus one spacing step of shell padding. No state sets a separate
-fixed container height, so switching modes keeps the pill's outer bounds and
-bottom alignment stable. The bottom safe-area inset and timeline clearance
-remain intact.
+On phones, the pill uses four-fifths of the available width, capped by the
+standard small max-width token, rather than stretching across the screen. The
+compactness is horizontal only. Its height remains content-driven: idle, text,
+and voice-recording states all use the same 44pt touch target plus medium
+vertical shell padding. No state sets a separate fixed container height, so
+switching modes keeps the pill's outer bounds and bottom alignment stable. The
+bottom safe-area inset and timeline clearance remain intact.
 
 The focused text composer uses keyboard-avoidance padding only while the
 screen's keyboard lifecycle reports it as visible. Saving or dismissing it
@@ -61,7 +61,8 @@ text-note helper continue to tap, type, and save through the real workflow.
   trimmed text note as before and returns to the action pill.
 - Attachment, camera, and voice flows continue to use their current handlers.
 - The voice-recording strip uses the same inset pill treatment.
-- Idle, text, and voice states share one outer height and horizontal position.
+- Idle, text, and voice states share one outer width, height, and horizontal
+  position.
 - Read-only reports continue to hide the capture surface.
 - Component coverage verifies the idle actions, text-mode transition, save,
   attachment sheet, camera, and voice controls. Existing Maestro capture

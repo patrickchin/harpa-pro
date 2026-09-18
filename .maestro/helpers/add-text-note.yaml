@@ -8,6 +8,10 @@ appId: ${MAESTRO_APP_ID}
 #
 # Pre-condition: current screen is the draft generate Notes tab.
 # Post-condition: the expected note row is visible.
+# The first tap opens the capture pill's Text mode; the second explicitly
+# focuses the newly mounted native TextInput before Maestro types.
+- tapOn:
+    id: "input-note"
 - tapOn:
     id: "input-note"
 - inputText: "${NOTE_TEXT}"

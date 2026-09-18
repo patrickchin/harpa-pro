@@ -43,6 +43,8 @@ tags:
 # --- Add a text note -------------------------------------------------------
 - tapOn:
     id: "input-note"
+- tapOn:
+    id: "input-note"
 - inputText: "Foundation inspection complete. No cracks observed."
 - tapOn:
     id: "btn-add-note"

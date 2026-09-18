@@ -40,6 +40,7 @@ import Reanimated, {
 import { AlertTriangle, Send, Trash2 } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
 import { HISTORY_SIZE } from './useInlineRecorder';
 
 export interface InlineVoiceRecorderProps {
@@ -212,9 +213,10 @@ export function InlineVoiceRecorder({
     <View
       testID="voice-record-strip"
       accessibilityLabel="Recording voice note"
-      className={`min-h-[68px] flex-1 flex-row items-center gap-3 rounded-xl border bg-card px-3 py-2 ${
+      className={`min-h-[68px] flex-1 flex-row items-center gap-3 rounded-full border bg-card px-3 py-2 ${
         isWarning ? 'border-destructive/60' : 'border-border'
       }`}
+      style={getSurfaceDepthStyle('floating')}
     >
       <Pressable
         onPress={onCancel}

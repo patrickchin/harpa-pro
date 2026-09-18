@@ -1,56 +1,169 @@
 ---
-import Wordmark from "./Wordmark.astro";
-import Icon from "../Icon.astro";
 import { APP_STORE_URL } from "../../lib/links";
-
-interface Props {
-  hideCta?: boolean;
-}
-
-const { hideCta = false } = Astro.props;
+import Icon from "../Icon.astro";
+import Wordmark from "./Wordmark.astro";
 ---
 
 <header
-  class="sticky top-0 z-40 border-b border-hairline bg-paper-2/90 backdrop-blur"
+  class="relative sticky top-0 z-40 border-b border-hairline bg-paper-2/95 backdrop-blur"
+  data-site-header
 >
   <div
     class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6"
   >
     <Wordmark />
-    <nav class="hidden items-center gap-8 md:flex">
-      <a
-        href="/roadmap"
-        class="text-sm text-ink-soft hover:text-ink transition-colors"
-      >
-        Roadmap
-      </a>
-      <a
-        href="/docs"
-        class="text-sm text-ink-soft hover:text-ink transition-colors"
-      >
-        Docs
-      </a>
-      {!hideCta && (
-        <a
-          href={APP_STORE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex h-9 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+    <nav aria-label="Primary" class="hidden items-center gap-2 md:flex">
+      <details class="group static" data-mega-menu="procurement">
+        <summary
+          class="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-md px-3 text-sm text-ink-soft transition-colors hover:bg-secondary hover:text-ink ring-focus [&::-webkit-details-marker]:hidden"
         >
-          Get the app
-        </a>
-      )}
+          Procurement
+          <Icon
+            name="chevron-down"
+            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div
+          class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
+          data-mega-panel
+        >
+          <div
+            class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]"
+          >
+            <div class="max-w-sm">
+              <p class="text-lg font-semibold text-ink">Procurement in China</p>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                Haruna coordinates factory information, product specifications,
+                quality checks, and shipping records.
+              </p>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <a
+                href="/"
+                aria-label="Procurement overview"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Procurement overview</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Service scope and Haruna's role</span>
+              </a>
+              <a
+                href="/#considerations"
+                aria-label="What we consider"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">What we consider</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Design, factories, quality, and delivery</span>
+              </a>
+              <a
+                href="/#factory-partners"
+                aria-label="Selected factory partners"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Selected factory partners</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Examples from current source packages</span>
+              </a>
+              <a
+                href="/#product-examples"
+                aria-label="Product examples"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Product examples</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Information supplied with a quote</span>
+              </a>
+              <a
+                href="/#factory-documents"
+                aria-label="Factory documents"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Factory documents</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Certificate and test-report previews</span>
+              </a>
+              <a
+                href="/#contact"
+                aria-label="Contact Haruna"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Contact Haruna</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Email or WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="group static" data-mega-menu="site-reporting">
+        <summary
+          class="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-md px-3 text-sm text-ink-soft transition-colors hover:bg-secondary hover:text-ink ring-focus [&::-webkit-details-marker]:hidden"
+        >
+          Site reporting
+          <Icon
+            name="chevron-down"
+            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div
+          class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
+          data-mega-panel
+        >
+          <div
+            class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]"
+          >
+            <div class="max-w-sm">
+              <p class="text-lg font-semibold text-ink">Site reporting</p>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                Turn voice notes, photos, and text updates into daily report
+                drafts that you can review and share.
+              </p>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <a
+                href="/app"
+                aria-label="Harpa Pro app"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Harpa Pro app</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">See the reporting workflow</span>
+              </a>
+              <a
+                href="/docs"
+                aria-label="Guides"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Guides</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Learn each app task</span>
+              </a>
+              <a
+                href="/roadmap"
+                aria-label="Roadmap"
+                class="rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="block font-semibold text-ink">Roadmap</span>
+                <span class="mt-1 block leading-relaxed text-ink-soft">Current and planned work</span>
+              </a>
+              <a
+                href={APP_STORE_URL}
+                aria-label="Get the app"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="rounded-lg bg-primary p-3 text-sm text-primary-foreground ring-focus"
+              >
+                <span class="block font-semibold">Get the app</span>
+                <span class="mt-1 block leading-relaxed opacity-80">Open the App Store</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <a
+        href="/#contact"
+        class="ml-2 inline-flex h-9 items-center rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
+      >
+        Contact Haruna
+      </a>
     </nav>
 
-    {/* No-JS mobile menu via <details>/<summary>. The panel is
-        absolute-positioned so it overlays content below the sticky
-        header — the source's React version pushed content down by
-        re-rendering as a sibling of the row, which we cannot do
-        here without scripting (a `<summary>` must be a direct child
-        of its `<details>`, and we want the toggle inside the row).
-        Cosmetic delta is negligible (no layout shift on toggle);
-        documented as an intentional, scripted-equivalent change. */}
-    <details class="md:hidden site-menu group">
+    <details class="site-menu group md:hidden" data-mobile-menu>
       <summary
         aria-label="Toggle menu"
         class="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-md border border-hairline text-ink [&::-webkit-details-marker]:hidden"
@@ -59,33 +172,118 @@ const { hideCta = false } = Astro.props;
         <Icon name="x" class="hidden h-4 w-4 group-open:block" />
       </summary>
       <div
-        class="absolute inset-x-0 top-16 border-t border-hairline bg-background"
+        class="absolute inset-x-0 top-16 border-t border-hairline bg-background shadow-lg"
       >
-        <div class="mx-auto flex max-w-6xl flex-col gap-1 p-4">
-          <a
-            href="/roadmap"
-            class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary"
-          >
-            Roadmap
-          </a>
-          <a
-            href="/docs"
-            class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary"
-          >
-            Docs
-          </a>
-          {!hideCta && (
-            <a
-              href={APP_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="mt-1 inline-flex h-10 items-center justify-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary"
-            >
-              Get the app
+        <div class="mx-auto grid max-w-6xl gap-4 p-4">
+          <div class="grid gap-1">
+            <p class="px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              Procurement
+            </p>
+            <a href="/" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              Procurement overview
             </a>
-          )}
+            <a href="/#considerations" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              What we consider
+            </a>
+            <a href="/#factory-partners" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              Selected factory partners
+            </a>
+            <a href="/#factory-documents" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              Factory documents
+            </a>
+            <a href="/#contact" class="rounded-md px-3 py-2 text-sm font-medium text-accent-ink hover:bg-secondary">
+              Contact Haruna
+            </a>
+          </div>
+          <div class="grid gap-1 border-t border-hairline pt-4" data-mobile-site-reporting>
+            <p class="px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              Site reporting
+            </p>
+            <a href="/app" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              Harpa Pro app
+            </a>
+            <a href="/docs" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              Guides
+            </a>
+            <a href="/roadmap" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              Roadmap
+            </a>
+          </div>
         </div>
       </div>
     </details>
   </div>
 </header>
+
+<script>
+  const siteHeader = document.querySelector<HTMLElement>("[data-site-header]");
+
+  if (siteHeader) {
+    const megaMenus = Array.from(
+      siteHeader.querySelectorAll<HTMLDetailsElement>("[data-mega-menu]"),
+    );
+    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+    let closeTimer: number | undefined;
+
+    const closeMenus = (except?: HTMLDetailsElement) => {
+      megaMenus.forEach((menu) => {
+        if (menu !== except) menu.open = false;
+      });
+    };
+
+    const cancelClose = () => {
+      if (closeTimer !== undefined) window.clearTimeout(closeTimer);
+      closeTimer = undefined;
+    };
+
+    megaMenus.forEach((menu) => {
+      const summary = menu.querySelector<HTMLElement>("summary");
+
+      summary?.addEventListener("pointerenter", () => {
+        if (!finePointer.matches) return;
+        cancelClose();
+        closeMenus(menu);
+        menu.open = true;
+      });
+
+      menu.addEventListener("pointerenter", cancelClose);
+      menu.addEventListener("pointerleave", () => {
+        if (!finePointer.matches) return;
+        cancelClose();
+        closeTimer = window.setTimeout(() => {
+          menu.open = false;
+        }, 120);
+      });
+
+      summary?.addEventListener("click", () => closeMenus(menu));
+      menu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          menu.open = false;
+        });
+      });
+    });
+
+    siteHeader.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const openMenu = megaMenus.find((menu) => menu.open);
+      if (!openMenu) return;
+      openMenu.open = false;
+      openMenu.querySelector<HTMLElement>("summary")?.focus();
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (event.target instanceof Node && !siteHeader.contains(event.target)) {
+        closeMenus();
+      }
+    });
+
+    const mobileMenu = siteHeader.querySelector<HTMLDetailsElement>(
+      "[data-mobile-menu]",
+    );
+    mobileMenu?.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        mobileMenu.open = false;
+      });
+    });
+  }
+</script>

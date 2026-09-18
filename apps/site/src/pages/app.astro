@@ -1,0 +1,71 @@
+---
+import About from "../components/landing/About.astro";
+import FAQ from "../components/landing/FAQ.astro";
+import Features from "../components/landing/Features.astro";
+import Footer from "../components/landing/Footer.astro";
+import Header from "../components/landing/Header.astro";
+import HowItWorks from "../components/landing/HowItWorks.astro";
+import SiteReportingHero from "../components/landing/SiteReportingHero.astro";
+import Icon from "../components/Icon.astro";
+import Container from "../components/primitives/Container.astro";
+import Section from "../components/primitives/Section.astro";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="Site reporting app | Harpa Pro"
+  description="Use the Harpa Pro app to turn voice notes, photos, and text updates into daily report drafts for review and export."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header />
+    <main>
+      <SiteReportingHero />
+      <HowItWorks />
+      <Features />
+      <About />
+      <FAQ />
+
+      <Section tone="paper-2" bordered="top">
+        <Container padding="lg">
+          <div class="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-start">
+            <div class="max-w-md">
+              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+                Guides and roadmap
+              </h2>
+              <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+                Use the guides for app tasks. Use the roadmap to check current
+                and planned work.
+              </p>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <a
+                href="/docs"
+                aria-label="View guides"
+                class="group rounded-xl border border-hairline bg-card p-6 shadow-sm hover:bg-secondary ring-focus"
+              >
+                <span class="text-lg font-semibold text-ink">View guides</span>
+                <span class="mt-2 block text-sm leading-relaxed text-ink-soft">
+                  Learn how to capture updates, create reports, edit content,
+                  and manage projects.
+                </span>
+                <Icon name="arrow-right" class="mt-5 h-4 w-4 text-primary" />
+              </a>
+              <a
+                href="/roadmap"
+                aria-label="View roadmap"
+                class="group rounded-xl border border-hairline bg-card p-6 shadow-sm hover:bg-secondary ring-focus"
+              >
+                <span class="text-lg font-semibold text-ink">View roadmap</span>
+                <span class="mt-2 block text-sm leading-relaxed text-ink-soft">
+                  Check the current app capabilities and planned work.
+                </span>
+                <Icon name="arrow-right" class="mt-5 h-4 w-4 text-primary" />
+              </a>
+            </div>
+          </div>
+        </Container>
+      </Section>
+    </main>
+    <Footer />
+  </div>
+</Layout>

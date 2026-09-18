@@ -3,25 +3,48 @@ import { expect, test } from "@playwright/test";
 const APP_STORE_URL =
   "https://apps.apple.com/us/app/harpa-pro/id6776759817";
 
-test("leads with the report workflow instead of platform launch copy", async ({
+test("uses the complete procurement page as home without a reporting promotion", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
 
-  const hero = page.locator("#top");
-  await expect(hero.locator("h1")).toContainText(
-    /Site Reports.*you talk, we write\./s,
-  );
-  await expect(hero.locator("p").first()).toContainText(
-    "Capture voice notes, photos, and text updates as work happens.",
-  );
+  const hero = page.locator("main > section").first();
+  await expect(hero.locator("h1")).toHaveText("Interior procurement in China");
   await expect(
-    hero.getByRole("link", { name: "Get the app", exact: true }),
-  ).toHaveAttribute("href", APP_STORE_URL);
+    hero.getByText(
+      "Haruna Bayoh manages specifications, factory coordination, quality checks, shipping records, and approvals from China.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(page.locator("#agent")).toBeVisible();
+  await expect(page.locator("#considerations")).toBeVisible();
+  await expect(page.locator("#evidence")).toBeVisible();
+  await expect(page.locator("#contact")).toBeVisible();
+  await expect(page.getByText("Construction site reporting", { exact: true })).toHaveCount(0);
+  await expect(page.locator("#app")).toHaveCount(0);
+  await expect(page.locator(`main a[href="${APP_STORE_URL}"]`)).toHaveCount(0);
 
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Use Harpa Pro to turn voice notes, photos, and field updates into daily construction reports you can review, edit, finalize, and share.",
+    "Haruna Bayoh coordinates specifications, factories, quality checks, shipping records, and project approvals in China.",
   );
   await expect(page.getByText(/now available for iPhone/i)).toHaveCount(0);
+
+  const agent = page.locator("#agent");
+  const [heroBox, agentBox] = await Promise.all([hero.boundingBox(), agent.boundingBox()]);
+  expect(heroBox).not.toBeNull();
+  expect(agentBox).not.toBeNull();
+  expect(heroBox!.height).toBeGreaterThan(agentBox!.height);
+
+  const divider = await page.evaluate(() => {
+    const heroSection = document.querySelector<HTMLElement>("#top");
+    const agentSection = document.querySelector<HTMLElement>("#agent");
+    if (!heroSection || !agentSection) throw new Error("Homepage sections are missing");
+    return {
+      heroBottom: Number.parseFloat(getComputedStyle(heroSection).borderBottomWidth),
+      agentTop: Number.parseFloat(getComputedStyle(agentSection).borderTopWidth),
+    };
+  });
+  expect(divider.heroBottom + divider.agentTop).toBeLessThanOrEqual(1);
 });

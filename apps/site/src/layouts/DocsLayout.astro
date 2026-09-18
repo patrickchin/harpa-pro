@@ -19,22 +19,24 @@ const { title, description, guides, currentSlug, currentTitle } = Astro.props;
 
 <Layout title={`${title} | Harpa Pro`} description={description}>
   <div class="min-h-screen bg-background text-ink">
-    <Header hideCta />
+    <Header />
     <div class="docs-shell">
       <details class="docs-mobile-nav">
-        <summary>Browse guides</summary>
+        <summary>Browse site reporting guides</summary>
         <DocsSidebar guides={guides} currentSlug={currentSlug} />
       </details>
 
       <div class="docs-columns">
         <aside class="docs-desktop-nav">
-          <a class="docs-home-link" href="/docs">Harpa Pro guides</a>
+          <a class="docs-home-link" href="/docs">Site reporting guides</a>
           <DocsSidebar guides={guides} currentSlug={currentSlug} />
         </aside>
 
         <main class="docs-main" id="main-content">
           <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
             <a href="/">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="/app">Site reporting</a>
             <span aria-hidden="true">/</span>
             {
               currentTitle ? (

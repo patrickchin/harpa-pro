@@ -148,7 +148,8 @@ describe('docs content model', () => {
     expect(header).toContain('href="/docs"');
 
     const docsIndex = readFileSync(resolve(srcRoot, 'pages/docs/index.astro'), 'utf8');
-    expect(docsIndex).toContain('What do you want to do?');
+    expect(docsIndex).toContain('Site reporting guides');
+    expect(docsIndex).toContain('Guides and workflows');
     expect(docsIndex).toContain('docs-core-grid');
     expect(docsIndex).toContain('docs-everyday-grid');
     expect(docsIndex).toContain('docs-setup-links');

@@ -5,7 +5,14 @@ import { guideHref, sortGuides } from "../lib/docs";
 
 export const prerender = true;
 
-const STATIC_PATHS = ["/", "/roadmap", "/privacy", "/account-deletion", "/docs"];
+const STATIC_PATHS = [
+  "/",
+  "/app",
+  "/roadmap",
+  "/privacy",
+  "/account-deletion",
+  "/docs",
+];
 
 export const GET: APIRoute = async ({ site }) => {
   const baseUrl = site ?? new URL("https://harpapro.com");

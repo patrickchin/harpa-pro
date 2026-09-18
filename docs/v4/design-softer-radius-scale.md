@@ -1,6 +1,6 @@
 # Softer radius scale
 
-**Status:** approved for implementation on 2026-09-18
+**Status:** revised after visual review on 2026-09-19
 
 **Applies to:** the mobile app and the shared dashboard visual language
 
@@ -12,14 +12,15 @@ shared radius scale rather than individual screens.
 
 ## Radius scale
 
-Every finite radius increases by 2 px:
+After the first visual review, every finite radius receives one more 2 px
+increase:
 
 | Role | Previous | Updated |
 | --- | ---: | ---: |
-| Small/default | 4 px | 6 px |
-| Control/medium | 6 px | 8 px |
-| Card/large | 8 px | 10 px |
-| Panel/extra-large | 12 px | 14 px |
+| Small/default | 6 px | 8 px |
+| Control/medium | 8 px | 10 px |
+| Card/large | 10 px | 12 px |
+| Panel/extra-large | 14 px | 16 px |
 
 Fully circular controls, avatars, status dots, waveform bars, and pill-shaped
 controls remain fully rounded. Their geometry already follows the control's
@@ -38,7 +39,7 @@ height and should not use a finite radius.
 ## Acceptance
 
 - Existing `rounded`, `rounded-sm`, `rounded-md`, `rounded-lg`, and
-  `rounded-xl` surfaces render 2 px rounder.
+  `rounded-xl` surfaces render another 2 px rounder.
 - `rounded-full` controls remain unchanged.
 - Mobile skeletons match the updated control and card shapes.
 - Mobile and dashboard lint, typecheck, tests, and builds remain green.

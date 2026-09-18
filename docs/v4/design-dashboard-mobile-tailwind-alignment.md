@@ -108,12 +108,12 @@ define another button, field, card, badge, dialog, or typography system.
 
 ### Components
 
-- Controls have a 44 px minimum target, 8 px radius, and visible focus ring.
+- Controls have a 44 px minimum target, 10 px radius, and visible focus ring.
 - Form labels are sentence-case label text in muted ink. Values stay regular
   weight and never inherit label uppercase or tracking.
 - Buttons, tabs, navigation, and member names use semibold rather than bold or
   extrabold.
-- Cards use 10 px radius, one-pixel border, 16 px default padding, and the mobile
+- Cards use 12 px radius, one-pixel border, 16 px default padding, and the mobile
   raised shadow. Use 12 or 20 px only where the content density warrants it.
 - Routine primary actions are navy. Orange is reserved for one dominant
   act-here action per view, such as generating or updating a report.

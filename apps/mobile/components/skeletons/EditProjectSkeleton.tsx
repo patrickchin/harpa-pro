@@ -10,7 +10,7 @@
  *   - `Input`     → `min-h-touch` = 44px (text-label label = 16px)
  *   - `Button` size="default" (delete) → `min-h-touch` = 44px
  *   - `Button` size="xl"      (save)   → `min-h-touch-lg` = 52px
- *   - All bordered surfaces use `rounded-md` = 8px
+ *   - All bordered surfaces use `rounded-md` = 10px
  *
  * The warning notice + delete + save buttons are duplicated here as
  * placeholders (rather than hidden) so the page does not jump when the
@@ -32,7 +32,7 @@ function FieldSkeleton({
   return (
     <View className="gap-2" onLayout={probeId ? onLayout : undefined}>
       <Skeleton width={labelWidth} height={16} />
-      <Skeleton width="100%" height={44} radius={8} />
+      <Skeleton width="100%" height={44} radius={10} />
     </View>
   );
 }
@@ -60,14 +60,14 @@ export function EditProjectSkeleton() {
 
       {/* Delete button placeholder — size="default" = 44, self-start. */}
       <View className="self-start">
-        <Skeleton width={160} height={44} radius={8} />
+        <Skeleton width={160} height={44} radius={10} />
       </View>
 
       {/* Save button placeholder — size="xl" = 52, full width. */}
       <Skeleton
         width="100%"
         height={52}
-        radius={8}
+        radius={10}
         onLayout={onSubmitLayout}
       />
     </View>

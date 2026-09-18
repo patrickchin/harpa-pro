@@ -22,11 +22,11 @@ function ReportRowSkeleton({ probeId }: { probeId?: string }) {
   return (
     <View className="px-5 pt-3" onLayout={probeId ? onLayout : undefined}>
       <View className="rounded-lg border border-border bg-card p-3 flex-row items-center gap-3">
-        <Skeleton width={40} height={40} radius={8} />
+        <Skeleton width={40} height={40} radius={10} />
         <View className="flex-1 gap-2">
           <SkeletonRow>
             <Skeleton width="65%" height={18} />
-            <Skeleton width={42} height={18} radius={8} />
+            <Skeleton width={42} height={18} radius={10} />
           </SkeletonRow>
           <Skeleton width="40%" height={14} />
         </View>

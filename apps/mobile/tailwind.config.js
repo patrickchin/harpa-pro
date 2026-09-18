@@ -31,11 +31,11 @@ module.exports = {
         label: ['0.8125rem', { lineHeight: '1rem', fontWeight: '700', letterSpacing: '0.08em' }],
       },
       borderRadius: {
-        DEFAULT: '6px',
-        sm: '6px',
-        md: '8px',
-        lg: '10px',
-        xl: '14px',
+        DEFAULT: '8px',
+        sm: '8px',
+        md: '10px',
+        lg: '12px',
+        xl: '16px',
       },
       minHeight: {
         touch: '44px',

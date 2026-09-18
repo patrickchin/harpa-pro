@@ -60,7 +60,7 @@ export function Skeleton({
     ? typeof height === 'number'
       ? height / 2
       : 999
-    : (radius ?? 8);
+    : (radius ?? 10);
   const resolvedWidth = circle ? height : width;
 
   return (

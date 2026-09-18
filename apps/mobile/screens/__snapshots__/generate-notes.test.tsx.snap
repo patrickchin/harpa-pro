@@ -18,6 +18,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
   <rn-KeyboardAvoidingView
     behavior="padding"
     className="flex-1"
+    enabled={false}
     keyboardVerticalOffset={0}
   >
     <rn-Animated.View
@@ -406,7 +407,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       </rn-View>
     </rn-ScrollView>
     <rn-View
-      className="bg-background px-5 pt-3"
+      className="bg-background px-4 pt-2"
       style={
         {
           "paddingBottom": 34,
@@ -414,11 +415,11 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       }
     >
       <rn-View
-        className="w-full max-w-[320px] self-center"
+        className="w-full max-w-sm self-center"
         testID="input-note-container"
       >
         <rn-View
-          className="min-h-[60px] flex-row items-stretch rounded-full border border-border bg-card p-1"
+          className="flex-row items-stretch rounded-full border border-border bg-card p-1"
           style={
             {
               "elevation": 4,
@@ -435,7 +436,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           <rn-Pressable
             accessibilityLabel="Add attachment"
             accessibilityRole="button"
-            className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
             onPress={[Function]}
             testID="btn-attachment"
           >
@@ -452,7 +453,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           <rn-Pressable
             accessibilityLabel="Add text note"
             accessibilityRole="button"
-            className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
             onPress={[Function]}
             testID="input-note"
           >
@@ -469,7 +470,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           <rn-Pressable
             accessibilityLabel="Take photo"
             accessibilityRole="button"
-            className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
             onPress={[Function]}
             testID="btn-camera-capture"
           >
@@ -491,7 +492,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                 "disabled": true,
               }
             }
-            className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary opacity-50"
+            className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary opacity-50"
             disabled={true}
             onPress={[Function]}
             testID="btn-record-start"

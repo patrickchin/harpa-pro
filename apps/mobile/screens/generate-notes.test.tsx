@@ -14,6 +14,7 @@
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { Keyboard } from 'react-native';
 
 const voicePipelineMock = vi.hoisted(
   (): {
@@ -289,6 +290,7 @@ describe('GenerateNotes', () => {
   });
 
   it('keeps an unsent text note when returning to the capture pill', () => {
+    const dismissSpy = vi.spyOn(Keyboard, 'dismiss');
     const tree = render(<GenerateNotes {...baseProps} />);
     act(() => {
       tree.root.findByProps({ testID: 'input-note' }).props.onPress();
@@ -304,6 +306,8 @@ describe('GenerateNotes', () => {
     });
 
     expect(tree.root.findByProps({ testID: 'input-note' }).props.value).toBe('Draft site note');
+    expect(dismissSpy).toHaveBeenCalledOnce();
+    dismissSpy.mockRestore();
   });
 
   it('opens the attachment sheet with stable photo action testIDs', () => {
@@ -489,5 +493,28 @@ describe('GenerateNotes', () => {
   it('renders the keyboard-collapsible chrome wrapper', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(() => tree.root.findByProps({ testID: 'generate-notes-chrome' })).not.toThrow();
+  });
+
+  it('enables keyboard avoidance only while the keyboard is visible', () => {
+    const listeners = new Map<string, () => void>();
+    const addListenerSpy = vi.spyOn(Keyboard, 'addListener').mockImplementation(
+      ((event: string, listener: () => void) => {
+        listeners.set(event, listener);
+        return { remove: vi.fn() };
+      }) as unknown as typeof Keyboard.addListener,
+    );
+    const tree = render(<GenerateNotes {...baseProps} />);
+    const keyboardAvoider = () =>
+      tree.root
+        .findAllByType('rn-KeyboardAvoidingView' as unknown as React.ComponentType)
+        .find((node) => node.props.enabled !== undefined)!;
+
+    expect(keyboardAvoider().props.enabled).toBe(false);
+    act(() => listeners.get('keyboardWillShow')?.());
+    expect(keyboardAvoider().props.enabled).toBe(true);
+    act(() => listeners.get('keyboardWillHide')?.());
+    expect(keyboardAvoider().props.enabled).toBe(false);
+
+    addListenerSpy.mockRestore();
   });
 });

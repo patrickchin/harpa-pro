@@ -4,7 +4,7 @@
  * existing capture handlers and bottom safe-area treatment stay unchanged.
  */
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 import { Camera, Mic, Paperclip, Pencil, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,15 +22,21 @@ export function GenerateReportInputBar() {
   const handleAddNote = () => {
     if (!notes.input.trim()) return;
     notes.add();
+    Keyboard.dismiss();
+    setIsTextComposerVisible(false);
+  };
+
+  const handleDismissTextComposer = () => {
+    Keyboard.dismiss();
     setIsTextComposerVisible(false);
   };
 
   return (
     <View
-      className="bg-background px-5 pt-3"
-      style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+      className="bg-background px-4 pt-2"
+      style={{ paddingBottom: Math.max(insets.bottom, 8) }}
     >
-      <View testID="input-note-container" className="w-full max-w-[320px] self-center">
+      <View testID="input-note-container" className="w-full max-w-sm self-center">
         {voice.isRecording ? (
           <InlineVoiceRecorder
             durationMs={voice.snapshot.durationMs}
@@ -41,39 +47,37 @@ export function GenerateReportInputBar() {
           />
         ) : isTextComposerVisible ? (
           <View
-            className="min-h-[60px] flex-row items-center rounded-full border border-border bg-card p-1"
+            className="flex-row items-center rounded-full border border-border bg-card p-1"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable
-              onPress={() => setIsTextComposerVisible(false)}
+              onPress={handleDismissTextComposer}
               testID="btn-dismiss-text-note"
               accessibilityRole="button"
               accessibilityLabel="Return to capture options"
-              className="h-touch w-touch items-center justify-center rounded-full active:bg-secondary"
+              className="h-touch shrink-0 aspect-square items-center justify-center rounded-full active:bg-secondary"
             >
               <X size={20} color={colors.muted.foreground} />
             </Pressable>
-            <View className="min-w-0 flex-1 py-1">
-              <Text className="text-xs font-semibold text-muted-foreground">Text note</Text>
-              <TextInput
-                autoFocus
-                testID="input-note"
-                value={notes.input}
-                onChangeText={notes.setInput}
-                placeholder="Add a site note"
-                placeholderTextColor={colors.muted.foreground}
-                accessibilityLabel="Text note"
-                className="min-h-touch flex-1 text-base text-foreground"
-                multiline
-                textAlignVertical="top"
-                returnKeyType="default"
-                blurOnSubmit={false}
-              />
-            </View>
+            <TextInput
+              autoFocus
+              testID="input-note"
+              value={notes.input}
+              onChangeText={notes.setInput}
+              placeholder="Add a site note"
+              placeholderTextColor={colors.muted.foreground}
+              accessibilityLabel="Text note"
+              className="h-touch min-w-0 flex-1 px-2 py-0 text-base leading-5 text-foreground"
+              multiline
+              textAlignVertical="center"
+              returnKeyType="default"
+              blurOnSubmit={false}
+            />
             {notes.input.trim() ? (
               <Button
                 testID="btn-add-note"
-                className="min-h-touch min-w-[64px] rounded-full px-3"
+                size="icon"
+                className="w-auto rounded-full px-4"
                 onPress={handleAddNote}
               >
                 <Text className="text-sm font-semibold text-primary-foreground">Add</Text>
@@ -82,7 +86,7 @@ export function GenerateReportInputBar() {
           </View>
         ) : (
           <View
-            className="min-h-[60px] flex-row items-stretch rounded-full border border-border bg-card p-1"
+            className="flex-row items-stretch rounded-full border border-border bg-card p-1"
             style={getSurfaceDepthStyle('floating')}
           >
             <Pressable
@@ -90,7 +94,7 @@ export function GenerateReportInputBar() {
               testID="btn-attachment"
               accessibilityRole="button"
               accessibilityLabel="Add attachment"
-              className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
+              className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
             >
               <Paperclip size={20} color={colors.foreground} />
               <Text className="text-xs font-semibold text-foreground">Attach</Text>
@@ -100,7 +104,7 @@ export function GenerateReportInputBar() {
               testID="input-note"
               accessibilityRole="button"
               accessibilityLabel="Add text note"
-              className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
+              className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
             >
               <Pencil size={20} color={colors.foreground} />
               <Text className="text-xs font-semibold text-foreground">Text</Text>
@@ -110,7 +114,7 @@ export function GenerateReportInputBar() {
               testID="btn-camera-capture"
               accessibilityRole="button"
               accessibilityLabel="Take photo"
-              className="min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary"
+              className="h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary"
             >
               <Camera size={20} color={colors.foreground} />
               <Text className="text-xs font-semibold text-foreground">Photo</Text>
@@ -122,7 +126,7 @@ export function GenerateReportInputBar() {
               accessibilityRole="button"
               accessibilityLabel="Start voice recording"
               accessibilityState={{ disabled: voice.pipeline === null }}
-              className={`min-h-touch flex-1 items-center justify-center rounded-full active:bg-secondary ${
+              className={`h-touch flex-1 items-center justify-center gap-0.5 rounded-full active:bg-secondary ${
                 voice.pipeline === null ? 'opacity-50' : ''
               }`}
             >

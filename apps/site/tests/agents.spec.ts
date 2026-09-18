@@ -238,8 +238,8 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
     ]);
     expect(frameBox).not.toBeNull();
     expect(imageBox).not.toBeNull();
-    expect(imageBox!.width).toBeGreaterThan(frameBox!.width + 10);
-    expect(imageBox!.height).toBeGreaterThan(frameBox!.height + 10);
+    expect(imageBox!.width).toBeGreaterThan(frameBox!.width * 1.15);
+    expect(imageBox!.height).toBeGreaterThan(frameBox!.height * 1.15);
   }
 
   for (const frame of await factories.locator('[data-factory-image-frame]').all()) {
@@ -261,6 +261,12 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   expect(featuredFrameBox).not.toBeNull();
   expect(featuredFrameBox!.height).toBeGreaterThanOrEqual(
     featuredCardBox!.height - 2,
+  );
+
+  const featuredImageBox = await aisFactoryImage.boundingBox();
+  expect(featuredImageBox).not.toBeNull();
+  expect(featuredImageBox!.height).toBeGreaterThan(
+    featuredFrameBox!.height * 1.15,
   );
 });
 

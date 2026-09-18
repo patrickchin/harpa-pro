@@ -193,6 +193,77 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
 });
 
+test('crops embedded source captions and fills photographic frames', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/#considerations');
+
+  await page.getByRole('tab', { name: 'Factory and product fit' }).click();
+  const considerationPanel = page.getByRole('tabpanel', {
+    name: 'Factory and product fit',
+  });
+  const considerationFrame = considerationPanel.locator(
+    '[data-consideration-image-frame]',
+  );
+  const considerationImage = considerationFrame.getByRole('img', {
+    name: 'AIS Smarti headquarters and factory in Foshan, China',
+  });
+
+  await expect(considerationFrame).toHaveAttribute(
+    'data-image-crop',
+    'embedded-caption',
+  );
+  await expect(considerationImage).toBeVisible();
+
+  const factories = page.locator('[data-factory-partner]');
+  await expect(factories.locator('[data-factory-image-frame]')).toHaveCount(
+    FACTORY_PARTNERS.length,
+  );
+
+  const aisFactory = factories.filter({ hasText: 'AIS Smarti' });
+  const aisFactoryFrame = aisFactory.locator('[data-factory-image-frame]');
+  const aisFactoryImage = aisFactoryFrame.getByRole('img');
+  await expect(aisFactoryFrame).toHaveAttribute(
+    'data-image-crop',
+    'embedded-caption',
+  );
+  await expect(aisFactoryImage).toBeVisible();
+
+  for (const [frame, image] of [
+    [considerationFrame, considerationImage],
+    [aisFactoryFrame, aisFactoryImage],
+  ] as const) {
+    const [frameBox, imageBox] = await Promise.all([
+      frame.boundingBox(),
+      image.boundingBox(),
+    ]);
+    expect(frameBox).not.toBeNull();
+    expect(imageBox).not.toBeNull();
+    expect(imageBox!.width).toBeGreaterThan(frameBox!.width + 10);
+    expect(imageBox!.height).toBeGreaterThan(frameBox!.height + 10);
+  }
+
+  for (const frame of await factories.locator('[data-factory-image-frame]').all()) {
+    const image = frame.getByRole('img');
+    const [frameBox, imageBox] = await Promise.all([
+      frame.boundingBox(),
+      image.boundingBox(),
+    ]);
+    expect(frameBox).not.toBeNull();
+    expect(imageBox).not.toBeNull();
+    expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
+    expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const featuredCardBox = await aisFactory.boundingBox();
+  const featuredFrameBox = await aisFactoryFrame.boundingBox();
+  expect(featuredCardBox).not.toBeNull();
+  expect(featuredFrameBox).not.toBeNull();
+  expect(featuredFrameBox!.height).toBeGreaterThanOrEqual(
+    featuredCardBox!.height - 2,
+  );
+});
+
 test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('/#evidence');

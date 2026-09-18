@@ -90,9 +90,9 @@ work.
 
 ### Shape, border, and depth
 
-- controls: 6 px radius;
-- cards and navigation items: 8 px radius;
-- exceptional floating surface: 12 px radius;
+- controls: 8 px radius;
+- cards and navigation items: 10 px radius;
+- exceptional floating surface: 14 px radius;
 - default border: 1 px;
 - raised surface: `0 2px 8px rgb(26 26 46 / 8%)`;
 - floating surface: `0 4px 14px rgb(26 26 46 / 12%)`.
@@ -103,7 +103,7 @@ Depth communicates layering, not decoration.
 
 ### Buttons and fields
 
-- Controls keep a 44 px minimum target and 6 px radius.
+- Controls keep a 44 px minimum target and 8 px radius.
 - Primary controls use navy; one dominant action may use orange.
 - Secondary controls use white or muted fill with a visible border.
 - Form labels use the label token in muted ink and sentence case. Uppercase is
@@ -116,9 +116,9 @@ Depth communicates layering, not decoration.
 
 ### Cards, rows, and tabs
 
-- Cards use an 8 px radius, one-pixel border, and restrained shadow.
+- Cards use a 10 px radius, one-pixel border, and restrained shadow.
 - Object rows use a 40 px icon/avatar, 4 px text stack, and 12–16 px padding.
-- Tabs sit in a bordered 8 px container.
+- Tabs sit in a bordered 10 px container.
 - The active tab is filled navy with paper text; state is never colour-only.
 
 ### Page headers

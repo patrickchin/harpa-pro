@@ -56,7 +56,11 @@ export function Skeleton({
     opacity: interpolate(progress.value, [0, 1], [0.35, 0.7]),
   }));
 
-  const resolvedRadius = circle ? (typeof height === 'number' ? height / 2 : 999) : (radius ?? 6);
+  const resolvedRadius = circle
+    ? typeof height === 'number'
+      ? height / 2
+      : 999
+    : (radius ?? 8);
   const resolvedWidth = circle ? height : width;
 
   return (

@@ -26,7 +26,7 @@ function ReportRowSkeleton({ probeId }: { probeId?: string }) {
         <View className="flex-1 gap-2">
           <SkeletonRow>
             <Skeleton width="65%" height={18} />
-            <Skeleton width={42} height={18} radius={6} />
+            <Skeleton width={42} height={18} radius={8} />
           </SkeletonRow>
           <Skeleton width="40%" height={14} />
         </View>

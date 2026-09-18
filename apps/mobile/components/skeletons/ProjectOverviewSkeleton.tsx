@@ -44,42 +44,42 @@ export function ProjectOverviewSkeleton() {
         <Skeleton
           width="48%"
           height={PROJECT_OVERVIEW_LAYOUT.statTileHeight}
-          radius={8}
+          radius={10}
         />
         <Skeleton
           width="48%"
           height={PROJECT_OVERVIEW_LAYOUT.statTileHeight}
-          radius={8}
+          radius={10}
         />
       </View>
 
       <Skeleton
         width="100%"
         height={PROJECT_OVERVIEW_LAYOUT.lastReportCardHeight}
-        radius={8}
+        radius={10}
       />
 
       <View className="gap-3">
         <Skeleton
           width="100%"
           height={PROJECT_OVERVIEW_LAYOUT.actionCardHeight}
-          radius={8}
+          radius={10}
         />
         <Skeleton
           width="100%"
           height={PROJECT_OVERVIEW_LAYOUT.actionCardHeight}
-          radius={8}
+          radius={10}
         />
         <Skeleton
           width="100%"
           height={PROJECT_OVERVIEW_LAYOUT.actionCardHeight}
-          radius={8}
+          radius={10}
         />
         <View onLayout={lastCardProbe}>
           <Skeleton
             width="100%"
             height={PROJECT_OVERVIEW_LAYOUT.actionCardHeight}
-            radius={8}
+            radius={10}
           />
         </View>
       </View>

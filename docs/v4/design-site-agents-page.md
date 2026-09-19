@@ -7,10 +7,11 @@ Status: implemented.
 Harpa Pro presents interior procurement as its main public service. The
 site-reporting app remains available as a secondary product.
 
-Haruna Bayoh is the only procurement agent. The site must not ask visitors to
-choose or compare agents. It must also remain static. Forms, booking, live
-availability, accounts, checkout, and other server-backed features are outside
-this revision.
+Haruna Bayoh is the only procurement agent. His name appears only in profile
+content and fixed contact identifiers. General service copy uses "we" and
+"our." The site must not ask visitors to choose or compare agents. It must also
+remain static. Forms, booking, live availability, accounts, checkout, and other
+server-backed features are outside this revision.
 
 The user supplied an internal nine-page interior procurement PDF. It is a
 design and content source for the website. It is not a public document and must
@@ -38,6 +39,10 @@ footer uses the same product order.
 
 The root page uses formal service labels. It contains one profile for Haruna
 and no selection or comparison language. `/procurement` redirects to `/`.
+
+Shared navigation, service descriptions, contact prompts, page metadata, and
+demo content use a collective Harpa Pro voice. Personal names remain inside
+profile content. The published email address stays `haruna@harpapro.com`.
 
 On large screens, the procurement hero is slightly taller than the Haruna
 profile section. The boundary between them uses one hairline, not borders on
@@ -158,6 +163,7 @@ Browser coverage verifies:
 - mouse and keyboard input change the selected consideration;
 - the interface contains no numbered stage or step language;
 - the page contains one Haruna profile and no agent-choice language;
+- service copy outside profiles uses "we," "our," and "contact us;"
 - Revit sheets and factory product submissions are visible;
 - factory partners include their product scope and source links;
 - certificate and test-report scans are visible rather than represented only by

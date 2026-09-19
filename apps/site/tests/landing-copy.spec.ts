@@ -73,5 +73,7 @@ test("uses collective service copy and keeps Haruna's name in profiles", async (
 
   await page.goto("/not-a-real-page");
   await expect(page.getByRole("link", { name: /haruna/i })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Contact us", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Contact us", exact: true }),
+  ).toBeVisible();
 });

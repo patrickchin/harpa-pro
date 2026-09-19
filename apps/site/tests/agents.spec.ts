@@ -508,7 +508,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await page.goto('/#contact');
 
   const contact = page.locator('#contact');
-  await expect(contact.getByRole('heading', { level: 2, name: 'Contact Haruna' })).toBeVisible();
+  await expect(contact.getByRole('heading', { level: 2, name: 'Contact us' })).toBeVisible();
   await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
   await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
@@ -576,7 +576,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
 
   await expect(
     desktopNav.getByRole('link', {
-      name: 'Contact Haruna',
+      name: 'Contact us',
       exact: true,
     }),
   ).toHaveAttribute('href', '/#contact');
@@ -598,7 +598,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
     mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
   ).toHaveAttribute('href', '/');
   await expect(
-    mobileMenu.getByRole('link', { name: 'Contact Haruna', exact: true }),
+    mobileMenu.getByRole('link', { name: 'Contact us', exact: true }),
   ).toHaveAttribute('href', '/#contact');
   const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
   await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();

@@ -110,7 +110,7 @@ describe('site smoke', () => {
     expect(considerations).toContain('Design and specification');
     expect(considerations).toContain('Packing and delivery');
     expect(considerations).not.toContain('Stage ');
-    expect(home).toContain('Contact Haruna');
+    expect(home).toContain('Contact us');
     expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('https://wa.me/861937283726');
     expect(home).toContain('data-single-agent-profile');

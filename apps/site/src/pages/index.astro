@@ -14,7 +14,7 @@ import harunaImg from "../assets/team/haruna.jpg";
 ---
 
 <Layout
-  title="Harpa Pro — Interior procurement in China"
+  title="Harpa Pro — Interior Procurement in China"
   description="We coordinate specifications, factories, quality checks, shipping records, and project approvals in China."
 >
   <div class="min-h-screen bg-background text-ink">
@@ -47,9 +47,9 @@ import harunaImg from "../assets/team/haruna.jpg";
             >
               <div class="max-w-6xl">
                 <h1
-                  class="text-[2rem] font-semibold leading-[1.02] tracking-tight text-primary-foreground sm:text-5xl lg:whitespace-nowrap lg:text-[3.75rem] xl:text-[4.25rem]"
+                  class="text-[2rem] font-semibold leading-[1.02] tracking-tight text-primary-foreground sm:text-5xl lg:text-[3.75rem] xl:whitespace-nowrap xl:text-[4.25rem]"
                 >
-                  Luxury Interior procurement in China
+                  Luxury Interior Procurement in China
                 </h1>
                 <p class="mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
                   We manage design specifications, factory coordination, quality
@@ -62,22 +62,34 @@ import harunaImg from "../assets/team/haruna.jpg";
         </div>
       </section>
 
+      <Section id="considerations" tone="paper-2" bordered="top" class="scroll-mt-16">
+        <Container padding="lg">
+          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            What We Consider
+          </h2>
+
+          <ProcurementConsiderations />
+        </Container>
+      </Section>
+
+      <ProcurementEvidence />
+
       <Section id="agent" tone="paper-2" bordered="top">
-        <Container padding="lg" data-procurement-profiles class="grid gap-6 lg:grid-cols-2">
+        <Container padding="lg" data-procurement-profiles class="grid gap-6 xl:grid-cols-2">
           <article
             data-procurement-profile="haruna"
             class="rounded-2xl border border-hairline bg-card p-5 shadow-sm sm:p-6"
           >
-            <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-5">
+            <div class="grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-5 xl:min-h-56">
               <figure
                 data-profile-portrait
-                class="h-28 w-28 overflow-hidden rounded-xl bg-primary sm:h-36 sm:w-36"
+                class="h-40 w-40 overflow-hidden rounded-xl bg-primary sm:h-52 sm:w-52"
               >
                 <Image
                   src={harunaImg}
                   alt="Haruna Bayoh"
-                  widths={[224, 288, 432]}
-                  sizes="(min-width: 40rem) 9rem, 7rem"
+                  widths={[320, 416, 624]}
+                  sizes="(min-width: 40rem) 13rem, 10rem"
                   format="webp"
                   quality={90}
                   loading="lazy"
@@ -107,7 +119,10 @@ import harunaImg from "../assets/team/haruna.jpg";
               </div>
             </div>
 
-            <dl class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm">
+            <dl
+              data-profile-credentials
+              class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm"
+            >
               <div>
                 <dt class="text-ink-soft">Discipline</dt>
                 <dd class="mt-1 font-medium text-ink">Architecture and materials</dd>
@@ -124,19 +139,19 @@ import harunaImg from "../assets/team/haruna.jpg";
 
             <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
               <div>
-                <dt class="text-sm font-semibold text-ink">Technical coordination</dt>
+                <dt class="text-sm font-semibold text-ink">Technical Coordination</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Drawings, dimensions, finishes, and approval records.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Order control</dt>
+                <dt class="text-sm font-semibold text-ink">Order Control</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Quantities, approvals, inspections, and order checks.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Document record</dt>
+                <dt class="text-sm font-semibold text-ink">Document Record</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Product data, certificates, approvals, and project files.
                 </dd>
@@ -148,16 +163,16 @@ import harunaImg from "../assets/team/haruna.jpg";
             data-procurement-profile="hashy"
             class="rounded-2xl border border-hairline bg-card p-5 shadow-sm sm:p-6"
           >
-            <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-5">
+            <div class="grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-5 xl:min-h-56">
               <figure
                 data-profile-portrait
-                class="h-28 w-28 overflow-hidden rounded-xl bg-primary sm:h-36 sm:w-36"
+                class="h-40 w-40 overflow-hidden rounded-xl bg-primary sm:h-52 sm:w-52"
               >
                 <Image
                   src={hashyImg}
                   alt="Hashy"
-                  widths={[224, 288, 432]}
-                  sizes="(min-width: 40rem) 9rem, 7rem"
+                  widths={[320, 416, 624]}
+                  sizes="(min-width: 40rem) 13rem, 10rem"
                   format="webp"
                   quality={90}
                   loading="lazy"
@@ -177,7 +192,10 @@ import harunaImg from "../assets/team/haruna.jpg";
               </div>
             </div>
 
-            <dl class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm">
+            <dl
+              data-profile-credentials
+              class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm"
+            >
               <div>
                 <dt class="text-ink-soft">Discipline</dt>
                 <dd class="mt-1 font-medium text-ink">Procurement &amp; Logistics</dd>
@@ -194,13 +212,13 @@ import harunaImg from "../assets/team/haruna.jpg";
 
             <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
               <div>
-                <dt class="text-sm font-semibold text-ink">Factory coordination</dt>
+                <dt class="text-sm font-semibold text-ink">Factory Coordination</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Capability, samples, quotations, and production questions.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Shipping logistics</dt>
+                <dt class="text-sm font-semibold text-ink">Shipping Logistics</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Packing, freight documents, shipment coordination, and delivery
                   records.
@@ -216,7 +234,7 @@ import harunaImg from "../assets/team/haruna.jpg";
           <div class="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(32rem,1.22fr)] lg:gap-16">
             <div class="max-w-xl">
               <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                Contact us
+                Contact Us
               </h2>
               <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
                 Email or message us about an interior procurement project in
@@ -285,18 +303,6 @@ import harunaImg from "../assets/team/haruna.jpg";
           </div>
         </Container>
       </Section>
-
-      <Section id="considerations" tone="paper-2" bordered="top" class="scroll-mt-16">
-        <Container padding="lg">
-          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            What we consider
-          </h2>
-
-          <ProcurementConsiderations />
-        </Container>
-      </Section>
-
-      <ProcurementEvidence />
     </main>
     <Footer />
   </div>

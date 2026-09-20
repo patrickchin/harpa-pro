@@ -93,7 +93,7 @@ const buyerInformation = [
 const productBriefs = [
   {
     index: "01",
-    title: "AIS custom kitchen joinery",
+    title: "AIS Custom Kitchen Joinery",
     source: "AIS Smarti Product Style Selection, page 4",
     description:
       "The factory page provides a style reference. A quote adds the approved drawings, dimensions, board grade, finishes, hardware, interfaces, quantity, and packing.",
@@ -110,7 +110,7 @@ const productBriefs = [
   },
   {
     index: "02",
-    title: "J2S JSBC hospitality seating",
+    title: "J2S JSBC Hospitality Seating",
     source: "J2S catalogue, pages 21-22",
     description:
       "The catalogue identifies the JSBC bar-chair series. A quote identifies one model and records its dimensions, frame, upholstery, finish, quantity, and packing.",
@@ -127,7 +127,7 @@ const productBriefs = [
   },
   {
     index: "03",
-    title: "Rong Shuo SW-011 shower enclosure",
+    title: "Rong Shuo SW-011 Shower Enclosure",
     source: "Rong Shuo Shower Room/Enclosure Catalogue, page 2",
     description:
       "The catalogue provides data for the first comparison. A quote also records the handing, site dimensions, finish, quantity, and packing.",
@@ -243,14 +243,14 @@ const credentials = [
 
 const technicalReviews = [
   {
-    title: "Revit A104 coordination review",
+    title: "Revit A104 Coordination Review",
     description:
       "We check the layout, finishes, and sizes before we approve the factory information.",
     image: revitCoordinationImg,
     alt: "Revit A104 3D coordination review sheet",
   },
   {
-    title: "Revit A103 shop-drawing review",
+    title: "Revit A103 Shop-Drawing Review",
     description: "We review the drawings before production.",
     image: revitShopDrawingImg,
     alt: "Revit A103 chair shop drawing review sheet",
@@ -271,7 +271,7 @@ const technicalReviews = [
           id="factory-partners-heading"
           class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
         >
-          Selected factory partners
+          Selected Factory Partners
         </h2>
         <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
           We match each order with the factory that meets the design specifications
@@ -285,12 +285,12 @@ const technicalReviews = [
         <article
           data-factory-partner
           data-factory-featured="true"
-          class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm sm:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.55fr)]"
+          class="grid max-w-2xl overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm sm:grid-cols-[minmax(0,1.2fr)_minmax(14rem,0.8fr)]"
         >
           <figure
             data-factory-image-frame
             data-image-crop={factory.imageCrop}
-            class="h-52 overflow-hidden bg-white sm:h-full sm:min-h-64"
+            class="h-44 overflow-hidden bg-white sm:h-48"
           >
             <Image
               src={factory.image}
@@ -304,7 +304,7 @@ const technicalReviews = [
               class={factory.imageClass}
             />
           </figure>
-          <div class="border-t border-hairline p-5 sm:border-l sm:border-t-0 sm:p-6">
+          <div class="border-t border-hairline p-5 sm:border-l sm:border-t-0">
             <p class="font-mono text-xs text-ink-soft">{factory.location}</p>
             <h3 class="mt-3 text-xl font-semibold tracking-tight text-ink">
               {factory.name}
@@ -368,7 +368,7 @@ const technicalReviews = [
           id="product-information-heading"
           class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
         >
-          What each quote includes
+          What Each Quote Includes
         </h2>
         <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
           A catalogue image identifies the product. The quote records the details
@@ -403,7 +403,7 @@ const technicalReviews = [
         id="product-briefs-heading"
         class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
       >
-        Product examples
+        Product Examples
       </h2>
       <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
         These examples show the detail in a buyer brief. They are not a stock
@@ -411,28 +411,25 @@ const technicalReviews = [
       </p>
     </div>
 
-    <div class="mt-10 grid gap-8">
+    <div class="mt-8 grid gap-5 lg:grid-cols-3">
     {
-      productBriefs.map((brief, index) => (
+      productBriefs.map((brief) => (
         <article
           data-product-brief
-          class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm lg:grid-cols-2"
+          class="flex h-full flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
         >
           <figure
             data-product-image-frame
             data-product-image-mode={brief.imageMode}
-            class:list={[
-              "relative h-80 overflow-hidden bg-white sm:h-96 lg:h-[30rem]",
-              index % 2 === 1 && "lg:order-2",
-            ]}
+            class="relative aspect-[16/10] w-full overflow-hidden bg-white"
           >
             <Image
               src={brief.image}
               alt={brief.alt}
               widths={[520, 760, 1040, 1400, 2000, 2400]}
               sizes={brief.imageMode === "source-content"
-                ? "(min-width: 64rem) 108rem, 300vw"
-                : "(min-width: 64rem) 36rem, calc(100vw - 3rem)"}
+                ? "(min-width: 64rem) 72rem, 300vw"
+                : "(min-width: 64rem) 24rem, calc(100vw - 3rem)"}
               format="webp"
               quality={90}
               loading="lazy"
@@ -440,27 +437,22 @@ const technicalReviews = [
               class={brief.imageClass}
             />
           </figure>
-          <div
-            class:list={[
-              "border-t border-hairline p-6 sm:p-8 lg:border-t-0",
-              index % 2 === 1 ? "lg:border-r" : "lg:border-l",
-            ]}
-          >
+          <div class="flex flex-1 flex-col border-t border-hairline p-5">
             <div class="flex items-center justify-between gap-4">
               <span class="font-mono text-xs text-accent-ink">Example {brief.index}</span>
               <span class="text-right font-mono text-[0.68rem] leading-relaxed text-ink-soft">
                 {brief.source}
               </span>
             </div>
-            <h3 class="mt-5 text-2xl font-semibold tracking-tight text-ink">
+            <h3 class="mt-4 text-xl font-semibold tracking-tight text-ink">
               {brief.title}
             </h3>
             <p class="mt-3 text-sm leading-relaxed text-ink-soft">
               {brief.description}
             </p>
-            <dl class="mt-6 grid gap-3 border-t border-hairline pt-5 text-sm">
+            <dl class="mt-5 grid gap-3 border-t border-hairline pt-4 text-sm">
               {brief.details.map(([term, value]) => (
-                <div class="grid gap-1 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-4">
+                <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
                   <dt class="text-ink-soft">{term}</dt>
                   <dd class="font-medium leading-relaxed text-ink">{value}</dd>
                 </div>
@@ -487,7 +479,7 @@ const technicalReviews = [
         id="factory-documents-heading"
         class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
       >
-        Factory documents
+        Factory Documents
       </h2>
       <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
         Select a document to view its first-page image. Full source files are not
@@ -581,7 +573,7 @@ const technicalReviews = [
         id="technical-reviews-heading"
         class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
       >
-        Technical reviews
+        Technical Reviews
       </h2>
     </div>
 

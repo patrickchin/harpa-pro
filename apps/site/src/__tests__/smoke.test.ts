@@ -68,9 +68,7 @@ describe('site smoke', () => {
     for (const [from, to] of Object.entries(FIRST_REVISION_DOC_REDIRECTS)) {
       expect(redirects).toContain(`${from} ${to} 301`);
     }
-    expect(redirects).toContain(
-      '/downloads/harpa-pro-interior-procurement.pdf /#evidence 301',
-    );
+    expect(redirects).toContain('/downloads/harpa-pro-interior-procurement.pdf /#evidence 301');
     expect(redirects).toContain('/documents/factories/* /#evidence 301');
     expect(redirects).toContain('/procurement / 301');
 
@@ -93,7 +91,7 @@ describe('site smoke', () => {
     const footer = readFileSync(resolve(here, '../components/landing/Footer.astro'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
-    expect(home).toContain('Luxury Interior procurement in China');
+    expect(home).toContain('Luxury Interior Procurement in China');
     expect(home).toMatch(
       /We manage design specifications, factory coordination, quality\s+checks, shipment, and complete procurement documentation\s+\(approved health, safety, and quality standards\)\./,
     );
@@ -110,10 +108,10 @@ describe('site smoke', () => {
     expect(app).not.toContain('WaitlistForm');
     expect(app).not.toContain('Current guidance and planned work.');
     expect(home).not.toContain('Harpa Pro procurement');
-    expect(considerations).toContain('Design and specification');
-    expect(considerations).toContain('Packing and delivery');
+    expect(considerations).toContain('Design and Specification');
+    expect(considerations).toContain('Packing and Delivery');
     expect(considerations).not.toContain('Stage ');
-    expect(home).toContain('Contact us');
+    expect(home).toContain('Contact Us');
     expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('https://wa.me/861937283726');
     expect(home).toContain('data-procurement-profiles');
@@ -126,21 +124,21 @@ describe('site smoke', () => {
     expect(home).toMatch(
       /coordinates technical approvals, records quality\s+standards and inspections, controls the order, and keeps the project\s+files complete\./,
     );
-    expect(home.match(/Factory coordination/g)).toHaveLength(1);
-    expect(home.match(/Shipping logistics/g)).toHaveLength(1);
-    expect(evidence).toContain('Technical reviews');
+    expect(home.match(/Factory Coordination/g)).toHaveLength(1);
+    expect(home.match(/Shipping Logistics/g)).toHaveLength(1);
+    expect(evidence).toContain('Technical Reviews');
     expect(evidence).toContain('AIS Smarti');
     expect(evidence).toContain('J2S');
     expect(evidence).toContain('Kenuo');
     expect(evidence).toContain('Masyounger');
     expect(evidence).toContain('Rong Shuo');
-    expect(evidence).toContain('Product examples');
-    expect(evidence).toContain('Factory documents');
+    expect(evidence).toContain('Product Examples');
+    expect(evidence).toContain('Factory Documents');
     expect(evidence).not.toContain('Project evidence');
     expect(evidence).not.toContain('Factory source library');
     expect(evidence).not.toContain('Open original PDF');
     expect(evidence).toContain('Show 7 more documents');
-    expect(evidence).toContain('Selected factory partners');
+    expect(evidence).toContain('Selected Factory Partners');
     expect(evidence).toContain(
       'We match each order with the factory that meets the design specifications',
     );
@@ -155,12 +153,12 @@ describe('site smoke', () => {
     expect(home).toContain('mailto:haruna@harpapro.com');
     expect(header).toContain('href="/"');
     expect(header).toContain('href="/app"');
-    expect(header).toContain('Site reporting');
+    expect(header).toContain('Site Reporting');
     expect(header).toContain('href="/#contact"');
     expect(header).not.toContain('View evidence');
     expect(footer).toContain('href="/"');
     expect(footer).toContain('href="/app"');
-    expect(footer).toContain('Site reporting');
+    expect(footer).toContain('Site Reporting');
     expect(sitemap).not.toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');
     expect(sitemap).toContain('"/app"');

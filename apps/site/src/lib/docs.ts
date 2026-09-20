@@ -1,7 +1,7 @@
 export const DOCS_TIERS = [
-  { id: 'core', label: 'Core workflows' },
-  { id: 'everyday', label: 'Everyday tasks' },
-  { id: 'setup', label: 'Setup & account' },
+  { id: 'core', label: 'Core Workflows' },
+  { id: 'everyday', label: 'Everyday Tasks' },
+  { id: 'setup', label: 'Setup & Account' },
 ] as const;
 
 export type DocsTier = (typeof DOCS_TIERS)[number]['id'];

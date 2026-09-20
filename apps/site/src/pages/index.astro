@@ -20,16 +20,16 @@ import harunaImg from "../assets/team/haruna.jpg";
     <Header />
     <main class="agents-page">
       <section id="top" class="bg-background">
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:py-12">
+        <div class="mx-auto max-w-7xl sm:px-6 sm:py-10 lg:py-12">
           <figure
             data-hero-visual
-            class="relative isolate min-h-[32rem] overflow-hidden rounded-2xl border border-primary/15 bg-primary shadow-lg sm:min-h-[36rem] lg:min-h-[40rem]"
+            class="relative isolate min-h-[40rem] overflow-hidden border-y border-primary/15 bg-primary shadow-lg sm:min-h-[40rem] sm:rounded-2xl sm:border md:min-h-[42rem]"
           >
             <Image
               src={procurementInteriorImg}
               alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
               widths={[640, 960, 1280, 1600]}
-              sizes="(min-width: 80rem) 80rem, calc(100vw - 3rem)"
+              sizes="(min-width: 80rem) 80rem, (min-width: 40rem) calc(100vw - 3rem), 100vw"
               format="webp"
               quality={84}
               priority
@@ -42,7 +42,7 @@ import harunaImg from "../assets/team/haruna.jpg";
             ></div>
             <figcaption
               data-hero-copy
-              class="relative z-10 flex min-h-[32rem] items-end p-5 sm:min-h-[36rem] sm:p-8 lg:min-h-[40rem] lg:p-12"
+              class="relative z-10 flex min-h-[40rem] items-end p-5 sm:min-h-[40rem] sm:p-8 md:min-h-[42rem] lg:p-12"
             >
               <div class="max-w-6xl">
                 <h1
@@ -64,23 +64,23 @@ import harunaImg from "../assets/team/haruna.jpg";
         <Container padding="lg">
           <article
             data-single-agent-profile
-            class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
+            class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm md:grid-cols-[minmax(14rem,0.72fr)_minmax(0,1.28fr)] lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
           >
-            <figure class="min-h-80 bg-primary">
+            <figure data-agent-portrait class="h-[22rem] bg-primary sm:h-[26rem] md:h-auto md:min-h-[34rem]">
               <Image
                 src={harunaImg}
                 alt="Haruna Bayoh"
                 widths={[480, 720, 960]}
-                sizes="(min-width: 64rem) 35vw, calc(100vw - 3rem)"
+                sizes="(min-width: 64rem) 35vw, (min-width: 48rem) 38vw, calc(100vw - 3rem)"
                 format="webp"
                 quality={90}
                 loading="lazy"
                 decoding="async"
-                class="h-full min-h-80 w-full object-cover object-top"
+                class="h-full w-full object-cover object-top md:object-[35%_top] lg:object-top"
               />
             </figure>
 
-            <div class="min-w-0 p-7 sm:p-10 lg:p-12">
+            <div data-agent-bio class="min-w-0 p-7 sm:p-10 lg:p-12">
               <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
                 Procurement Lead
               </h2>
@@ -229,11 +229,7 @@ import harunaImg from "../assets/team/haruna.jpg";
         </Container>
       </Section>
 
-      <Section id="evidence" bordered="top" class="bg-background">
-        <Container padding="lg">
-          <ProcurementEvidence />
-        </Container>
-      </Section>
+      <ProcurementEvidence />
     </main>
     <Footer />
   </div>

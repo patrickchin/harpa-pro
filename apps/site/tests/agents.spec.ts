@@ -197,7 +197,16 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(page.locator('[data-agent-card]')).toHaveCount(0);
 
   const main = page.locator('main');
-  await expect(main.getByRole('heading', { level: 2, name: 'Project evidence' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Project evidence' })).toHaveCount(0);
+  for (const heading of [
+    'Selected factory partners',
+    'What each quote includes',
+    'Product examples',
+    'Factory documents',
+    'Technical reviews',
+  ]) {
+    await expect(main.getByRole('heading', { level: 2, name: heading })).toBeVisible();
+  }
   await expect(main.getByText('Harpa Pro procurement', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Service scope', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Procurement review', { exact: true })).toHaveCount(0);
@@ -229,6 +238,43 @@ test('presents Haruna and procurement considerations with matching evidence', as
     }),
   ).toHaveCount(0);
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
+});
+
+test('keeps consideration choices and selected details stable at common widths', async ({
+  page,
+}) => {
+  for (const width of [390, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/#considerations');
+
+    const tabs = page.getByRole('tablist', { name: 'Procurement considerations' }).getByRole('tab');
+    const tabHeights = await tabs.evaluateAll((elements) =>
+      elements.map((element) => element.getBoundingClientRect().height),
+    );
+    expect(Math.max(...tabHeights) - Math.min(...tabHeights)).toBeLessThanOrEqual(1);
+
+    const panelHeights: number[] = [];
+    const nextSectionOffsets: number[] = [];
+    for (let index = 0; index < CONSIDERATIONS.length; index += 1) {
+      await tabs.nth(index).click();
+      const panel = page.getByRole('tabpanel', {
+        name: CONSIDERATIONS[index]!.title,
+      });
+      await expect(panel).toBeVisible();
+      panelHeights.push(await panel.evaluate((element) => element.getBoundingClientRect().height));
+      nextSectionOffsets.push(
+        await page.locator('#evidence').evaluate((element) => (element as HTMLElement).offsetTop),
+      );
+    }
+
+    expect(
+      Math.max(...panelHeights) - Math.min(...panelHeights),
+      `${width}px panel heights: ${panelHeights.join(', ')}`,
+    ).toBeLessThanOrEqual(1);
+    expect(Math.max(...nextSectionOffsets) - Math.min(...nextSectionOffsets)).toBeLessThanOrEqual(
+      1,
+    );
+  }
 });
 
 test('crops embedded source captions and fills photographic frames', async ({ page }) => {
@@ -479,7 +525,7 @@ test('shows compact factory examples and progressively discloses document previe
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
   await expect(
-    page.getByRole('heading', { level: 3, name: 'Selected factory partners' }),
+    page.getByRole('heading', { level: 2, name: 'Selected factory partners' }),
   ).toBeVisible();
   await expect(
     page.getByText('These are selected examples, not a complete factory directory.', {

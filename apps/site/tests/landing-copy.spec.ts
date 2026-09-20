@@ -101,7 +101,17 @@ test("uses the complete procurement page as home without a reporting promotion",
       ),
     };
   });
-  expect(sectionIds).toEqual(["top", "agent", "contact", "considerations", "evidence"]);
+  expect(sectionIds).toEqual([
+    "top",
+    "agent",
+    "contact",
+    "considerations",
+    "evidence",
+    "quote-contents",
+    "product-examples",
+    "factory-documents",
+    "technical-reviews",
+  ]);
   for (let index = 1; index < sectionBackgrounds.length; index += 1) {
     expect(sectionBackgrounds[index]).not.toBe(sectionBackgrounds[index - 1]);
   }
@@ -116,6 +126,40 @@ test("uses the complete procurement page as home without a reporting promotion",
   expect(mobileHeadingBox!.height / mobileLineHeight).toBeGreaterThan(1.9);
   expect(mobileHeadingBox!.height / mobileLineHeight).toBeLessThan(2.1);
   expect(mobileOverflow).toBe(0);
+});
+
+test("keeps the hero dominant and the procurement portrait responsive", async ({
+  page,
+}) => {
+  for (const width of [390, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+
+    const [heroBox, portraitBox, bioBox, overflow] = await Promise.all([
+      page.locator("[data-hero-visual]").boundingBox(),
+      page.locator("[data-agent-portrait]").boundingBox(),
+      page.locator("[data-agent-bio]").boundingBox(),
+      page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ]);
+    expect(heroBox).not.toBeNull();
+    expect(portraitBox).not.toBeNull();
+    expect(bioBox).not.toBeNull();
+    expect(overflow).toBeLessThanOrEqual(1);
+    expect(heroBox!.width * heroBox!.height).toBeGreaterThan(
+      portraitBox!.width * portraitBox!.height,
+    );
+    expect(heroBox!.height).toBeGreaterThan(portraitBox!.height);
+
+    if (width >= 768) {
+      expect(portraitBox!.x).toBeLessThan(bioBox!.x);
+      expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
+    } else {
+      expect(portraitBox!.y).toBeLessThan(bioBox!.y);
+      expect(Math.abs(heroBox!.width - width)).toBeLessThanOrEqual(1);
+    }
+  }
 });
 
 test("uses collective service copy and keeps Haruna's name in profiles", async ({

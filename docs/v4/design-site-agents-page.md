@@ -40,6 +40,11 @@ footer uses the same product order.
 The root page uses formal service labels. It contains one profile for Haruna
 and no selection or comparison language. `/procurement` redirects to `/`.
 
+The profile heading names the role, **Procurement Lead**, rather than repeating
+Haruna's name. The biography identifies him directly. Place the contact section
+immediately after the profile so the next action follows the person responsible
+for the service; keep the existing `#contact` anchor for shared navigation.
+
 Shared navigation, service descriptions, contact prompts, page metadata, and
 demo content use a collective Harpa Pro voice. Personal names remain inside
 profile content. The published email address stays `haruna@harpapro.com`.
@@ -59,9 +64,16 @@ or a long sequence:
 - production quality;
 - packing and delivery.
 
-On large screens, the consideration names form a compact list on the left. The
-selected consideration shows a short explanation and one directly relevant
-image on the right. On small screens, the list appears above the detail panel.
+The consideration names form a prominent selector-card grid above the detail
+panel. Each card uses a subject-specific icon, a clear **View details** action,
+and a strong selected state so visitors can recognize the interaction without
+testing it first. The cards remain substantial touch targets and collapse to a
+single column on narrow screens.
+
+The selected consideration shows its title, a short explanation, and one
+directly relevant image in a wide panel below the selectors. Remove the generic
+introductory sentence below **What we consider**; the five named cards explain
+the section more directly.
 
 The control uses an accessible tab pattern and a small local script. It makes
 no network request and stores no user data. The first consideration remains
@@ -159,10 +171,13 @@ Browser coverage verifies:
 - interior procurement is the main home-page subject;
 - the app appears as a secondary section;
 - all five considerations have a short description and a matching image;
+- all five consideration selectors expose a visible detail action and a clear
+  selected state;
 - photographic frames cover their containers without embedded caption bands;
 - mouse and keyboard input change the selected consideration;
 - the interface contains no numbered stage or step language;
 - the page contains one Haruna profile and no agent-choice language;
+- the profile is titled **Procurement Lead** and contact follows it immediately;
 - service copy outside profiles uses "we," "our," and "contact us;"
 - Revit sheets and factory product submissions are visible;
 - factory partners include their product scope and source links;

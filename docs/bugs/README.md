@@ -166,6 +166,16 @@ and unit-test the final options object, and keep real-device/TestFlight
 smoke coverage for option surfaces that affect native encoders,
 permissions, or audio sessions.
 
+### R21 — Hand-written Tailwind utilities drop generated variants
+
+A class defined manually in CSS can look like a Tailwind color utility without
+participating in Tailwind's variant generation. A solid class such as
+`bg-paper-2` works, while an opacity form such as `bg-paper-2/95` has no rule
+and silently leaves the element transparent. Type checking, linting, and unit
+tests remain green because the class name is valid text. Register reusable
+colors in `@theme` and assert the computed style in browser coverage whenever
+surface opacity carries contrast or hierarchy.
+
 ## Entries
 
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
@@ -385,6 +395,12 @@ external credential absent. This is the reflection variant of the earlier
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-09-20** _(R21)_ — The sticky site header and secondary section bands
+  stayed transparent because hand-written `bg-paper-2` could not generate the
+  `/95` and `/60` opacity variants used in markup. Fix: register the semantic
+  Tailwind color, use solid surfaces for navigation and bands, and assert the
+  computed backgrounds in Playwright.
+  [detail](2026-09-20-tailwind-custom-color-opacity.md)
 - **2026-09-03** _(R20)_ — Better Auth 1.7's Drizzle adapter probed `db._`
   during construction, and the API's catch-all lazy proxy treated that
   reflection as a real query, requiring `DATABASE_URL` at import time. Fix:

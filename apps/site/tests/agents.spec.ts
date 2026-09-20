@@ -2,35 +2,35 @@ import { expect, test } from '@playwright/test';
 
 const CONSIDERATIONS = [
   {
-    title: 'Design and specification',
+    title: 'Design and Specification',
     description:
       'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
     image: 'Revit A104 coordination sheet with 3D interior views',
     fit: 'contain',
   },
   {
-    title: 'Factory and product fit',
+    title: 'Factory and Product Fit',
     description:
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: 'AIS Smarti headquarters and factory in Foshan, China',
     fit: 'cover',
   },
   {
-    title: 'Materials and compliance',
+    title: 'Materials and Compliance',
     description:
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: 'First page of the AIS marine HDF formaldehyde test report',
     fit: 'contain',
   },
   {
-    title: 'Production quality',
+    title: 'Production Quality',
     description:
       'We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.',
     image: 'AIS Smarti production lines and factory floor',
     fit: 'cover',
   },
   {
-    title: 'Packing and delivery',
+    title: 'Packing and Delivery',
     description:
       'We check packing, labels, collection, freight documents, and delivery records against the order.',
     image: 'AIS Smarti pallet and flat-pack packing examples',
@@ -74,9 +74,9 @@ const BUYER_INFORMATION = [
 ] as const;
 
 const PRODUCT_BRIEFS = [
-  { title: 'AIS custom kitchen joinery', imageMode: 'cover' },
-  { title: 'J2S JSBC hospitality seating', imageMode: 'cover' },
-  { title: 'Rong Shuo SW-011 shower enclosure', imageMode: 'source-content' },
+  { title: 'AIS Custom Kitchen Joinery', imageMode: 'cover' },
+  { title: 'J2S JSBC Hospitality Seating', imageMode: 'cover' },
+  { title: 'Rong Shuo SW-011 Shower Enclosure', imageMode: 'source-content' },
 ] as const;
 
 const CREDENTIALS = [
@@ -105,7 +105,7 @@ test('presents the procurement team and considerations with matching evidence', 
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Luxury Interior procurement in China',
+      name: 'Luxury Interior Procurement in China',
     }),
   ).toBeVisible();
 
@@ -152,9 +152,7 @@ test('presents the procurement team and considerations with matching evidence', 
 
     const panel = page.getByRole('tabpanel', { name: consideration.title });
     await expect(panel).toBeVisible();
-    await expect(
-      panel.getByRole('heading', { level: 3, name: consideration.title }),
-    ).toBeVisible();
+    await expect(panel.getByRole('heading', { level: 3, name: consideration.title })).toBeVisible();
     await expect(panel).toContainText(consideration.description);
     const image = panel.getByRole('img', { name: consideration.image });
     await expect(image).toBeVisible();
@@ -186,11 +184,11 @@ test('presents the procurement team and considerations with matching evidence', 
   );
   await expect(harunaProfile).toContainText("Master's degree");
   await expect(harunaProfile).toContainText('6 years');
-  await expect(harunaProfile).toContainText('Technical coordination');
-  await expect(harunaProfile).toContainText('Order control');
-  await expect(harunaProfile).toContainText('Document record');
-  await expect(harunaProfile).not.toContainText('Factory coordination');
-  await expect(harunaProfile).not.toContainText('Shipping logistics');
+  await expect(harunaProfile).toContainText('Technical Coordination');
+  await expect(harunaProfile).toContainText('Order Control');
+  await expect(harunaProfile).toContainText('Document Record');
+  await expect(harunaProfile).not.toContainText('Factory Coordination');
+  await expect(harunaProfile).not.toContainText('Shipping Logistics');
   await expect(harunaProfile.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
     'href',
     'https://www.linkedin.com/in/harunabayoh/',
@@ -209,8 +207,8 @@ test('presents the procurement team and considerations with matching evidence', 
   await expect(hashyProfile).toContainText('Procurement & Logistics');
   await expect(hashyProfile).toContainText("Bachelor's degree");
   await expect(hashyProfile).toContainText('4 years');
-  await expect(hashyProfile).toContainText('Factory coordination');
-  await expect(hashyProfile).toContainText('Shipping logistics');
+  await expect(hashyProfile).toContainText('Factory Coordination');
+  await expect(hashyProfile).toContainText('Shipping Logistics');
   await expect(hashyProfile.getByRole('img', { name: 'Hashy' })).toBeVisible();
   await expect(hashyProfile.getByRole('link')).toHaveCount(0);
   await expect(page.locator('[data-agent-card]')).toHaveCount(0);
@@ -218,11 +216,11 @@ test('presents the procurement team and considerations with matching evidence', 
   const main = page.locator('main');
   await expect(main.getByRole('heading', { name: 'Project evidence' })).toHaveCount(0);
   for (const heading of [
-    'Selected factory partners',
-    'What each quote includes',
-    'Product examples',
-    'Factory documents',
-    'Technical reviews',
+    'Selected Factory Partners',
+    'What Each Quote Includes',
+    'Product Examples',
+    'Factory Documents',
+    'Technical Reviews',
   ]) {
     await expect(main.getByRole('heading', { level: 2, name: heading })).toBeVisible();
   }
@@ -299,9 +297,11 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#considerations');
 
-  const mobileConsiderationTabs = page.getByRole('tablist', {
-    name: 'Procurement considerations',
-  }).getByRole('tab');
+  const mobileConsiderationTabs = page
+    .getByRole('tablist', {
+      name: 'Procurement considerations',
+    })
+    .getByRole('tab');
   const mobileTabBoxes = await mobileConsiderationTabs.evaluateAll((elements) =>
     elements.map((element) => {
       const { width, height } = element.getBoundingClientRect();
@@ -310,21 +310,16 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   );
   expect(mobileTabBoxes.every(({ width, height }) => width >= 320 && height >= 80)).toBe(true);
 
-  await page.getByRole('tab', { name: 'Factory and product fit' }).click();
+  await page.getByRole('tab', { name: 'Factory and Product Fit' }).click();
   const considerationPanel = page.getByRole('tabpanel', {
-    name: 'Factory and product fit',
+    name: 'Factory and Product Fit',
   });
-  const considerationFrame = considerationPanel.locator(
-    '[data-consideration-image-frame]',
-  );
+  const considerationFrame = considerationPanel.locator('[data-consideration-image-frame]');
   const considerationImage = considerationFrame.getByRole('img', {
     name: 'AIS Smarti headquarters and factory in Foshan, China',
   });
 
-  await expect(considerationFrame).toHaveAttribute(
-    'data-image-crop',
-    'embedded-caption',
-  );
+  await expect(considerationFrame).toHaveAttribute('data-image-crop', 'embedded-caption');
   await expect(considerationImage).toBeVisible();
 
   const factories = page.locator('[data-factory-partner]');
@@ -335,20 +330,14 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   const aisFactory = factories.filter({ hasText: 'AIS Smarti' });
   const aisFactoryFrame = aisFactory.locator('[data-factory-image-frame]');
   const aisFactoryImage = aisFactoryFrame.getByRole('img');
-  await expect(aisFactoryFrame).toHaveAttribute(
-    'data-image-crop',
-    'embedded-caption',
-  );
+  await expect(aisFactoryFrame).toHaveAttribute('data-image-crop', 'embedded-caption');
   await expect(aisFactoryImage).toBeVisible();
 
   for (const [frame, image] of [
     [considerationFrame, considerationImage],
     [aisFactoryFrame, aisFactoryImage],
   ] as const) {
-    const [frameBox, imageBox] = await Promise.all([
-      frame.boundingBox(),
-      image.boundingBox(),
-    ]);
+    const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
     expect(frameBox).not.toBeNull();
     expect(imageBox).not.toBeNull();
     expect(imageBox!.width).toBeGreaterThan(frameBox!.width * 1.15);
@@ -357,10 +346,7 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
 
   for (const frame of await factories.locator('[data-factory-image-frame]').all()) {
     const image = frame.getByRole('img');
-    const [frameBox, imageBox] = await Promise.all([
-      frame.boundingBox(),
-      image.boundingBox(),
-    ]);
+    const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
     expect(frameBox).not.toBeNull();
     expect(imageBox).not.toBeNull();
     expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
@@ -372,15 +358,11 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   const featuredFrameBox = await aisFactoryFrame.boundingBox();
   expect(featuredCardBox).not.toBeNull();
   expect(featuredFrameBox).not.toBeNull();
-  expect(featuredFrameBox!.height).toBeGreaterThanOrEqual(
-    featuredCardBox!.height - 2,
-  );
+  expect(featuredFrameBox!.height).toBeGreaterThanOrEqual(featuredCardBox!.height - 2);
 
   const featuredImageBox = await aisFactoryImage.boundingBox();
   expect(featuredImageBox).not.toBeNull();
-  expect(featuredImageBox!.height).toBeGreaterThan(
-    featuredFrameBox!.height * 1.15,
-  );
+  expect(featuredImageBox!.height).toBeGreaterThan(featuredFrameBox!.height * 1.15);
 });
 
 test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
@@ -389,13 +371,13 @@ test('opens evidence images in an accessible dialog without leaving the page', a
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
-    name: 'Open full view of Revit A104 coordination review',
+    name: 'Open full view of Revit A104 Coordination Review',
   });
   await drawingTrigger.click();
 
   await expect(page).toHaveURL(pageUrl);
   const drawingDialog = page.getByRole('dialog', {
-    name: 'Full view: Revit A104 coordination review',
+    name: 'Full view: Revit A104 Coordination Review',
   });
   await expect(drawingDialog).toBeVisible();
   await expect(
@@ -483,15 +465,13 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   await page.goto('/#evidence');
 
   const trigger = page.getByRole('button', {
-    name: 'Open full view of Revit A104 coordination review',
+    name: 'Open full view of Revit A104 Coordination Review',
   });
   const thumbnail = trigger.getByRole('img');
   await thumbnail.scrollIntoViewIfNeeded();
   await thumbnail.evaluate((image) => (image as HTMLImageElement).decode());
 
-  const previewSource = await thumbnail.evaluate(
-    (image) => (image as HTMLImageElement).currentSrc,
-  );
+  const previewSource = await thumbnail.evaluate((image) => (image as HTMLImageElement).currentSrc);
   const source = await trigger.getAttribute('data-evidence-image-src');
   expect(source).not.toBeNull();
   const fullSource = new URL(source!, page.url()).href;
@@ -508,7 +488,7 @@ test('shows a cached preview while the full evidence image loads', async ({ page
 
   await trigger.click();
   const dialog = page.getByRole('dialog', {
-    name: 'Full view: Revit A104 coordination review',
+    name: 'Full view: Revit A104 Coordination Review',
   });
   const dialogImage = dialog.getByRole('img');
   const imageRegion = dialog.locator('[data-evidence-image-dialog-region]');
@@ -529,9 +509,10 @@ test('shows a cached preview while the full evidence image loads', async ({ page
 test('shows compact factory examples and progressively discloses document previews', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/#evidence');
 
-  await expect(page.getByRole('heading', { name: 'Technical reviews' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Technical Reviews' })).toBeVisible();
   await expect(
     page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' }),
   ).toBeVisible();
@@ -543,20 +524,21 @@ test('shows compact factory examples and progressively discloses document previe
   await expect(technicalReviews.nth(0)).toContainText(
     'We check the layout, finishes, and sizes before we approve the factory information.',
   );
-  await expect(technicalReviews.nth(1)).toContainText(
-    'We review the drawings before production.',
-  );
+  await expect(technicalReviews.nth(1)).toContainText('We review the drawings before production.');
   await expect(page.getByText(/These sheets record design coordination/)).toHaveCount(0);
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
   await expect(
-    page.getByRole('heading', { level: 2, name: 'Selected factory partners' }),
+    page.getByRole('heading', { level: 2, name: 'Selected Factory Partners' }),
   ).toBeVisible();
   await expect(
-    page.getByText('We match each order with the factory that meets the design specifications and the delivery timeline.', {
-      exact: false,
-    }),
+    page.getByText(
+      'We match each order with the factory that meets the design specifications and the delivery timeline.',
+      {
+        exact: false,
+      },
+    ),
   ).toBeVisible();
   for (const [index, factory] of FACTORY_PARTNERS.entries()) {
     const card = factories.nth(index);
@@ -567,11 +549,18 @@ test('shows compact factory examples and progressively discloses document previe
     await expect(card).not.toContainText('How we use them');
   }
   await expect(factories.first()).toHaveAttribute('data-factory-featured', 'true');
+  const [partnerSectionBox, featuredFactoryBox] = await Promise.all([
+    page.locator('#factory-partners').boundingBox(),
+    factories.first().boundingBox(),
+  ]);
+  expect(partnerSectionBox).not.toBeNull();
+  expect(featuredFactoryBox).not.toBeNull();
+  expect(featuredFactoryBox!.width).toBeLessThanOrEqual(partnerSectionBox!.width * 0.67);
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
 
-  await expect(page.getByRole('heading', { name: 'Product examples' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Product Examples' })).toBeVisible();
   for (const label of BUYER_INFORMATION) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
@@ -591,8 +580,30 @@ test('shows compact factory examples and progressively discloses document previe
     expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
     expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
   }
+  const briefBoxes = await briefs.evaluateAll((cards) =>
+    cards.map((card) => {
+      const box = card.getBoundingClientRect();
+      return { width: box.width, y: box.y };
+    }),
+  );
+  expect(briefBoxes).toHaveLength(PRODUCT_BRIEFS.length);
+  expect(
+    Math.max(...briefBoxes.map(({ y }) => y)) - Math.min(...briefBoxes.map(({ y }) => y)),
+  ).toBeLessThanOrEqual(1);
 
-  await expect(page.getByRole('heading', { name: 'Factory documents' })).toBeVisible();
+  const [productSectionBox, factoryDocumentsBox, technicalReviewsBox] = await Promise.all([
+    page.locator('#product-examples').boundingBox(),
+    page.locator('#factory-documents').boundingBox(),
+    page.locator('#technical-reviews').boundingBox(),
+  ]);
+  expect(productSectionBox).not.toBeNull();
+  expect(factoryDocumentsBox).not.toBeNull();
+  expect(technicalReviewsBox).not.toBeNull();
+  expect(productSectionBox!.height).toBeLessThanOrEqual(
+    Math.max(factoryDocumentsBox!.height, technicalReviewsBox!.height) * 1.4,
+  );
+
+  await expect(page.getByRole('heading', { name: 'Factory Documents' })).toBeVisible();
   const suppliedRecords = page.locator('[data-credential-record]');
   await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
   for (const title of INITIAL_CREDENTIALS) {
@@ -677,7 +688,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await page.goto('/#contact');
 
   const contact = page.locator('#contact');
-  await expect(contact.getByRole('heading', { level: 2, name: 'Contact us' })).toBeVisible();
+  await expect(contact.getByRole('heading', { level: 2, name: 'Contact Us' })).toBeVisible();
   await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
   await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
@@ -730,17 +741,17 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await procurementSummary.hover();
   await expect(procurementMenu).toHaveAttribute('open', '');
   await expect(
-    procurementMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
+    procurementMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
   ).toHaveAttribute('href', '/');
   await expect(
-    procurementMenu.getByRole('link', { name: 'Selected factory partners', exact: true }),
+    procurementMenu.getByRole('link', { name: 'Selected Factory Partners', exact: true }),
   ).toHaveAttribute('href', '/#factory-partners');
 
   await siteReportingSummary.hover();
   await expect(siteReportingMenu).toHaveAttribute('open', '');
   await expect(procurementMenu).not.toHaveAttribute('open', '');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Harpa Pro app', exact: true }),
+    siteReportingMenu.getByRole('link', { name: 'Harpa Pro App', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
@@ -760,7 +771,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
 
   await expect(
     desktopNav.getByRole('link', {
-      name: 'Contact us',
+      name: 'Contact Us',
       exact: true,
     }),
   ).toHaveAttribute('href', '/#contact');
@@ -773,7 +784,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
       })
       .first(),
   ).toHaveAttribute('href', '/');
-  await expect(page.locator('footer').getByText('Site reporting', { exact: true })).toBeVisible();
+  await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
@@ -783,20 +794,19 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(mobileItemIcons).toHaveCount(8);
   await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(8);
   expect(
-    await mobileItemIcons.evaluateAll(
-      (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
-    ),
+    await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
   ).toBe(8);
   await expect(
-    mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
+    mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
   ).toHaveAttribute('href', '/');
-  await expect(
-    mobileMenu.getByRole('link', { name: 'Contact us', exact: true }),
-  ).toHaveAttribute('href', '/#contact');
+  await expect(mobileMenu.getByRole('link', { name: 'Contact Us', exact: true })).toHaveAttribute(
+    'href',
+    '/#contact',
+  );
   const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
-  await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();
+  await expect(mobileSiteReporting.getByText('Site Reporting', { exact: true })).toBeVisible();
   await expect(
-    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro app', exact: true }),
+    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro App', exact: true }),
   ).toHaveAttribute('href', '/app');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
@@ -808,7 +818,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
 
   await expect(
-    mobileMenu.getByRole('link', { name: 'Factory documents', exact: true }),
+    mobileMenu.getByRole('link', { name: 'Factory Documents', exact: true }),
   ).toHaveAttribute('href', '/#factory-documents');
 
   const overflow = await page.evaluate(
@@ -825,9 +835,9 @@ test('uses valid tab semantics and accessible contrast for procurement actions',
   const tabs = page.getByRole('tab');
   await expect(tabs).toHaveCount(5);
   for (let index = 0; index < 5; index += 1) {
-    expect(
-      await tabs.nth(index).evaluate((tab) => tab.parentElement?.getAttribute('role')),
-    ).toBe('tablist');
+    expect(await tabs.nth(index).evaluate((tab) => tab.parentElement?.getAttribute('role'))).toBe(
+      'tablist',
+    );
   }
 
   const panel = page.getByRole('tabpanel').first();

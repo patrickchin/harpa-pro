@@ -88,9 +88,9 @@ describe('docs content model', () => {
     const ids = DOCS_TIERS.map(({ id }) => id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(DOCS_TIERS).toEqual([
-      { id: 'core', label: 'Core workflows' },
-      { id: 'everyday', label: 'Everyday tasks' },
-      { id: 'setup', label: 'Setup & account' },
+      { id: 'core', label: 'Core Workflows' },
+      { id: 'everyday', label: 'Everyday Tasks' },
+      { id: 'setup', label: 'Setup & Account' },
     ]);
   });
 
@@ -102,7 +102,7 @@ describe('docs content model', () => {
     ];
 
     expect(sortGuides(guides).map(({ id }) => id)).toEqual(['first', 'second', 'setup']);
-    expect(docsTierLabel('everyday')).toBe('Everyday tasks');
+    expect(docsTierLabel('everyday')).toBe('Everyday Tasks');
     expect(guideHref('01-getting-started.mdx')).toBe('/docs/guides/getting-started');
   });
 
@@ -148,8 +148,8 @@ describe('docs content model', () => {
     expect(header).toContain('href="/docs"');
 
     const docsIndex = readFileSync(resolve(srcRoot, 'pages/docs/index.astro'), 'utf8');
-    expect(docsIndex).toContain('Site reporting guides');
-    expect(docsIndex).toContain('Guides and workflows');
+    expect(docsIndex).toContain('Site Reporting Guides');
+    expect(docsIndex).toContain('Guides and Workflows');
     expect(docsIndex).toContain('docs-core-grid');
     expect(docsIndex).toContain('docs-everyday-grid');
     expect(docsIndex).toContain('docs-setup-links');

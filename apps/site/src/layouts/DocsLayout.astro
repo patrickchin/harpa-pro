@@ -22,13 +22,13 @@ const { title, description, guides, currentSlug, currentTitle } = Astro.props;
     <Header />
     <div class="docs-shell">
       <details class="docs-mobile-nav">
-        <summary>Browse site reporting guides</summary>
+        <summary>Browse Site Reporting Guides</summary>
         <DocsSidebar guides={guides} currentSlug={currentSlug} />
       </details>
 
       <div class="docs-columns">
         <aside class="docs-desktop-nav">
-          <a class="docs-home-link" href="/docs">Site reporting guides</a>
+          <a class="docs-home-link" href="/docs">Site Reporting Guides</a>
           <DocsSidebar guides={guides} currentSlug={currentSlug} />
         </aside>
 
@@ -36,7 +36,7 @@ const { title, description, guides, currentSlug, currentTitle } = Astro.props;
           <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
             <a href="/">Home</a>
             <span aria-hidden="true">/</span>
-            <a href="/app">Site reporting</a>
+            <a href="/app">Site Reporting</a>
             <span aria-hidden="true">/</span>
             {
               currentTitle ? (

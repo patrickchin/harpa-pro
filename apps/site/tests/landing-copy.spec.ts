@@ -140,18 +140,27 @@ test("uses the complete procurement page as home without a reporting promotion",
   expect(mobileOverflow).toBe(0);
 });
 
-test("keeps the hero dominant and the procurement portraits responsive", async ({ page }) => {
+test("keeps the procurement profiles compact and responsive", async ({ page }) => {
   for (const width of [390, 768, 1024, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
 
-    const [heroBox, overflow] = await Promise.all([
+    const profileGroup = page.locator("[data-procurement-profiles]");
+    const harunaProfile = page.locator('[data-procurement-profile="haruna"]');
+    const hashyProfile = page.locator('[data-procurement-profile="hashy"]');
+    const [heroBox, groupBox, harunaBox, hashyBox, overflow] = await Promise.all([
       page.locator("[data-hero-visual]").boundingBox(),
+      profileGroup.boundingBox(),
+      harunaProfile.boundingBox(),
+      hashyProfile.boundingBox(),
       page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       ),
     ]);
     expect(heroBox).not.toBeNull();
+    expect(groupBox).not.toBeNull();
+    expect(harunaBox).not.toBeNull();
+    expect(hashyBox).not.toBeNull();
     expect(overflow).toBeLessThanOrEqual(1);
 
     for (const profileName of ["haruna", "hashy"]) {
@@ -165,14 +174,19 @@ test("keeps the hero dominant and the procurement portraits responsive", async (
       expect(heroBox!.width * heroBox!.height).toBeGreaterThan(
         portraitBox!.width * portraitBox!.height,
       );
-      expect(heroBox!.height).toBeGreaterThan(portraitBox!.height);
+      expect(portraitBox!.height).toBeLessThanOrEqual(146);
+      expect(Math.abs(portraitBox!.width - portraitBox!.height)).toBeLessThanOrEqual(1);
+      expect(portraitBox!.x).toBeLessThan(bioBox!.x);
+      expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
+    }
 
-      if (width >= 768) {
-        expect(portraitBox!.x).toBeLessThan(bioBox!.x);
-        expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
-      } else {
-        expect(portraitBox!.y).toBeLessThan(bioBox!.y);
-      }
+    if (width >= 1024) {
+      expect(harunaBox!.x).toBeLessThan(hashyBox!.x);
+      expect(Math.abs(harunaBox!.y - hashyBox!.y)).toBeLessThanOrEqual(1);
+      expect(harunaBox!.width).toBeLessThan(groupBox!.width * 0.5);
+      expect(hashyBox!.width).toBeLessThan(groupBox!.width * 0.5);
+    } else {
+      expect(harunaBox!.y).toBeLessThan(hashyBox!.y);
     }
 
     if (width < 768) {

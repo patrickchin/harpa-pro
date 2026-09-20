@@ -63,140 +63,150 @@ import harunaImg from "../assets/team/haruna.jpg";
       </section>
 
       <Section id="agent" tone="paper-2" bordered="top">
-        <Container padding="lg" data-procurement-profiles class="grid gap-8">
+        <Container padding="lg" data-procurement-profiles class="grid gap-6 lg:grid-cols-2">
           <article
             data-procurement-profile="haruna"
-            class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm md:grid-cols-[minmax(14rem,0.72fr)_minmax(0,1.28fr)] lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
+            class="rounded-2xl border border-hairline bg-card p-5 shadow-sm sm:p-6"
           >
-            <figure data-profile-portrait class="h-[22rem] bg-primary sm:h-[26rem] md:h-auto md:min-h-[34rem]">
-              <Image
-                src={harunaImg}
-                alt="Haruna Bayoh"
-                widths={[480, 720, 960]}
-                sizes="(min-width: 64rem) 35vw, (min-width: 48rem) 38vw, calc(100vw - 3rem)"
-                format="webp"
-                quality={90}
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover object-top md:object-[35%_top] lg:object-top"
-              />
-            </figure>
-
-            <div data-profile-bio class="min-w-0 p-7 sm:p-10 lg:p-12">
-              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                Procurement Lead
-              </h2>
-              <p class="mt-5 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
-                Haruna Bayoh is Harpa Pro's procurement lead in China. He receives
-                the project brief, coordinates technical approvals, records quality
-                standards and inspections, controls the order, and keeps the project
-                files complete.
-              </p>
-              <a
-                href="https://www.linkedin.com/in/harunabayoh/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary ring-focus"
+            <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-5">
+              <figure
+                data-profile-portrait
+                class="h-28 w-28 overflow-hidden rounded-xl bg-primary sm:h-36 sm:w-36"
               >
-                LinkedIn profile <Icon name="external-link" class="h-4 w-4" />
-              </a>
+                <Image
+                  src={harunaImg}
+                  alt="Haruna Bayoh"
+                  widths={[224, 288, 432]}
+                  sizes="(min-width: 40rem) 9rem, 7rem"
+                  format="webp"
+                  quality={90}
+                  loading="lazy"
+                  decoding="async"
+                  class="h-full w-full object-cover object-[center_24%]"
+                />
+              </figure>
 
-              <dl class="mt-8 grid gap-4 border-y border-hairline py-5 text-sm sm:grid-cols-3">
-                <div>
-                  <dt class="text-ink-soft">Discipline</dt>
-                  <dd class="mt-1 font-medium text-ink">Architecture and materials</dd>
-                </div>
-                <div>
-                  <dt class="text-ink-soft">Education</dt>
-                  <dd class="mt-1 font-medium text-ink">Master's degree</dd>
-                </div>
-                <div>
-                  <dt class="text-ink-soft">Experience</dt>
-                  <dd class="mt-1 font-medium text-ink">6 years</dd>
-                </div>
-              </dl>
-
-              <dl class="mt-8 grid gap-x-6 gap-y-5 sm:grid-cols-2">
-                <div>
-                  <dt class="text-sm font-semibold text-ink">Technical coordination</dt>
-                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Drawings, dimensions, finishes, and approval records.
-                  </dd>
-                </div>
-                <div>
-                  <dt class="text-sm font-semibold text-ink">Order control</dt>
-                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Quantities, approvals, inspections, and order checks.
-                  </dd>
-                </div>
-                <div>
-                  <dt class="text-sm font-semibold text-ink">Document record</dt>
-                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Product data, certificates, approvals, and project files.
-                  </dd>
-                </div>
-              </dl>
+              <div data-profile-bio class="min-w-0">
+                <h2 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+                  Procurement Lead
+                </h2>
+                <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                  Haruna Bayoh is Harpa Pro's procurement lead in China. He receives
+                  the project brief, coordinates technical approvals, records quality
+                  standards and inspections, controls the order, and keeps the project
+                  files complete.
+                </p>
+                <a
+                  href="https://www.linkedin.com/in/harunabayoh/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary ring-focus"
+                >
+                  LinkedIn profile <Icon name="external-link" class="h-4 w-4" />
+                </a>
+              </div>
             </div>
+
+            <dl class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm">
+              <div>
+                <dt class="text-ink-soft">Discipline</dt>
+                <dd class="mt-1 font-medium text-ink">Architecture and materials</dd>
+              </div>
+              <div>
+                <dt class="text-ink-soft">Education</dt>
+                <dd class="mt-1 font-medium text-ink">Master's degree</dd>
+              </div>
+              <div>
+                <dt class="text-ink-soft">Experience</dt>
+                <dd class="mt-1 font-medium text-ink">6 years</dd>
+              </div>
+            </dl>
+
+            <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
+              <div>
+                <dt class="text-sm font-semibold text-ink">Technical coordination</dt>
+                <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Drawings, dimensions, finishes, and approval records.
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-semibold text-ink">Order control</dt>
+                <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Quantities, approvals, inspections, and order checks.
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-semibold text-ink">Document record</dt>
+                <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Product data, certificates, approvals, and project files.
+                </dd>
+              </div>
+            </dl>
           </article>
 
           <article
             data-procurement-profile="hashy"
-            class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm md:grid-cols-[minmax(14rem,0.72fr)_minmax(0,1.28fr)] lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
+            class="rounded-2xl border border-hairline bg-card p-5 shadow-sm sm:p-6"
           >
-            <figure data-profile-portrait class="h-[22rem] bg-primary sm:h-[26rem] md:h-auto md:min-h-[28rem]">
-              <Image
-                src={hashyImg}
-                alt="Hashy"
-                widths={[480, 720, 960]}
-                sizes="(min-width: 64rem) 35vw, (min-width: 48rem) 38vw, calc(100vw - 3rem)"
-                format="webp"
-                quality={90}
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover object-center"
-              />
-            </figure>
+            <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-5">
+              <figure
+                data-profile-portrait
+                class="h-28 w-28 overflow-hidden rounded-xl bg-primary sm:h-36 sm:w-36"
+              >
+                <Image
+                  src={hashyImg}
+                  alt="Hashy"
+                  widths={[224, 288, 432]}
+                  sizes="(min-width: 40rem) 9rem, 7rem"
+                  format="webp"
+                  quality={90}
+                  loading="lazy"
+                  decoding="async"
+                  class="h-full w-full object-cover object-center"
+                />
+              </figure>
 
-            <div data-profile-bio class="min-w-0 p-7 sm:p-10 lg:p-12">
-              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                Procurement Specialist
-              </h2>
-              <p class="mt-5 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
-                Hashy is Harpa Pro's procurement specialist for factory coordination
-                and shipping logistics.
-              </p>
-
-              <dl class="mt-8 grid gap-4 border-y border-hairline py-5 text-sm sm:grid-cols-3">
-                <div>
-                  <dt class="text-ink-soft">Discipline</dt>
-                  <dd class="mt-1 font-medium text-ink">Procurement &amp; Logistics</dd>
-                </div>
-                <div>
-                  <dt class="text-ink-soft">Education</dt>
-                  <dd class="mt-1 font-medium text-ink">Bachelor's degree</dd>
-                </div>
-                <div>
-                  <dt class="text-ink-soft">Experience</dt>
-                  <dd class="mt-1 font-medium text-ink">4 years</dd>
-                </div>
-              </dl>
-
-              <dl class="mt-8 grid gap-x-6 gap-y-5 sm:grid-cols-2">
-                <div>
-                  <dt class="text-sm font-semibold text-ink">Factory coordination</dt>
-                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Capability, samples, quotations, and production questions.
-                  </dd>
-                </div>
-                <div>
-                  <dt class="text-sm font-semibold text-ink">Shipping logistics</dt>
-                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Packing, freight documents, shipment coordination, and delivery
-                    records.
-                  </dd>
-                </div>
-              </dl>
+              <div data-profile-bio class="min-w-0">
+                <h2 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+                  Procurement Specialist
+                </h2>
+                <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                  Hashy is Harpa Pro's procurement specialist for factory coordination
+                  and shipping logistics.
+                </p>
+              </div>
             </div>
+
+            <dl class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm">
+              <div>
+                <dt class="text-ink-soft">Discipline</dt>
+                <dd class="mt-1 font-medium text-ink">Procurement &amp; Logistics</dd>
+              </div>
+              <div>
+                <dt class="text-ink-soft">Education</dt>
+                <dd class="mt-1 font-medium text-ink">Bachelor's degree</dd>
+              </div>
+              <div>
+                <dt class="text-ink-soft">Experience</dt>
+                <dd class="mt-1 font-medium text-ink">4 years</dd>
+              </div>
+            </dl>
+
+            <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
+              <div>
+                <dt class="text-sm font-semibold text-ink">Factory coordination</dt>
+                <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Capability, samples, quotations, and production questions.
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-semibold text-ink">Shipping logistics</dt>
+                <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Packing, freight documents, shipment coordination, and delivery
+                  records.
+                </dd>
+              </div>
+            </dl>
           </article>
         </Container>
       </Section>

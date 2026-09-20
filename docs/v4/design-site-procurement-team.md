@@ -4,10 +4,9 @@ Status: implemented.
 
 ## Context
 
-The procurement home page currently presents Haruna Bayoh as the only
-procurement profile. Hashy is joining the public team presentation as a
-procurement specialist with four years of experience in procurement and
-logistics.
+The procurement home page presents Haruna Bayoh and Hashy in large, full-width
+profile cards. The profiles contain the right information but occupy too much
+vertical space.
 
 This change supersedes the single-profile constraints in
 [`design-site-agents-page.md`](design-site-agents-page.md) while preserving the
@@ -15,10 +14,15 @@ rest of that page specification.
 
 ## Decision
 
-Keep the existing `#agent` section and place two full-width profile cards in a
-single vertical flow. Haruna remains **Procurement Lead** and keeps his
-credentials, portrait treatment, and LinkedIn link. His responsibilities are
-technical coordination, order control, and document records.
+Keep the existing `#agent` section and use two compact profile cards. Stack the
+cards below the large breakpoint and place them side by side from the large
+breakpoint upward. Within each card, place a moderately sized square portrait
+beside the name and summary, followed by credentials and responsibilities.
+Reduce heading, padding, and vertical spacing without removing content.
+
+Haruna remains **Procurement Lead** and keeps his credentials, portrait
+treatment, and LinkedIn link. His responsibilities are technical coordination,
+order control, and document records.
 
 Add Hashy as **Procurement Specialist** using the supplied portrait. Show the
 provided facts exactly:
@@ -37,9 +41,8 @@ list exclude factory coordination and shipping logistics; Hashy's profile
 shows those two responsibilities.
 
 Keep the profiles as individual role-led articles rather than a comparison or
-selection interface. On narrow screens, each portrait stays above its profile
-copy. From the medium breakpoint upward, each portrait sits to the left of its
-copy. The procurement hero remains visually larger than either portrait.
+selection interface. The procurement hero remains visually larger than either
+portrait.
 
 The shared contact section remains immediately after the profile group. Its
 published email address and WhatsApp details do not change.
@@ -64,8 +67,9 @@ Browser and source coverage must verify that:
 - Haruna owns technical coordination, order control, and document records,
   without duplicating Hashy's responsibilities;
 - no unsupported Hashy details are introduced;
-- each profile stacks on phones and uses portrait-left layout from the medium
+- the cards stack below the large breakpoint and sit side by side from the large
   breakpoint upward;
+- each portrait is a bounded square thumbnail beside the profile identity;
 - the hero remains larger than either portrait;
 - the page has no horizontal overflow at supported viewport widths;
 - the contact section still follows the profile group.

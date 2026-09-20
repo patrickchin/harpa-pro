@@ -173,8 +173,13 @@ test('presents Haruna and procurement considerations with matching evidence', as
 
   const profiles = page.locator('[data-single-agent-profile]');
   await expect(profiles).toHaveCount(1);
+  await expect(
+    profiles.getByRole('heading', { level: 2, name: 'Procurement Lead' }),
+  ).toBeVisible();
   await expect(profiles).toContainText('Haruna Bayoh');
-  await expect(profiles).toContainText("Haruna is Harpa Pro's procurement lead in China.");
+  await expect(profiles).toContainText(
+    "Haruna Bayoh is Harpa Pro's procurement lead in China.",
+  );
   await expect(profiles).toContainText("Master's degree");
   await expect(profiles).toContainText('6 years');
   await expect(profiles).toContainText('Technical coordination');
@@ -407,6 +412,54 @@ test('opens evidence images in an accessible dialog without leaving the page', a
 
   await expect(page.locator('[data-technical-review] > a')).toHaveCount(0);
   await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
+});
+
+test('shows a cached preview while the full evidence image loads', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/#evidence');
+
+  const trigger = page.getByRole('button', {
+    name: 'Open full view of Revit A104 coordination review',
+  });
+  const thumbnail = trigger.getByRole('img');
+  await thumbnail.scrollIntoViewIfNeeded();
+  await thumbnail.evaluate((image) => (image as HTMLImageElement).decode());
+
+  const previewSource = await thumbnail.evaluate(
+    (image) => (image as HTMLImageElement).currentSrc,
+  );
+  const source = await trigger.getAttribute('data-evidence-image-src');
+  expect(source).not.toBeNull();
+  const fullSource = new URL(source!, page.url()).href;
+  expect(previewSource).not.toBe(fullSource);
+
+  let releaseFullImage!: () => void;
+  const fullImageGate = new Promise<void>((resolve) => {
+    releaseFullImage = resolve;
+  });
+  await page.route(fullSource, async (route) => {
+    await fullImageGate;
+    await route.continue();
+  });
+
+  await trigger.click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Full view: Revit A104 coordination review',
+  });
+  const dialogImage = dialog.getByRole('img');
+  const imageRegion = dialog.locator('[data-evidence-image-dialog-region]');
+
+  try {
+    await expect(dialogImage).toHaveJSProperty('currentSrc', previewSource);
+    await expect(dialogImage).toHaveAttribute('data-evidence-image-state', 'preview');
+    await expect(imageRegion).toHaveAttribute('aria-busy', 'true');
+  } finally {
+    releaseFullImage();
+  }
+
+  await expect(dialogImage).toHaveJSProperty('currentSrc', fullSource);
+  await expect(dialogImage).toHaveAttribute('data-evidence-image-state', 'full');
+  await expect(imageRegion).toHaveAttribute('aria-busy', 'false');
 });
 
 test('shows compact factory examples and progressively discloses document previews', async ({

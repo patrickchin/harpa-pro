@@ -40,6 +40,11 @@ footer uses the same product order.
 The root page uses formal service labels. It contains one profile for Haruna
 and no selection or comparison language. `/procurement` redirects to `/`.
 
+The profile heading names the role, **Procurement Lead**, rather than repeating
+Haruna's name. The biography identifies him directly. Place the contact section
+immediately after the profile so the next action follows the person responsible
+for the service; keep the existing `#contact` anchor for shared navigation.
+
 Shared navigation, service descriptions, contact prompts, page metadata, and
 demo content use a collective Harpa Pro voice. Personal names remain inside
 profile content. The published email address stays `haruna@harpapro.com`.
@@ -172,6 +177,7 @@ Browser coverage verifies:
 - mouse and keyboard input change the selected consideration;
 - the interface contains no numbered stage or step language;
 - the page contains one Haruna profile and no agent-choice language;
+- the profile is titled **Procurement Lead** and contact follows it immediately;
 - service copy outside profiles uses "we," "our," and "contact us;"
 - Revit sheets and factory product submissions are visible;
 - factory partners include their product scope and source links;

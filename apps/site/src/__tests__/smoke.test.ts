@@ -114,7 +114,7 @@ describe('site smoke', () => {
     expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('https://wa.me/861937283726');
     expect(home).toContain('data-single-agent-profile');
-    expect(home).toContain("Haruna is Harpa Pro's procurement lead in China.");
+    expect(home).toContain("Haruna Bayoh is Harpa Pro's procurement lead in China.");
     expect(evidence).toContain('Technical reviews');
     expect(evidence).toContain('AIS Smarti');
     expect(evidence).toContain('J2S');

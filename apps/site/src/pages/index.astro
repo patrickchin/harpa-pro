@@ -32,8 +32,7 @@ import harunaImg from "../assets/team/haruna.jpg";
               sizes="(min-width: 80rem) 80rem, calc(100vw - 3rem)"
               format="webp"
               quality={84}
-              loading="eager"
-              decoding="async"
+              priority
               class="absolute inset-0 h-full w-full object-cover"
             />
             <div
@@ -83,10 +82,10 @@ import harunaImg from "../assets/team/haruna.jpg";
 
             <div class="min-w-0 p-7 sm:p-10 lg:p-12">
               <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                Haruna Bayoh
+                Procurement Lead
               </h2>
               <p class="mt-5 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
-                Haruna is Harpa Pro's procurement lead in China. He receives
+                Haruna Bayoh is Harpa Pro's procurement lead in China. He receives
                 the project brief, works with the factories, records approvals
                 and inspections, and keeps the order files complete.
               </p>
@@ -142,22 +141,6 @@ import harunaImg from "../assets/team/haruna.jpg";
               </dl>
             </div>
           </article>
-        </Container>
-      </Section>
-
-      <Section id="considerations" bordered="top" class="scroll-mt-16 bg-background">
-        <Container padding="lg">
-          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            What we consider
-          </h2>
-
-          <ProcurementConsiderations />
-        </Container>
-      </Section>
-
-      <Section id="evidence" tone="paper-2" bordered="top">
-        <Container padding="lg">
-          <ProcurementEvidence />
         </Container>
       </Section>
 
@@ -233,6 +216,22 @@ import harunaImg from "../assets/team/haruna.jpg";
               </div>
             </dl>
           </div>
+        </Container>
+      </Section>
+
+      <Section id="considerations" tone="paper-2" bordered="top" class="scroll-mt-16">
+        <Container padding="lg">
+          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            What we consider
+          </h2>
+
+          <ProcurementConsiderations />
+        </Container>
+      </Section>
+
+      <Section id="evidence" bordered="top" class="bg-background">
+        <Container padding="lg">
+          <ProcurementEvidence />
         </Container>
       </Section>
     </main>

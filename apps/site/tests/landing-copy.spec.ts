@@ -22,6 +22,12 @@ test("uses the complete procurement page as home without a reporting promotion",
   await expect(page.locator("#considerations")).toBeVisible();
   await expect(page.locator("#evidence")).toBeVisible();
   await expect(page.locator("#contact")).toBeVisible();
+  await expect(
+    page.locator("[data-single-agent-profile]").getByRole("heading", {
+      level: 2,
+      name: "Procurement Lead",
+    }),
+  ).toBeVisible();
   await expect(page.getByText("Construction site reporting", { exact: true })).toHaveCount(0);
   await expect(page.locator("#app")).toHaveCount(0);
   await expect(page.locator(`main a[href="${APP_STORE_URL}"]`)).toHaveCount(0);
@@ -84,11 +90,18 @@ test("uses the complete procurement page as home without a reporting promotion",
   });
   expect(divider.heroBottom + divider.agentTop).toBeLessThanOrEqual(1);
 
-  const sectionBackgrounds = await page.evaluate(() =>
-    ["top", "agent", "considerations", "evidence", "contact"].map((id) =>
-      getComputedStyle(document.getElementById(id)!).backgroundColor,
-    ),
-  );
+  const { sectionIds, sectionBackgrounds } = await page.evaluate(() => {
+    const sections = Array.from(
+      document.querySelectorAll<HTMLElement>("main > section"),
+    );
+    return {
+      sectionIds: sections.map((section) => section.id),
+      sectionBackgrounds: sections.map(
+        (section) => getComputedStyle(section).backgroundColor,
+      ),
+    };
+  });
+  expect(sectionIds).toEqual(["top", "agent", "contact", "considerations", "evidence"]);
   for (let index = 1; index < sectionBackgrounds.length; index += 1) {
     expect(sectionBackgrounds[index]).not.toBe(sectionBackgrounds[index - 1]);
   }

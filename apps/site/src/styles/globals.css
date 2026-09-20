@@ -1000,12 +1000,26 @@
 
   .evidence-image-dialog-region img {
     display: block;
+    filter: none;
     height: auto;
     margin: 0 auto;
     max-height: calc(100dvh - 8rem);
     max-width: 100%;
     object-fit: contain;
+    opacity: 1;
+    transition: filter 160ms ease, opacity 160ms ease;
     width: auto;
+  }
+
+  .evidence-image-dialog-region img[data-evidence-image-state='preview'] {
+    filter: blur(6px);
+    opacity: 0.88;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .evidence-image-dialog-region img {
+      transition: none;
+    }
   }
 
   .evidence-image-dialog-panel figcaption {

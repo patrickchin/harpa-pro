@@ -144,14 +144,16 @@ Show the report number and issue date where available. Do not state that a
 document is current unless the document proves it. Mark the J2S European
 representative appointment as expired on 15 July 2026.
 
-Keep this notice beside the records: `Factory-supplied document. Harpa Pro has
-not independently verified its current status or scope.`
+Do not show a separate source-status notice below the section introduction.
 
 ## Technical reviews
 
 Keep the two Revit review sheets. They show how Harpa Pro reviews drawings and
 factory information. Remove the old lighting product sheets from this section.
 The user will replace the extracted Revit images with original files later.
+Do not add introductory copy below the section heading. Describe the A104 review
+as checking layout, finishes, and sizes before approval, and the A103 review as
+reviewing drawings before production.
 
 ## Validation
 

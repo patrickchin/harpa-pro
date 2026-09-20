@@ -48,6 +48,8 @@ for the service; keep the existing `#contact` anchor for shared navigation.
 Shared navigation, service descriptions, contact prompts, page metadata, and
 demo content use a collective Harpa Pro voice. Personal names remain inside
 profile content. The published email address stays `haruna@harpapro.com`.
+The home-page title leads with the product name: **Harpa Pro — Interior
+procurement in China**.
 
 On large screens, the procurement hero is slightly taller than the Haruna
 profile section. The boundary between them uses one hairline, not borders on

@@ -386,7 +386,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
     }),
   ).toBeVisible();
   const drawingCaption = drawingDialog.getByText(
-    'We use three-dimensional room views to check the layout, finishes, and interfaces before we approve the factory information.',
+    'We check the layout, finishes, and sizes before we approve the factory information.',
     { exact: true },
   );
   await expect(drawingCaption).toBeVisible();
@@ -520,7 +520,15 @@ test('shows compact factory examples and progressively discloses document previe
   await expect(
     page.getByRole('img', { name: 'Revit A103 chair shop drawing review sheet' }),
   ).toBeVisible();
-  await expect(page.locator('[data-technical-review]')).toHaveCount(2);
+  const technicalReviews = page.locator('[data-technical-review]');
+  await expect(technicalReviews).toHaveCount(2);
+  await expect(technicalReviews.nth(0)).toContainText(
+    'We check the layout, finishes, and sizes before we approve the factory information.',
+  );
+  await expect(technicalReviews.nth(1)).toContainText(
+    'We review the drawings before production.',
+  );
+  await expect(page.getByText(/These sheets record design coordination/)).toHaveCount(0);
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
@@ -624,7 +632,7 @@ test('shows compact factory examples and progressively discloses document previe
       'Factory-supplied document. Harpa Pro has not independently verified its current status or scope.',
       { exact: true },
     ),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   const expiredRecord = page.locator('[data-credential-status="expired"]');
   await expect(expiredRecord).toHaveCount(1);

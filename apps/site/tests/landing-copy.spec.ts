@@ -23,14 +23,23 @@ test("uses the complete procurement page as home without a reporting promotion",
   await expect(page.locator("#evidence")).toBeVisible();
   await expect(page.locator("#contact")).toBeVisible();
   await expect(
-    page.locator("[data-single-agent-profile]").getByRole("heading", {
+    page.locator('[data-procurement-profile="haruna"]').getByRole("heading", {
       level: 2,
       name: "Procurement Lead",
     }),
   ).toBeVisible();
-  await expect(page.locator("[data-single-agent-profile]")).toContainText(
-    "Haruna Bayoh is Harpa Pro's procurement lead in China. He receives the project brief, works with the factories, records and approve quality standards and inspections, manage shipping logistics, and keep the order files complete.",
+  await expect(page.locator('[data-procurement-profile="haruna"]')).toContainText(
+    "Haruna Bayoh is Harpa Pro's procurement lead in China. He receives the project brief, coordinates technical approvals, records quality standards and inspections, controls the order, and keeps the project files complete.",
   );
+  const hashyProfile = page.locator('[data-procurement-profile="hashy"]');
+  await expect(
+    hashyProfile.getByRole("heading", { level: 2, name: "Procurement Specialist" }),
+  ).toBeVisible();
+  await expect(hashyProfile).toContainText("Procurement & Logistics");
+  await expect(hashyProfile).toContainText("Bachelor's degree");
+  await expect(hashyProfile).toContainText("4 years");
+  await expect(hashyProfile).toContainText("Factory coordination");
+  await expect(hashyProfile).toContainText("Shipping logistics");
   await expect(page.getByText("Construction site reporting", { exact: true })).toHaveCount(0);
   await expect(page.locator("#app")).toHaveCount(0);
   await expect(page.locator(`main a[href="${APP_STORE_URL}"]`)).toHaveCount(0);
@@ -131,56 +140,62 @@ test("uses the complete procurement page as home without a reporting promotion",
   expect(mobileOverflow).toBe(0);
 });
 
-test("keeps the hero dominant and the procurement portrait responsive", async ({
-  page,
-}) => {
+test("keeps the hero dominant and the procurement portraits responsive", async ({ page }) => {
   for (const width of [390, 768, 1024, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
 
-    const [heroBox, portraitBox, bioBox, overflow] = await Promise.all([
+    const [heroBox, overflow] = await Promise.all([
       page.locator("[data-hero-visual]").boundingBox(),
-      page.locator("[data-agent-portrait]").boundingBox(),
-      page.locator("[data-agent-bio]").boundingBox(),
       page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       ),
     ]);
     expect(heroBox).not.toBeNull();
-    expect(portraitBox).not.toBeNull();
-    expect(bioBox).not.toBeNull();
     expect(overflow).toBeLessThanOrEqual(1);
-    expect(heroBox!.width * heroBox!.height).toBeGreaterThan(
-      portraitBox!.width * portraitBox!.height,
-    );
-    expect(heroBox!.height).toBeGreaterThan(portraitBox!.height);
 
-    if (width >= 768) {
-      expect(portraitBox!.x).toBeLessThan(bioBox!.x);
-      expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
-    } else {
-      expect(portraitBox!.y).toBeLessThan(bioBox!.y);
+    for (const profileName of ["haruna", "hashy"]) {
+      const profile = page.locator(`[data-procurement-profile="${profileName}"]`);
+      const [portraitBox, bioBox] = await Promise.all([
+        profile.locator("[data-profile-portrait]").boundingBox(),
+        profile.locator("[data-profile-bio]").boundingBox(),
+      ]);
+      expect(portraitBox).not.toBeNull();
+      expect(bioBox).not.toBeNull();
+      expect(heroBox!.width * heroBox!.height).toBeGreaterThan(
+        portraitBox!.width * portraitBox!.height,
+      );
+      expect(heroBox!.height).toBeGreaterThan(portraitBox!.height);
+
+      if (width >= 768) {
+        expect(portraitBox!.x).toBeLessThan(bioBox!.x);
+        expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
+      } else {
+        expect(portraitBox!.y).toBeLessThan(bioBox!.y);
+      }
+    }
+
+    if (width < 768) {
       expect(Math.abs(heroBox!.width - width)).toBeLessThanOrEqual(1);
     }
   }
 });
 
-test("uses collective service copy and keeps Haruna's name in profiles", async ({
-  page,
-}) => {
+test("uses collective service copy and keeps team names in profiles", async ({ page }) => {
   await page.goto("/");
 
-  const profile = page.locator("[data-single-agent-profile]");
-  await expect(profile).toContainText("Haruna Bayoh");
+  const profiles = page.locator("[data-procurement-profiles]");
+  await expect(profiles).toContainText("Haruna Bayoh");
+  await expect(profiles).toContainText("Hashy");
 
   const nonProfileText = await page.locator("body").evaluate((body) => {
     const copy = body.cloneNode(true) as HTMLElement;
-    copy.querySelector("[data-single-agent-profile]")?.remove();
+    copy.querySelector("[data-procurement-profiles]")?.remove();
     copy.querySelectorAll("script, style").forEach((element) => element.remove());
     return (copy.textContent ?? "").replace(/haruna@harpapro\.com/gi, "");
   });
 
-  expect(nonProfileText).not.toMatch(/\bharuna(?: bayoh)?\b/i);
+  expect(nonProfileText).not.toMatch(/\b(?:haruna(?: bayoh)?|hashy)\b/i);
   await expect(page.getByRole("link", { name: /haruna/i })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 2, name: "Contact us" })).toBeVisible();
 

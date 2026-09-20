@@ -97,7 +97,9 @@ const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
 const FIRST_CREDENTIAL_DESCRIPTION =
   'The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.';
 
-test('presents Haruna and procurement considerations with matching evidence', async ({ page }) => {
+test('presents the procurement team and considerations with matching evidence', async ({
+  page,
+}) => {
   await page.goto('/');
 
   await expect(
@@ -171,29 +173,46 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(considerationSection).not.toContainText(/\bstage\b|\bstep\b/i);
   await expect(considerationSection.locator('ol')).toHaveCount(0);
 
-  const profiles = page.locator('[data-single-agent-profile]');
-  await expect(profiles).toHaveCount(1);
+  const profiles = page.locator('[data-procurement-profile]');
+  const harunaProfile = page.locator('[data-procurement-profile="haruna"]');
+  const hashyProfile = page.locator('[data-procurement-profile="hashy"]');
+  await expect(profiles).toHaveCount(2);
   await expect(
-    profiles.getByRole('heading', { level: 2, name: 'Procurement Lead' }),
+    harunaProfile.getByRole('heading', { level: 2, name: 'Procurement Lead' }),
   ).toBeVisible();
-  await expect(profiles).toContainText('Haruna Bayoh');
-  await expect(profiles).toContainText(
-    "Haruna Bayoh is Harpa Pro's procurement lead in China. He receives the project brief, works with the factories, records and approve quality standards and inspections, manage shipping logistics, and keep the order files complete.",
+  await expect(harunaProfile).toContainText('Haruna Bayoh');
+  await expect(harunaProfile).toContainText(
+    "Haruna Bayoh is Harpa Pro's procurement lead in China. He receives the project brief, coordinates technical approvals, records quality standards and inspections, controls the order, and keeps the project files complete.",
   );
-  await expect(profiles).toContainText("Master's degree");
-  await expect(profiles).toContainText('6 years');
-  await expect(profiles).toContainText('Technical coordination');
-  await expect(profiles).toContainText('Factory coordination');
-  await expect(profiles).toContainText('Order control');
-  await expect(profiles).toContainText('Document record');
-  await expect(profiles.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
+  await expect(harunaProfile).toContainText("Master's degree");
+  await expect(harunaProfile).toContainText('6 years');
+  await expect(harunaProfile).toContainText('Technical coordination');
+  await expect(harunaProfile).toContainText('Order control');
+  await expect(harunaProfile).toContainText('Document record');
+  await expect(harunaProfile).not.toContainText('Factory coordination');
+  await expect(harunaProfile).not.toContainText('Shipping logistics');
+  await expect(harunaProfile.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
     'href',
     'https://www.linkedin.com/in/harunabayoh/',
   );
-  await expect(profiles.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
+  await expect(harunaProfile.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
     'target',
     '_blank',
   );
+  await expect(
+    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement Specialist' }),
+  ).toBeVisible();
+  await expect(hashyProfile).toContainText('Hashy');
+  await expect(hashyProfile).toContainText(
+    "Hashy is Harpa Pro's procurement specialist for factory coordination and shipping logistics.",
+  );
+  await expect(hashyProfile).toContainText('Procurement & Logistics');
+  await expect(hashyProfile).toContainText("Bachelor's degree");
+  await expect(hashyProfile).toContainText('4 years');
+  await expect(hashyProfile).toContainText('Factory coordination');
+  await expect(hashyProfile).toContainText('Shipping logistics');
+  await expect(hashyProfile.getByRole('img', { name: 'Hashy' })).toBeVisible();
+  await expect(hashyProfile.getByRole('link')).toHaveCount(0);
   await expect(page.locator('[data-agent-card]')).toHaveCount(0);
 
   const main = page.locator('main');
@@ -226,7 +245,6 @@ test('presents Haruna and procurement considerations with matching evidence', as
     expect(level - headingLevels[index - 1]!).toBeLessThanOrEqual(1);
   }
 
-  await expect(page.getByText('Hashy', { exact: true })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/choose (an|your) agent|select your agent/i);
   await expect(page.getByText('Meet Haruna.', { exact: true })).toHaveCount(0);
   await expect(page.getByText('This is your agent.', { exact: true })).toHaveCount(0);

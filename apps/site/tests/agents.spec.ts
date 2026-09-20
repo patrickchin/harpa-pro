@@ -641,6 +641,14 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   const siteReportingSummary = siteReportingMenu.locator('summary');
 
   await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(3);
+  const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
+  await expect(desktopItemIcons).toHaveCount(10);
+  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(10);
+  expect(
+    await desktopItemIcons.evaluateAll(
+      (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
+    ),
+  ).toBe(10);
   expect(
     await page
       .locator('[data-site-header]')
@@ -699,6 +707,14 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(3);
+  const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
+  await expect(mobileItemIcons).toHaveCount(8);
+  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(8);
+  expect(
+    await mobileItemIcons.evaluateAll(
+      (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
+    ),
+  ).toBe(8);
   await expect(
     mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
   ).toHaveAttribute('href', '/');

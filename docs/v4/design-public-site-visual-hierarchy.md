@@ -33,6 +33,11 @@ clipboard list for site reporting, and a message bubble for contact. Keep the
 text labels so the icons remain supporting cues rather than the only source of
 meaning. Repeat the category cues in the mobile navigation.
 
+Give every destination inside the procurement and site-reporting menus its own
+small Lucide icon as well. Use the same icon-to-destination mapping in desktop
+mega-menus and the mobile menu. The visible link text remains the accessible
+name; these icons are decorative scanning cues, not replacement labels.
+
 Alternate the homepage's major sections between the base and secondary paper
 surfaces. Borders remain quiet secondary edges; the background change carries
 the section hierarchy.
@@ -55,6 +60,7 @@ Browser coverage must verify that:
 
 - the sticky header has a non-transparent background after scrolling;
 - the three primary navigation choices expose distinct decorative icons;
+- every desktop and mobile menu destination exposes a matching decorative icon;
 - adjacent homepage sections use different computed background colors;
 - the hero copy overlaps the image and sits above a visible scrim;
 - the hero image fills its visual frame;

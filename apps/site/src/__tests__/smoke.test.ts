@@ -93,7 +93,10 @@ describe('site smoke', () => {
     const footer = readFileSync(resolve(here, '../components/landing/Footer.astro'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
-    expect(home).toContain('Interior procurement in China');
+    expect(home).toContain('Luxury Interior procurement in China');
+    expect(home).toMatch(
+      /We manage design specifications, factory coordination, quality\s+checks, shipment, and complete procurement documentation\s+\(approved health, safety, and quality standards\)\./,
+    );
     expect(home).toContain('ProcurementConsiderations');
     expect(home).toContain('ProcurementEvidence');
     expect(home).toContain('id="contact"');
@@ -114,7 +117,9 @@ describe('site smoke', () => {
     expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('https://wa.me/861937283726');
     expect(home).toContain('data-single-agent-profile');
-    expect(home).toContain("Haruna Bayoh is Harpa Pro's procurement lead in China.");
+    expect(home).toMatch(
+      /records and approve\s+quality standards and inspections, manage shipping logistics, and\s+keep the order files complete\./,
+    );
     expect(evidence).toContain('Technical reviews');
     expect(evidence).toContain('AIS Smarti');
     expect(evidence).toContain('J2S');
@@ -128,6 +133,9 @@ describe('site smoke', () => {
     expect(evidence).not.toContain('Open original PDF');
     expect(evidence).toContain('Show 7 more documents');
     expect(evidence).toContain('Selected factory partners');
+    expect(evidence).toContain(
+      'We match each order with the factory that meets the design specifications',
+    );
     expect(evidence).not.toContain('Ningbo Langyao Lighting');
     expect(evidence).not.toContain('Haining Mingyuan');
     expect(evidence).not.toContain('Foshan Zhenglian / JLA');

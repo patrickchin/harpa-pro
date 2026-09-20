@@ -11,10 +11,10 @@ test("uses the complete procurement page as home without a reporting promotion",
 
   const hero = page.locator("main > section").first();
   const heroHeading = hero.locator("h1");
-  await expect(heroHeading).toHaveText("Interior procurement in China");
+  await expect(heroHeading).toHaveText("Luxury Interior procurement in China");
   await expect(
     hero.getByText(
-      "We manage specifications, factory coordination, quality checks, shipping records, and approvals from China.",
+      "We manage design specifications, factory coordination, quality checks, shipment, and complete procurement documentation (approved health, safety, and quality standards).",
       { exact: false },
     ),
   ).toBeVisible();
@@ -28,6 +28,9 @@ test("uses the complete procurement page as home without a reporting promotion",
       name: "Procurement Lead",
     }),
   ).toBeVisible();
+  await expect(page.locator("[data-single-agent-profile]")).toContainText(
+    "Haruna Bayoh is Harpa Pro's procurement lead in China. He receives the project brief, works with the factories, records and approve quality standards and inspections, manage shipping logistics, and keep the order files complete.",
+  );
   await expect(page.getByText("Construction site reporting", { exact: true })).toHaveCount(0);
   await expect(page.locator("#app")).toHaveCount(0);
   await expect(page.locator(`main a[href="${APP_STORE_URL}"]`)).toHaveCount(0);

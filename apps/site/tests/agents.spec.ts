@@ -103,7 +103,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Interior procurement in China',
+      name: 'Luxury Interior procurement in China',
     }),
   ).toBeVisible();
 
@@ -178,7 +178,7 @@ test('presents Haruna and procurement considerations with matching evidence', as
   ).toBeVisible();
   await expect(profiles).toContainText('Haruna Bayoh');
   await expect(profiles).toContainText(
-    "Haruna Bayoh is Harpa Pro's procurement lead in China.",
+    "Haruna Bayoh is Harpa Pro's procurement lead in China. He receives the project brief, works with the factories, records and approve quality standards and inspections, manage shipping logistics, and keep the order files complete.",
   );
   await expect(profiles).toContainText("Master's degree");
   await expect(profiles).toContainText('6 years');
@@ -528,7 +528,7 @@ test('shows compact factory examples and progressively discloses document previe
     page.getByRole('heading', { level: 2, name: 'Selected factory partners' }),
   ).toBeVisible();
   await expect(
-    page.getByText('These are selected examples, not a complete factory directory.', {
+    page.getByText('We match each order with the factory that meets the design specifications and the delivery timeline.', {
       exact: false,
     }),
   ).toBeVisible();

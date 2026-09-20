@@ -5,7 +5,7 @@ import Wordmark from "./Wordmark.astro";
 ---
 
 <header
-  class="relative sticky top-0 z-40 border-b border-hairline bg-paper-2/95 backdrop-blur"
+  class="relative sticky top-0 z-40 border-b border-border bg-paper-2 shadow-sm"
   data-site-header
 >
   <div
@@ -15,8 +15,11 @@ import Wordmark from "./Wordmark.astro";
     <nav aria-label="Primary" class="hidden items-center gap-2 md:flex">
       <details class="group static" data-mega-menu="procurement">
         <summary
-          class="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-md px-3 text-sm text-ink-soft transition-colors hover:bg-secondary hover:text-ink ring-focus [&::-webkit-details-marker]:hidden"
+          class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden"
         >
+          <span class="text-accent-ink" data-nav-icon>
+            <Icon name="package-search" class="h-4 w-4" />
+          </span>
           Procurement
           <Icon
             name="chevron-down"
@@ -93,8 +96,11 @@ import Wordmark from "./Wordmark.astro";
 
       <details class="group static" data-mega-menu="site-reporting">
         <summary
-          class="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-md px-3 text-sm text-ink-soft transition-colors hover:bg-secondary hover:text-ink ring-focus [&::-webkit-details-marker]:hidden"
+          class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden"
         >
+          <span class="text-accent-ink" data-nav-icon>
+            <Icon name="clipboard-list" class="h-4 w-4" />
+          </span>
           Site reporting
           <Icon
             name="chevron-down"
@@ -157,8 +163,11 @@ import Wordmark from "./Wordmark.astro";
 
       <a
         href="/#contact"
-        class="ml-2 inline-flex h-9 items-center rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
+        class="ml-2 inline-flex h-9 items-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
       >
+        <span data-nav-icon>
+          <Icon name="message-circle" class="h-4 w-4" />
+        </span>
         Contact us
       </a>
     </nav>
@@ -176,7 +185,10 @@ import Wordmark from "./Wordmark.astro";
       >
         <div class="mx-auto grid max-w-6xl gap-4 p-4">
           <div class="grid gap-1">
-            <p class="px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+            <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name="package-search" class="h-4 w-4" />
+              </span>
               Procurement
             </p>
             <a href="/" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
@@ -191,12 +203,18 @@ import Wordmark from "./Wordmark.astro";
             <a href="/#factory-documents" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
               Factory documents
             </a>
-            <a href="/#contact" class="rounded-md px-3 py-2 text-sm font-medium text-accent-ink hover:bg-secondary">
+            <a href="/#contact" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-accent-ink hover:bg-secondary">
+              <span data-nav-icon>
+                <Icon name="message-circle" class="h-4 w-4" />
+              </span>
               Contact us
             </a>
           </div>
           <div class="grid gap-1 border-t border-hairline pt-4" data-mobile-site-reporting>
-            <p class="px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+            <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name="clipboard-list" class="h-4 w-4" />
+              </span>
               Site reporting
             </p>
             <a href="/app" class="rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">

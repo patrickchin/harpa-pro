@@ -59,9 +59,16 @@ or a long sequence:
 - production quality;
 - packing and delivery.
 
-On large screens, the consideration names form a compact list on the left. The
-selected consideration shows a short explanation and one directly relevant
-image on the right. On small screens, the list appears above the detail panel.
+The consideration names form a prominent selector-card grid above the detail
+panel. Each card uses a subject-specific icon, a clear **View details** action,
+and a strong selected state so visitors can recognize the interaction without
+testing it first. The cards remain substantial touch targets and collapse to a
+single column on narrow screens.
+
+The selected consideration shows its title, a short explanation, and one
+directly relevant image in a wide panel below the selectors. Remove the generic
+introductory sentence below **What we consider**; the five named cards explain
+the section more directly.
 
 The control uses an accessible tab pattern and a small local script. It makes
 no network request and stores no user data. The first consideration remains
@@ -159,6 +166,8 @@ Browser coverage verifies:
 - interior procurement is the main home-page subject;
 - the app appears as a secondary section;
 - all five considerations have a short description and a matching image;
+- all five consideration selectors expose a visible detail action and a clear
+  selected state;
 - photographic frames cover their containers without embedded caption bands;
 - mouse and keyboard input change the selected consideration;
 - the interface contains no numbered stage or step language;

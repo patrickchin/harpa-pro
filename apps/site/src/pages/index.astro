@@ -19,41 +19,49 @@ import harunaImg from "../assets/team/haruna.jpg";
   <div class="min-h-screen bg-background text-ink">
     <Header />
     <main class="agents-page">
-      <section id="top">
-        <Container padding="lg">
-          <div
-            class="grid items-center gap-10 lg:min-h-[40rem] lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:gap-16"
+      <section id="top" class="bg-background">
+        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:py-12">
+          <figure
+            data-hero-visual
+            class="relative isolate min-h-[32rem] overflow-hidden rounded-2xl border border-primary/15 bg-primary shadow-lg sm:min-h-[36rem] lg:min-h-[40rem]"
           >
-            <div class="max-w-3xl">
-              <h1
-                class="text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
-              >
-                Interior procurement in China
-              </h1>
-              <p class="mt-5 max-w-2xl text-base leading-relaxed text-ink-soft sm:text-lg">
-                We manage specifications, factory coordination, quality checks,
-                shipping records, and approvals from China.
-              </p>
-            </div>
-
-            <figure class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm lg:h-[36rem]">
-              <Image
-                src={procurementInteriorImg}
-                alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
-                widths={[480, 720, 960, 1200]}
-                sizes="(min-width: 64rem) 50vw, calc(100vw - 3rem)"
-                format="webp"
-                quality={84}
-                loading="eager"
-                decoding="async"
-                class="aspect-[3/2] w-full object-cover lg:h-full lg:aspect-auto"
-              />
-            </figure>
-          </div>
-        </Container>
+            <Image
+              src={procurementInteriorImg}
+              alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
+              widths={[640, 960, 1280, 1600]}
+              sizes="(min-width: 80rem) 80rem, calc(100vw - 3rem)"
+              format="webp"
+              quality={84}
+              loading="eager"
+              decoding="async"
+              class="absolute inset-0 h-full w-full object-cover"
+            />
+            <div
+              data-hero-scrim
+              aria-hidden="true"
+              class="hero-scrim absolute inset-0"
+            ></div>
+            <figcaption
+              data-hero-copy
+              class="relative z-10 flex min-h-[32rem] items-end p-5 sm:min-h-[36rem] sm:p-8 lg:min-h-[40rem] lg:p-12"
+            >
+              <div class="max-w-6xl">
+                <h1
+                  class="text-[2rem] font-semibold leading-[1.02] tracking-tight text-primary-foreground sm:text-5xl lg:whitespace-nowrap lg:text-[3.75rem] xl:text-[4.25rem]"
+                >
+                  Interior procurement in China
+                </h1>
+                <p class="mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
+                  We manage specifications, factory coordination, quality checks,
+                  shipping records, and approvals from China.
+                </p>
+              </div>
+            </figcaption>
+          </figure>
+        </div>
       </section>
 
-      <Section id="agent" bordered="top">
+      <Section id="agent" tone="paper-2" bordered="top">
         <Container padding="lg">
           <article
             data-single-agent-profile
@@ -137,29 +145,23 @@ import harunaImg from "../assets/team/haruna.jpg";
         </Container>
       </Section>
 
-      <Section id="considerations" tone="paper-2" bordered="top">
+      <Section id="considerations" bordered="top" class="scroll-mt-16 bg-background">
         <Container padding="lg">
-          <div class="max-w-2xl">
-            <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              What we consider
-            </h2>
-            <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-              We review design, factory capability, materials, quality,
-              packing, and records as one order package.
-            </p>
-          </div>
+          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            What we consider
+          </h2>
 
           <ProcurementConsiderations />
         </Container>
       </Section>
 
-      <Section id="evidence" bordered="top">
+      <Section id="evidence" tone="paper-2" bordered="top">
         <Container padding="lg">
           <ProcurementEvidence />
         </Container>
       </Section>
 
-      <Section id="contact" tone="paper-2" bordered="top" class="scroll-mt-16">
+      <Section id="contact" bordered="top" class="scroll-mt-16 bg-background">
         <Container padding="lg">
           <div class="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(32rem,1.22fr)] lg:gap-16">
             <div class="max-w-xl">

@@ -112,14 +112,47 @@ test('presents Haruna and procurement considerations with matching evidence', as
   });
   const tabs = considerations.getByRole('tab');
   await expect(tabs).toHaveCount(CONSIDERATIONS.length);
+  await expect(considerations.locator('[data-consideration-icon]')).toHaveCount(
+    CONSIDERATIONS.length,
+  );
+  await expect(
+    page.getByText(
+      'We review design, factory capability, materials, quality, packing, and records as one order package.',
+      { exact: true },
+    ),
+  ).toHaveCount(0);
+
+  const tabHeights = await tabs.evaluateAll((elements) =>
+    elements.map((element) => element.getBoundingClientRect().height),
+  );
+  expect(tabHeights.every((height) => height >= 160)).toBe(true);
+
+  const [selectedStyle, idleStyle] = await Promise.all([
+    tabs.first().evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, border: style.borderColor };
+    }),
+    tabs.nth(1).evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, border: style.borderColor };
+    }),
+  ]);
+  expect(selectedStyle.background).not.toBe(idleStyle.background);
+  expect(selectedStyle.border).not.toBe(idleStyle.border);
+  await expect(tabs.first().getByText('Details shown', { exact: true })).toBeVisible();
+  await expect(tabs.nth(1).getByText('View details', { exact: true })).toBeVisible();
 
   for (const [index, consideration] of CONSIDERATIONS.entries()) {
     const tab = tabs.nth(index);
-    await expect(tab).toHaveText(consideration.title);
+    await expect(tab.locator('[data-consideration-title]')).toHaveText(consideration.title);
     await tab.click();
+    await expect(tab.getByText('Details shown', { exact: true })).toBeVisible();
 
     const panel = page.getByRole('tabpanel', { name: consideration.title });
     await expect(panel).toBeVisible();
+    await expect(
+      panel.getByRole('heading', { level: 3, name: consideration.title }),
+    ).toBeVisible();
     await expect(panel).toContainText(consideration.description);
     const image = panel.getByRole('img', { name: consideration.image });
     await expect(image).toBeVisible();
@@ -196,6 +229,17 @@ test('presents Haruna and procurement considerations with matching evidence', as
 test('crops embedded source captions and fills photographic frames', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#considerations');
+
+  const mobileConsiderationTabs = page.getByRole('tablist', {
+    name: 'Procurement considerations',
+  }).getByRole('tab');
+  const mobileTabBoxes = await mobileConsiderationTabs.evaluateAll((elements) =>
+    elements.map((element) => {
+      const { width, height } = element.getBoundingClientRect();
+      return { width, height };
+    }),
+  );
+  expect(mobileTabBoxes.every(({ width, height }) => width >= 320 && height >= 80)).toBe(true);
 
   await page.getByRole('tab', { name: 'Factory and product fit' }).click();
   const considerationPanel = page.getByRole('tabpanel', {
@@ -543,6 +587,13 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
   const siteReportingSummary = siteReportingMenu.locator('summary');
 
+  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(3);
+  expect(
+    await page
+      .locator('[data-site-header]')
+      .evaluate((header) => getComputedStyle(header).backgroundColor),
+  ).not.toBe('rgba(0, 0, 0, 0)');
+
   await procurementSummary.hover();
   await expect(procurementMenu).toHaveAttribute('open', '');
   await expect(
@@ -594,6 +645,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
+  await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(3);
   await expect(
     mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
   ).toHaveAttribute('href', '/');

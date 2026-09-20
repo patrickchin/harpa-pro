@@ -9,6 +9,7 @@ import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
 import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
+import hashyImg from "../assets/team/hashy.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
 ---
 
@@ -62,12 +63,12 @@ import harunaImg from "../assets/team/haruna.jpg";
       </section>
 
       <Section id="agent" tone="paper-2" bordered="top">
-        <Container padding="lg">
+        <Container padding="lg" data-procurement-profiles class="grid gap-8">
           <article
-            data-single-agent-profile
+            data-procurement-profile="haruna"
             class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm md:grid-cols-[minmax(14rem,0.72fr)_minmax(0,1.28fr)] lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
           >
-            <figure data-agent-portrait class="h-[22rem] bg-primary sm:h-[26rem] md:h-auto md:min-h-[34rem]">
+            <figure data-profile-portrait class="h-[22rem] bg-primary sm:h-[26rem] md:h-auto md:min-h-[34rem]">
               <Image
                 src={harunaImg}
                 alt="Haruna Bayoh"
@@ -81,15 +82,15 @@ import harunaImg from "../assets/team/haruna.jpg";
               />
             </figure>
 
-            <div data-agent-bio class="min-w-0 p-7 sm:p-10 lg:p-12">
+            <div data-profile-bio class="min-w-0 p-7 sm:p-10 lg:p-12">
               <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
                 Procurement Lead
               </h2>
               <p class="mt-5 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
                 Haruna Bayoh is Harpa Pro's procurement lead in China. He receives
-                the project brief, works with the factories, records and approve
-                quality standards and inspections, manage shipping logistics, and
-                keep the order files complete.
+                the project brief, coordinates technical approvals, records quality
+                standards and inspections, controls the order, and keeps the project
+                files complete.
               </p>
               <a
                 href="https://www.linkedin.com/in/harunabayoh/"
@@ -123,21 +124,75 @@ import harunaImg from "../assets/team/haruna.jpg";
                   </dd>
                 </div>
                 <div>
+                  <dt class="text-sm font-semibold text-ink">Order control</dt>
+                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                    Quantities, approvals, inspections, and order checks.
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-sm font-semibold text-ink">Document record</dt>
+                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
+                    Product data, certificates, approvals, and project files.
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+
+          <article
+            data-procurement-profile="hashy"
+            class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm md:grid-cols-[minmax(14rem,0.72fr)_minmax(0,1.28fr)] lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]"
+          >
+            <figure data-profile-portrait class="h-[22rem] bg-primary sm:h-[26rem] md:h-auto md:min-h-[28rem]">
+              <Image
+                src={hashyImg}
+                alt="Hashy"
+                widths={[480, 720, 960]}
+                sizes="(min-width: 64rem) 35vw, (min-width: 48rem) 38vw, calc(100vw - 3rem)"
+                format="webp"
+                quality={90}
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full object-cover object-center"
+              />
+            </figure>
+
+            <div data-profile-bio class="min-w-0 p-7 sm:p-10 lg:p-12">
+              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+                Procurement Specialist
+              </h2>
+              <p class="mt-5 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+                Hashy is Harpa Pro's procurement specialist for factory coordination
+                and shipping logistics.
+              </p>
+
+              <dl class="mt-8 grid gap-4 border-y border-hairline py-5 text-sm sm:grid-cols-3">
+                <div>
+                  <dt class="text-ink-soft">Discipline</dt>
+                  <dd class="mt-1 font-medium text-ink">Procurement &amp; Logistics</dd>
+                </div>
+                <div>
+                  <dt class="text-ink-soft">Education</dt>
+                  <dd class="mt-1 font-medium text-ink">Bachelor's degree</dd>
+                </div>
+                <div>
+                  <dt class="text-ink-soft">Experience</dt>
+                  <dd class="mt-1 font-medium text-ink">4 years</dd>
+                </div>
+              </dl>
+
+              <dl class="mt-8 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                <div>
                   <dt class="text-sm font-semibold text-ink">Factory coordination</dt>
                   <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                     Capability, samples, quotations, and production questions.
                   </dd>
                 </div>
                 <div>
-                  <dt class="text-sm font-semibold text-ink">Order control</dt>
+                  <dt class="text-sm font-semibold text-ink">Shipping logistics</dt>
                   <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Quantities, inspections, packing, and delivery checks.
-                  </dd>
-                </div>
-                <div>
-                  <dt class="text-sm font-semibold text-ink">Document record</dt>
-                  <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
-                    Product data, certificates, approvals, and shipping files.
+                    Packing, freight documents, shipment coordination, and delivery
+                    records.
                   </dd>
                 </div>
               </dl>

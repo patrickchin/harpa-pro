@@ -1,5 +1,8 @@
 # Factory source library and single-agent profile
 
+The single-profile requirements in this document are superseded by
+[`design-site-procurement-team.md`](design-site-procurement-team.md).
+
 Status: implemented.
 
 ## Context

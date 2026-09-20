@@ -116,10 +116,18 @@ describe('site smoke', () => {
     expect(home).toContain('Contact us');
     expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('https://wa.me/861937283726');
-    expect(home).toContain('data-single-agent-profile');
+    expect(home).toContain('data-procurement-profiles');
+    expect(home).toContain('data-procurement-profile="hashy"');
+    expect(home).toContain('Procurement Specialist');
+    expect(home).toContain('Procurement &amp; Logistics');
+    expect(home).toContain("Bachelor's degree");
+    expect(home).toContain('4 years');
+    expect(home).toContain('assets/team/hashy.jpg');
     expect(home).toMatch(
-      /records and approve\s+quality standards and inspections, manage shipping logistics, and\s+keep the order files complete\./,
+      /coordinates technical approvals, records quality\s+standards and inspections, controls the order, and keeps the project\s+files complete\./,
     );
+    expect(home.match(/Factory coordination/g)).toHaveLength(1);
+    expect(home.match(/Shipping logistics/g)).toHaveLength(1);
     expect(evidence).toContain('Technical reviews');
     expect(evidence).toContain('AIS Smarti');
     expect(evidence).toContain('J2S');
@@ -143,7 +151,6 @@ describe('site smoke', () => {
     expect(home).not.toContain('Choose an agent');
     expect(home).not.toContain('Meet Haruna.');
     expect(home).not.toContain('This is your agent.');
-    expect(home).not.toContain('Hashy');
     expect(home).not.toContain('Send a sourcing brief');
     expect(home).toContain('mailto:haruna@harpapro.com');
     expect(header).toContain('href="/"');

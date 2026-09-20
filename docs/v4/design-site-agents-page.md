@@ -2,6 +2,10 @@
 
 Status: implemented.
 
+The single-profile requirements below record the original implementation and
+are superseded by
+[`design-site-procurement-team.md`](design-site-procurement-team.md).
+
 ## Context
 
 Harpa Pro presents interior procurement as its main public service. The

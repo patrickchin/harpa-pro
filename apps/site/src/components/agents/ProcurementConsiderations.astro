@@ -65,7 +65,7 @@ const considerations = [
   <div
     role="tablist"
     aria-label="Procurement considerations"
-    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+    class="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5"
   >
     {
       considerations.map((consideration, index) => (
@@ -78,7 +78,7 @@ const considerations = [
           aria-controls={`consideration-panel-${index + 1}`}
           tabindex={index === 0 ? 0 : -1}
           data-consideration-tab
-          class="group flex min-h-[5.5rem] w-full cursor-pointer flex-row items-center gap-4 rounded-xl border-2 border-border bg-card p-4 text-left text-ink shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/50 hover:shadow-md aria-selected:border-primary aria-selected:bg-secondary aria-selected:shadow-md ring-focus lg:min-h-[10.5rem] lg:flex-col lg:items-start lg:gap-0 lg:p-5"
+          class="group flex h-full min-h-[5.5rem] w-full cursor-pointer flex-row items-center gap-4 rounded-xl border-2 border-border bg-card p-4 text-left text-ink shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/50 hover:shadow-md aria-selected:border-primary aria-selected:bg-secondary aria-selected:shadow-md ring-focus lg:min-h-[10.5rem] lg:flex-col lg:items-start lg:gap-0 lg:p-5"
         >
           <span
             data-consideration-icon
@@ -123,7 +123,7 @@ const considerations = [
           <div
             data-consideration-image-frame
             data-image-crop={consideration.crop}
-            class="aspect-[16/10] w-full overflow-hidden bg-white lg:aspect-auto lg:min-h-[28rem]"
+            class="aspect-[16/10] w-full overflow-hidden bg-white lg:aspect-auto lg:h-[28rem]"
           >
             <Image
               src={consideration.image}
@@ -137,7 +137,7 @@ const considerations = [
               class={consideration.fit}
             />
           </div>
-          <div class="flex flex-col justify-end border-t border-hairline p-6 sm:p-8 lg:border-l lg:border-t-0 lg:p-10">
+          <div class="flex min-h-[15rem] flex-col justify-end border-t border-hairline p-6 sm:min-h-[13rem] sm:p-8 lg:min-h-0 lg:border-l lg:border-t-0 lg:p-10">
             <h3 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
               {consideration.title}
             </h3>

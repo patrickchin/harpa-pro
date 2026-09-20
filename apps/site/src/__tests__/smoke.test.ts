@@ -123,7 +123,7 @@ describe('site smoke', () => {
     expect(evidence).toContain('Rong Shuo');
     expect(evidence).toContain('Product examples');
     expect(evidence).toContain('Factory documents');
-    expect(evidence).toContain('Project evidence');
+    expect(evidence).not.toContain('Project evidence');
     expect(evidence).not.toContain('Factory source library');
     expect(evidence).not.toContain('Open original PDF');
     expect(evidence).toContain('Show 7 more documents');

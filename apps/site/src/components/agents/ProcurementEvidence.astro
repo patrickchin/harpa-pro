@@ -1,6 +1,8 @@
 ---
 import { Image } from "astro:assets";
 import EvidenceImageDialog from "./EvidenceImageDialog.astro";
+import Container from "../primitives/Container.astro";
+import Section from "../primitives/Section.astro";
 import revitShopDrawingImg from "../../assets/agents/procurement/revit-a103-shop-drawing.jpg";
 import revitCoordinationImg from "../../assets/agents/procurement/revit-a104-coordination.jpg";
 import aisFactoryImg from "../../assets/procurement/factories/ais-factory-exterior.webp";
@@ -257,35 +259,28 @@ const technicalReviews = [
 ];
 ---
 
-<div class="max-w-3xl">
-  <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-    Project evidence
-  </h2>
-  <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-    Review the factory profiles, quote contents, product examples, source
-    documents, and technical reviews for this service.
-  </p>
-</div>
-
-<section
-  id="factory-partners"
+<Section
+  id="evidence"
   aria-labelledby="factory-partners-heading"
-  class="mt-16 scroll-mt-24"
+  bordered="top"
+  class="scroll-mt-16 bg-background"
 >
-  <div class="max-w-3xl">
-    <h3
-      id="factory-partners-heading"
-      class="text-2xl font-semibold tracking-tight text-ink"
-    >
-      Selected factory partners
-    </h3>
-    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-      These are selected examples, not a complete factory directory. We match
-      each order with the required product, specification, and document scope.
-    </p>
-  </div>
+  <Container padding="lg">
+    <div id="factory-partners" class="scroll-mt-24">
+      <div class="max-w-3xl">
+        <h2
+          id="factory-partners-heading"
+          class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+        >
+          Selected factory partners
+        </h2>
+        <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+          These are selected examples, not a complete factory directory. We match
+          each order with the required product, specification, and document scope.
+        </p>
+      </div>
 
-  <div class="mt-8 grid gap-5">
+      <div class="mt-8 grid gap-5">
     {
       factories.filter((factory) => factory.featured).map((factory) => (
         <article
@@ -312,9 +307,9 @@ const technicalReviews = [
           </figure>
           <div class="border-t border-hairline p-5 sm:border-l sm:border-t-0 sm:p-6">
             <p class="font-mono text-xs text-ink-soft">{factory.location}</p>
-            <h4 class="mt-3 text-xl font-semibold tracking-tight text-ink">
+            <h3 class="mt-3 text-xl font-semibold tracking-tight text-ink">
               {factory.name}
-            </h4>
+            </h3>
             <p class="mt-3 text-sm leading-relaxed text-ink-soft">{factory.scope}</p>
           </div>
         </article>
@@ -348,64 +343,76 @@ const technicalReviews = [
               <p class="font-mono text-[0.68rem] leading-relaxed text-ink-soft">
                 {factory.location}
               </p>
-              <h4 class="mt-2 text-base font-semibold text-ink">{factory.name}</h4>
+              <h3 class="mt-2 text-base font-semibold text-ink">{factory.name}</h3>
               <p class="mt-2 text-sm leading-relaxed text-ink-soft">{factory.scope}</p>
             </div>
           </article>
         ))
       }
     </div>
-  </div>
-</section>
-
-<section aria-labelledby="product-information-heading" class="mt-24">
-  <div class="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
-    <div class="max-w-xl">
-      <h3
-        id="product-information-heading"
-        class="text-2xl font-semibold tracking-tight text-ink"
-      >
-        What each quote includes
-      </h3>
-      <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-        A catalogue image identifies the product. The quote records the details
-        needed to compare, approve, inspect, pack, and ship it.
-      </p>
+      </div>
     </div>
-    <ol class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-      {
-        buyerInformation.map((item, index) => (
-          <li class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 border-t border-hairline pt-3 text-sm leading-relaxed text-ink">
-            <span class="font-mono text-xs text-accent-ink">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <span>{item}</span>
-          </li>
-        ))
-      }
-    </ol>
-  </div>
-</section>
+  </Container>
+</Section>
 
-<section
+<Section
+  id="quote-contents"
+  aria-labelledby="product-information-heading"
+  tone="paper-2"
+  bordered="top"
+  class="scroll-mt-16"
+>
+  <Container padding="lg">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
+      <div class="max-w-xl">
+        <h2
+          id="product-information-heading"
+          class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+        >
+          What each quote includes
+        </h2>
+        <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+          A catalogue image identifies the product. The quote records the details
+          needed to compare, approve, inspect, pack, and ship it.
+        </p>
+      </div>
+      <ol class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+        {
+          buyerInformation.map((item, index) => (
+            <li class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 border-t border-hairline pt-3 text-sm leading-relaxed text-ink">
+              <span class="font-mono text-xs text-accent-ink">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span>{item}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </Container>
+</Section>
+
+<Section
   id="product-examples"
   aria-labelledby="product-briefs-heading"
-  class="mt-20 scroll-mt-24"
+  bordered="top"
+  class="scroll-mt-16 bg-background"
 >
-  <div class="max-w-3xl">
-    <h3
-      id="product-briefs-heading"
-      class="text-2xl font-semibold tracking-tight text-ink"
-    >
-      Product examples
-    </h3>
-    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-      These examples show the detail in a buyer brief. They are not a stock
-      list, price list, or full catalogue.
-    </p>
-  </div>
+  <Container padding="lg">
+    <div class="max-w-3xl">
+      <h2
+        id="product-briefs-heading"
+        class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      >
+        Product examples
+      </h2>
+      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+        These examples show the detail in a buyer brief. They are not a stock
+        list, price list, or full catalogue.
+      </p>
+    </div>
 
-  <div class="mt-10 grid gap-8">
+    <div class="mt-10 grid gap-8">
     {
       productBriefs.map((brief, index) => (
         <article
@@ -446,9 +453,9 @@ const technicalReviews = [
                 {brief.source}
               </span>
             </div>
-            <h4 class="mt-5 text-2xl font-semibold tracking-tight text-ink">
+            <h3 class="mt-5 text-2xl font-semibold tracking-tight text-ink">
               {brief.title}
-            </h4>
+            </h3>
             <p class="mt-3 text-sm leading-relaxed text-ink-soft">
               {brief.description}
             </p>
@@ -464,35 +471,39 @@ const technicalReviews = [
         </article>
       ))
     }
-  </div>
-</section>
+    </div>
+  </Container>
+</Section>
 
-<section
+<Section
   id="factory-documents"
   aria-labelledby="factory-documents-heading"
-  class="mt-24 scroll-mt-24"
+  tone="paper-2"
+  bordered="top"
+  class="scroll-mt-16"
 >
-  <div class="max-w-3xl">
-    <h3
-      id="factory-documents-heading"
-      class="text-2xl font-semibold tracking-tight text-ink"
-    >
-      Factory documents
-    </h3>
-    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-      Select a document to view its first-page image. Full source files are not
-      published on this website.
-      <span class="mt-1 block">
-        Factory-supplied document. Harpa Pro has not independently verified its
-        current status or scope.
-      </span>
-    </p>
-  </div>
+  <Container padding="lg">
+    <div class="max-w-3xl">
+      <h2
+        id="factory-documents-heading"
+        class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      >
+        Factory documents
+      </h2>
+      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+        Select a document to view its first-page image. Full source files are not
+        published on this website.
+        <span class="mt-1 block">
+          Factory-supplied document. Harpa Pro has not independently verified its
+          current status or scope.
+        </span>
+      </p>
+    </div>
 
-  <div
-    id="factory-document-grid"
-    class="mt-8 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3"
-  >
+    <div
+      id="factory-document-grid"
+      class="mt-8 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3"
+    >
     {
       credentials.map((document, index) => (
         <article
@@ -533,9 +544,9 @@ const technicalReviews = [
           </button>
           <div class="border-t border-hairline p-3 sm:p-5">
             <div class="flex flex-wrap items-start justify-between gap-2">
-              <h4 class="text-sm font-semibold leading-snug text-ink sm:text-base">
+              <h3 class="text-sm font-semibold leading-snug text-ink sm:text-base">
                 {document.title}
-              </h4>
+              </h3>
               {document.statusLabel && (
                 <span class="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 font-mono text-[0.65rem] font-semibold uppercase tracking-wide text-accent-ink">
                   {document.statusLabel}
@@ -550,33 +561,40 @@ const technicalReviews = [
         </article>
       ))
     }
-  </div>
-  <button
-    type="button"
-    aria-expanded="false"
-    aria-controls="factory-document-grid"
-    class="mt-6 inline-flex h-11 items-center rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
-    data-document-disclosure
-  >
-    Show 7 more documents
-  </button>
-</section>
-
-<section aria-labelledby="technical-reviews-heading" class="mt-24">
-  <div class="max-w-3xl">
-    <h3
-      id="technical-reviews-heading"
-      class="text-2xl font-semibold tracking-tight text-ink"
+    </div>
+    <button
+      type="button"
+      aria-expanded="false"
+      aria-controls="factory-document-grid"
+      class="mt-6 inline-flex h-11 items-center rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
+      data-document-disclosure
     >
-      Technical reviews
-    </h3>
-    <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-      These sheets record design coordination and factory drawing reviews.
-      Original Revit files will replace the current extracts.
-    </p>
-  </div>
+      Show 7 more documents
+    </button>
+  </Container>
+</Section>
 
-  <div class="mt-8 grid gap-5 md:grid-cols-2">
+<Section
+  id="technical-reviews"
+  aria-labelledby="technical-reviews-heading"
+  bordered="top"
+  class="scroll-mt-16 bg-background"
+>
+  <Container padding="lg">
+    <div class="max-w-3xl">
+      <h2
+        id="technical-reviews-heading"
+        class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      >
+        Technical reviews
+      </h2>
+      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+        These sheets record design coordination and factory drawing reviews.
+        Original Revit files will replace the current extracts.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-5 md:grid-cols-2">
     {
       technicalReviews.map((review) => (
         <figure
@@ -608,7 +626,7 @@ const technicalReviews = [
             />
           </button>
           <figcaption class="border-t border-hairline p-5">
-            <h4 class="font-semibold text-ink">{review.title}</h4>
+            <h3 class="font-semibold text-ink">{review.title}</h3>
             <p class="mt-2 text-sm leading-relaxed text-ink-soft">
               {review.description}
             </p>
@@ -616,8 +634,9 @@ const technicalReviews = [
         </figure>
       ))
     }
-  </div>
-</section>
+    </div>
+  </Container>
+</Section>
 
 <EvidenceImageDialog />
 

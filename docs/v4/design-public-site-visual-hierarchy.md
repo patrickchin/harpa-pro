@@ -54,6 +54,23 @@ naturally without authored line breaks, using a smaller mobile size that aims
 for two balanced lines on a typical phone. The photograph fills the hero at
 every breakpoint so there is no adjacent unused space.
 
+At phone widths, let the hero run edge to edge and give it enough height to
+remain the page's dominant image. Restore the inset card treatment from the
+small breakpoint upward. Bound the procurement-lead portrait when it stacks,
+then place it to the left of the biography from the medium breakpoint onward.
+This keeps the portrait useful without letting it compete with the hero at
+tablet and compact-laptop widths.
+
+Keep every consideration control on the same grid track height. The selected
+detail card also reserves one consistent footprint at each breakpoint, so
+changing tabs never pushes the following content up or down.
+
+Remove the generic “Project evidence” wrapper. Promote Selected factory
+partners, What each quote includes, Product examples, Factory documents, and
+Technical reviews into adjacent page sections with alternating paper tones and
+second-level headings. Retain `#evidence` on the first evidence section for old
+links, and retain `#factory-partners` as the navigation target inside it.
+
 ## Validation
 
 Browser coverage must verify that:
@@ -65,9 +82,18 @@ Browser coverage must verify that:
 - the hero copy overlaps the image and sits above a visible scrim;
 - the hero image fills its visual frame;
 - the desktop hero title renders on one line;
+- the phone hero is full-bleed and remains visually larger than the bounded
+  procurement-lead portrait;
+- the procurement-lead portrait sits left of the biography from the medium
+  breakpoint upward and stacks only below it;
+- all consideration controls and all selected detail states keep equal heights
+  at the supported viewport widths;
+- the generic Project evidence heading is absent and every evidence group is a
+  direct, alternately toned page section;
 - the existing mega-menu, mobile-menu, keyboard, and fragment behavior stays
   unchanged;
 - the homepage has no horizontal overflow at mobile width.
 
 Run the site unit tests, type check, lint, production build, and focused
-Playwright coverage. Inspect the desktop and mobile homepage before delivery.
+Playwright coverage. Inspect and capture the homepage at 1440, 1280, 1024,
+768, and 390 CSS-pixel widths before delivery.

@@ -67,6 +67,9 @@ updates:
         patterns:
           - 'vitest'
           - '@vitest/*'
+      commitlint-stack:
+        patterns:
+          - '@commitlint/*'
       production-patches:
         patterns:
           - '*'

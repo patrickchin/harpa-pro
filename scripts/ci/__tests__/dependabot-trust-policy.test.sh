@@ -171,8 +171,8 @@ for group in \
   dom-testing-stack \
   commitlint-stack \
   tanstack-query-stack \
-  production-patches \
-  development-patches; do
+  production-minor-patch \
+  development-minor-patch; do
   require_fixed "$DEPENDABOT_CONFIG" "${group}:" \
     "Dependabot defines the ${group} update group"
 done
@@ -182,10 +182,12 @@ for dependency in "expo*" "@expo/*" "react-native*" "@react-native/*"; do
     "Dependabot leaves the Expo/native compatibility graph to Expo Doctor"
 done
 
-forbid_fixed "$DEPENDABOT_CONFIG" "production-minor-patch:" \
-  "broad production grouping does not mix unrelated minor updates"
-forbid_fixed "$DEPENDABOT_CONFIG" "development-minor-patch:" \
-  "broad development grouping does not mix unrelated minor updates"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "production-minor-patch" \
+  "- 'minor'" \
+  "broad production grouping consolidates routine minor updates"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "development-minor-patch" \
+  "- 'minor'" \
+  "broad development grouping consolidates routine minor updates"
 require_fixed ".github/actions/changed-paths/action.yml" \
   "- '.github/dependabot.yml'" \
   "Dependabot policy changes activate the CI policy-test job"

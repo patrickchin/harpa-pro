@@ -82,17 +82,22 @@ updates:
           - '@tanstack/react-query'
           - '@tanstack/react-query-persist-client'
           - '@tanstack/query-async-storage-persister'
-      production-patches:
+      # Compatibility stacks above keep priority. Everything else that is not
+      # a major is consolidated by dependency type to keep the weekly queue
+      # reviewable instead of opening one PR for every minor release.
+      production-minor-patch:
         patterns:
           - '*'
         dependency-type: 'production'
         update-types:
+          - 'minor'
           - 'patch'
-      development-patches:
+      development-minor-patch:
         patterns:
           - '*'
         dependency-type: 'development'
         update-types:
+          - 'minor'
           - 'patch'
     ignore:
       # Expo Doctor / `expo install` owns this native compatibility graph.

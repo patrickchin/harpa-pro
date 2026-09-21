@@ -968,6 +968,30 @@ require_fixed "docker-compose.yml" \
 require_fixed "docker-compose.yml" \
   "STORAGE_ACCOUNT_DELETE_ENABLED: 'true'" \
   "fresh local Compose stacks enable account deletion after migration"
+require_fixed "docker-compose.yml" \
+  "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z" \
+  "local Compose uses the available pinned MinIO server image"
+require_fixed "docker-compose.yml" \
+  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
+  "local Compose uses the available pinned MinIO client image"
+require_fixed "apps/cli/scripts/journey-extras.sh" \
+  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
+  "CLI journey cleanup uses the same pinned MinIO client image"
+require_fixed "scripts/maestro/seed-store-screenshots.sh" \
+  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
+  "store screenshot seeding uses the same pinned MinIO client image"
+forbid_fixed "docker-compose.yml" \
+  "minio/minio:latest" \
+  "local Compose does not depend on the removed Docker Hub MinIO server image"
+forbid_fixed "docker-compose.yml" \
+  "minio/mc:latest" \
+  "local Compose does not depend on the removed Docker Hub MinIO client image"
+forbid_fixed "apps/cli/scripts/journey-extras.sh" \
+  "minio/mc:latest" \
+  "CLI journey cleanup does not depend on the removed Docker Hub client image"
+forbid_fixed "scripts/maestro/seed-store-screenshots.sh" \
+  "minio/mc:latest" \
+  "store screenshot seeding does not depend on the removed Docker Hub client image"
 require_section_fixed "docker-compose.yml" \
   "  storage-worker:" "  api:" \
   "migrate:" \

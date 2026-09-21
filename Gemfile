@@ -9,4 +9,4 @@ gem "fastlane", "2.240.1"
 
 # excon 1.7 and rbs 4.2 require Ruby 3.3; EAS still uses Ruby 3.2.
 gem "excon", "~> 1.6.0"
-gem "rbs", "< 4.2.0"
+gem "rbs", "< 4.3.0"

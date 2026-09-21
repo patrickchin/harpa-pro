@@ -138,12 +138,10 @@ tags:
     timeout: 60000
 - tapOn:
     id: 'btn-finalize-report'
-- extendedWaitUntil:
-    visible:
-      id: 'confirm-finalize'
-    timeout: 8000
-- tapOn:
-    id: 'confirm-finalize'
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
       id: 'btn-report-actions'
@@ -207,12 +205,10 @@ tags:
     timeout: 8000
 - tapOn:
     id: 'btn-report-delete'
-- extendedWaitUntil:
-    visible:
-      id: 'dialog-sheet'
-    timeout: 8000
-- tapOn:
-    id: 'btn-confirm-delete-report'
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'btn-confirm-delete-report'
 - extendedWaitUntil:
     visible:
       id: 'btn-new-report'

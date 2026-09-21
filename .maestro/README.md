@@ -17,7 +17,7 @@ The CI lint job (`scripts/check-maestro-appid.sh`) fails if any
 `docs/bugs/README.md` (R-Maestro1) for the regression that motivated
 the env-var rule.
 
-## No coordinate taps
+## Coordinate-tap boundary
 
 Do not use `tapOn: { point: ... }` or any `point:` key in `.maestro`
 flows. Coordinate taps depend on device size, safe areas, orientation,
@@ -26,7 +26,13 @@ instead; add a testID to the app if the target has no stable semantic
 selector yet.
 
 The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
-which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
+which fails on every coordinate except the exact, counted iOS fallbacks in
+`helpers/tap-dialog-action.yaml` and `helpers/tap-dialog-cancel.yaml`. Xcode 27
+can omit a visibly rendered React Native `Modal` window from XCTest entirely,
+so those helpers retain semantic IDs on Android, use one bottom-sheet-relative
+point on iOS, and require each caller to assert the resulting app state. Do not
+add coordinates anywhere else or add another exception without a reproduced
+missing-window failure and a result assertion.
 
 ## CI launch smoke
 
@@ -134,9 +140,10 @@ the end. Covers:
 16. Sign out
 
 **Pre-condition:** docker compose stack up, auth broker running, Metro
-running, app built with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and
-camera privacy grants are required for modules 09 and 10a. `mo up`
-starts the local compose stack, auth broker, and Metro.
+running, app built with `EXPO_PUBLIC_USE_FIXTURES=true`. Fixture mode replaces
+the microphone and camera inputs used by modules 09 and 10a, so those modules
+do not need native privacy grants. `mo up` starts the local compose stack,
+auth broker, and Metro.
 
 On Android devices/emulators, reverse every local port used by the
 app and upload pipeline before running. Photo signed URLs point at
@@ -152,10 +159,13 @@ adb reverse tcp:9000 tcp:9000
 ```
 
 All current camera flows delegate to
-`helpers/wait-for-camera-shutter-ready.yaml` before tapping the shutter.
-The helper waits for the existing shutter to be enabled, which proves native
-picture-size discovery is stable and the previous native capture has reached a
-terminal callback; burst flows repeat it between captures. Do not replace this
+`helpers/wait-for-camera-shutter-ready.yaml` before tapping the shutter. The
+helper observes the visible ready-only shutter-face marker because iOS XCTest
+does not export React Native Pressable's enabled field.
+The marker is driven by the existing shutter's enabled state, which proves
+native picture-size discovery is stable and the previous native capture has
+reached a terminal callback; burst flows repeat it between captures. Do not
+replace this
 boundary with a fixed sleep or a whole-flow retry.
 
 **Run:**
@@ -419,6 +429,10 @@ P3.14a usage-limits-card coverage lives in `modules/15-usage.yaml`.
   unreliable on iOS XCTest. For `input-note`, tap `btn-add-note` while
   it is visible above the keyboard, then swipe the notes list down to
   dismiss the keyboard and restore the generate chrome.
+- For the published-report review composer, tap the semantic
+  `report-review-pane` background after text entry on iOS. This blurs the
+  multiline input before tapping `btn-add-report-review-comment`; a reported
+  successful `hideKeyboard` can still leave the keyboard over that button.
 - For full-screen edit modals, do not require `hideKeyboard` before
   tapping a header action. `btn-edit-modal-save` and
   `btn-edit-modal-cancel` remain visible above the keyboard, so tap

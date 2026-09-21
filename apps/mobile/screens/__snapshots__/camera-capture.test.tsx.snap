@@ -180,6 +180,11 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
       <rn-Pressable
         accessibilityLabel="Take photo"
         accessibilityRole="button"
+        accessibilityState={
+          {
+            "disabled": true,
+          }
+        }
         className="w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center "
         disabled={true}
         onPress={[Function]}

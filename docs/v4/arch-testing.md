@@ -493,8 +493,9 @@ that are not covered by workspace linters:
 - `check-maestro-appid.sh` — Maestro flows must reference
   `${MAESTRO_APP_ID}` rather than a hardcoded bundle id.
 - `check-no-maestro-point-taps.sh` — Maestro flows must tap text,
-  accessibility labels, or testIDs rather than device-dependent
-  `point:` coordinates.
+  accessibility labels, or testIDs. The only exact, counted exceptions are
+  the centralized Xcode 27 native-Modal action/cancel fallbacks; callers must
+  prove the resulting app state.
 - `check-native-input-smoke.sh` — native input coverage cannot rely on
   the fixture recorder.
 - `check-no-process-env-r2.sh` — R2 config is read through

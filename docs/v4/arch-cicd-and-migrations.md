@@ -356,8 +356,13 @@ to `main` continue through the normal `dev → main` promotion path.
   Repair explicitly starts it if stopped, polls at most ten fresh inventories
   three seconds apart through only safe stopped/starting states, and clones only
   after that exact id is started. An update that already started the candidate
-  skips the redundant start. Both paths list Machines again and succeed only
-  when the exact healthy pair is present.
+  skips the redundant start. A post-deploy pair with one `created` or `starting`
+  candidate and one stopped standby is recoverable only when both are current-
+  release and service-less and the standby watches that exact candidate. The
+  helper re-lists before mutation, starts only a still-`created` candidate, and
+  polls that exact pair through `created`/`starting` until it is healthy. All
+  paths list Machines again and succeed only when the exact healthy pair is
+  present.
 - Every Machine used by repair must match one unambiguous `app` identity on
   nonempty Fly release id, release version, and valid full tagged image. The
   image comparison removes only an optional validated
@@ -365,12 +370,13 @@ to `main` continue through the normal `dev → main` promotion path.
   representation of the same deployment tag; repository, tag, and release
   metadata remain exact. Tag-only Machines may coexist with at most one
   distinct explicit digest; conflicting non-null digests fail closed. Untagged,
-  digest-only, malformed, stale, transitional, or ambiguous initial inventories
-  fail before mutation; no process-count scaling is allowed. Each update/start
-  transition also proves the candidate id, singleton topology, empty services,
-  and empty standbys. If clearing succeeds but later work fails, exact singleton
-  stopped/no-standby and started/no-standby states are retry-safe; all other
-  drift fails closed.
+  digest-only, malformed, stale, or ambiguous initial inventories fail before
+  mutation; non-running or transitional inventories fail too unless they are
+  the exact paired `created`/`starting` recovery above. No process-count scaling
+  is allowed. Each update/start transition proves the candidate id, expected
+  singleton or pair topology, empty services, and exact standby configuration.
+  If clearing succeeds but later work fails, exact singleton stopped/no-standby
+  and started/no-standby states are retry-safe; all other drift fails closed.
 - Run the read-only started-worker verifier again, then stop. Production deploy
   does not arm lifecycle or enable account deletion. CI and manual deploys use
   the same deploy-to-repair-to-verify path. The GitHub deploy step has a

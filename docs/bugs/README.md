@@ -178,6 +178,39 @@ surface opacity carries contrast or hierarchy.
 
 ## Entries
 
+- **2026-09-22** — The photo Maestro flows claimed fixture mode supplied a
+  synthetic camera image, but the route always mounted native Expo Camera;
+  camera-equipped Android hardware masked the missing wiring until the iOS
+  simulator shutter never became ready. Fix: connect the existing route seams
+  to a unique cache-backed fixture capture and retain a separate native smoke.
+  [detail](2026-09-22-ios-fixture-camera-missing.md)
+
+- **2026-09-22** — The cross-platform photo-note Maestro module required the
+  Android-only Photo library action on iOS, contradicting the accepted iOS
+  camera-only policy. Fix: assert the library action is present on Android and
+  absent on iOS before continuing through shared camera coverage.
+  [detail](2026-09-22-ios-photo-library-maestro-policy-drift.md)
+
+- **2026-09-22** — Under Xcode 27, the full iOS Maestro regression rendered
+  native draft and note deletion sheets but XCTest omitted their entire modal
+  windows from the accessibility snapshot. Fix: centralize both deletion
+  sequences, retain semantic Android paths, and use bounded iOS coordinate
+  fallbacks before asserting each deletion result.
+  [detail](2026-09-22-ios-dialog-accessibility-collapse.md)
+
+- **2026-09-22** — The iOS regression reached the finalized-report review
+  composer but failed to add its comment because `hideKeyboard` reported
+  success while the multiline keyboard still covered the semantic submit
+  target. The flow now blurs through the known `report-review-pane` background
+  on iOS before submitting and verifies the comment survives refinalization.
+  [detail](2026-09-22-ios-report-review-keyboard-overlay.md)
+
+- **2026-09-22** _(R22)_ — Fresh local and Maestro stacks could not start because
+  MinIO's Docker Hub image names no longer resolved, while previously pulled
+  images hid the failure on established machines. Fix: use pinned official
+  Quay images everywhere and enforce the source in release-confidence policy.
+  [detail](2026-09-22-minio-docker-hub-images-removed.md)
+
 - **2026-09-21** — Fly returned the active storage worker in its valid
   post-update `created` state while the exact current-release standby already
   watched that id; the fail-closed repair helper omitted that state and stopped

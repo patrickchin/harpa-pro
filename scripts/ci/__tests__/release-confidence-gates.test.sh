@@ -583,11 +583,34 @@ require_fixed "scripts/maestro/seed-store-screenshots.sh" \
   "MSYS_NO_PATHCONV=1 docker run" \
   "store screenshot seed preserves the container shell path under Git Bash"
 require_fixed ".maestro/helpers/wait-for-camera-shutter-ready.yaml" \
-  "id: 'btn-camera-shutter'" \
-  "camera readiness helper targets the semantic shutter control"
+  "id: 'camera-shutter-ready'" \
+  "camera readiness helper targets the ready-only shutter marker"
 require_fixed ".maestro/helpers/wait-for-camera-shutter-ready.yaml" \
-  "enabled: true" \
-  "camera readiness helper waits for an enabled native shutter"
+  "timeout: 30000" \
+  "camera readiness helper keeps its bounded native startup wait"
+require_file "apps/mobile/lib/camera/fixture-camera.ts" \
+  "fixture camera provides a real cache-backed image input"
+require_fixed "apps/mobile/app/(camera)/capture.tsx" \
+  "env.EXPO_PUBLIC_USE_FIXTURES" \
+  "camera route selects fixture inputs from the parsed bundle-time flag"
+require_fixed "apps/mobile/app/(camera)/capture.tsx" \
+  "permissionOverride: FIXTURE_CAMERA_PERMISSION" \
+  "fixture camera bypasses native permission deterministically"
+require_fixed "apps/mobile/app/(camera)/capture.tsx" \
+  "renderPreview: renderFixtureCameraPreview" \
+  "fixture camera bypasses unavailable simulator preview hardware"
+require_fixed "apps/mobile/app/(camera)/capture.tsx" \
+  "takePicture: takeFixtureCameraPicture" \
+  "fixture camera connects the shutter to a readable local image"
+require_fixed "apps/mobile/screens/camera-capture.tsx" \
+  "accessibilityState={{ disabled: shutterDisabled }}" \
+  "camera shutter exposes its readiness boundary to native automation"
+require_fixed "apps/mobile/screens/camera-capture.tsx" \
+  "testID={shutterDisabled ? undefined : 'camera-shutter-ready'}" \
+  "camera shutter exports a ready-only marker for iOS XCTest"
+require_fixed ".maestro/native-input-smoke.yaml" \
+  "EXPO_PUBLIC_USE_FIXTURES=false" \
+  "native input smoke keeps exercising production camera wiring"
 require_fixed_count ".maestro/modules/10a-photo-notes-draft.yaml" \
   "- runFlow: ../helpers/wait-for-camera-shutter-ready.yaml" 2 \
   "draft burst waits for stable camera readiness before both captures"
@@ -620,6 +643,18 @@ require_fixed_count ".maestro/modules/10b-photo-notes-finalized.yaml" \
 require_fixed_count ".maestro/modules/10b-photo-notes-finalized.yaml" \
   "centerElement: true" 2 \
   "finalized photo and cleanup targets are centered away from clipped viewport edges"
+require_occurrence_before ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "platform: Android" 1 \
+  "id: 'btn-attachment-photo-library'" 1 \
+  "draft photo journey exposes the library action only in its Android branch"
+require_occurrence_before ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "platform: iOS" 1 \
+  "id: 'btn-attachment-photo-library'" 2 \
+  "draft photo journey checks the omitted library action in its iOS branch"
+require_occurrence_before ".maestro/modules/10a-photo-notes-draft.yaml" \
+  "id: 'btn-attachment-photo-library'" 2 \
+  "id: 'btn-attachment-camera'" 2 \
+  "platform-specific library policy is checked before camera capture"
 require_before ".maestro/store-screenshots.yaml" \
   "id: 'btn-report-photo-.*'" \
   "id: 'report-photos-grid'" \
@@ -838,6 +873,82 @@ require_occurrence_before ".maestro/modules/08-text-notes.yaml" \
   "- runFlow: ../helpers/wait-for-auto-regeneration.yaml" 2 \
   'id: "btn-draft-options"' 1 \
   "text-note cleanup waits for regeneration before opening draft actions"
+require_file ".maestro/helpers/tap-dialog-action.yaml" \
+  "native Modal actions share one platform boundary"
+require_fixed ".maestro/helpers/tap-dialog-action.yaml" \
+  "platform: Android" \
+  "native Modal action keeps semantic Android selectors"
+require_fixed ".maestro/helpers/tap-dialog-action.yaml" \
+  "id: '\${ACTION_ID}'" \
+  "native Modal action receives its semantic action ID"
+require_fixed ".maestro/helpers/tap-dialog-action.yaml" \
+  "platform: iOS" \
+  "native Modal action scopes its fallback to iOS"
+require_fixed_count ".maestro/helpers/tap-dialog-action.yaml" \
+  "point: '50%,85%'" 1 \
+  "native Modal action has one bounded iOS fallback"
+require_file ".maestro/helpers/tap-dialog-cancel.yaml" \
+  "native Modal cancellation shares one platform boundary"
+require_fixed ".maestro/helpers/tap-dialog-cancel.yaml" \
+  "id: '\${ACTION_ID}'" \
+  "native Modal cancel receives its semantic action ID"
+require_fixed_count ".maestro/helpers/tap-dialog-cancel.yaml" \
+  "point: '50%,92%'" 1 \
+  "native Modal cancel has one bounded iOS fallback"
+require_file ".maestro/helpers/confirm-delete-draft.yaml" \
+  "draft deletion shares one native-modal confirmation boundary"
+require_fixed ".maestro/helpers/confirm-delete-draft.yaml" \
+  "file: tap-dialog-action.yaml" \
+  "draft confirmation delegates to the shared native-modal boundary"
+require_fixed ".maestro/helpers/confirm-delete-draft.yaml" \
+  "ACTION_ID: 'dialog-action-confirm-delete-draft'" \
+  "draft confirmation retains its semantic action ID"
+require_fixed ".maestro/helpers/confirm-delete-draft.yaml" \
+  "id: 'btn-new-report'" \
+  "draft confirmation proves the delete action completed"
+for draft_delete_flow in \
+  ".maestro/native-input-smoke.yaml:helpers/confirm-delete-draft.yaml" \
+  ".maestro/modules/07-reports-crud.yaml:../helpers/confirm-delete-draft.yaml" \
+  ".maestro/modules/08-text-notes.yaml:../helpers/confirm-delete-draft.yaml" \
+  ".maestro/modules/09-voice-notes.yaml:../helpers/confirm-delete-draft.yaml" \
+  ".maestro/modules/10a-photo-notes-draft.yaml:../helpers/confirm-delete-draft.yaml" \
+  ".maestro/modules/10c-photo-attachment-picker-scroll.yaml:../helpers/confirm-delete-draft.yaml"
+do
+  draft_delete_file="${draft_delete_flow%%:*}"
+  draft_delete_helper="${draft_delete_flow#*:}"
+  require_fixed "$draft_delete_file" \
+    "- runFlow: $draft_delete_helper" \
+    "draft-deleting flow uses the shared native-modal confirmation boundary"
+done
+require_file ".maestro/helpers/delete-note.yaml" \
+  "note deletion shares one native-modal interaction boundary"
+require_fixed ".maestro/helpers/delete-note.yaml" \
+  "file: tap-dialog-action.yaml" \
+  "note deletion delegates both stages to the shared native-modal boundary"
+require_fixed ".maestro/helpers/delete-note.yaml" \
+  "ACTION_ID: 'btn-note-options-delete'" \
+  "note deletion retains the options-stage action ID"
+require_fixed ".maestro/helpers/delete-note.yaml" \
+  "ACTION_ID: 'btn-note-options-confirm-delete'" \
+  "note deletion retains the confirmation-stage action ID"
+require_fixed_count ".maestro/helpers/delete-note.yaml" \
+  "file: tap-dialog-action.yaml" 2 \
+  "note deletion invokes exactly two modal actions"
+for note_delete_flow in \
+  ".maestro/modules/08-text-notes.yaml" \
+  ".maestro/modules/09-voice-notes.yaml" \
+  ".maestro/modules/10a-photo-notes-draft.yaml"
+do
+  require_fixed "$note_delete_flow" \
+    "- runFlow: ../helpers/delete-note.yaml" \
+    "note-deleting flow uses the shared native-modal interaction boundary"
+  forbid_fixed "$note_delete_flow" \
+    "btn-note-options-confirm-delete" \
+    "note-deleting flow does not duplicate the hidden confirmation selector"
+done
+require_fixed_count ".maestro/modules/11-generate-finalize.yaml" \
+  "file: ../helpers/tap-dialog-action.yaml" 3 \
+  "generate lifecycle routes finalize, unfinalize, and re-finalize through the modal boundary"
 require_fixed ".maestro/regression-journey.yaml" \
   "- runFlow: modules/09-voice-notes.yaml" \
   "regression journey keeps the live voice-notes module wired"
@@ -968,6 +1079,30 @@ require_fixed "docker-compose.yml" \
 require_fixed "docker-compose.yml" \
   "STORAGE_ACCOUNT_DELETE_ENABLED: 'true'" \
   "fresh local Compose stacks enable account deletion after migration"
+require_fixed "docker-compose.yml" \
+  "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z" \
+  "local Compose uses the available pinned MinIO server image"
+require_fixed "docker-compose.yml" \
+  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
+  "local Compose uses the available pinned MinIO client image"
+require_fixed "apps/cli/scripts/journey-extras.sh" \
+  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
+  "CLI journey cleanup uses the same pinned MinIO client image"
+require_fixed "scripts/maestro/seed-store-screenshots.sh" \
+  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
+  "store screenshot seeding uses the same pinned MinIO client image"
+forbid_fixed "docker-compose.yml" \
+  "minio/minio:latest" \
+  "local Compose does not depend on the removed Docker Hub MinIO server image"
+forbid_fixed "docker-compose.yml" \
+  "minio/mc:latest" \
+  "local Compose does not depend on the removed Docker Hub MinIO client image"
+forbid_fixed "apps/cli/scripts/journey-extras.sh" \
+  "minio/mc:latest" \
+  "CLI journey cleanup does not depend on the removed Docker Hub client image"
+forbid_fixed "scripts/maestro/seed-store-screenshots.sh" \
+  "minio/mc:latest" \
+  "store screenshot seeding does not depend on the removed Docker Hub client image"
 require_section_fixed "docker-compose.yml" \
   "  storage-worker:" "  api:" \
   "migrate:" \

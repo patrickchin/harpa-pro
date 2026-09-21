@@ -1,0 +1,11 @@
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow:
+    file: tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'dialog-action-confirm-delete-draft'
+
+- extendedWaitUntil:
+    visible:
+      id: 'btn-new-report'
+    timeout: 15000

@@ -149,6 +149,21 @@ require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@hono/zod-openapi" \
   "version-update:semver-major" \
   "Dependabot leaves the OpenAPI registry major to a reviewed contract migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@types/node" \
+  "version-update:semver-major" \
+  "Dependabot keeps Node types on the deployed runtime major"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "zod" \
+  "version-update:semver-major" \
+  "Dependabot leaves Zod majors to a reviewed contract migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "eslint-plugin-react-hooks" \
+  "version-update:semver-major" \
+  "Dependabot leaves React Hooks lint majors to a reviewed purity migration"
+require_fixed "apps/dashboard/eslint.config.js" "'react-hooks/rules-of-hooks': 'error'" \
+  "dashboard keeps the established Rules of Hooks gate"
+require_fixed "apps/dashboard/eslint.config.js" "'react-hooks/exhaustive-deps': 'warn'" \
+  "dashboard keeps the established exhaustive-deps advisory"
+forbid_fixed "apps/dashboard/eslint.config.js" "reactHooks.configs.recommended.rules" \
+  "React Hooks updates cannot silently enable compiler-era lint rules"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "rbs" \
   "versions: ['>= 4.2.0']" \
   "Dependabot leaves Ruby 3.3-only rbs releases to the Expo Ruby migration"

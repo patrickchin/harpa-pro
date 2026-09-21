@@ -24,6 +24,12 @@ pipeline.
 `CameraCapture` will make the existing shutter's enabled state the semantic
 native-readiness boundary:
 
+- The same readiness boolean is published through
+  `accessibilityState.disabled`, so iOS XCTest, Maestro, and assistive
+  technology receive the state enforced by `Pressable.disabled`. Because iOS
+  XCTest does not expose that React Native state as its `enabled` field, the
+  visible shutter region also receives a ready-only `camera-shutter-ready`
+  test ID from the same boolean.
 - Default native wiring starts unready.
 - The first `onCameraReady` discovers the preferred picture size.
 - On Android, when discovery changes `pictureSize`, readiness remains false
@@ -69,10 +75,11 @@ discard sheet, so they directly reclaim any retained captures before leaving.
 
 ## Maestro contract
 
-A shared helper will wait for `btn-camera-shutter` to be visible and enabled.
-Every current direct camera flow will use it before its first capture. The two
-burst flows will use it again between their first thumbnail and second capture.
-No fixed sleep or whole-flow retry is allowed.
+A shared helper will wait for the ready-only `camera-shutter-ready` marker,
+then each flow taps the stable `btn-camera-shutter` control. Every current
+direct camera flow will use it before its first capture. The two burst flows
+will use it again between their first thumbnail and second capture. No fixed
+sleep or whole-flow retry is allowed.
 
 ## Verification
 

@@ -747,12 +747,16 @@ export function CameraCapture(props: CameraCaptureProps) {
         </View>
 
         {/* Shutter */}
-        <View className="items-center py-3">
+        <View
+          className="items-center py-3"
+          testID={shutterDisabled ? undefined : 'camera-shutter-ready'}
+        >
           <Pressable
             onPress={handleCapture}
             disabled={shutterDisabled}
             accessibilityRole="button"
             accessibilityLabel="Take photo"
+            accessibilityState={{ disabled: shutterDisabled }}
             testID="btn-camera-shutter"
             className={`w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center ${
               captures.length >= maxBurst ? 'opacity-40' : ''

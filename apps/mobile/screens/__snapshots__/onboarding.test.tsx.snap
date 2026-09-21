@@ -70,7 +70,7 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
               autoFocus={true}
               className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
               editable={true}
-              onChangeText={[MockFunction spy]}
+              onChangeText={[MockFunction]}
               placeholder="John Smith"
               placeholderTextColor="#5f5b66"
               style={
@@ -115,7 +115,7 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
               autoComplete="organization"
               className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
               editable={true}
-              onChangeText={[MockFunction spy]}
+              onChangeText={[MockFunction]}
               placeholder="Smith Construction LLC"
               placeholderTextColor="#5f5b66"
               style={
@@ -149,7 +149,7 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
           <rn-Pressable
             className="flex-row items-center justify-center rounded-md border border-accent bg-accent active:opacity-85 min-h-touch-lg px-6 py-4 w-full"
             disabled={false}
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             style={
               [
                 {

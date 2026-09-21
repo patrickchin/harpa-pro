@@ -45,7 +45,7 @@ exports[`ProjectsList > does not render ListHeaderComponent when empty 1`] = `
         action={
           <Button
             accessibilityLabel="Add project"
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             size="lg"
             testID="btn-new-project"
             variant="hero"
@@ -76,7 +76,7 @@ exports[`ProjectsList > does not render ListHeaderComponent when empty 1`] = `
     maxToRenderPerBatch={10}
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }
@@ -132,7 +132,7 @@ exports[`ProjectsList > matches snapshot when empty 1`] = `
         action={
           <Button
             accessibilityLabel="Add project"
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             size="lg"
             testID="btn-new-project"
             variant="hero"
@@ -163,7 +163,7 @@ exports[`ProjectsList > matches snapshot when empty 1`] = `
     maxToRenderPerBatch={10}
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }
@@ -225,7 +225,7 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
     <rn-Pressable
       accessibilityLabel="Add project"
       accessibilityRole="button"
-      onPress={[MockFunction spy]}
+      onPress={[MockFunction]}
       testID="btn-new-project"
     >
       <rn-View
@@ -659,7 +659,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
     <rn-Pressable
       accessibilityLabel="Add project"
       accessibilityRole="button"
-      onPress={[MockFunction spy]}
+      onPress={[MockFunction]}
       testID="btn-new-project"
     >
       <rn-View
@@ -696,7 +696,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
         action={
           <Button
             accessibilityLabel="Add project"
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             size="lg"
             testID="btn-new-project"
             variant="hero"
@@ -751,7 +751,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
     maxToRenderPerBatch={10}
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }
@@ -807,7 +807,7 @@ exports[`ProjectsList > renders EmptyState when no projects 1`] = `
         action={
           <Button
             accessibilityLabel="Add project"
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             size="lg"
             testID="btn-new-project"
             variant="hero"
@@ -838,7 +838,7 @@ exports[`ProjectsList > renders EmptyState when no projects 1`] = `
     maxToRenderPerBatch={10}
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }
@@ -900,7 +900,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
     <rn-Pressable
       accessibilityLabel="Add project"
       accessibilityRole="button"
-      onPress={[MockFunction spy]}
+      onPress={[MockFunction]}
       testID="btn-new-project"
     >
       <rn-View
@@ -937,7 +937,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
         action={
           <Button
             accessibilityLabel="Add project"
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             size="lg"
             testID="btn-new-project"
             variant="hero"
@@ -992,7 +992,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
     maxToRenderPerBatch={10}
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }
@@ -1054,7 +1054,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
     <rn-Pressable
       accessibilityLabel="Add project"
       accessibilityRole="button"
-      onPress={[MockFunction spy]}
+      onPress={[MockFunction]}
       testID="btn-new-project"
     >
       <rn-View
@@ -1091,7 +1091,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
         action={
           <Button
             accessibilityLabel="Add project"
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             size="lg"
             testID="btn-new-project"
             variant="hero"
@@ -1146,7 +1146,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
     maxToRenderPerBatch={10}
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }

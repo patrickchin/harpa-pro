@@ -123,6 +123,10 @@ echo "Dependabot trust policy"
 DEPENDABOT_CONFIG=".github/dependabot.yml"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "better-auth-stack" "- 'auth'" \
   "Better Auth CLI package moves with the Better Auth stack"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- 'vitest'" \
+  "Vitest moves with its companion packages"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- '@vitest/*'" \
+  "Vitest coverage providers move with the test runner"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
   "version-update:semver-major" \
   "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
@@ -147,6 +151,7 @@ for group in \
   drizzle-stack \
   aws-sdk-stack \
   typescript-eslint-stack \
+  vitest-stack \
   production-patches \
   development-patches; do
   require_fixed "$DEPENDABOT_CONFIG" "${group}:" \

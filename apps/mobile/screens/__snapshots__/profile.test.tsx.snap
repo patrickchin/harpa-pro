@@ -25,7 +25,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
     }
     refreshControl={
       <RN.RefreshControl
-        onRefresh={[MockFunction spy]}
+        onRefresh={[MockFunction]}
         refreshing={false}
       />
     }
@@ -45,7 +45,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
             accessibilityRole="button"
             className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
             disabled={false}
-            onPress={[MockFunction spy]}
+            onPress={[MockFunction]}
             style={
               [
                 {
@@ -82,7 +82,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
         </rn-View>
       </rn-View>
       <rn-Pressable
-        onPress={[MockFunction spy]}
+        onPress={[MockFunction]}
         testID="btn-open-account"
       >
         <rn-View
@@ -146,7 +146,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
       <rn-View>
         <rn-Pressable
           disabled={false}
-          onPress={[MockFunction spy]}
+          onPress={[MockFunction]}
           testID="btn-open-usage"
         >
           <rn-View
@@ -194,7 +194,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
       <rn-View>
         <rn-Pressable
           disabled={false}
-          onPress={[MockFunction spy]}
+          onPress={[MockFunction]}
           testID="btn-open-privacy-policy"
         >
           <rn-View

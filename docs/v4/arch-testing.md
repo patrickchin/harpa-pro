@@ -364,7 +364,8 @@ documented in [`arch-ops.md`](arch-ops.md).
 
 GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
 the repository's default branch, `main`. It checks the root pnpm workspace,
-the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
+the Maestro orchestrator's uv/Python graph, the root Bundler/Fastlane graph,
+and GitHub Actions weekly. Routine
 version-update pull requests target `dev`. Compatibility-coupled Better Auth,
 React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, DOM-testing,
 Commitlint, and TanStack Query packages update as coordinated stacks. The
@@ -412,6 +413,13 @@ setting only groups those alert-driven security PRs. Routine version updates
 still use the groups in `.github/dependabot.yml`, and its `target-branch: dev`
 customizations do not apply to security updates. The configuration does not
 become active until it reaches `main`.
+
+Dependabot can group transitive security alerts yet still fail to open a PR
+when every vulnerable package is outside its parent's declared range. The root
+pnpm overrides record the minimum safe transitive versions in that case. An
+override that crosses a parent major must stay narrowly scoped and pass the
+affected runtime gate: Metro changes require the mobile bundle/native gates,
+and Lighthouse/Puppeteer changes require the site Lighthouse browser gate.
 
 Dependabot pull requests run with reduced credentials. Credential-free tests,
 lint, typechecking, browser checks, builds, path detection, and migration-name

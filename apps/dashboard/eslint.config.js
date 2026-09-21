@@ -14,7 +14,11 @@ export default tseslint.config(
       'react-hooks': reactHooks,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // Keep the established runtime-hook contract. Plugin 7 supports
+      // ESLint 10, but its expanded recommended preset also opts into React
+      // Compiler purity rules that need a separate dashboard refactor.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/consistent-type-imports': 'error',
       'no-restricted-syntax': [
         'error',

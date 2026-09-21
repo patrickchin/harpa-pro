@@ -73,7 +73,7 @@ test.describe('dashboard live preview journey', () => {
     const reviewComment = `Live review ${liveEnv.DASHBOARD_LIVE_RUN_ID}`;
 
     let editorContext: BrowserContext | null = null;
-    let editorPage: Page | null = null;
+    let editorPage: Page;
     let editorToken: string | null = null;
     let ownerToken: string | null = null;
     let projectId: string | null = null;

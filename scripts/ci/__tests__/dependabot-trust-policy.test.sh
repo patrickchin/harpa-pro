@@ -136,6 +136,9 @@ require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "rbs" \
   "versions: ['>= 4.2.0']" \
   "Dependabot leaves Ruby 3.3-only rbs releases to the Expo Ruby migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "excon" \
+  "versions: ['>= 1.7.0']" \
+  "Dependabot leaves Ruby 3.3-only excon releases to the Expo Ruby migration"
 for dependency in "react" "react-dom" "react-test-renderer"; do
   require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "$dependency" \
     "dependency-name: '${dependency}'" \

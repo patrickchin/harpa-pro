@@ -1,5 +1,9 @@
 # Better Auth 1.7 upgrade design
 
+> Historical 1.7.2 rollout record. Better Auth 1.7.3 reversed the issuer
+> identity contract; the current design is
+> [Better Auth 1.7.5 account compatibility](design-better-auth-1-7-5-account-compatibility.md).
+
 - **Status:** Proposed
 - **Scope:** API auth schema and adapter, test/demo account tooling, Expo auth
   storage, generated schema, and deployment sequencing

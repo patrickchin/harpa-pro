@@ -9,11 +9,13 @@ import { listMigrationFiles, migrate } from '../db/migrate.js';
 
 const BASE_HEAD = '0031_remove_retired_llm_usage_ledger.sql';
 const ISSUER_MIGRATION = '0032_better_auth_account_issuer.sql';
+const ISSUER_RELAXATION = '0033_relax_better_auth_account_issuer.sql';
 const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations/', import.meta.url));
 
 let container: StartedPostgreSqlContainer;
 let connectionString: string;
 let baseMigrationsDir: string;
+let expandedMigrationsDir: string;
 
 async function withClient<T>(run: (client: pg.Client) => Promise<T>): Promise<T> {
   const client = new pg.Client({ connectionString });
@@ -35,6 +37,10 @@ async function resetToLegacySchema(): Promise<void> {
 
   const result = await migrate(connectionString, { dir: baseMigrationsDir });
   expect(result.applied.at(-1)).toBe(BASE_HEAD);
+}
+
+async function migrateThroughIssuerExpand() {
+  return migrate(connectionString, { dir: expandedMigrationsDir });
 }
 
 async function insertUser(client: pg.Client, id: string, email: string): Promise<void> {
@@ -133,25 +139,36 @@ beforeAll(async () => {
     .start();
   connectionString = container.getConnectionUri();
   baseMigrationsDir = mkdtempSync(join(tmpdir(), 'better-auth-issuer-base-migrations-'));
+  expandedMigrationsDir = mkdtempSync(join(tmpdir(), 'better-auth-issuer-expanded-migrations-'));
 
   const files = listMigrationFiles(MIGRATIONS_DIR);
   const baseIndex = files.indexOf(BASE_HEAD);
+  const issuerIndex = files.indexOf(ISSUER_MIGRATION);
   if (baseIndex === -1) throw new Error(`Base migration fixture not found: ${BASE_HEAD}`);
+  if (issuerIndex === -1) {
+    throw new Error(`Issuer migration fixture not found: ${ISSUER_MIGRATION}`);
+  }
   for (const file of files.slice(0, baseIndex + 1)) {
     copyFileSync(join(MIGRATIONS_DIR, file), join(baseMigrationsDir, file));
+  }
+  for (const file of files.slice(0, issuerIndex + 1)) {
+    copyFileSync(join(MIGRATIONS_DIR, file), join(expandedMigrationsDir, file));
   }
 }, 120_000);
 
 afterAll(async () => {
   await container?.stop();
   if (baseMigrationsDir) rmSync(baseMigrationsDir, { recursive: true, force: true });
+  if (expandedMigrationsDir) {
+    rmSync(expandedMigrationsDir, { recursive: true, force: true });
+  }
 });
 
 describe('Better Auth account issuer migration', () => {
   it('expands an empty database and keeps old 1.6 inserts compatible', async () => {
     await resetToLegacySchema();
 
-    await expect(migrate(connectionString)).resolves.toEqual({
+    await expect(migrateThroughIssuerExpand()).resolves.toEqual({
       applied: [ISSUER_MIGRATION],
     });
 
@@ -181,7 +198,7 @@ describe('Better Auth account issuer migration', () => {
       });
     });
 
-    await expect(migrate(connectionString)).resolves.toEqual({ applied: [] });
+    await expect(migrateThroughIssuerExpand()).resolves.toEqual({ applied: [] });
   }, 120_000);
 
   it('canonicalizes a legacy credential without changing its protected data', async () => {
@@ -205,7 +222,7 @@ describe('Better Auth account issuer migration', () => {
       return inserted.rows[0];
     });
 
-    await expect(migrate(connectionString)).resolves.toEqual({
+    await expect(migrateThroughIssuerExpand()).resolves.toEqual({
       applied: [ISSUER_MIGRATION],
     });
 
@@ -236,7 +253,7 @@ describe('Better Auth account issuer migration', () => {
       );
     });
 
-    await expect(migrate(connectionString)).rejects.toThrow(/1 non-credential provider row/i);
+    await expect(migrateThroughIssuerExpand()).rejects.toThrow(/1 non-credential provider row/i);
 
     await withClient(async (client) => {
       await expectMigrationRolledBack(client);
@@ -270,7 +287,7 @@ describe('Better Auth account issuer migration', () => {
       );
     });
 
-    await expect(migrate(connectionString)).rejects.toThrow(
+    await expect(migrateThroughIssuerExpand()).rejects.toThrow(
       /1 projected credential identity collision/i,
     );
 
@@ -300,12 +317,10 @@ describe('Better Auth account issuer migration', () => {
     await resetToLegacySchema();
     await withClient(async (client) => {
       await client.query('DROP INDEX public.account_user_id_idx');
-      await client.query(
-        'CREATE INDEX account_user_id_idx ON public."account" (provider_id)',
-      );
+      await client.query('CREATE INDEX account_user_id_idx ON public."account" (provider_id)');
     });
 
-    await expect(migrate(connectionString)).rejects.toThrow(
+    await expect(migrateThroughIssuerExpand()).rejects.toThrow(
       /unexpected pre-1\.7 public\.account index definitions/i,
     );
 
@@ -320,8 +335,7 @@ describe('Better Auth account issuer migration', () => {
       `);
       expect(index.rows).toEqual([
         {
-          indexdef:
-            'CREATE INDEX account_user_id_idx ON public.account USING btree (provider_id)',
+          indexdef: 'CREATE INDEX account_user_id_idx ON public.account USING btree (provider_id)',
         },
       ]);
     });
@@ -338,7 +352,7 @@ describe('Better Auth account issuer migration', () => {
       `);
     });
 
-    await expect(migrate(connectionString)).rejects.toThrow(
+    await expect(migrateThroughIssuerExpand()).rejects.toThrow(
       /unexpected pre-1\.7 public\.account constraint definitions/i,
     );
 
@@ -353,6 +367,114 @@ describe('Better Auth account issuer migration', () => {
       expect(constraint.rows).toEqual([
         {
           definition: 'FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE RESTRICT',
+        },
+      ]);
+    });
+  }, 120_000);
+});
+
+describe('Better Auth account issuer relaxation migration', () => {
+  it('relaxes the 1.7.2 schema without rewriting credentials', async () => {
+    await resetToLegacySchema();
+    await expect(migrateThroughIssuerExpand()).resolves.toEqual({
+      applied: [ISSUER_MIGRATION],
+    });
+
+    await withClient(async (client) => {
+      await insertUser(client, 'usr_relax0001', 'relax-one@test.local');
+      await client.query(
+        `INSERT INTO public."account"
+           (id, account_id, provider_id, user_id, password, updated_at)
+         VALUES ('idn_relax0001', 'usr_relax0001', 'credential',
+                 'usr_relax0001', 'password-hash', now())`,
+      );
+    });
+
+    await expect(migrate(connectionString)).resolves.toEqual({
+      applied: [ISSUER_RELAXATION],
+    });
+
+    await withClient(async (client) => {
+      const contract = await client.query<{
+        is_nullable: 'YES' | 'NO';
+        column_default: string | null;
+        issuer_index: string | null;
+      }>(`
+        SELECT
+          columns.is_nullable,
+          columns.column_default,
+          to_regclass('public."account_issuer_accountId_uidx"')::text
+            AS issuer_index
+        FROM information_schema.columns
+        WHERE columns.table_schema = 'public'
+          AND columns.table_name = 'account'
+          AND columns.column_name = 'issuer'
+      `);
+      expect(contract.rows).toEqual([
+        {
+          is_nullable: 'YES',
+          column_default: "'local:credential'::text",
+          issuer_index: null,
+        },
+      ]);
+
+      const credential = await client.query(
+        `SELECT issuer, account_id, provider_id, user_id, password
+         FROM public."account"
+         WHERE id = 'idn_relax0001'`,
+      );
+      expect(credential.rows).toEqual([
+        {
+          issuer: 'local:credential',
+          account_id: 'usr_relax0001',
+          provider_id: 'credential',
+          user_id: 'usr_relax0001',
+          password: 'password-hash',
+        },
+      ]);
+    });
+
+    await expect(migrate(connectionString)).resolves.toEqual({ applied: [] });
+  }, 120_000);
+
+  it('fails closed when the 1.7.2 issuer index contract drifted', async () => {
+    await resetToLegacySchema();
+    await expect(migrateThroughIssuerExpand()).resolves.toEqual({
+      applied: [ISSUER_MIGRATION],
+    });
+
+    await withClient(async (client) => {
+      await client.query('DROP INDEX public."account_issuer_accountId_uidx"');
+      await client.query(
+        'CREATE INDEX "account_issuer_accountId_uidx" ON public."account" (issuer)',
+      );
+    });
+
+    await expect(migrate(connectionString)).rejects.toThrow(
+      /unexpected Better Auth 1\.7\.2 issuer identity index contract/i,
+    );
+
+    await withClient(async (client) => {
+      const state = await client.query<{
+        is_nullable: 'YES' | 'NO';
+        migration_recorded: boolean;
+      }>(`
+        SELECT
+          columns.is_nullable,
+          EXISTS (
+            SELECT 1
+            FROM app._migrations
+            WHERE name = '${ISSUER_RELAXATION}'
+          ) AS migration_recorded
+        FROM information_schema.columns
+        WHERE columns.table_schema = 'public'
+          AND columns.table_name = 'account'
+          AND columns.column_name = 'issuer'
+      `);
+      expect(state.rows).toEqual([
+        {
+          is_nullable: 'NO',
+          migration_recorded: false,
         },
       ]);
     });

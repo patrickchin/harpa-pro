@@ -67,7 +67,7 @@ cleanup() {
   # Runs even on failure so the bucket doesn't accumulate orphans.
   if [[ -s "$KEYS_FILE" ]] && docker compose ps --services 2>/dev/null | grep -q minio; then
     while IFS= read -r key; do
-      docker run --rm --network harpa-pro-opus_default minio/mc:latest \
+      docker run --rm --network harpa-pro-opus_default quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z \
         /bin/sh -c "mc alias set local http://minio:9000 minio minio-dev-secret >/dev/null && \
                     mc rm 'local/harpa-pro/$key'" >/dev/null 2>&1 || true
     done < "$KEYS_FILE"

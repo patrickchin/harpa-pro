@@ -303,7 +303,7 @@ copy_fixture "store-construction-scaffolding.jpg"
 copy_fixture "store-construction-overhead.jpg"
 copy_fixture "store-construction-homes.jpg"
 
-MSYS_NO_PATHCONV=1 docker run --rm --network container:harpa-pro-minio --volumes-from harpa-pro-minio --entrypoint /bin/sh minio/mc:latest -c '
+MSYS_NO_PATHCONV=1 docker run --rm --network container:harpa-pro-minio --volumes-from harpa-pro-minio --entrypoint /bin/sh quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z -c '
 set -eu
 mc alias set local http://localhost:9000 minio minio-dev-secret >/dev/null
 mc mb -p local/harpa-pro >/dev/null 2>&1 || true

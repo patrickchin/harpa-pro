@@ -178,6 +178,12 @@ surface opacity carries contrast or hierarchy.
 
 ## Entries
 
+- **2026-09-22** _(R22)_ — Fresh local and Maestro stacks could not start because
+  MinIO's Docker Hub image names no longer resolved, while previously pulled
+  images hid the failure on established machines. Fix: use pinned official
+  Quay images everywhere and enforce the source in release-confidence policy.
+  [detail](2026-09-22-minio-docker-hub-images-removed.md)
+
 - **2026-09-21** — Fly returned the active storage worker in its valid
   post-update `created` state while the exact current-release standby already
   watched that id; the fail-closed repair helper omitted that state and stopped

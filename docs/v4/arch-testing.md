@@ -364,22 +364,33 @@ documented in [`arch-ops.md`](arch-ops.md).
 
 GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
 the repository's default branch, `main`. It checks the root pnpm workspace,
-the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
+the Maestro orchestrator's uv/Python graph, the root Bundler/Fastlane graph,
+and GitHub Actions weekly. Routine
 version-update pull requests target `dev`. Compatibility-coupled Better Auth,
-React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, Commitlint, and
-TanStack Query packages update as coordinated stacks. The Vitest group includes
+React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, DOM-testing,
+Commitlint, and TanStack Query packages update as coordinated stacks. The
+Vitest group includes
 `@vitest/*` and all update types so a runner major cannot leave its coverage
-provider on an incompatible major. The Commitlint group likewise keeps the CLI,
+provider on an incompatible major. The DOM-testing group keeps jsdom and the
+Testing Library packages together; the dashboard declares `@testing-library/dom`
+directly because jest-dom 7 makes it a required peer and requires Node 22 or
+newer. The Commitlint group likewise keeps the CLI,
 shared types, and conventional configuration on one major. The TanStack Query
 group keeps React Query and both mobile persistence adapters on the same exact
 release because their peer types use private members and are not structurally
 interchangeable across versions. The broad npm production/development groups
-accept patches only, so unrelated minor updates remain focused. The Better Auth
+consolidate minor and patch updates by dependency type, after the compatibility
+stacks have been assigned. This keeps the routine weekly queue to a small number
+of reviewable PRs while major updates remain isolated for migration review. The
+Better Auth
 CLI package `auth` moves with the complete Better Auth stack; its semver-major
 updates, like the other Better Auth packages, require a reviewed stack
 migration. Expo and React Native packages are ignored here: until a reviewed
 SDK migration changes the tested matrix, Expo Doctor and `expo install` own the
-React runtime/renderers and the Babel-major compatibility boundary.
+React runtime/renderers and the Babel-major compatibility boundary. Stable
+NativeWind v4 uses Tailwind CSS 3, so Tailwind major updates are also reserved
+for the reviewed NativeWind v5 migration; minor and patch updates remain
+automated.
 
 Better Auth patch releases can include schema-compatibility corrections.
 Package-only pull requests must run the real adapter initialization and
@@ -397,9 +408,18 @@ stale dependency pins.
 
 Dependabot security updates are enabled separately under **Settings → Code
 security and analysis**. They are advisory-driven rather than scheduled and
-always target the default branch, `main`; the `target-branch: dev`
-customizations apply only to routine version updates. The configuration does
-not become active until it reaches `main`.
+always target the default branch, `main`; GitHub's grouped-security-updates
+setting only groups those alert-driven security PRs. Routine version updates
+still use the groups in `.github/dependabot.yml`, and its `target-branch: dev`
+customizations do not apply to security updates. The configuration does not
+become active until it reaches `main`.
+
+Dependabot can group transitive security alerts yet still fail to open a PR
+when every vulnerable package is outside its parent's declared range. The root
+pnpm overrides record the minimum safe transitive versions in that case. An
+override that crosses a parent major must stay narrowly scoped and pass the
+affected runtime gate: Metro changes require the mobile bundle/native gates,
+and Lighthouse/Puppeteer changes require the site Lighthouse browser gate.
 
 Dependabot pull requests run with reduced credentials. Credential-free tests,
 lint, typechecking, browser checks, builds, path detection, and migration-name

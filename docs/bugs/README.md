@@ -178,6 +178,13 @@ surface opacity carries contrast or hierarchy.
 
 ## Entries
 
+- **2026-09-21** — Fly returned the active storage worker in its valid
+  post-update `created` state while the exact current-release standby already
+  watched that id; the fail-closed repair helper omitted that state and stopped
+  the deploy after the API was live. Fix: prove the exact pair, start only the
+  created candidate, and poll the same identities to the healthy topology.
+  [detail](2026-09-21-fly-created-worker-recovery.md)
+
 - **2026-09-21** — Better Auth 1.7.3 reversed the issuer-keyed account schema
   introduced in 1.7.0–1.7.2, so a package-only 1.7.5 update rejected every
   auth request against the previously correct `NOT NULL account.issuer`.

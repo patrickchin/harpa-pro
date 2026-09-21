@@ -80,9 +80,9 @@ for (const unsafeSelector of [
 
 assertDeclaredFloor(
   apiPackage.dependencies?.nanoid,
-  5,
-  '5.1.16',
-  'the API must keep nanoid on the patched 5.x floor',
+  6,
+  '6.0.1',
+  'the API must keep nanoid on the reviewed 6.x floor',
 );
 assertDeclaredFloor(
   overrides['nanoid@>=3.0.0 <3.3.18'],
@@ -129,9 +129,9 @@ assert.ok(
 assert.ok(
   nanoidVersions.some(
     (version) =>
-      parseVersion(version)[0] === 5 && compareVersions(version, '5.1.16') >= 0,
+      parseVersion(version)[0] === 6 && compareVersions(version, '6.0.1') >= 0,
   ),
-  'the API nanoid edge must resolve at or above its patched floor',
+  'the API nanoid edge must resolve at or above its reviewed 6.x floor',
 );
 
 assertNoAffectedVersions('js-yaml', resolvedVersions('js-yaml'), (version) => {

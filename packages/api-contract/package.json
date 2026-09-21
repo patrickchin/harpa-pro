@@ -18,7 +18,7 @@
     "gen:types": "tsx scripts/gen-types.ts"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "openapi-typescript": "^7.4.1",

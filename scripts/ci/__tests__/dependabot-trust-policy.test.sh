@@ -146,6 +146,9 @@ require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "tailwindcss" \
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
   "version-update:semver-major" \
   "Dependabot leaves Better Auth CLI major upgrades to a reviewed stack migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@hono/zod-openapi" \
+  "version-update:semver-major" \
+  "Dependabot leaves the OpenAPI registry major to a reviewed contract migration"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "rbs" \
   "versions: ['>= 4.2.0']" \
   "Dependabot leaves Ruby 3.3-only rbs releases to the Expo Ruby migration"

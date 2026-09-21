@@ -67,6 +67,14 @@ updates:
         patterns:
           - 'vitest'
           - '@vitest/*'
+      commitlint-stack:
+        patterns:
+          - '@commitlint/*'
+      tanstack-query-stack:
+        patterns:
+          - '@tanstack/react-query'
+          - '@tanstack/react-query-persist-client'
+          - '@tanstack/query-async-storage-persister'
       production-patches:
         patterns:
           - '*'

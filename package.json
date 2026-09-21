@@ -40,8 +40,8 @@
     "ios": "expo run:ios"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.5.0",
-    "@commitlint/config-conventional": "^19.5.0",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@lhci/cli": "^0.15.1",
     "@types/node": "^22.7.5",
     "husky": "^9.1.6",

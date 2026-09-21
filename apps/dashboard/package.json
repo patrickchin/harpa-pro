@@ -19,7 +19,7 @@
     "@harpa/api-contract": "workspace:*",
     "@harpa/design-tokens": "workspace:^",
     "@headlessui/react": "^2.2.10",
-    "@sentry/react": "^10.70.0",
+    "@sentry/react": "^10.75.0",
     "@tanstack/react-query": "^5.103.1",
     "better-auth": "1.7.5",
     "clsx": "^2.1.1",
@@ -27,8 +27,8 @@
     "lucide-react": "^1.47.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "react-router": "^8.3.0",
-    "tailwind-merge": "^3.6.0",
+    "react-router": "^8.4.0",
+    "tailwind-merge": "^3.7.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

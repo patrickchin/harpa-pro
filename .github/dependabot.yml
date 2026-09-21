@@ -145,6 +145,9 @@ updates:
     commit-message:
       prefix: 'chore(deps)'
     ignore:
-      # Expo's SDK 55 builders still use Ruby 3.2. rbs 4.2 requires Ruby 3.3.
+      # Expo's SDK 55 builders still use Ruby 3.2. excon 1.7 and rbs 4.2
+      # require Ruby 3.3.
+      - dependency-name: 'excon'
+        versions: ['>= 1.7.0']
       - dependency-name: 'rbs'
         versions: ['>= 4.2.0']

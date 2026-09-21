@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@harpa/api-contract": "workspace:*",
-    "chalk": "^5.3.0",
+    "chalk": "^6.0.0",
     "citty": "^0.2.2",
     "openapi-fetch": "^0.17.0",
     "zod": "^3.23.8"

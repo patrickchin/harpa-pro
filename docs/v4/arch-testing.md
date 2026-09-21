@@ -379,8 +379,9 @@ The path-scoped `ruby-security` workflow validates each Ruby dependency change
 with Bundler 2.6.9 on Ruby 3.2.11 (the supported EAS Ruby line) and Ruby 3.4.10
 (the checked-in local version). Both jobs load the Fastlane configuration after
 checking the patched dependency floors. Scheduled Bundler updates ignore
-`rbs >= 4.2.0` while SDK 55 builders remain on Ruby 3.2; the matching Gemfile
-ceiling is the runtime compatibility boundary, not a stale dependency pin.
+`excon >= 1.7.0` and `rbs >= 4.2.0` while SDK 55 builders remain on Ruby
+3.2; the matching Gemfile ceilings are runtime compatibility boundaries, not
+stale dependency pins.
 
 Dependabot security updates are enabled separately under **Settings → Code
 security and analysis**. They are advisory-driven rather than scheduled and

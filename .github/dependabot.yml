@@ -63,6 +63,10 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+      vitest-stack:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
       production-patches:
         patterns:
           - '*'

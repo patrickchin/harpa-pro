@@ -9,6 +9,9 @@ export default defineConfig({
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     environment: 'jsdom',
+    // Vitest 5 defaults this to true. Preserve module-initialization
+    // assertions that intentionally observe client construction.
+    clearMocks: false,
     setupFiles: ['./src/test/setup.ts'],
     css: true,
     env: {

@@ -247,15 +247,18 @@ require_fixed ".github/dependabot.yml" \
 require_fixed ".github/dependabot.yml" \
   "package-ecosystem: 'bundler'" \
   "Dependabot scans the root Bundler graph"
+require_fixed ".github/dependabot.yml" \
+  "package-ecosystem: 'pip'" \
+  "Dependabot scans the Maestro uv/Python graph"
 require_fixed_count ".github/dependabot.yml" \
-  "package-ecosystem:" 3 \
-  "Dependabot declares exactly the three intended ecosystems"
+  "package-ecosystem:" 4 \
+  "Dependabot declares exactly the four intended ecosystems"
 require_fixed_count ".github/dependabot.yml" \
-  "target-branch: 'dev'" 3 \
-  "all three routine dependency update entries target dev"
+  "target-branch: 'dev'" 4 \
+  "all four routine dependency update entries target dev"
 require_fixed_count ".github/dependabot.yml" \
-  "interval: 'weekly'" 3 \
-  "all three dependency update entries use a controlled weekly cadence"
+  "interval: 'weekly'" 4 \
+  "all four dependency update entries use a controlled weekly cadence"
 require_dependabot_entry_fixed ".github/dependabot.yml" \
   "npm" "directory: '/'" \
   "npm updates scan the root pnpm workspace"
@@ -280,6 +283,18 @@ require_dependabot_entry_fixed ".github/dependabot.yml" \
 require_dependabot_entry_fixed ".github/dependabot.yml" \
   "npm" "prefix: 'chore(deps)'" \
   "npm updates retain the dependency commit prefix"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "pip" "directory: '/tools/maestro-orchestrator'" \
+  "Python updates scan the Maestro orchestrator lockfile"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "pip" "target-branch: 'dev'" \
+  "Python updates target dev"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "pip" "interval: 'weekly'" \
+  "Python updates use the weekly cadence"
+require_dependabot_entry_fixed ".github/dependabot.yml" \
+  "pip" "open-pull-requests-limit: 2" \
+  "Python updates retain the two-PR limit"
 require_dependabot_entry_fixed ".github/dependabot.yml" \
   "github-actions" "directory: '/'" \
   "GitHub Actions updates scan the root workflow graph"
@@ -329,11 +344,11 @@ require_dependabot_entry_fixed ".github/dependabot.yml" \
   "bundler" "prefix: 'chore(deps)'" \
   "Bundler updates retain the dependency commit prefix"
 require_fixed ".github/dependabot.yml" \
-  "production-patches:" \
-  "unrelated production updates are grouped only at patch level"
+  "production-minor-patch:" \
+  "unrelated production minor and patch updates are grouped"
 require_fixed ".github/dependabot.yml" \
-  "development-patches:" \
-  "unrelated development updates are grouped only at patch level"
+  "development-minor-patch:" \
+  "unrelated development minor and patch updates are grouped"
 forbid_fixed ".github/dependabot.yml" \
   "include: 'scope'" \
   "explicit conventional prefixes are not given a duplicate dependency scope"

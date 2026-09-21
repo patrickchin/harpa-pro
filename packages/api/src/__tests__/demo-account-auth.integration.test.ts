@@ -2,7 +2,6 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createLocalAccountIssuer } from 'better-auth/db';
 import type { PgFixture } from './setup-pg.js';
 
 const DEMO_EMAIL = 'demo@harpapro.com';
@@ -10,7 +9,6 @@ const DEMO_EMAIL_2 = 'demo2@harpapro.com';
 const DEMO_PASSWORD = 'demo-password-12345';
 const TEST_EMAIL = 'test@harpapro.com';
 const TEST_PASSWORD = 'test-password-12345';
-const CREDENTIAL_ISSUER = createLocalAccountIssuer('credential');
 const API_DIR = fileURLToPath(new URL('../..', import.meta.url));
 const execFileAsync = promisify(execFile);
 
@@ -87,7 +85,6 @@ async function seedPasswordUser(email: string, password: string): Promise<void> 
   await ctx.internalAdapter.linkAccount({
     userId,
     providerId: 'credential',
-    issuer: CREDENTIAL_ISSUER,
     accountId: userId,
     password: passwordHash,
   });

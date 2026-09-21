@@ -403,12 +403,13 @@ checks the exact generation command. No current CI job regenerates the file
 and compares the result, so schema drift still needs a direct review check.
 
 Migration `0032_better_auth_account_issuer.sql` was the deliberate expand-stage
-bridge deployed before the Better Auth 1.7 runtime update. Its checked-in mirror
-was generated independently with 1.7.2 while the 1.6.28 runtime remained live.
-The runtime and CLI now use 1.7.2; regenerating with the pinned CLI must leave
-the mirror byte-for-byte unchanged. The `local:credential` database default
-remains only for rollback compatibility until a later physical-contract
-migration removes it.
+bridge deployed before the Better Auth 1.7.2 runtime update. Better Auth 1.7.3
+then restored the pre-1.7 account contract. Migration
+`0033_relax_better_auth_account_issuer.sql` drops the obsolete issuer identity
+index and makes the legacy column nullable before the 1.7.5 runtime starts.
+The 1.7.5-generated Drizzle mirror omits `issuer`; regenerating with the
+pinned CLI must leave the mirror byte-for-byte unchanged. The physical
+`local:credential` default remains only for a bounded 1.7.2 rollback.
 
 The API and mobile manifests pin `better-auth`, `@better-auth/expo`, and the
 official `auth` CLI to the same exact stable release. Upgrade all of them
@@ -416,14 +417,11 @@ together. Version ranges or the retired `@better-auth/cli` package can let
 pnpm satisfy the Expo plugin with an older `@better-auth/core`, even when the
 top-level runtime package looks current.
 
-Better Auth 1.7 identifies an account by `(issuer, accountId)`. Harpa Pro is
-credential-only, so every current account uses
-`issuer = 'local:credential'`, `account_id = user_id`, and
-`provider_id = 'credential'`. Direct seed and test writers derive the issuer
-with `createLocalAccountIssuer('credential')`. The 1.7.2 package does not
-implement the upgrade guide's `identityStrategy` option, so the server must
-not add or cast through that unsupported setting. Any live account with a
-different provider blocks deployment and requires a separately designed
+Better Auth 1.7.3+ identifies an account by `(providerId, accountId)`. Harpa
+Pro is credential-only, so every current account uses
+`provider_id = 'credential'` and `account_id = user_id`. The deploy seed
+finds that exact tuple and does not write the legacy issuer field. Any live
+account with a different provider still requires a separately designed
 identity migration.
 
 The mobile workspace pins Zod 4 because Better Auth's client and Expo plugin
@@ -439,26 +437,25 @@ The file is imported by the Drizzle adapter and re-exported by
 
 Better-auth tables live in `public` (Postgres default schema):
 
-| Table                 | Owner       | Notes                                            |
-| --------------------- | ----------- | ------------------------------------------------ |
-| `public.user`         | better-auth | `id text` (slug: `usr_…`)                        |
-| `public.session`      | better-auth | `id text` (slug: `ses_…`)                        |
-| `public.account`      | better-auth | `id text` (slug: `idn_…`), issuer-keyed identity |
-| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store             |
-| `app.*`               | application | RLS enforced, `app.usr_id` domain on FK cols     |
+| Table                 | Owner       | Notes                                              |
+| --------------------- | ----------- | -------------------------------------------------- |
+| `public.user`         | better-auth | `id text` (slug: `usr_…`)                          |
+| `public.session`      | better-auth | `id text` (slug: `ses_…`)                          |
+| `public.account`      | better-auth | `id text` (slug: `idn_…`), provider-keyed identity |
+| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store               |
+| `app.*`               | application | RLS enforced, `app.usr_id` domain on FK cols       |
 
 **No RLS on `public.session`, `public.account`, or `public.verification`.**
 The better-auth adapter queries these with the unscoped pool; RLS
 would block its own session lookups.
 
 The only currently supported account provider is `credential`. Its canonical
-identity is `issuer = 'local:credential'` and `account_id = user_id`, enforced
-by the unique `(issuer, account_id)` index. The physical issuer default is a
-temporary compatibility extension for Better Auth 1.6 writers and rollback;
-it is intentionally absent from the generated Drizzle declaration. Any live
-non-credential account blocks the 1.7 rollout. SIWA, Google, or another
-provider requires a separately reviewed identity migration rather than an
-inferred issuer.
+runtime identity is `provider_id = 'credential'` and `account_id = user_id`.
+The nullable physical `issuer` column and `local:credential` default are
+temporary compatibility extensions for a bounded 1.7.2 rollback; they are
+intentionally absent from the generated Drizzle declaration and no longer
+carry a uniqueness rule. SIWA, Google, or another provider requires a
+separately reviewed identity migration.
 
 **`public.user` does have an RLS policy** — see the migration snippet
 below. Better Auth uses the raw application connection before a request has
@@ -731,10 +728,11 @@ Env-Zod enforces both-or-neither. The deployment design configures both
 provider state before relying on it. The before-hook rejects any email not on
 the configured allowlist. The deploy seed is credential-level idempotent: if
 an allowlisted user already exists, it creates or refreshes that user's
-`credential` account password instead of assuming the user is ready. During
-the 1.7 expand stage, the retained database default assigns
-`issuer = 'local:credential'` to this unchanged 1.6 writer; integration
-coverage asserts the stored issuer and canonical account ID.
+`credential` account password instead of assuming the user is ready. The
+1.7.5 adapter writes `(provider_id, account_id)`; the retained database
+default still assigns `issuer = 'local:credential'` for rollback
+compatibility. Integration coverage asserts the canonical account tuple and
+successful password sign-in.
 
 The report generation live canary may use a dedicated allowlisted identity such as
 `report-canary@e2e.harpapro.com`. Account seeding supplies credentials only;

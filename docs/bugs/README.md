@@ -178,6 +178,13 @@ surface opacity carries contrast or hierarchy.
 
 ## Entries
 
+- **2026-09-21** — Better Auth 1.7.3 reversed the issuer-keyed account schema
+  introduced in 1.7.0–1.7.2, so a package-only 1.7.5 update rejected every
+  auth request against the previously correct `NOT NULL account.issuer`.
+  Fix: apply the vendor cleanup as forward migration 0033, regenerate the
+  Drizzle contract, and cover real adapter initialization plus sign-in.
+  [detail](2026-09-21-better-auth-patch-reversed-schema.md)
+
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
 
 A `POST /projects/{project}/members` handler that uses `INSERT … ON CONFLICT DO

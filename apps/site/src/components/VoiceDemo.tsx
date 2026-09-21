@@ -95,7 +95,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
       <div className="flex-1 overflow-y-auto px-4 pb-3 pt-3">
         <PreviousNoteCard
           title="Walk through — North Entrance"
-          author="Haruna Bayoh"
+          author="Site team"
           recordedAt="Today · 9:42 AM"
           summary="Rebar laid out for Block B footing. Crew noted standing water near gridline 4; pump scheduled for tomorrow."
           duration="2:14"

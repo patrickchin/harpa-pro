@@ -191,7 +191,7 @@ export function PhotoTile({
             left: 0,
             alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: 8,
+            borderRadius: 10,
             backgroundColor: 'rgba(0,0,0,0.5)',
           }}
         >

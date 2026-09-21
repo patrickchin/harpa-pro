@@ -1,0 +1,57 @@
+---
+import VoiceDemo from "../VoiceDemo.tsx";
+import Icon from "../Icon.astro";
+import { APP_STORE_URL } from "../../lib/links";
+---
+
+<section id="top" class="border-b border-hairline">
+  <div
+    class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-12"
+  >
+    <div class="flex flex-col justify-center">
+      <h1
+        class="text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
+      >
+        Site Reports from Voice, Photos, and Text
+      </h1>
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
+        Record site updates as work happens. Harpa Pro organizes them into a
+        daily report draft that you can review, edit, and share.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
+        >
+          Get the app <Icon name="external-link" class="h-4 w-4" />
+        </a>
+        <a
+          href="#how"
+          class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
+        >
+          See the workflow <Icon name="arrow-right" class="h-4 w-4" />
+        </a>
+      </div>
+      <ul class="mt-8 grid gap-2 text-sm text-ink-soft">
+        <li class="inline-flex items-center gap-2">
+          <Icon name="circle-check" class="h-4 w-4 text-ink" />
+          Capture a voice note, photo, or text note
+        </li>
+        <li class="inline-flex items-center gap-2">
+          <Icon name="circle-check" class="h-4 w-4 text-ink" />
+          Create a structured report draft
+        </li>
+        <li class="inline-flex items-center gap-2">
+          <Icon name="circle-check" class="h-4 w-4 text-ink" />
+          Review the report before you share it
+        </li>
+      </ul>
+    </div>
+
+    <div class="relative min-h-[640px] lg:pl-6" data-voice-demo>
+      <VoiceDemo client:only="react" />
+    </div>
+  </div>
+</section>

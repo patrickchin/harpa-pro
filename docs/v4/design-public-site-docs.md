@@ -59,9 +59,11 @@ The documentation uses an Astro content collection rooted at
 - last-verified date;
 - optional related-guide slugs.
 
-`/docs` is the searchable guide index. Individual guides use
-`/docs/guides/<slug>`. The hierarchy follows the original documentation site
-more closely while updating every instruction for v4.
+`/docs` is the searchable **Harpa Pro app guides** index. Individual guides
+use `/docs/guides/<slug>`. The shared navigation and breadcrumbs place these
+guides under the reporting app, separate from the procurement service. The
+hierarchy follows the original documentation site more closely while updating
+every instruction for v4.
 
 ### Core workflows
 

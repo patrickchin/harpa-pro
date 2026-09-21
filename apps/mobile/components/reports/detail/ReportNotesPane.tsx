@@ -417,7 +417,7 @@ function ReportNoteRowSkeleton({
         </View>
       </SkeletonRow>
       {withThumbnail ? (
-        <Skeleton width="100%" height={140} radius={8} />
+        <Skeleton width="100%" height={140} radius={10} />
       ) : (
         <View className="gap-1.5 pt-1">
           {Array.from({ length: lines }).map((_, i) => (

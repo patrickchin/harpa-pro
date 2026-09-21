@@ -75,12 +75,12 @@
   --info-border: #9fb7df;
 
   /* Shape and depth */
-  --radius-sm: 4px;
-  --radius-control: 6px;
-  --radius-md: 6px;
-  --radius-card: 8px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-sm: 8px;
+  --radius-control: 10px;
+  --radius-md: 10px;
+  --radius-card: 12px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --border-width: 1px;
   --shadow-raised: 0 2px 8px rgb(26 26 46 / 8%);
   --shadow-floating: 0 4px 14px rgb(26 26 46 / 12%);

@@ -166,6 +166,16 @@ and unit-test the final options object, and keep real-device/TestFlight
 smoke coverage for option surfaces that affect native encoders,
 permissions, or audio sessions.
 
+### R21 — Hand-written Tailwind utilities drop generated variants
+
+A class defined manually in CSS can look like a Tailwind color utility without
+participating in Tailwind's variant generation. A solid class such as
+`bg-paper-2` works, while an opacity form such as `bg-paper-2/95` has no rule
+and silently leaves the element transparent. Type checking, linting, and unit
+tests remain green because the class name is valid text. Register reusable
+colors in `@theme` and assert the computed style in browser coverage whenever
+surface opacity carries contrast or hierarchy.
+
 ## Entries
 
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
@@ -379,12 +389,31 @@ configuration to the adapter, and prove a cold import succeeds with the
 external credential absent. This is the reflection variant of the earlier
 [`routes/dev.ts` boot crash](2026-06-06-routes-dev-boot-crash.md).
 
+### R22 — Floating external container aliases disappear beneath CI
+
+A Testcontainers helper that pulls `vendor/image:latest` from a legacy
+registry can break every unrelated pull request when the publisher moves or
+removes that alias. Pin the image to the publisher's official registry and a
+verified release tag. Keep a real integration test that pulls and boots the
+image so registry drift fails at the shared boundary instead of masquerading
+as a product regression.
+
 ## Bugs
 
 - **2026-06-06** _(R3)_ — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-09-21** _(R22)_ — API integration failed across unrelated PRs because
+  Docker Hub stopped serving the floating `minio/minio:latest` alias. Fix:
+  use MinIO's official Quay registry with a pinned release tag.
+  [detail](2026-09-21-minio-docker-hub-image-removed.md)
+- **2026-09-20** _(R21)_ — The sticky site header and secondary section bands
+  stayed transparent because hand-written `bg-paper-2` could not generate the
+  `/95` and `/60` opacity variants used in markup. Fix: register the semantic
+  Tailwind color, use solid surfaces for navigation and bands, and assert the
+  computed backgrounds in Playwright.
+  [detail](2026-09-20-tailwind-custom-color-opacity.md)
 - **2026-09-03** _(R20)_ — Better Auth 1.7's Drizzle adapter probed `db._`
   during construction, and the API's catch-all lazy proxy treated that
   reflection as a real query, requiring `DATABASE_URL` at import time. Fix:

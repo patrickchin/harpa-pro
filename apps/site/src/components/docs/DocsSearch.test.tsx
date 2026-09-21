@@ -1,20 +1,20 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
 
-import { DocsSearch } from "./DocsSearch";
+import { DocsSearch } from './DocsSearch';
 
-describe("DocsSearch", () => {
-  it("server-renders an accessible search field without a duplicate guide grid", () => {
+describe('DocsSearch', () => {
+  it('server-renders an accessible search field without a duplicate guide grid', () => {
     const html = renderToStaticMarkup(
       <DocsSearch
         entries={[
           {
-            slug: "getting-started",
-            title: "Getting started",
-            description: "Install the app and sign in.",
-            tier: "setup",
-            tierLabel: "Setup & account",
-            keywords: ["install"],
+            slug: 'getting-started',
+            title: 'Getting started',
+            description: 'Install the app and sign in.',
+            tier: 'setup',
+            tierLabel: 'Setup & Account',
+            keywords: ['install'],
           },
         ]}
       />,

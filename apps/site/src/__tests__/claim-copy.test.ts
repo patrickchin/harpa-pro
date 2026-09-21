@@ -13,7 +13,7 @@ function readSource(path: string): string {
 describe('marketing claim copy', () => {
   it('does not publish stale or overbroad audited claims', () => {
     const files = [
-      'components/landing/Hero.astro',
+      'components/agents/ProcurementEvidence.astro',
       'components/landing/Header.astro',
       'components/landing/Features.astro',
       'components/landing/WaitlistForm.astro',
@@ -32,6 +32,7 @@ describe('marketing claim copy', () => {
       'content.config.ts',
       'layouts/Layout.astro',
       'pages/index.astro',
+      'pages/app.astro',
       'pages/confirm.astro',
       'pages/roadmap.astro',
       'lib/links.ts',

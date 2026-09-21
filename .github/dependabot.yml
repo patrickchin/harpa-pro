@@ -144,3 +144,7 @@ updates:
     open-pull-requests-limit: 2
     commit-message:
       prefix: 'chore(deps)'
+    ignore:
+      # Expo's SDK 55 builders still use Ruby 3.2. rbs 4.2 requires Ruby 3.3.
+      - dependency-name: 'rbs'
+        versions: ['>= 4.2.0']

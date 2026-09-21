@@ -3,7 +3,7 @@
  * recording strip rendered by `GenerateReportInputBar` while
  * `voice.isRecording` is true.
  *
- * Layout (single row, ~68px tall to match the input bar):
+ * Layout (single row, sized by the shared touch target and shell padding):
  *
  *   ┌─────────────────────────────────────────────────────────────┐
  *   │ [🗑]  ● 0:08         ▁▂▅▇▆▃▁▂▄▆▇▅▃▁▂▄▆ …  [Send ▶]           │
@@ -40,6 +40,7 @@ import Reanimated, {
 import { AlertTriangle, Send, Trash2 } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
 import { HISTORY_SIZE } from './useInlineRecorder';
 
 export interface InlineVoiceRecorderProps {
@@ -174,7 +175,7 @@ function Waveform({ bars }: { bars: readonly number[] }) {
   return (
     <View
       testID="voice-record-waveform"
-      className="h-10 flex-1 flex-row items-center justify-end"
+      className="h-10 flex-1 flex-row items-center justify-end overflow-hidden"
       style={{ gap: BAR_GAP }}
     >
       {padded.map((amp, idx) => {
@@ -212,9 +213,10 @@ export function InlineVoiceRecorder({
     <View
       testID="voice-record-strip"
       accessibilityLabel="Recording voice note"
-      className={`min-h-[68px] flex-1 flex-row items-center gap-3 rounded-xl border bg-card px-3 py-2 ${
+      className={`flex-row items-center gap-2 rounded-full border bg-card p-2.5 ${
         isWarning ? 'border-destructive/60' : 'border-border'
       }`}
+      style={getSurfaceDepthStyle('floating')}
     >
       <Pressable
         onPress={onCancel}
@@ -223,17 +225,17 @@ export function InlineVoiceRecorder({
         accessibilityRole="button"
         accessibilityLabel="Cancel recording"
         hitSlop={8}
-        className="h-11 w-11 items-center justify-center rounded-full"
+        className="h-touch shrink-0 aspect-square items-center justify-center rounded-full"
       >
         <Trash2 size={20} color={colors.destructive.DEFAULT} />
       </Pressable>
 
-      <View className="flex-row items-center gap-2">
+      <View className="shrink-0 flex-row items-center gap-2">
         <RecordingDot />
         <View>
           <Text
             testID="voice-record-duration"
-            className={`min-w-[36px] text-base font-semibold tabular-nums ${
+            className={`min-w-9 text-base font-semibold tabular-nums ${
               isWarning ? 'text-destructive' : 'text-foreground'
             }`}
           >
@@ -245,7 +247,7 @@ export function InlineVoiceRecorder({
               <Text
                 testID="voice-record-remaining"
                 accessibilityLabel={`${formatDuration(remainingMs)} remaining before automatic stop`}
-                className="text-[10px] font-semibold tabular-nums text-destructive"
+                className="text-xs font-semibold tabular-nums text-destructive"
               >
                 {formatDuration(remainingMs)} left
               </Text>
@@ -253,7 +255,7 @@ export function InlineVoiceRecorder({
           ) : (
             <Text
               testID="voice-record-max"
-              className="text-[10px] text-muted-foreground"
+              className="text-xs text-muted-foreground"
             >
               Max {formatDuration(MAX_DURATION_MS)}
             </Text>
@@ -271,7 +273,7 @@ export function InlineVoiceRecorder({
         accessibilityLabel="Send voice note"
         accessibilityState={{ disabled: sending || durationMs === 0 }}
         hitSlop={8}
-        className={`h-11 w-11 items-center justify-center rounded-full bg-primary ${
+        className={`h-touch shrink-0 aspect-square items-center justify-center rounded-full bg-primary ${
           sending || durationMs === 0 ? 'opacity-50' : ''
         }`}
       >

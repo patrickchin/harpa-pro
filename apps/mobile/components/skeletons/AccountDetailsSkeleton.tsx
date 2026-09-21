@@ -51,26 +51,26 @@ export function AccountDetailsSkeleton({
       style={{ gap: 20, paddingBottom: 40 }}
     >
       <View onLayout={onInfoNoticeLayout}>
-        <Skeleton width="100%" height={INFO_NOTICE_HEIGHT} radius={8} />
+        <Skeleton width="100%" height={INFO_NOTICE_HEIGHT} radius={10} />
       </View>
 
       <View className="gap-2" onLayout={onEmailFieldLayout}>
         <Skeleton width={50} height={LABEL_HEIGHT} />
-        <Skeleton width="100%" height={INPUT_HEIGHT} radius={8} />
+        <Skeleton width="100%" height={INPUT_HEIGHT} radius={10} />
       </View>
 
       <View className="gap-2">
         <Skeleton width={72} height={LABEL_HEIGHT} />
-        <Skeleton width="100%" height={INPUT_HEIGHT} radius={8} />
+        <Skeleton width="100%" height={INPUT_HEIGHT} radius={10} />
       </View>
 
       <View className="gap-2" onLayout={onCompanyFieldLayout}>
         <Skeleton width={100} height={LABEL_HEIGHT} />
-        <Skeleton width="100%" height={INPUT_HEIGHT} radius={8} />
+        <Skeleton width="100%" height={INPUT_HEIGHT} radius={10} />
       </View>
 
       {canEdit ? (
-        <Skeleton width="100%" height={BUTTON_HEIGHT} radius={8} />
+        <Skeleton width="100%" height={BUTTON_HEIGHT} radius={10} />
       ) : null}
     </View>
   );

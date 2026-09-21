@@ -25,7 +25,7 @@ exports[`Skeleton > renders default block 1`] = `
   style={
     [
       {
-        "borderRadius": 6,
+        "borderRadius": 10,
         "height": 16,
         "width": "100%",
       },
@@ -44,7 +44,7 @@ exports[`Skeleton > renders fixed width + height 1`] = `
   style={
     [
       {
-        "borderRadius": 6,
+        "borderRadius": 10,
         "height": 24,
         "width": 120,
       },
@@ -101,7 +101,7 @@ exports[`SkeletonRow > renders children inside a flex-row container 1`] = `
     style={
       [
         {
-          "borderRadius": 6,
+          "borderRadius": 10,
           "height": 16,
           "width": "100%",
         },

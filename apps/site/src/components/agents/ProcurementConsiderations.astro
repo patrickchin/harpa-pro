@@ -1,0 +1,202 @@
+---
+import { Image } from "astro:assets";
+import Icon from "../Icon.astro";
+import revitCoordinationImg from "../../assets/agents/procurement/revit-a104-coordination.jpg";
+import aisFactoryImg from "../../assets/procurement/factories/ais-factory-exterior.webp";
+import aisProductionImg from "../../assets/procurement/factories/ais-production-overview.webp";
+import aisPackingImg from "../../assets/procurement/factories/catalogues/ais-packing-p41.webp";
+import aisHdfReportImg from "../../assets/procurement/factories/credentials/ais-hdf-formaldehyde-e0-2026.webp";
+
+const considerations = [
+  {
+    title: "Design and Specification",
+    description:
+      "We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.",
+    image: revitCoordinationImg,
+    alt: "Revit A104 coordination sheet with 3D interior views",
+    crop: "contain",
+    fit: "h-full w-full object-contain bg-white p-2",
+    icon: "ruler",
+  },
+  {
+    title: "Factory and Product Fit",
+    description:
+      "We compare the factory's capability, product range, production capacity, and records with the project brief.",
+    image: aisFactoryImg,
+    alt: "AIS Smarti headquarters and factory in Foshan, China",
+    crop: "embedded-caption",
+    fit: "h-full w-full origin-top scale-[1.18] object-cover object-top",
+    icon: "factory",
+  },
+  {
+    title: "Materials and Compliance",
+    description:
+      "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
+    image: aisHdfReportImg,
+    alt: "First page of the AIS marine HDF formaldehyde test report",
+    crop: "contain",
+    fit: "h-full w-full object-contain bg-white p-2",
+    icon: "shield-check",
+  },
+  {
+    title: "Production Quality",
+    description:
+      "We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.",
+    image: aisProductionImg,
+    alt: "AIS Smarti production lines and factory floor",
+    crop: "cover",
+    fit: "h-full w-full object-cover",
+    icon: "clipboard-check",
+  },
+  {
+    title: "Packing and Delivery",
+    description:
+      "We check packing, labels, collection, freight documents, and delivery records against the order.",
+    image: aisPackingImg,
+    alt: "AIS Smarti pallet and flat-pack packing examples",
+    crop: "cover",
+    fit: "h-full w-full object-cover",
+    icon: "package-check",
+  },
+];
+---
+
+<div data-considerations class="mt-8">
+  <div
+    role="tablist"
+    aria-label="Procurement considerations"
+    class="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5"
+  >
+    {
+      considerations.map((consideration, index) => (
+        <button
+          id={`consideration-tab-${index + 1}`}
+          type="button"
+          role="tab"
+          aria-label={consideration.title}
+          aria-selected={index === 0 ? "true" : "false"}
+          aria-controls={`consideration-panel-${index + 1}`}
+          tabindex={index === 0 ? 0 : -1}
+          data-consideration-tab
+          class="group flex h-full min-h-[5.5rem] w-full cursor-pointer flex-row items-center gap-4 rounded-xl border-2 border-border bg-card p-4 text-left text-ink shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/50 hover:shadow-md aria-selected:border-primary aria-selected:bg-secondary aria-selected:shadow-md ring-focus lg:min-h-[10.5rem] lg:flex-col lg:items-start lg:gap-0 lg:p-5"
+        >
+          <span
+            data-consideration-icon
+            class="grid h-10 w-10 flex-none place-items-center rounded-lg bg-secondary text-accent-ink transition-colors group-aria-selected:bg-primary group-aria-selected:text-primary-foreground"
+          >
+            <Icon name={consideration.icon} class="h-5 w-5" />
+          </span>
+          <span
+            data-consideration-title
+            class="min-w-0 text-base font-semibold leading-snug tracking-tight lg:mt-4"
+          >
+            {consideration.title}
+          </span>
+          <span
+            data-consideration-action
+            class="ml-auto inline-flex flex-none items-center gap-1.5 text-sm font-medium text-accent-ink group-aria-selected:text-primary lg:ml-0 lg:mt-auto lg:pt-5"
+          >
+            <span class="group-aria-selected:hidden">View details</span>
+            <span class="hidden group-aria-selected:inline">Details shown</span>
+            <Icon
+              name="chevron-right"
+              class="h-4 w-4 transition-transform group-aria-selected:rotate-90"
+            />
+          </span>
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="mt-6 min-w-0">
+    {
+      considerations.map((consideration, index) => (
+        <div
+          id={`consideration-panel-${index + 1}`}
+          role="tabpanel"
+          aria-labelledby={`consideration-tab-${index + 1}`}
+          tabindex="0"
+          hidden={index !== 0}
+          data-consideration-panel
+          class="overflow-hidden rounded-2xl border border-border bg-card shadow-md ring-focus lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]"
+        >
+          <div
+            data-consideration-image-frame
+            data-image-crop={consideration.crop}
+            class="aspect-[16/10] w-full overflow-hidden bg-white lg:aspect-auto lg:h-[28rem]"
+          >
+            <Image
+              src={consideration.image}
+              alt={consideration.alt}
+              widths={[480, 720, 960, 1200]}
+              sizes="(min-width: 64rem) 48rem, calc(100vw - 3rem)"
+              format="webp"
+              quality={86}
+              loading="lazy"
+              decoding="async"
+              class={consideration.fit}
+            />
+          </div>
+          <div class="flex min-h-[15rem] flex-col justify-end border-t border-hairline p-6 sm:min-h-[13rem] sm:p-8 lg:min-h-0 lg:border-l lg:border-t-0 lg:p-10">
+            <h3 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+              {consideration.title}
+            </h3>
+            <p class="mt-4 text-base leading-relaxed text-ink-soft sm:text-lg">
+              {consideration.description}
+            </p>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  function initializeConsiderations(root: HTMLElement) {
+    const tabs = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("[data-consideration-tab]"),
+    );
+    const panels = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-consideration-panel]"),
+    );
+
+    function activate(index: number, moveFocus = false) {
+      tabs.forEach((tab, tabIndex) => {
+        const isSelected = tabIndex === index;
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.tabIndex = isSelected ? 0 : -1;
+        const panel = panels[tabIndex];
+        if (panel) panel.hidden = !isSelected;
+      });
+
+      const nextTab = tabs[index];
+      if (moveFocus && nextTab) nextTab.focus();
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activate(index));
+      tab.addEventListener("keydown", (event) => {
+        let nextIndex = index;
+
+        if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+          nextIndex = (index + 1) % tabs.length;
+        } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+          nextIndex = (index - 1 + tabs.length) % tabs.length;
+        } else if (event.key === "Home") {
+          nextIndex = 0;
+        } else if (event.key === "End") {
+          nextIndex = tabs.length - 1;
+        } else {
+          return;
+        }
+
+        event.preventDefault();
+        activate(nextIndex, true);
+      });
+    });
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-considerations]")
+    .forEach(initializeConsiderations);
+</script>

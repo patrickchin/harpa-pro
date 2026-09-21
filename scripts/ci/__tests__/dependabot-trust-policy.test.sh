@@ -127,6 +127,11 @@ require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- 'vitest'" 
   "Vitest moves with its companion packages"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- '@vitest/*'" \
   "Vitest coverage providers move with the test runner"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "dom-testing-stack" "- 'jsdom'" \
+  "jsdom moves with the DOM testing stack"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "dom-testing-stack" \
+  "- '@testing-library/jest-dom'" \
+  "jest-dom moves with its required DOM peer"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "commitlint-stack" "- '@commitlint/*'" \
   "Commitlint CLI and configuration move together"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "tanstack-query-stack" \
@@ -160,6 +165,7 @@ for group in \
   aws-sdk-stack \
   typescript-eslint-stack \
   vitest-stack \
+  dom-testing-stack \
   commitlint-stack \
   tanstack-query-stack \
   production-patches \
@@ -183,6 +189,8 @@ require_fixed ".github/actions/changed-paths/action.yml" \
 require_fixed ".github/workflows/lint-typecheck.yml" \
   "bash scripts/ci/__tests__/dependabot-trust-policy.test.sh" \
   "the credential-free lint workflow runs this policy test"
+require_fixed "apps/dashboard/package.json" '"@testing-library/dom":' \
+  "dashboard declares the required jest-dom peer explicitly"
 
 PULL_REQUEST_TARGET_FOUND=0
 while IFS= read -r -d '' workflow; do

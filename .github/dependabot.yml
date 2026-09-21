@@ -67,6 +67,13 @@ updates:
         patterns:
           - 'vitest'
           - '@vitest/*'
+      dom-testing-stack:
+        patterns:
+          - 'jsdom'
+          - '@testing-library/dom'
+          - '@testing-library/jest-dom'
+          - '@testing-library/react'
+          - '@testing-library/user-event'
       commitlint-stack:
         patterns:
           - '@commitlint/*'

@@ -366,10 +366,14 @@ GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
 the repository's default branch, `main`. It checks the root pnpm workspace,
 the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
 version-update pull requests target `dev`. Compatibility-coupled Better Auth,
-React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, Commitlint, and
-TanStack Query packages update as coordinated stacks. The Vitest group includes
+React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, DOM-testing,
+Commitlint, and TanStack Query packages update as coordinated stacks. The
+Vitest group includes
 `@vitest/*` and all update types so a runner major cannot leave its coverage
-provider on an incompatible major. The Commitlint group likewise keeps the CLI,
+provider on an incompatible major. The DOM-testing group keeps jsdom and the
+Testing Library packages together; the dashboard declares `@testing-library/dom`
+directly because jest-dom 7 makes it a required peer and requires Node 22 or
+newer. The Commitlint group likewise keeps the CLI,
 shared types, and conventional configuration on one major. The TanStack Query
 group keeps React Query and both mobile persistence adapters on the same exact
 release because their peer types use private members and are not structurally

@@ -27,11 +27,11 @@ export interface MinioFixture {
 
 const ACCESS_KEY = 'minio_test_ak';
 const SECRET_KEY = 'minio_test_sk_long_enough_for_aws_sdk';
+const MINIO_IMAGE =
+  'quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z';
 
 export async function startMinio(bucket = 'harpa-test'): Promise<MinioFixture> {
-  const container: StartedTestContainer = await new GenericContainer(
-    'minio/minio:latest',
-  )
+  const container: StartedTestContainer = await new GenericContainer(MINIO_IMAGE)
     .withCommand(['server', '/data'])
     .withEnvironment({
       MINIO_ROOT_USER: ACCESS_KEY,

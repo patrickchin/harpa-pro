@@ -231,8 +231,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       immer:
-        specifier: ^11.1.16
-        version: 11.1.17
+        specifier: ^11.1.18
+        version: 11.1.18
       lucide-react:
         specifier: ^1.31.0
         version: 1.31.0(react@19.2.0)
@@ -406,8 +406,8 @@ importers:
         specifier: ^55.0.24
         version: 55.0.24(expo@55.0.26)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       immer:
-        specifier: ^11.1.16
-        version: 11.1.17
+        specifier: ^11.1.18
+        version: 11.1.18
       lucide-react-native:
         specifier: ^1.31.0
         version: 1.31.0(react-native-svg@15.15.3(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -518,8 +518,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/api-contract
       '@marsidev/react-turnstile':
-        specifier: ^1.6.0
-        version: 1.6.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: ^1.6.1
+        version: 1.6.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.2.2(@types/node@22.19.18)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
@@ -625,13 +625,13 @@ importers:
         version: link:../api-contract
       '@hono/node-server':
         specifier: 2.1.1
-        version: 2.1.1(hono@4.13.2)
+        version: 2.1.1(hono@4.13.8)
       '@hono/zod-openapi':
         specifier: ^0.18.3
-        version: 0.18.4(hono@4.13.2)(zod@3.25.76)
+        version: 0.18.4(hono@4.13.8)(zod@3.25.76)
       '@sentry/hono':
         specifier: ^10.70.0
-        version: 10.70.0(@cloudflare/workers-types@4.20260511.1)(@hono/node-server@2.1.1(hono@4.13.2))(@sentry/node@10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1)))(hono@4.13.2)
+        version: 10.70.0(@cloudflare/workers-types@4.20260511.1)(@hono/node-server@2.1.1(hono@4.13.8))(@sentry/node@10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1)))(hono@4.13.8)
       '@sentry/node':
         specifier: ^10.70.0
         version: 10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
@@ -642,8 +642,8 @@ importers:
         specifier: 0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260511.1)(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/pg@8.23.1)(better-sqlite3@12.10.0)(kysely@0.29.2)(pg@8.23.0)
       hono:
-        specifier: ^4.13.2
-        version: 4.13.2
+        specifier: ^4.13.8
+        version: 4.13.8
       nanoid:
         specifier: ^5.1.16
         version: 5.1.16
@@ -3515,8 +3515,8 @@ packages:
   '@lhci/utils@0.15.1':
     resolution: {integrity: sha512-WclJnUQJeOMY271JSuaOjCv/aA0pgvuHZS29NFNdIeI14id8eiFsjith85EGKYhljgoQhJ2SiW4PsVfFiakNNw==}
 
-  '@marsidev/react-turnstile@1.6.0':
-    resolution: {integrity: sha512-T2Um71ZdBgQBiyS01xgRMvDWk+mEsrLtXLFVhOC917OVEO584wbPOWj1sw35RaM17+q9QoADgLVcH60xr9NRqQ==}
+  '@marsidev/react-turnstile@1.6.1':
+    resolution: {integrity: sha512-ojI9NLYv821IRKi7KraTkxTto6KC/m58hNNyKxvYxm/cQBu5MI5eMkaiJs2JSQBFiXE3LPQI3seJVjv/2lgALA==}
     peerDependencies:
       react: 19.2.0
       react-dom: 19.2.0
@@ -7372,8 +7372,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.13.2:
-    resolution: {integrity: sha512-JydRilDRkYBQMt9qR9U92mXxmbGqsqSn/IKOrh4e7/gEbn+0zSr8igTu0obwJoNGN4sez28DIql7FBHWydoJpA==}
+  hono@4.13.8:
+    resolution: {integrity: sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@7.0.2:
@@ -7450,8 +7450,8 @@ packages:
   immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
 
-  immer@11.1.17:
-    resolution: {integrity: sha512-8Vu44Y0MuMBlTQz/jQ8HEMYNq/bBqk87MnBwYR5mC8AthfhEXidZ5aT/oA/CUqboa8THKltnD9L3xyqhU/Sy1Q==}
+  immer@11.1.18:
+    resolution: {integrity: sha512-EQyQtLiYW029lyoczMl/Hh4Xu7cDecSc58JRYpHyL4tIAu3eqd1yJzQX04d2BZHDkzFFvm6qJEJWOtfDSWAXbQ==}
 
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
@@ -13924,20 +13924,20 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
       use-sync-external-store: 1.6.0(react@19.2.0)
 
-  '@hono/node-server@2.1.1(hono@4.13.2)':
+  '@hono/node-server@2.1.1(hono@4.13.8)':
     dependencies:
-      hono: 4.13.2
+      hono: 4.13.8
 
-  '@hono/zod-openapi@0.18.4(hono@4.13.2)(zod@3.25.76)':
+  '@hono/zod-openapi@0.18.4(hono@4.13.8)(zod@3.25.76)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 7.3.4(zod@3.25.76)
-      '@hono/zod-validator': 0.4.3(hono@4.13.2)(zod@3.25.76)
-      hono: 4.13.2
+      '@hono/zod-validator': 0.4.3(hono@4.13.8)(zod@3.25.76)
+      hono: 4.13.8
       zod: 3.25.76
 
-  '@hono/zod-validator@0.4.3(hono@4.13.2)(zod@3.25.76)':
+  '@hono/zod-validator@0.4.3(hono@4.13.8)(zod@3.25.76)':
     dependencies:
-      hono: 4.13.2
+      hono: 4.13.8
       zod: 3.25.76
 
   '@humanfs/core@0.19.2':
@@ -14339,7 +14339,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@marsidev/react-turnstile@1.6.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@marsidev/react-turnstile@1.6.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
@@ -15349,15 +15349,15 @@ snapshots:
     dependencies:
       '@sentry/core': 10.70.0
 
-  '@sentry/hono@10.70.0(@cloudflare/workers-types@4.20260511.1)(@hono/node-server@2.1.1(hono@4.13.2))(@sentry/node@10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1)))(hono@4.13.2)':
+  '@sentry/hono@10.70.0(@cloudflare/workers-types@4.20260511.1)(@hono/node-server@2.1.1(hono@4.13.8))(@sentry/node@10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1)))(hono@4.13.8)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@sentry/conventions': 0.16.0
       '@sentry/core': 10.70.0
-      hono: 4.13.2
+      hono: 4.13.8
     optionalDependencies:
       '@cloudflare/workers-types': 4.20260511.1
-      '@hono/node-server': 2.1.1(hono@4.13.2)
+      '@hono/node-server': 2.1.1(hono@4.13.8)
       '@sentry/node': 10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))
 
   '@sentry/integrations@7.120.4':
@@ -19010,7 +19010,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.13.2: {}
+  hono@4.13.8: {}
 
   hosted-git-info@7.0.2:
     dependencies:
@@ -19084,7 +19084,7 @@ snapshots:
 
   immediate@3.0.6: {}
 
-  immer@11.1.17: {}
+  immer@11.1.18: {}
 
   import-fresh@3.3.1:
     dependencies:

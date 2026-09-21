@@ -758,8 +758,9 @@ Migration `0029_llm_usage_events_created_at.notx.sql` adds
 records the filename only after the index build succeeds. The required-head
 parser accepts the exact optional `.notx.sql` suffix. Migrations 0030 and 0031
 later reconcile one development-only legacy table/ledger shape. Migration
-0032 expands Better Auth account identity for the 1.7 rollout, so the current
-application head is `0032_better_auth_account_issuer.sql`.
+0032 expanded Better Auth account identity for the 1.7.2 rollout. Migration
+0033 relaxes that issuer contract for Better Auth 1.7.5, so the current
+application head is `0033_relax_better_auth_account_issuer.sql`.
 
 An interrupted build can leave a same-name invalid index. A rerun fails closed
 instead of recording the migration. Verify `pg_index.indisvalid = false`, drop
@@ -782,7 +783,7 @@ If this draft is approved, prove it in this order:
 
 1. Deploy the stack without adding a provider administrator credential.
 2. Verify that `/readyz.head` is exactly
-   `0032_better_auth_account_issuer.sql` and that
+   `0033_relax_better_auth_account_issuer.sql` and that
    `/healthz.gitCommit` is the expected full SHA.
 3. Verify the administrator Pages marker at the matching source head.
 4. Sign in through the dedicated admin site, record the load observation, and

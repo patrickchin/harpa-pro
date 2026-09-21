@@ -57,7 +57,7 @@ dependabot_group_body() {
 
 require_dependabot_group_fixed() {
   local path="$1" group="$2" needle="$3" description="$4"
-  if dependabot_group_body "$path" "$group" | grep -Fq -- "$needle"; then
+  if dependabot_group_body "$path" "$group" | grep -F -- "$needle" > /dev/null; then
     pass "$description"
   else
     fail "$description"
@@ -75,7 +75,7 @@ dependabot_ignore_rule_body() {
 
 require_dependabot_ignore_rule_fixed() {
   local path="$1" dependency="$2" needle="$3" description="$4"
-  if dependabot_ignore_rule_body "$path" "$dependency" | grep -Fq -- "$needle"; then
+  if dependabot_ignore_rule_body "$path" "$dependency" | grep -F -- "$needle" > /dev/null; then
     pass "$description"
   else
     fail "$description"
@@ -84,7 +84,7 @@ require_dependabot_ignore_rule_fixed() {
 
 forbid_dependabot_ignore_rule_fixed() {
   local path="$1" dependency="$2" needle="$3" description="$4"
-  if dependabot_ignore_rule_body "$path" "$dependency" | grep -Fq -- "$needle"; then
+  if dependabot_ignore_rule_body "$path" "$dependency" | grep -F -- "$needle" > /dev/null; then
     fail "$description"
   else
     pass "$description"
@@ -102,7 +102,7 @@ job_body() {
 
 require_job_fixed() {
   local path="$1" job="$2" needle="$3" description="$4"
-  if job_body "$path" "$job" | grep -Fq -- "$needle"; then
+  if job_body "$path" "$job" | grep -F -- "$needle" > /dev/null; then
     pass "$description"
   else
     fail "$description"
@@ -111,7 +111,7 @@ require_job_fixed() {
 
 forbid_job_fixed() {
   local path="$1" job="$2" needle="$3" description="$4"
-  if job_body "$path" "$job" | grep -Fq -- "$needle"; then
+  if job_body "$path" "$job" | grep -F -- "$needle" > /dev/null; then
     fail "$description"
   else
     pass "$description"
@@ -123,6 +123,10 @@ echo "Dependabot trust policy"
 DEPENDABOT_CONFIG=".github/dependabot.yml"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "better-auth-stack" "- 'auth'" \
   "Better Auth CLI package moves with the Better Auth stack"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- 'vitest'" \
+  "Vitest moves with its companion packages"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- '@vitest/*'" \
+  "Vitest coverage providers move with the test runner"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
   "version-update:semver-major" \
   "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
@@ -132,6 +136,9 @@ require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "rbs" \
   "versions: ['>= 4.2.0']" \
   "Dependabot leaves Ruby 3.3-only rbs releases to the Expo Ruby migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "excon" \
+  "versions: ['>= 1.7.0']" \
+  "Dependabot leaves Ruby 3.3-only excon releases to the Expo Ruby migration"
 for dependency in "react" "react-dom" "react-test-renderer"; do
   require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "$dependency" \
     "dependency-name: '${dependency}'" \
@@ -147,6 +154,7 @@ for group in \
   drizzle-stack \
   aws-sdk-stack \
   typescript-eslint-stack \
+  vitest-stack \
   production-patches \
   development-patches; do
   require_fixed "$DEPENDABOT_CONFIG" "${group}:" \

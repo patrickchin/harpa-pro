@@ -12,6 +12,7 @@ const BASE_HEAD = '0029_llm_usage_events_created_at.notx.sql';
 const SCHEMA_REPAIR = '0030_reconcile_llm_usage_events_schema.sql';
 const LEDGER_REPAIR = '0031_remove_retired_llm_usage_ledger.sql';
 const AUTH_ISSUER_EXPAND = '0032_better_auth_account_issuer.sql';
+const AUTH_ISSUER_RELAX = '0033_relax_better_auth_account_issuer.sql';
 const RETIRED_MIGRATION = '0003_llm_usage_events.sql';
 const CURRENT_0003 = '0003_report_last_generation.sql';
 const MIGRATIONS_DIR = fileURLToPath(new URL('../../migrations/', import.meta.url));
@@ -155,7 +156,12 @@ describe('LLM usage migration drift reconciliation', () => {
     await withClient(recreateObservedDevDrift);
 
     const result = await migrate(connectionString);
-    expect(result.applied).toEqual([SCHEMA_REPAIR, LEDGER_REPAIR, AUTH_ISSUER_EXPAND]);
+    expect(result.applied).toEqual([
+      SCHEMA_REPAIR,
+      LEDGER_REPAIR,
+      AUTH_ISSUER_EXPAND,
+      AUTH_ISSUER_RELAX,
+    ]);
 
     await withClient(async (client) => {
       const columns = await client.query<{
@@ -276,7 +282,12 @@ describe('LLM usage migration drift reconciliation', () => {
 
     const before = await withClient(schemaSnapshot);
     const result = await migrate(connectionString);
-    expect(result.applied).toEqual([SCHEMA_REPAIR, LEDGER_REPAIR, AUTH_ISSUER_EXPAND]);
+    expect(result.applied).toEqual([
+      SCHEMA_REPAIR,
+      LEDGER_REPAIR,
+      AUTH_ISSUER_EXPAND,
+      AUTH_ISSUER_RELAX,
+    ]);
     const after = await withClient(schemaSnapshot);
 
     expect(after).toEqual(before);

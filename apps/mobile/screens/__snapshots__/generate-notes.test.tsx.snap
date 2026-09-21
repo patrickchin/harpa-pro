@@ -54,7 +54,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               accessibilityRole="button"
               className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
               disabled={false}
-              onPress={[MockFunction spy]}
+              onPress={[MockFunction]}
               style={
                 [
                   {
@@ -1119,7 +1119,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Pressable
                 disabled={false}
                 hitSlop={12}
-                onPress={[MockFunction spy]}
+                onPress={[MockFunction]}
               >
                 <lucide-X
                   color="#5f5b66"
@@ -1158,7 +1158,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                 <rn-Pressable
                   className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
                   disabled={false}
-                  onPress={[MockFunction spy]}
+                  onPress={[MockFunction]}
                   style={
                     [
                       {
@@ -1218,7 +1218,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Pressable
                 disabled={false}
                 hitSlop={12}
-                onPress={[MockFunction spy]}
+                onPress={[MockFunction]}
               >
                 <lucide-X
                   color="#5f5b66"
@@ -1235,7 +1235,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                 <rn-Pressable
                   className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
                   disabled={false}
-                  onPress={[MockFunction spy]}
+                  onPress={[MockFunction]}
                   style={
                     [
                       {
@@ -1394,7 +1394,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Pressable
                 disabled={false}
                 hitSlop={12}
-                onPress={[MockFunction spy]}
+                onPress={[MockFunction]}
               >
                 <lucide-X
                   color="#5f5b66"
@@ -1411,7 +1411,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                 <rn-Pressable
                   className="flex-row items-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-5 py-3.5 justify-center"
                   disabled={false}
-                  onPress={[MockFunction spy]}
+                  onPress={[MockFunction]}
                   style={
                     [
                       {

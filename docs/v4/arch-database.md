@@ -107,6 +107,12 @@ rules. Summary below.
   database default only so a 1.6 rollback remains compatible. Removing that
   default is a later physical-contract migration, not part of the 1.7 runtime
   upgrade.
+- Migration `0033_relax_better_auth_account_issuer.sql` follows Better Auth's
+  1.7.3 reversal of that identity contract. It validates the exact 1.7.2
+  shape, drops `account_issuer_accountId_uidx`, and makes `issuer` nullable
+  without rewriting accounts. Better Auth 1.7.5 again identifies accounts by
+  `(provider_id, account_id)`. The legacy column and default remain only for
+  a bounded 1.7.2 rollback and are omitted from the generated Drizzle schema.
 - Both streams are forward-only. Never run an admin migration through the
   application loader or edit an applied migration.
 - The repository does not have an immutable migration manifest or applied-file

@@ -29,6 +29,12 @@
 
 - Run the relevant workspace suite locally. CI runs unit tests for
   code changes and for pushes to `dev` or `main`.
+- Vitest and every `@vitest/*` provider stay on one major. Vitest 5 clears
+  mocks before each test by default; dashboard and mobile explicitly retain
+  the prior opt-out where module-construction assertions and snapshots depend
+  on it. Mobile's coverage floors are calibrated to Vitest's accurate
+  AST-based V8 remapping (78% lines, 76% statements, 71% functions and
+  branches), not the false-positive-prone v3 totals.
 - Mobile tests mock hooks, native modules, and request boundaries per
   test. The mobile workspace does not include an MSW harness.
 - API: in-process Hono `app.fetch()` calls; DB stubbed for pure
@@ -332,7 +338,7 @@ documented in [`arch-ops.md`](arch-ops.md).
 
 | Workflow                      | Trigger                                                       | Gate                                                                                                   |
 | ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, repository policy gates, and CI policy tests                                 |
+| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, repository policy gates, and CI policy tests                                |
 | `unit.yml`                    | Pull requests and pushes to `dev` or `main`, with path gating | `pnpm test`                                                                                            |
 | `api-integration.yml`         | API-relevant pull requests and pushes                         | Combined API unit and Testcontainers coverage at 90% lines                                             |
 | `cli.yml`                     | CLI-relevant pull requests and branch pushes                  | CLI typecheck, lint, tests, help drift, and integration journeys                                       |
@@ -360,8 +366,10 @@ GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
 the repository's default branch, `main`. It checks the root pnpm workspace,
 the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
 version-update pull requests target `dev`. Compatibility-coupled Better Auth,
-React, Astro/Vite, Drizzle, AWS SDK, and TypeScript-ESLint packages update as
-coordinated stacks. The broad npm production/development groups accept patches
+React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, and Vitest packages
+update as coordinated stacks. The Vitest group includes `@vitest/*` and all
+update types so a runner major cannot leave its coverage provider on an
+incompatible major. The broad npm production/development groups accept patches
 only, so unrelated minor updates remain focused. The Better Auth CLI package
 `auth` moves with the complete Better Auth stack; its semver-major updates,
 like the other Better Auth packages, require a reviewed stack migration. Expo
@@ -369,12 +377,19 @@ and React Native packages are ignored here: until a reviewed SDK migration
 changes the tested matrix, Expo Doctor and `expo install` own the React
 runtime/renderers and the Babel-major compatibility boundary.
 
+Better Auth patch releases can include schema-compatibility corrections.
+Package-only pull requests must run the real adapter initialization and
+password-sign-in integration paths; if validation reports an unwritten
+required column, follow the upstream migration guidance instead of disabling
+`advanced.database.validateSchema`.
+
 The path-scoped `ruby-security` workflow validates each Ruby dependency change
 with Bundler 2.6.9 on Ruby 3.2.11 (the supported EAS Ruby line) and Ruby 3.4.10
 (the checked-in local version). Both jobs load the Fastlane configuration after
 checking the patched dependency floors. Scheduled Bundler updates ignore
-`rbs >= 4.2.0` while SDK 55 builders remain on Ruby 3.2; the matching Gemfile
-ceiling is the runtime compatibility boundary, not a stale dependency pin.
+`excon >= 1.7.0` and `rbs >= 4.2.0` while SDK 55 builders remain on Ruby
+3.2; the matching Gemfile ceilings are runtime compatibility boundaries, not
+stale dependency pins.
 
 Dependabot security updates are enabled separately under **Settings → Code
 security and analysis**. They are advisory-driven rather than scheduled and

@@ -383,7 +383,10 @@ CLI package `auth` moves with the complete Better Auth stack; its semver-major
 updates, like the other Better Auth packages, require a reviewed stack
 migration. Expo and React Native packages are ignored here: until a reviewed
 SDK migration changes the tested matrix, Expo Doctor and `expo install` own the
-React runtime/renderers and the Babel-major compatibility boundary.
+React runtime/renderers and the Babel-major compatibility boundary. Stable
+NativeWind v4 uses Tailwind CSS 3, so Tailwind major updates are also reserved
+for the reviewed NativeWind v5 migration; minor and patch updates remain
+automated.
 
 Better Auth patch releases can include schema-compatibility corrections.
 Package-only pull requests must run the real adapter initialization and

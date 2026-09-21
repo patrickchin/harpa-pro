@@ -108,6 +108,11 @@ updates:
       - dependency-name: '@babel/core'
         update-types: ['version-update:semver-major']
 
+      # Stable NativeWind v4 uses Tailwind CSS 3. Tailwind CSS 4 belongs to
+      # the reviewed NativeWind v5 migration, not an isolated package bump.
+      - dependency-name: 'tailwindcss'
+        update-types: ['version-update:semver-major']
+
       # Compatibility-stack majors need their own migration plans.
       - dependency-name: 'react'
       - dependency-name: 'react-dom'

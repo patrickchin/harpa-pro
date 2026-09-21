@@ -140,6 +140,9 @@ require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "tanstack-query-stack" \
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
   "version-update:semver-major" \
   "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "tailwindcss" \
+  "version-update:semver-major" \
+  "Dependabot leaves Tailwind majors to the NativeWind migration"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
   "version-update:semver-major" \
   "Dependabot leaves Better Auth CLI major upgrades to a reviewed stack migration"

@@ -414,6 +414,14 @@ still use the groups in `.github/dependabot.yml`, and its `target-branch: dev`
 customizations do not apply to security updates. The configuration does not
 become active until it reaches `main`.
 
+Routine npm grouping intentionally consolidates minor and patch updates only.
+Semver-major updates remain separate unless a named compatibility stack owns
+them, because a green lockfile is not evidence that a breaking migration is
+complete. Remove unused direct dependencies instead of carrying their major
+upgrade surface. `@hono/zod-openapi` 1.x is held at its major boundary until a
+reviewed API-contract migration replaces the current zod-to-openapi metadata
+graph; a package-only 1.x bump crashes during OpenAPI emission.
+
 Dependabot can group transitive security alerts yet still fail to open a PR
 when every vulnerable package is outside its parent's declared range. The root
 pnpm overrides record the minimum safe transitive versions in that case. An

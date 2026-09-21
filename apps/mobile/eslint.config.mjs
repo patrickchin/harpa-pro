@@ -5,6 +5,7 @@ export default [
     ignores: [
       'node_modules/**',
       '.expo/**',
+      'coverage/**',
       'dist/**',
       'build/**',
       'babel.config.js',

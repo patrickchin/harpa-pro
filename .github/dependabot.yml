@@ -143,6 +143,12 @@ updates:
       - dependency-name: 'auth'
         update-types: ['version-update:semver-major']
 
+      # Version 1.x moves to the zod-to-openapi v9 metadata registry. The
+      # current API schema graph must migrate as one reviewed contract change;
+      # a package-only bump crashes while emitting the OpenAPI document.
+      - dependency-name: '@hono/zod-openapi'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     target-branch: 'dev'

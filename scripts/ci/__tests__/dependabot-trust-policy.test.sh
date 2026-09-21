@@ -129,6 +129,9 @@ require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- '@vitest/*
   "Vitest coverage providers move with the test runner"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "commitlint-stack" "- '@commitlint/*'" \
   "Commitlint CLI and configuration move together"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "tanstack-query-stack" \
+  "- '@tanstack/react-query-persist-client'" \
+  "TanStack Query persistence packages move with the React adapter"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
   "version-update:semver-major" \
   "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
@@ -158,6 +161,7 @@ for group in \
   typescript-eslint-stack \
   vitest-stack \
   commitlint-stack \
+  tanstack-query-stack \
   production-patches \
   development-patches; do
   require_fixed "$DEPENDABOT_CONFIG" "${group}:" \

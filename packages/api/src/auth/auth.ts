@@ -105,7 +105,6 @@ type AuthInternalContext = {
     linkAccount: (input: {
       userId: string;
       providerId: string;
-      issuer: string;
       accountId: string;
       password: string;
     }) => Promise<unknown>;

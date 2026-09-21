@@ -8,7 +8,7 @@
  *
  * Truly bypasses the `disableSignUp` guard by going through
  * better-auth's internal adapter (`internalAdapter.createUser` +
- * `internalAdapter.linkAccount({ issuer, providerId: 'credential', password })`)
+ * `internalAdapter.linkAccount({ providerId: 'credential', password })`)
  * — the same path `auth.api.signUpEmail` takes after its public
  * checks pass. This works deploy-time because we have direct access
  * to `auth.$context`; it cannot be triggered over HTTP because no
@@ -26,12 +26,9 @@
  * §Test-account smoke-test path.
  */
 import { and, eq } from 'drizzle-orm';
-import { createLocalAccountIssuer } from 'better-auth/db';
 import { auth } from '../src/auth/auth.js';
 import { rawDb, schema } from '../src/db/client.js';
 import { env } from '../src/env.js';
-
-const CREDENTIAL_ISSUER = createLocalAccountIssuer('credential');
 
 type SeedGroup = {
   label: string;
@@ -49,7 +46,6 @@ async function ensureCredentialAccount(
   const updated = await db
     .update(schema.accounts)
     .set({
-      issuer: CREDENTIAL_ISSUER,
       accountId: userId,
       password: passwordHash,
       updatedAt: new Date(),
@@ -58,7 +54,6 @@ async function ensureCredentialAccount(
       and(
         eq(schema.accounts.userId, userId),
         eq(schema.accounts.providerId, 'credential'),
-        eq(schema.accounts.issuer, CREDENTIAL_ISSUER),
         eq(schema.accounts.accountId, userId),
       ),
     )
@@ -71,7 +66,6 @@ async function ensureCredentialAccount(
   await ctx.internalAdapter.linkAccount({
     userId,
     providerId: 'credential',
-    issuer: CREDENTIAL_ISSUER,
     accountId: userId,
     password: passwordHash,
   });

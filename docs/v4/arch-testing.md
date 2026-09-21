@@ -332,7 +332,7 @@ documented in [`arch-ops.md`](arch-ops.md).
 
 | Workflow                      | Trigger                                                       | Gate                                                                                                   |
 | ----------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, repository policy gates, and CI policy tests                                 |
+| `lint-typecheck.yml`          | Pull requests and pushes to `dev` or `main`, with path gating | Workspace lint, typecheck, repository policy gates, and CI policy tests                                |
 | `unit.yml`                    | Pull requests and pushes to `dev` or `main`, with path gating | `pnpm test`                                                                                            |
 | `api-integration.yml`         | API-relevant pull requests and pushes                         | Combined API unit and Testcontainers coverage at 90% lines                                             |
 | `cli.yml`                     | CLI-relevant pull requests and branch pushes                  | CLI typecheck, lint, tests, help drift, and integration journeys                                       |
@@ -368,6 +368,12 @@ like the other Better Auth packages, require a reviewed stack migration. Expo
 and React Native packages are ignored here: until a reviewed SDK migration
 changes the tested matrix, Expo Doctor and `expo install` own the React
 runtime/renderers and the Babel-major compatibility boundary.
+
+Better Auth patch releases can include schema-compatibility corrections.
+Package-only pull requests must run the real adapter initialization and
+password-sign-in integration paths; if validation reports an unwritten
+required column, follow the upstream migration guidance instead of disabling
+`advanced.database.validateSchema`.
 
 The path-scoped `ruby-security` workflow validates each Ruby dependency change
 with Bundler 2.6.9 on Ruby 3.2.11 (the supported EAS Ruby line) and Ruby 3.4.10

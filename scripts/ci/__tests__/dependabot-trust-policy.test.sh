@@ -57,7 +57,7 @@ dependabot_group_body() {
 
 require_dependabot_group_fixed() {
   local path="$1" group="$2" needle="$3" description="$4"
-  if dependabot_group_body "$path" "$group" | grep -Fq -- "$needle"; then
+  if dependabot_group_body "$path" "$group" | grep -F -- "$needle" > /dev/null; then
     pass "$description"
   else
     fail "$description"
@@ -75,7 +75,7 @@ dependabot_ignore_rule_body() {
 
 require_dependabot_ignore_rule_fixed() {
   local path="$1" dependency="$2" needle="$3" description="$4"
-  if dependabot_ignore_rule_body "$path" "$dependency" | grep -Fq -- "$needle"; then
+  if dependabot_ignore_rule_body "$path" "$dependency" | grep -F -- "$needle" > /dev/null; then
     pass "$description"
   else
     fail "$description"
@@ -84,7 +84,7 @@ require_dependabot_ignore_rule_fixed() {
 
 forbid_dependabot_ignore_rule_fixed() {
   local path="$1" dependency="$2" needle="$3" description="$4"
-  if dependabot_ignore_rule_body "$path" "$dependency" | grep -Fq -- "$needle"; then
+  if dependabot_ignore_rule_body "$path" "$dependency" | grep -F -- "$needle" > /dev/null; then
     fail "$description"
   else
     pass "$description"
@@ -102,7 +102,7 @@ job_body() {
 
 require_job_fixed() {
   local path="$1" job="$2" needle="$3" description="$4"
-  if job_body "$path" "$job" | grep -Fq -- "$needle"; then
+  if job_body "$path" "$job" | grep -F -- "$needle" > /dev/null; then
     pass "$description"
   else
     fail "$description"
@@ -111,7 +111,7 @@ require_job_fixed() {
 
 forbid_job_fixed() {
   local path="$1" job="$2" needle="$3" description="$4"
-  if job_body "$path" "$job" | grep -Fq -- "$needle"; then
+  if job_body "$path" "$job" | grep -F -- "$needle" > /dev/null; then
     fail "$description"
   else
     pass "$description"

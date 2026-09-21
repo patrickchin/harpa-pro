@@ -366,18 +366,20 @@ GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
 the repository's default branch, `main`. It checks the root pnpm workspace,
 the root Bundler/Fastlane graph, and GitHub Actions weekly. Routine
 version-update pull requests target `dev`. Compatibility-coupled Better Auth,
-React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, and Commitlint
-packages update as coordinated stacks. The Vitest group includes `@vitest/*`
-and all update types so a runner major cannot leave its coverage provider on
-an incompatible major. The Commitlint group likewise keeps the CLI, shared
-types, and conventional configuration on one major. The broad npm
-production/development groups accept patches only, so unrelated minor updates
-remain focused. The Better Auth CLI package `auth` moves with the complete
-Better Auth stack; its semver-major updates, like the other Better Auth
-packages, require a reviewed stack migration. Expo and React Native packages
-are ignored here: until a reviewed SDK migration changes the tested matrix,
-Expo Doctor and `expo install` own the React runtime/renderers and the
-Babel-major compatibility boundary.
+React, Astro/Vite, Drizzle, AWS SDK, TypeScript-ESLint, Vitest, Commitlint, and
+TanStack Query packages update as coordinated stacks. The Vitest group includes
+`@vitest/*` and all update types so a runner major cannot leave its coverage
+provider on an incompatible major. The Commitlint group likewise keeps the CLI,
+shared types, and conventional configuration on one major. The TanStack Query
+group keeps React Query and both mobile persistence adapters on the same exact
+release because their peer types use private members and are not structurally
+interchangeable across versions. The broad npm production/development groups
+accept patches only, so unrelated minor updates remain focused. The Better Auth
+CLI package `auth` moves with the complete Better Auth stack; its semver-major
+updates, like the other Better Auth packages, require a reviewed stack
+migration. Expo and React Native packages are ignored here: until a reviewed
+SDK migration changes the tested matrix, Expo Doctor and `expo install` own the
+React runtime/renderers and the Babel-major compatibility boundary.
 
 Better Auth patch releases can include schema-compatibility corrections.
 Package-only pull requests must run the real adapter initialization and

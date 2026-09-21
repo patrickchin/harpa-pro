@@ -14,12 +14,10 @@ tags:
     timeout: 10000
 - tapOn:
     id: "btn-remove-member-.*"
-- extendedWaitUntil:
-    visible:
-      id: "confirm-remove-member"
-    timeout: 8000
-- tapOn:
-    id: "confirm-remove-member"
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-remove-member'
 - extendedWaitUntil:
     notVisible:
       text: "Viewer"

@@ -28,12 +28,10 @@ tags:
 # --- Remove test2's row -------------------------------------------------------
 - tapOn:
     id: "btn-remove-member-.*"
-- extendedWaitUntil:
-    visible:
-      id: "confirm-remove-member"
-    timeout: 8000
-- tapOn:
-    id: "confirm-remove-member"
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-remove-member'
 
 # --- Confirm test2's row is gone ---------------------------------------------
 # `member-row-.*` still matches test's owner row, so we assert the

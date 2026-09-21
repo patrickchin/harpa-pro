@@ -112,20 +112,9 @@ tags:
     id: "note-options-transcript-text"
 - tapOn:
     id: "btn-note-options-transcript-back"
-- extendedWaitUntil:
-    visible:
-      id: "btn-note-options-delete"
-    timeout: 8000
 
 # --- Delete the voice note --------------------------------------------------
-- tapOn:
-    id: "btn-note-options-delete"
-- extendedWaitUntil:
-    visible:
-      id: "btn-note-options-confirm-delete"
-    timeout: 8000
-- tapOn:
-    id: "btn-note-options-confirm-delete"
+- runFlow: ../helpers/delete-note.yaml
 - extendedWaitUntil:
     notVisible:
       id: "voice-title-.*"
@@ -138,16 +127,7 @@ tags:
 # --- Clean up: delete the draft and return to project home -----------------
 - tapOn:
     id: "btn-draft-options"
-- extendedWaitUntil:
-    visible:
-      id: "dialog-action-confirm-delete-draft"
-    timeout: 8000
-- tapOn:
-    id: "dialog-action-confirm-delete-draft"
-- extendedWaitUntil:
-    visible:
-      id: "btn-new-report"
-    timeout: 15000
+- runFlow: ../helpers/confirm-delete-draft.yaml
 - tapOn:
     id: "btn-back"
 - extendedWaitUntil:

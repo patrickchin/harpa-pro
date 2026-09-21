@@ -130,12 +130,10 @@ tags:
 # --- Finalize the report ---------------------------------------------------
 - tapOn:
     id: 'btn-finalize-report'
-- extendedWaitUntil:
-    visible:
-      id: 'confirm-finalize'
-    timeout: 8000
-- tapOn:
-    id: 'confirm-finalize'
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
       id: 'btn-report-actions'
@@ -166,12 +164,22 @@ tags:
     timeout: 10000
 - tapOn:
     id: 'input-report-review-comment'
-- inputText: 'Reviewed on device. Delivery count confirmed.'
-# On iOS the software keyboard covers the submit button. Maestro can still
-# resolve the obscured accessibility node, but tapping its coordinates lands
-# on a keyboard suggestion instead of the button.
-- hideKeyboard
-- waitForAnimationToEnd
+- inputText: 'Review confirmed 4242.'
+# On iOS 26.5, hideKeyboard can leave the multiline keyboard open. Tapping
+# the pane is a semantic background tap that reliably blurs the composer.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: 'report-review-pane'
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+      - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: 'btn-add-report-review-comment'
@@ -179,7 +187,7 @@ tags:
 - tapOn:
     id: 'btn-add-report-review-comment'
 - extendedWaitUntil:
-    visible: 'Reviewed on device. Delivery count confirmed.'
+    visible: 'Review confirmed 4242.'
     timeout: 15000
 
 # --- Unfinalize to confirm the round-trip ---------------------------------
@@ -191,12 +199,10 @@ tags:
     timeout: 8000
 - tapOn:
     id: 'btn-unfinalize-report'
-- extendedWaitUntil:
-    visible:
-      id: 'btn-confirm-unfinalize-report'
-    timeout: 8000
-- tapOn:
-    id: 'btn-confirm-unfinalize-report'
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'btn-confirm-unfinalize-report'
 
 # Unfinalize flips status in place — it does NOT navigate. The user
 # stays on the saved-report screen (apps/mobile/screens/saved-report.tsx)
@@ -229,12 +235,10 @@ tags:
 # --- Re-finalize (leave finalized for module 12) ---------------------------
 - tapOn:
     id: 'btn-finalize-report'
-- extendedWaitUntil:
-    visible:
-      id: 'confirm-finalize'
-    timeout: 8000
-- tapOn:
-    id: 'confirm-finalize'
+- runFlow:
+    file: ../helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
       id: 'btn-report-actions'
@@ -246,5 +250,5 @@ tags:
 - tapOn:
     id: 'btn-tab-review'
 - extendedWaitUntil:
-    visible: 'Reviewed on device. Delivery count confirmed.'
+    visible: 'Review confirmed 4242.'
     timeout: 15000

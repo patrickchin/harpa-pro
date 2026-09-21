@@ -73,8 +73,8 @@ tags:
 
 # ── 10a. Photo notes (draft): camera → upload pipeline ────────────────────
 # Pre-condition: test on project home
-# Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; camera
-# privacy grant on the sim.
+# Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; the fixture camera
+# bypasses native camera hardware and permission.
 - runFlow: modules/10a-photo-notes-draft.yaml
 
 # ── 10b. Photo notes (finalized): saved-report photo strip ────────────────

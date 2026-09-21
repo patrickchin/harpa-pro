@@ -89,9 +89,9 @@ remain Stack routes.
 
 `pnpm --filter @harpa/mobile ios:mock` sets
 `EXPO_PUBLIC_USE_FIXTURES=true`. This flag selects deterministic local
-native inputs, including the canned voice recording. It does not tell
-the API to replay AI fixtures. The API selects live or replay mode from
-its own environment.
+native inputs, including the canned voice recording and a cache-backed camera
+image. It does not tell the API to replay AI fixtures. The API selects live or
+replay mode from its own environment.
 
 ## Historical exit status
 

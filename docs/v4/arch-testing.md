@@ -422,6 +422,18 @@ upgrade surface. `@hono/zod-openapi` 1.x is held at its major boundary until a
 reviewed API-contract migration replaces the current zod-to-openapi metadata
 graph; a package-only 1.x bump crashes during OpenAPI emission.
 
+The TypeScript runtime surface follows the deployed Node line: the repository
+requires Node 24 and keeps `@types/node` on major 24 so typechecking cannot
+approve APIs that production cannot execute. The shared API, CLI, dashboard,
+and contract schemas remain on Zod 3 until a coordinated contract migration;
+the mobile package's isolated Zod 4 dependency may continue taking minor and
+patch releases. `eslint-plugin-react-hooks` 7 supplies ESLint 10 compatibility,
+but the dashboard pins the established `rules-of-hooks` and `exhaustive-deps`
+contract instead of implicitly enabling its expanded compiler-era recommended
+preset. Enabling those purity rules is a separate dashboard refactor, and
+future plugin majors require the same explicit review. These boundaries must
+not arrive as package-only changes.
+
 Dependabot can group transitive security alerts yet still fail to open a PR
 when every vulnerable package is outside its parent's declared range. The root
 pnpm overrides record the minimum safe transitive versions in that case. An

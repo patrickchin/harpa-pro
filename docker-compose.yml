@@ -55,7 +55,10 @@ services:
   # `signGet` URLs come back as real-fetchable HTTP. The bucket
   # (harpa-pro) is created by the minio-init one-shot below.
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: harpa-minio:20251015-20250813
+    pull_policy: build
+    build:
+      context: ./infra/minio
     container_name: harpa-pro-minio
     command: ['server', '/data', '--console-address', ':9001']
     environment:
@@ -65,7 +68,7 @@ services:
       - '9000:9000'
       - '9001:9001'
     healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:9000/minio/health/ready']
       interval: 2s
       timeout: 2s
       retries: 30
@@ -73,7 +76,10 @@ services:
       - harpa-minio:/data
 
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: harpa-minio:20251015-20250813
+    pull_policy: build
+    build:
+      context: ./infra/minio
     depends_on:
       minio:
         condition: service_healthy

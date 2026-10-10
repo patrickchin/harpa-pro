@@ -580,7 +580,7 @@ require_fixed ".maestro/store-screenshots.yaml" \
   "- runFlow: helpers/launch-local-dev-client.yaml" \
   "store screenshot flow uses the shared dev-client launch helper"
 require_fixed "scripts/maestro/seed-store-screenshots.sh" \
-  "MSYS_NO_PATHCONV=1 docker run" \
+  "MSYS_NO_PATHCONV=1 docker exec" \
   "store screenshot seed preserves the container shell path under Git Bash"
 require_fixed ".maestro/helpers/wait-for-camera-shutter-ready.yaml" \
   "id: 'camera-shutter-ready'" \
@@ -1079,18 +1079,28 @@ require_fixed "docker-compose.yml" \
 require_fixed "docker-compose.yml" \
   "STORAGE_ACCOUNT_DELETE_ENABLED: 'true'" \
   "fresh local Compose stacks enable account deletion after migration"
-require_fixed "docker-compose.yml" \
-  "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z" \
-  "local Compose uses the available pinned MinIO server image"
-require_fixed "docker-compose.yml" \
-  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
-  "local Compose uses the available pinned MinIO client image"
+require_fixed_count "docker-compose.yml" \
+  "context: ./infra/minio" 2 \
+  "local Compose builds server and bucket initializer from pinned source"
+require_fixed "infra/minio/Dockerfile" \
+  "github.com/minio/minio@9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a" \
+  "MinIO server source is pinned to an immutable official revision"
+require_fixed "infra/minio/Dockerfile" \
+  "github.com/minio/mc@7394ce0dd2a80935aded936b09fa12cbb3cb8096" \
+  "MinIO client source is pinned to an immutable official revision"
+require_fixed "packages/api/scripts/test-coverage.sh" \
+  "pnpm test:storage:build" \
+  "coverage builds real S3 storage before the integration shards"
 require_fixed "apps/cli/scripts/journey-extras.sh" \
-  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
-  "CLI journey cleanup uses the same pinned MinIO client image"
+  "docker compose exec -T minio" \
+  "CLI cleanup uses the locally built server client"
 require_fixed "scripts/maestro/seed-store-screenshots.sh" \
-  "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" \
-  "store screenshot seeding uses the same pinned MinIO client image"
+  "docker exec harpa-pro-minio /bin/sh" \
+  "screenshot seeding uses the locally built server client"
+for minio_caller in docker-compose.yml packages/api/src/__tests__/helpers/r2-container.ts apps/cli/scripts/journey-extras.sh scripts/maestro/seed-store-screenshots.sh; do
+  forbid_fixed "$minio_caller" "quay.io/minio/" \
+    "storage fixtures do not pull retired Quay images ($minio_caller)"
+done
 forbid_fixed "docker-compose.yml" \
   "minio/minio:latest" \
   "local Compose does not depend on the removed Docker Hub MinIO server image"

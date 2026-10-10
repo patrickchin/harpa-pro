@@ -65,6 +65,7 @@ runs:
             - '.github/workflows/**'
             - '.github/actions/**'
           api:
+            - 'infra/minio/**'
             - 'packages/api/**'
             - 'packages/api-contract/**'
             - 'packages/ai-fixtures/**'

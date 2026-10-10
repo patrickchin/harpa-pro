@@ -45,7 +45,7 @@ test('uses the complete procurement page as home without a reporting promotion',
 
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
-    'We coordinate specifications, factories, quality checks, shipping records, and project approvals in China.',
+    'Harpa Pro coordinates interior procurement in China: design specifications, factory coordination, quality checks, shipping, and procurement documentation.',
   );
   await expect(page.getByText(/now available for iPhone/i)).toHaveCount(0);
 
@@ -119,6 +119,7 @@ test('uses the complete procurement page as home without a reporting promotion',
     'factory-documents',
     'technical-reviews',
     'agent',
+    'procurement-questions',
     'contact',
   ]);
   for (let index = 1; index < sectionBackgrounds.length; index += 1) {

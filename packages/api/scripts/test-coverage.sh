@@ -18,6 +18,9 @@ vitest run \
   --reporter=blob \
   --outputFile.blob="$REPORT_DIR/unit.json"
 
+# Build before bounded hooks; fresh machines must not rely on cached images.
+pnpm test:storage:build
+
 for shard in 1 2; do
   vitest run \
     --coverage \

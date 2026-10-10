@@ -9,11 +9,7 @@
  *   2. Pre-create the target bucket so signed PUTs succeed.
  */
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
-import {
-  S3Client,
-  CreateBucketCommand,
-  HeadBucketCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
 
 export interface MinioFixture {
   endpoint: string;
@@ -27,8 +23,8 @@ export interface MinioFixture {
 
 const ACCESS_KEY = 'minio_test_ak';
 const SECRET_KEY = 'minio_test_sk_long_enough_for_aws_sdk';
-const MINIO_IMAGE =
-  'quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z';
+// Built before the suite by test:storage:build, outside bounded test hooks.
+const MINIO_IMAGE = 'harpa-minio:20251015-20250813';
 
 export async function startMinio(bucket = 'harpa-test'): Promise<MinioFixture> {
   const container: StartedTestContainer = await new GenericContainer(MINIO_IMAGE)

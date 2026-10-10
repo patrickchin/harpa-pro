@@ -53,3 +53,32 @@ release captures exactly.
 
 Legacy `/guides/*` URLs and slugs from the first unified-site revision are
 preserved in `public/_redirects`.
+
+## Search discoverability
+
+Pages ship complete HTML, production canonicals, search/social metadata, and
+JSON-LD. The homepage identifies the interior procurement service in China;
+`/app` identifies the iOS construction reporting app. Guides include article
+and breadcrumb data. `robots.txt` allows search crawlers, including AI search,
+and the sitemap lists public pages. Confirmation and error pages use
+`noindex`; the production Pages alias has a hostname-specific `noindex`
+header. Cloudflare supplies `noindex` for dev/preview deployments.
+
+The procurement homepage answers service, product-scope, inspection, and
+project-brief questions in visible HTML. The reporting app's audience,
+workflow, and initial voice demonstration also render before JavaScript.
+
+The old `docs.harpapro.com` Vercel deployment still serves obsolete guides as
+of 2026-10-10. Its hostname cutover to the current `/docs` guides remains a
+separate infrastructure step; redirects in this app cannot affect Vercel.
+
+Run `pnpm --filter @harpa/site exec playwright test tests/seo.spec.ts` to verify built
+metadata, crawlable content without JavaScript, sitemap coverage, and crawler
+access. Preview checks cannot verify Cloudflare's live bot/security policy.
+After deployment, submit `/sitemap.xml` in Google Search Console and Bing
+Webmaster Tools, inspect key URLs, and confirm official search crawlers can
+reach the production site without challenges. Indexing and AI citations
+depend on those external services.
+
+See the [search design](../../docs/v4/design-site-search-discoverability.md)
+for scope, verification, and release steps.

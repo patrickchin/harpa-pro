@@ -8,18 +8,59 @@ interface Props {
   image?: string;
   imageAlt?: string;
   noindex?: boolean;
+  pageType?: "WebPage" | "CollectionPage" | "TechArticle";
+  structuredData?: Record<string, unknown>[];
 }
 
 const {
-  title = "Harpa Pro — Site reports by voice",
-  description = "Use Harpa Pro to turn voice notes, photos, and field updates into daily construction reports you can review, edit, finalize, and share.",
+  title = "Interior Procurement in China | Harpa Pro",
+  description = "Harpa Pro coordinates interior procurement in China, from design specifications and factory coordination to quality checks, shipping, and project records.",
   image = "/og-image.png",
-  imageAlt = "Harpa Pro — Site reports by voice.",
+  imageAlt = "Harpa Pro",
   noindex = false,
+  pageType = "WebPage",
+  structuredData = [],
 } = Astro.props;
 
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const canonicalUrl = new URL(Astro.url.pathname.replace(/\/+$/, "") || "/", Astro.site);
 const ogImageUrl = new URL(image, Astro.site);
+const homeUrl = new URL("/", Astro.site).href;
+const organizationId = `${homeUrl}#organization`;
+const websiteId = `${homeUrl}#website`;
+const jsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": organizationId,
+      name: "Harpa Pro",
+      url: homeUrl,
+      logo: new URL("/brand-icon.svg", Astro.site).href,
+    },
+    {
+      "@type": "WebSite",
+      "@id": websiteId,
+      name: "Harpa Pro",
+      url: homeUrl,
+      inLanguage: "en",
+      publisher: { "@id": organizationId },
+    },
+    {
+      "@type": pageType,
+      "@id": `${canonicalUrl}#webpage`,
+      url: canonicalUrl.href,
+      name: title,
+      description,
+      inLanguage: "en",
+      isPartOf: { "@id": websiteId },
+      ...(pageType === "TechArticle" && {
+        headline: title,
+        author: { "@id": organizationId },
+      }),
+    },
+    ...structuredData,
+  ],
+}).replace(/</g, "\\u003c");
 ---
 
 <!doctype html>
@@ -28,11 +69,16 @@ const ogImageUrl = new URL(image, Astro.site);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta
+      name="robots"
+      content={noindex ? "noindex, follow" : "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"}
+    />
     <meta name="theme-color" content="#e55d22" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalUrl} />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     <title>{title}</title>
+    {!noindex && <script is:inline type="application/ld+json" set:html={jsonLd} />}
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Harpa Pro" />

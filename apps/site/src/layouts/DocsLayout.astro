@@ -15,9 +15,33 @@ interface Props {
 }
 
 const { title, description, guides, currentSlug, currentTitle } = Astro.props;
+const breadcrumbs = [
+  { name: "Home", path: "/" },
+  { name: "Site Reporting", path: "/app" },
+  { name: "Guides", path: "/docs" },
+  ...(currentTitle && currentSlug ? [{
+    name: currentTitle,
+    path: `/docs/guides/${currentSlug}`,
+  }] : []),
+];
+const structuredData = [{
+  "@type": "BreadcrumbList",
+  "@id": `${new URL(Astro.url.pathname, Astro.site)}#breadcrumbs`,
+  itemListElement: breadcrumbs.map(({ name, path }, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    name,
+    item: new URL(path, Astro.site).href,
+  })),
+}];
 ---
 
-<Layout title={`${title} | Harpa Pro`} description={description}>
+<Layout
+  title={`${title} | Harpa Pro`}
+  description={description}
+  pageType={currentSlug ? "TechArticle" : "CollectionPage"}
+  structuredData={structuredData}
+>
   <div class="min-h-screen bg-background text-ink">
     <Header />
     <div class="docs-shell">

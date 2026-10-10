@@ -1,5 +1,5 @@
 ---
-import { Image } from "astro:assets";
+import { getImage, Image } from "astro:assets";
 import ProcurementConsiderations from "../components/agents/ProcurementConsiderations.astro";
 import ProcurementEvidence from "../components/agents/ProcurementEvidence.astro";
 import Icon from "../components/Icon.astro";
@@ -11,11 +11,53 @@ import Layout from "../layouts/Layout.astro";
 import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
 import hashyImg from "../assets/team/hashy.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
+
+const title = "Luxury Interior Procurement in China | Harpa Pro";
+const description = "Harpa Pro coordinates interior procurement in China: design specifications, factory coordination, quality checks, shipping, and procurement documentation.";
+const homeUrl = new URL("/", Astro.site).href;
+const socialImage = await getImage({
+  src: procurementInteriorImg,
+  width: 1200,
+  height: 630,
+  format: "png",
+});
+const structuredData = [{
+  "@type": "Service",
+  "@id": `${homeUrl}#procurement`,
+  name: "Luxury Interior Procurement in China",
+  serviceType: "Interior procurement",
+  description,
+  url: homeUrl,
+  areaServed: { "@type": "Country", name: "China" },
+  provider: { "@id": `${homeUrl}#organization` },
+  mainEntityOfPage: { "@id": `${homeUrl}#webpage` },
+}];
+const procurementQuestions = [
+  {
+    question: "What does an interior procurement agent in China do?",
+    answer: "Harpa Pro coordinates design specifications, factory selection, technical approvals, production quality checks, packing, and shipping records. We keep drawings, product data, approvals, and procurement documents together for the project.",
+  },
+  {
+    question: "What furniture and interior products can Harpa Pro help source?",
+    answer: "Our selected factory partners cover custom cabinetry and joinery, hospitality furniture, office desks and seating, steel storage, and bathroom cabinets and shower systems. We match each order with the factory that meets its design specifications.",
+  },
+  {
+    question: "How are materials and production quality checked?",
+    answer: "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements. At agreed points during production, we inspect materials, workmanship, dimensions, finishes, and finished goods. Packing, labels, quantities, and freight documents are checked against the order.",
+  },
+  {
+    question: "What should I send to start a procurement project?",
+    answer: "Send the project brief, drawings or product references, dimensions, finishes, quantities, and approval requirements. Our procurement team coordinates technical approvals and keeps the project record complete.",
+  },
+];
 ---
 
 <Layout
-  title="Harpa Pro — Interior Procurement in China"
-  description="We coordinate specifications, factories, quality checks, shipping records, and project approvals in China."
+  title={title}
+  description={description}
+  image={socialImage.src}
+  imageAlt="Harpa Pro interior procurement in China — living room with stone, timber, and fabric samples"
+  structuredData={structuredData}
 >
   <div class="min-h-screen bg-background text-ink">
     <Header />
@@ -229,7 +271,23 @@ import harunaImg from "../assets/team/haruna.jpg";
         </Container>
       </Section>
 
-      <Section id="contact" bordered="top" class="scroll-mt-16 bg-background">
+      <Section id="procurement-questions" bordered="top">
+        <Container padding="lg">
+          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            Procurement Questions
+          </h2>
+          <div class="mt-8 grid gap-8 md:grid-cols-2">
+            {procurementQuestions.map(({ question, answer }) => (
+              <article class="max-w-xl">
+                <h3 class="text-lg font-semibold leading-snug text-ink">{question}</h3>
+                <p class="mt-3 text-base leading-relaxed text-ink-soft">{answer}</p>
+              </article>
+            ))}
+          </div>
+        </Container>
+      </Section>
+
+      <Section id="contact" tone="paper-2" bordered="top" class="scroll-mt-16">
         <Container padding="lg">
           <div class="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(32rem,1.22fr)] lg:gap-16">
             <div class="max-w-xl">

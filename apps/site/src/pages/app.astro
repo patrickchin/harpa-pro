@@ -10,11 +10,29 @@ import Icon from "../components/Icon.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
+import { APP_STORE_URL } from "../lib/links";
+
+const description = "Create AI construction daily report drafts from voice notes, photos, and text with Harpa Pro. Review, edit, finalize, and export reports as PDFs.";
+const homeUrl = new URL("/", Astro.site).href;
+const appUrl = new URL("/app", Astro.site).href;
+const structuredData = [{
+  "@type": "SoftwareApplication",
+  "@id": `${appUrl}#software`,
+  name: "Harpa Pro",
+  description,
+  url: appUrl,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "iOS",
+  downloadUrl: APP_STORE_URL,
+  publisher: { "@id": `${homeUrl}#organization` },
+  mainEntityOfPage: { "@id": `${appUrl}#webpage` },
+}];
 ---
 
 <Layout
-  title="Site Reporting App | Harpa Pro"
-  description="Use the Harpa Pro app to turn voice notes, photos, and text updates into daily report drafts for review and export."
+  title="AI Construction Daily Report App | Harpa Pro"
+  description={description}
+  structuredData={structuredData}
 >
   <div class="min-h-screen bg-background text-ink">
     <Header />

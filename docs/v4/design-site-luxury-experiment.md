@@ -100,6 +100,11 @@ type belongs to the hero and major section headings; specifications, contact
 addresses, navigation, controls, and card copy remain easy to scan. Use
 uppercase, spaced small labels sparingly for real categories.
 
+Keep the Harpa Pro wordmark in the shared Inter sans-serif treatment, as
+requested by the user. Use the same compact size, semibold weight, and letter
+spacing in the header and footer. The homepage may adjust its color for the
+dark masthead; serif display styling belongs to the editorial headings.
+
 The material folio needs to remain specific to procurement. Keep real factory
 photographs, furniture examples, test-report crops, and technical drawings.
 Avoid invented luxury client logos, awards, project counts, testimonials, or

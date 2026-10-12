@@ -2,8 +2,12 @@
 
 Status: implemented as a local visual experiment.
 
-Material-scheme revision: accepted for implementation. The user requests
-complete alternative room images and a lighter hero scrim.
+Material-scheme revision: implemented. The user requests complete alternative
+room images and a lighter hero scrim.
+
+Material-balance refinement: implemented. The user prefers
+subtle, professionally composed interiors over repeated single-material
+finishes across the whole room.
 
 ## Context
 
@@ -45,6 +49,30 @@ Wood is the default. These images illustrate material direction; they do not
 depict completed Harpa projects or prove supplied products. Keep that meaning
 clear in the visible concept caption and each image's descriptive alt text.
 The factory, furniture, document, and drawing evidence elsewhere stays real.
+
+### Balanced material schemes
+
+Keep the same room, camera, furniture silhouettes, and daylight. Give each
+scheme its own restrained palette and a clear hierarchy of finishes. A
+material name describes the direction, not every surface in the room. Avoid
+repeating identical grain, veining, or reflective metal across walls, floors,
+joinery, and tables.
+
+- Wood: walnut joinery, chalk plaster, pale honed stone, natural linen, and a
+  muted olive accent. Timber remains the principal joinery finish; tables,
+  floors, and surrounding walls provide contrast.
+- Stone & Marble: a subtly veined marble coffee table and one controlled stone
+  detail, with painted joinery, oak shelf interiors, matte plaster, soft
+  textiles, and a muted wine accent. Keep broad surfaces quiet.
+- Glass & Modern: a smoked-glass coffee table and limited glass cabinet
+  fronts, with deep blue-grey joinery, warm oak details, matte plaster,
+  pale stone flooring, and tactile upholstery. Use metal for small fittings;
+  avoid mirrored walls, metal-clad architecture, or transparent islands.
+
+The result should look like three credible material selections by an interior
+designer. Inspect the generated scenes for material balance and believable
+construction before replacing the current assets. Preserve the lighter scrim
+and the existing image-switching behavior.
 
 Lighten the scrim so visitors can see the room and material changes. Reduce
 the broad dark overlay while retaining a local gradient behind the title,

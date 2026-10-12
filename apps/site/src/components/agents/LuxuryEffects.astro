@@ -1,30 +1,69 @@
 <script>
   const root = document.querySelector<HTMLElement>(".luxury-site");
   const hero = root?.querySelector<HTMLElement>("[data-hero-visual]");
+  const image = root?.querySelector<HTMLImageElement>("[data-material-image]");
   const controls = root?.querySelector<HTMLElement>("[data-material-controls]");
   const caption = root?.querySelector<HTMLElement>("[data-material-caption]");
-  const views = {
-    room: "Stone, timber, and fabric in context",
-    stone: "A closer look at the stone and timber",
-    texture: "A closer look at the upholstery and finishes",
-  };
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  if (hero && controls && caption) {
+  if (hero && image && controls && caption) {
+    let requestId = 0;
+    let imageFade: Animation | undefined;
     controls.hidden = false;
     const choices = controls.querySelectorAll<HTMLButtonElement>("[data-material-choice]");
     choices.forEach((button) => {
-      button.addEventListener("click", () => {
-        const view = button.dataset.materialChoice as keyof typeof views;
-        if (!(view in views)) return;
-        hero.dataset.materialView = view;
-        caption.textContent = views[view];
-        choices.forEach((choice) => choice.setAttribute("aria-pressed", String(choice === button)));
+      button.addEventListener("click", async () => {
+        const { materialChoice: view, materialSrc: src, materialSrcset: srcset,
+          materialSizes: sizes, materialAlt: alt, materialDescription: description,
+          materialLabel: label } = button.dataset;
+        if (!view || !src || !srcset || !sizes || !alt || !description || !label) return;
+
+        const pendingRequest = ++requestId;
+        if (view === hero.dataset.materialView) {
+          image.setAttribute("aria-busy", "false");
+          caption.textContent = description;
+          return;
+        }
+
+        image.setAttribute("aria-busy", "true");
+        caption.textContent = `Loading ${label} concept…`;
+        try {
+          const nextImage = new Image();
+          nextImage.sizes = sizes;
+          nextImage.srcset = srcset;
+          nextImage.src = src;
+          await nextImage.decode();
+          if (pendingRequest !== requestId) return;
+
+          imageFade?.cancel();
+          image.sizes = sizes;
+          image.srcset = srcset;
+          image.src = src;
+          image.alt = alt;
+          image.setAttribute("aria-busy", "false");
+          hero.dataset.materialView = view;
+          caption.textContent = description;
+          choices.forEach((choice) => choice.setAttribute("aria-pressed", String(choice === button)));
+
+          if (!reducedMotion.matches && image.animate) {
+            imageFade = image.animate([{ opacity: 0.75 }, { opacity: 1 }], {
+              duration: 500,
+              easing: "ease-out",
+            });
+          }
+        } catch {
+          if (pendingRequest !== requestId) return;
+          image.setAttribute("aria-busy", "false");
+          caption.textContent = `${label} concept could not load. Try again.`;
+        }
       });
+    });
+    reducedMotion.addEventListener("change", () => {
+      if (reducedMotion.matches) imageFade?.cancel();
     });
   }
 
   // Animate visible content rather than hiding it behind script initialization.
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   if (root && !reducedMotion.matches && "IntersectionObserver" in window) {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {

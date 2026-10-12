@@ -52,7 +52,7 @@ test('uses the complete procurement page as home without a reporting promotion',
 
   const heroVisual = hero.locator('[data-hero-visual]');
   const heroImage = hero.getByRole('img', {
-    name: 'Contemporary living room with stone, timber, and fabric samples arranged for review',
+    name: 'Generated interior concept with warm wood finishes in a contemporary living room',
   });
   const [heroBox, heroVisualBox, heroImageBox, heroHeadingBox] = await Promise.all([
     hero.boundingBox(),
@@ -162,25 +162,26 @@ test('uses the complete procurement page as home without a reporting promotion',
   }
 });
 
-test('offers accurate material views with mutually exclusive pressed controls', async ({ page }) => {
+test('swaps complete material concepts with pointer and keyboard controls', async ({ page }) => {
   await page.goto('/');
 
   const hero = page.locator('[data-hero-visual]');
-  const image = hero.getByRole('img');
+  const image = hero.locator('[data-material-image]');
   const choices = hero.locator('[data-material-choice]');
   const caption = hero.locator('[data-material-caption]');
-  await expect(hero.getByRole('group', { name: 'Interior photograph views' })).toBeVisible();
+  await expect(hero.getByRole('group', { name: 'Interior material concepts' })).toBeVisible();
   await expect(choices).toHaveCount(3);
-  await expect(caption).toHaveText('Stone, timber, and fabric in context');
-  const imageSource = await image.getAttribute('src');
+  await expect(caption).toHaveText('Material concept · Wood');
+  const initialBox = await image.boundingBox();
+  const imageSources = new Set<string>();
 
-  for (const [view, label, description] of [
-    ['stone', 'Stone', 'A closer look at the stone and timber'],
-    ['texture', 'Texture', 'A closer look at the upholstery and finishes'],
-    ['room', 'Room', 'Stone, timber, and fabric in context'],
+  for (const [view, label] of [
+    ['stone', 'Stone & Marble'],
+    ['modern', 'Glass & Modern'],
+    ['wood', 'Wood'],
   ] as const) {
     const choice = hero.getByRole('button', { name: label, exact: true });
-    if (view === 'texture') {
+    if (view === 'modern') {
       await choice.focus();
       await choice.press('Enter');
     } else {
@@ -191,13 +192,108 @@ test('offers accurate material views with mutually exclusive pressed controls', 
     await expect(choice).toHaveAttribute('aria-pressed', 'true');
     await expect(hero.locator('[data-material-choice][aria-pressed="true"]')).toHaveCount(1);
     await expect(hero.locator('[data-material-choice][aria-pressed="false"]')).toHaveCount(2);
-    await expect(caption).toHaveText(description);
-    await expect(image).toHaveAttribute('src', imageSource!);
-    await expect.poll(() => image.evaluate((element) => {
-      const transform = getComputedStyle(element).transform;
-      return transform === 'none' ? 1 : new DOMMatrixReadOnly(transform).a;
-    })).toBeCloseTo(view === 'room' ? 1 : 1.3, 2);
+    await expect(caption).toHaveText(`Material concept · ${label}`);
+    await expect(image).toHaveAttribute('aria-busy', 'false');
+    await expect(image).toHaveAttribute('src', (await choice.getAttribute('data-material-src'))!);
+    await expect(image).toHaveAttribute('srcset', (await choice.getAttribute('data-material-srcset'))!);
+    await expect(image).toHaveAttribute('alt', (await choice.getAttribute('data-material-alt'))!);
+    imageSources.add(await image.evaluate(async (element: HTMLImageElement) => {
+      await element.decode();
+      if (!element.naturalWidth) throw new Error('Material concept did not decode');
+      return element.currentSrc;
+    }));
+    expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
+    expect(await image.boundingBox()).toEqual(initialBox);
   }
+  expect(imageSources.size).toBe(3);
+});
+
+test('retains the loaded image while fetching and keeps the latest material choice', async ({ page }) => {
+  await page.goto('/');
+  const hero = page.locator('[data-hero-visual]');
+  const image = hero.locator('[data-material-image]');
+  const caption = hero.locator('[data-material-caption]');
+  const stone = hero.getByRole('button', { name: 'Stone & Marble', exact: true });
+  const stoneSources = await stone.evaluate((button: HTMLButtonElement) =>
+    `${button.dataset.materialSrc},${button.dataset.materialSrcset}`.split(',').map((source) =>
+      new URL(source.trim().split(/\s+/)[0]!, window.location.href).href,
+    ),
+  );
+  const initialSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
+  const initialBox = await image.boundingBox();
+  let releaseImage!: () => void;
+  const imageGate = new Promise<void>((resolve) => { releaseImage = resolve; });
+  await page.route((url) => stoneSources.includes(url.href), async (route) => {
+    await imageGate;
+    await route.continue();
+  });
+
+  try {
+    await stone.click();
+    await expect(image).toHaveAttribute('aria-busy', 'true');
+    await expect(caption).toHaveText('Loading Stone & Marble concept…');
+    await expect(hero).toHaveAttribute('data-material-view', 'wood');
+    await expect(hero.getByRole('button', { name: 'Wood', exact: true }))
+      .toHaveAttribute('aria-pressed', 'true');
+    await expect(image).toHaveJSProperty('currentSrc', initialSource);
+    expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+    expect(await image.boundingBox()).toEqual(initialBox);
+
+    await hero.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
+    await expect(hero).toHaveAttribute('data-material-view', 'modern');
+    const modernSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
+    expect(modernSource).not.toBe(initialSource);
+    const stoneResponse = page.waitForResponse((response) => stoneSources.includes(response.url()));
+    releaseImage();
+    await (await stoneResponse).finished();
+    // Wait for a real decode of the released resource before checking stale completion.
+    await page.evaluate(async (source) => {
+      const pendingImage = new Image();
+      pendingImage.src = source;
+      await pendingImage.decode();
+    }, (await stoneResponse).url());
+    await expect(hero).toHaveAttribute('data-material-view', 'modern');
+    await expect(caption).toHaveText('Material concept · Glass & Modern');
+    await expect(image).toHaveJSProperty('currentSrc', modernSource);
+    await expect(image).toHaveAttribute('aria-busy', 'false');
+  } finally {
+    releaseImage();
+  }
+});
+
+test('preserves a material concept after loading fails and allows a retry', async ({ page }) => {
+  await page.goto('/');
+  const hero = page.locator('[data-hero-visual]');
+  const image = hero.locator('[data-material-image]');
+  const modern = hero.getByRole('button', { name: 'Glass & Modern', exact: true });
+  const modernSources = await modern.evaluate((button: HTMLButtonElement) =>
+    `${button.dataset.materialSrc},${button.dataset.materialSrcset}`.split(',').map((source) =>
+      new URL(source.trim().split(/\s+/)[0]!, window.location.href).href,
+    ),
+  );
+  const initialSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
+  const initialAlt = await image.getAttribute('alt');
+  const matchesModern = (url: URL) => modernSources.includes(url.href);
+  await page.route(matchesModern, (route) => route.abort());
+  await modern.click();
+  await expect(hero.locator('[data-material-caption]'))
+    .toHaveText('Glass & Modern concept could not load. Try again.');
+  await expect(image).toHaveAttribute('aria-busy', 'false');
+  await expect(image).toHaveJSProperty('currentSrc', initialSource);
+  await expect(image).toHaveAttribute('alt', initialAlt!);
+  await expect(hero).toHaveAttribute('data-material-view', 'wood');
+  await expect(hero.getByRole('button', { name: 'Wood', exact: true }))
+    .toHaveAttribute('aria-pressed', 'true');
+  expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+  await page.unroute(matchesModern);
+  await modern.click();
+  await expect(hero).toHaveAttribute('data-material-view', 'modern');
+  await expect(modern).toHaveAttribute('aria-pressed', 'true');
+  await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Glass & Modern');
+  expect(await image.evaluate(async (element: HTMLImageElement) => {
+    await element.decode();
+    return element.currentSrc;
+  })).not.toBe(initialSource);
 });
 
 test('uses the local readable text color on dark procurement sections', async ({ page }) => {
@@ -231,13 +327,26 @@ test('honors reduced motion at load and when the preference changes', async ({ p
   expect(await page.locator('html').evaluate((element) => getComputedStyle(element).scrollBehavior))
     .toBe('auto');
   expect(await image.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s');
-  await page.getByRole('button', { name: 'Stone', exact: true }).click();
-  expect(await image.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a))
-    .toBeCloseTo(1.3, 2);
+  const initialSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
+  await page.getByRole('button', { name: 'Stone & Marble', exact: true }).click();
+  await expect(page.locator('[data-hero-visual]')).toHaveAttribute('data-material-view', 'stone');
+  expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).not.toBe(initialSource);
+  expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
+  expect(await image.evaluate((element) => element.getAnimations().length)).toBe(0);
 
   const heading = page.locator('#considerations h2');
   await heading.evaluate((element) => element.scrollIntoView({ behavior: 'instant', block: 'center' }));
   expect(await heading.evaluate((element) => element.getAnimations().length)).toBe(0);
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
+  await expect(page.locator('[data-hero-visual]')).toHaveAttribute('data-material-view', 'modern');
+  expect(await image.evaluate((element) =>
+    element.getAnimations().some((animation) => animation.playState === 'running'),
+  )).toBe(true);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(() => image.evaluate((element) => element.getAnimations().length)).toBe(0);
 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
@@ -266,7 +375,13 @@ test('keeps the hero and contact routes useful without JavaScript', async ({ bro
       level: 1,
       name: 'Luxury Interior Procurement in China',
     })).toBeVisible();
-    await expect(hero.getByRole('img')).toBeVisible();
+    const image = hero.getByRole('img', {
+      name: 'Generated interior concept with warm wood finishes in a contemporary living room',
+    });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+    await expect(hero.locator('[data-material-caption]')).toBeVisible();
+    await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Wood');
     await expect(hero.getByText(/We manage design specifications/)).toBeVisible();
     await expect(hero.locator('[data-material-controls]')).toBeHidden();
     await expect(hero.getByRole('button')).toHaveCount(0);

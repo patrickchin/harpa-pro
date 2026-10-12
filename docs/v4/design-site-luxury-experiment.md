@@ -2,6 +2,9 @@
 
 Status: implemented as a local visual experiment.
 
+Material-scheme revision: accepted for implementation. The user requests
+complete alternative room images and a lighter hero scrim.
+
 ## Context
 
 Harpa Pro coordinates luxury furniture and interior procurement in China. The
@@ -27,13 +30,26 @@ is a designer, developer, or project owner evaluating a procurement partner.
 The page's job is to connect that visitor with the procurement team after
 giving them enough concrete evidence to assess the service.
 
-The signature is the existing interior photograph with an oversized editorial
-title layered over the darker part of the room. Let the title wrap into a
+The signature is an interior concept image with an oversized editorial title
+layered over the darker part of the room. Let the title wrap into a
 deliberate composition at wide widths; do not force the long service name onto
 one line. Give the image more of the viewport and the copy a clear anchored
 position. Add useful routes to the existing factory evidence and contact
 sections. A small interior/material caption or a restrained material strip may
-support the image, provided it describes the service or photograph accurately.
+support the image, provided it describes the service or concept accurately.
+
+Use three generated interior concepts for the hero, keeping the same room
+layout, camera position, furniture arrangement, aspect ratio, and lighting.
+Only the material scheme changes: Wood, Stone & Marble, and Glass & Modern.
+Wood is the default. These images illustrate material direction; they do not
+depict completed Harpa projects or prove supplied products. Keep that meaning
+clear in the visible concept caption and each image's descriptive alt text.
+The factory, furniture, document, and drawing evidence elsewhere stays real.
+
+Lighten the scrim so visitors can see the room and material changes. Reduce
+the broad dark overlay while retaining a local gradient behind the title,
+description, and controls. Verify legibility against all three images at each
+supported viewport rather than assuming the default image is representative.
 
 Use material-inspired home-only colors: walnut ink, pale limestone, porcelain,
 muted bronze, and the existing Harpa orange. Define color values in `oklch`,
@@ -72,12 +88,37 @@ Within `#top`, place a short service introduction below the hero image to lead
 into the working detail. It remains part of the hero section. The hero's main
 actions point to Contact Us and the existing considerations section.
 
-Add an optional A closer look control with Room, Stone, and Texture buttons.
-These are views of the same existing interior image, using bounded scale and
-position changes with accurate photograph captions. Mark the active view
-with `aria-pressed`. They do not claim that the image depicts a completed
-Harpa project or that any pictured material is a supplied product. Without
-JavaScript, the default room composition remains useful.
+Keep the optional A closer look control, with Wood, Stone & Marble, and
+Glass & Modern buttons. Activation replaces the complete hero image with the
+selected material scheme instead of enlarging a crop. All schemes keep the
+same composition so the visitor can compare finishes without losing the room
+context. Mark the displayed scheme with `aria-pressed`; preserve the selected
+button's focus during loading and replacement.
+
+The default Wood image renders server-side as a responsive, high-priority
+Astro image. Without JavaScript, that image, its concept description, the hero
+copy, and both anchor actions remain useful. Hide optional scheme buttons
+until their script has initialized. Keep the visible default concept caption
+outside any controls wrapper that is hidden without JavaScript.
+
+Generate responsive URLs and width metadata for each alternate with Astro's
+`getImage` at build time. Serialize that metadata without inserting alternate
+image `src` or `srcset` attributes into the initial DOM. Fetch an alternate
+only after its button is activated, using its responsive `srcset` and `sizes`
+to choose an appropriate file for the viewport. Keep the current image visible
+while the requested scheme loads and decodes.
+
+After a successful decode, fade the ready image into full opacity and
+update its alt text, concept caption, and pressed button together. Keep the
+image frame's dimensions unchanged. Under reduced motion, replace it
+immediately. Cancel a pending fade when the reduced-motion preference changes.
+A late response from an earlier choice must not replace a more recent choice.
+
+Use a polite caption/status region to announce loading and a recoverable
+failure. If loading or decoding fails, keep the previous image, its alt text,
+and its pressed button; say that the requested scheme could not load and that
+the visitor can try again. Do not clear the hero, expose a broken image, or
+disable the other choices. Selecting the same failed scheme again retries it.
 
 Make the header feel like an interiors studio masthead while retaining its
 opaque sticky surface and native disclosure behavior. Keep Procurement, Site
@@ -108,8 +149,8 @@ Use native CSS and a small browser script; add no motion library or other
 dependency. Keep decorative enhancements separate so they can be removed
 without replacing content or changing navigation:
 
-- A small first-view image scale settles into the hero frame. The optional
-  image-view buttons may provide a closer crop after explicit activation.
+- The optional material-scheme buttons replace the complete room image after
+  explicit activation, with a short fade once the next image is ready.
 - A restrained scroll reveal brings section headings or image frames into
   place as the visitor reaches them. Do not hide substantive body content.
 - Fine-pointer hover gently enlarges photos inside their existing crop and
@@ -139,9 +180,11 @@ Prefer a separate homepage stylesheet with clear groups for palette/type,
 hero, sections, and motion. Removing motion rules and its small script should
 leave the visual composition intact.
 
-The planned files are `styles/luxury.css` for the home-only composition and
-`components/agents/LuxuryEffects.astro` for image-view selection and entrance
-enhancement. Headings may use the Web Animations API after intersection;
+The implementation files are `styles/luxury.css` for the home-only composition
+and `components/agents/LuxuryEffects.astro` for material-scheme selection and
+entrance enhancement. Store the generated concepts with the existing site
+assets; remove the earlier crop-transform rules. Headings may use the Web
+Animations API after intersection;
 their base CSS never sets them transparent or offsets them before the script
 starts. Use native CSS transitions for decorative hover behavior.
 
@@ -159,8 +202,10 @@ Use existing hooks where possible:
   `[data-product-image-frame]`, `[data-credential-record]`, and
   `[data-technical-review]`.
 
-Keep the hero's Astro image high priority and responsive. Below-fold imagery
-remains lazy. Preserve the existing preview-first evidence image dialog from
+Keep the default Wood hero's Astro image high priority and responsive; its
+concept alt text also applies to social metadata that uses that image. Keep
+alternate hero assets on demand and below-fold imagery lazy. Preserve the
+existing preview-first evidence image dialog from
 [progressive evidence images](design-site-progressive-evidence-images.md).
 Do not reintroduce source-document downloads or add external-service calls.
 
@@ -177,3 +222,13 @@ Inspect desktop, compact desktop, tablet, and phone widths, including 1440,
 no horizontal overflow, equal-height consideration states, aligned profile
 credentials, reduced-motion behavior, and useful content without JavaScript.
 Confirm that the shared app and docs routes retain their baseline styling.
+
+For the material-scheme revision, verify all three complete images and their
+captions, mutually exclusive pressed states, stable frame geometry, and visible
+keyboard focus. Assert that alternate assets are not requested before a choice
+is activated. Delay one alternate response and confirm the current image stays
+visible until decode completes; fail another response and confirm the current
+image and selection remain intact and retry succeeds. Cover rapid selection,
+reduced-motion replacement, and the default Wood composition without
+JavaScript. Inspect the lighter scrim with every material scheme on desktop
+and phone.

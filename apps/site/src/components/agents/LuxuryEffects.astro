@@ -1,0 +1,47 @@
+<script>
+  const root = document.querySelector<HTMLElement>(".luxury-site");
+  const hero = root?.querySelector<HTMLElement>("[data-hero-visual]");
+  const controls = root?.querySelector<HTMLElement>("[data-material-controls]");
+  const caption = root?.querySelector<HTMLElement>("[data-material-caption]");
+  const views = {
+    room: "Stone, timber, and fabric in context",
+    stone: "A closer look at the stone and timber",
+    texture: "A closer look at the upholstery and finishes",
+  };
+
+  if (hero && controls && caption) {
+    controls.hidden = false;
+    const choices = controls.querySelectorAll<HTMLButtonElement>("[data-material-choice]");
+    choices.forEach((button) => {
+      button.addEventListener("click", () => {
+        const view = button.dataset.materialChoice as keyof typeof views;
+        if (!(view in views)) return;
+        hero.dataset.materialView = view;
+        caption.textContent = views[view];
+        choices.forEach((choice) => choice.setAttribute("aria-pressed", String(choice === button)));
+      });
+    });
+  }
+
+  // Animate visible content rather than hiding it behind script initialization.
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (root && !reducedMotion.matches && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        observer.unobserve(entry.target);
+        if (reducedMotion.matches || !entry.target.animate) continue;
+        entry.target.animate(
+          [{ opacity: 0.45, transform: "translateY(18px)" }, { opacity: 1, transform: "translateY(0)" }],
+          { duration: 700, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" },
+        );
+      }
+    }, { threshold: 0.6 });
+    root.querySelectorAll("main > section:not(#top) h2").forEach((heading) => observer.observe(heading));
+    reducedMotion.addEventListener("change", () => {
+      if (!reducedMotion.matches) return;
+      observer.disconnect();
+      root.getAnimations({ subtree: true }).forEach((animation) => animation.cancel());
+    });
+  }
+</script>

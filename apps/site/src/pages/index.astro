@@ -8,6 +8,8 @@ import Header from "../components/landing/Header.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
+import LuxuryEffects from "../components/agents/LuxuryEffects.astro";
+import "../styles/luxury.css";
 import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
 import hashyImg from "../assets/team/hashy.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
@@ -59,48 +61,79 @@ const procurementQuestions = [
   imageAlt="Harpa Pro interior procurement in China — living room with stone, timber, and fabric samples"
   structuredData={structuredData}
 >
-  <div class="min-h-screen bg-background text-ink">
+  <div class="luxury-site min-h-screen bg-background text-ink">
     <Header />
+    <div class="luxury-reading-progress" aria-hidden="true"></div>
     <main class="agents-page">
       <section id="top" class="bg-background">
-        <div class="mx-auto max-w-7xl sm:px-6 sm:py-10 lg:py-12">
+        <div class="luxury-hero-shell">
           <figure
             data-hero-visual
-            class="relative isolate min-h-[40rem] overflow-hidden border-y border-primary/15 bg-primary shadow-lg sm:min-h-[40rem] sm:rounded-2xl sm:border md:min-h-[43rem]"
+            data-material-view="room"
+            class="luxury-hero relative isolate overflow-hidden bg-primary"
           >
             <Image
               src={procurementInteriorImg}
               alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
               widths={[640, 960, 1280, 1600]}
-              sizes="(min-width: 80rem) 80rem, (min-width: 40rem) calc(100vw - 3rem), 100vw"
+              sizes="100vw"
               format="webp"
               quality={84}
               priority
-              class="absolute inset-0 h-full w-full object-cover"
+              class="luxury-hero-image absolute inset-0 h-full w-full object-cover"
             />
             <div
               data-hero-scrim
               aria-hidden="true"
               class="hero-scrim absolute inset-0"
             ></div>
+            <div class="luxury-hero-topline" aria-hidden="true">
+              <span>Interior procurement · China</span>
+              <span>Design / Materials / Detail</span>
+            </div>
             <figcaption
               data-hero-copy
-              class="relative z-10 flex min-h-[40rem] items-end p-5 sm:min-h-[40rem] sm:p-8 md:min-h-[43rem] lg:p-12"
+              class="luxury-hero-copy relative z-10"
             >
-              <div class="max-w-6xl">
-                <h1
-                  class="text-[2rem] font-semibold leading-[1.02] tracking-tight text-primary-foreground sm:text-5xl lg:text-[3.75rem] xl:whitespace-nowrap xl:text-[4.25rem]"
-                >
-                  Luxury Interior Procurement in China
+              <div class="luxury-hero-title-group">
+                <h1 class="luxury-hero-title">
+                  <span>Luxury Interior</span>{" "}<span><em>Procurement</em> in China</span>
                 </h1>
-                <p class="mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
+                <p class="luxury-hero-description">
                   We manage design specifications, factory coordination, quality
                   checks, shipment, and complete procurement documentation
                   (approved health, safety, and quality standards).
                 </p>
+                <div class="luxury-hero-actions">
+                  <a href="#contact" class="luxury-button ring-focus">
+                    Discuss your project <Icon name="arrow-up-right" class="h-4 w-4" />
+                  </a>
+                  <a href="#considerations" class="luxury-text-link ring-focus">
+                    Explore our approach <Icon name="arrow-down" class="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </figcaption>
+            <div class="luxury-material-controls" data-material-controls hidden>
+              <p>A closer look</p>
+              <div role="group" aria-label="Interior photograph views">
+                <button type="button" data-material-choice="room" aria-pressed="true" class="ring-focus">
+                  <span class="luxury-swatch luxury-swatch-room" aria-hidden="true"></span>Room
+                </button>
+                <button type="button" data-material-choice="stone" aria-pressed="false" class="ring-focus">
+                  <span class="luxury-swatch luxury-swatch-stone" aria-hidden="true"></span>Stone
+                </button>
+                <button type="button" data-material-choice="texture" aria-pressed="false" class="ring-focus">
+                  <span class="luxury-swatch luxury-swatch-texture" aria-hidden="true"></span>Texture
+                </button>
+              </div>
+              <span data-material-caption role="status" aria-live="polite">Stone, timber, and fabric in context</span>
+            </div>
           </figure>
+        </div>
+        <div class="luxury-service-line">
+          <p>Design specifications <span aria-hidden="true">↗</span> Factory coordination <span aria-hidden="true">↗</span> Quality checks <span aria-hidden="true">↗</span> Delivery</p>
+          <a href="#evidence" class="ring-focus">Explore the project details <Icon name="arrow-down-right" class="h-4 w-4" /></a>
         </div>
       </section>
 
@@ -363,6 +396,7 @@ const procurementQuestions = [
       </Section>
     </main>
     <Footer />
+    <LuxuryEffects />
   </div>
 
   <script>

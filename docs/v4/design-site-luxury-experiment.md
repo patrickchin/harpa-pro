@@ -186,8 +186,9 @@ without replacing content or changing navigation:
   explicit activation, with a short fade once the next image is ready.
 - A restrained scroll reveal brings section headings or image frames into
   place as the visitor reaches them. Do not hide substantive body content.
-- Fine-pointer hover gently enlarges photos inside their existing crop and
-  moves action arrows a few pixels. Focus has an equally clear treatment.
+- Keep image scale unchanged on hover, as requested by the user. Fine-pointer
+  hover may emphasize photo color and move action arrows a few pixels. Focus
+  has an equally clear treatment.
 - Quiet paper/material texture, inset framing, or reflection accents may
   enrich surfaces without obscuring text, drawings, or document previews.
 - A thin reading-progress rule may sit on the masthead, marked decorative,

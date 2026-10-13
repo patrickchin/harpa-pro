@@ -98,7 +98,6 @@ test('every sitemap page has unique metadata and an accurate production identity
       await expect(page.locator('article')).toContainText('Keep the approved sample.');
       await expect(page.locator('article figure')).toContainText('Generated material concept');
       await expect(page.locator('article figure img')).toHaveAttribute('alt', /Generated/);
-      await page.evaluate(() => document.fonts.ready);
       const fonts = await page.evaluate(() => ({
         title: getComputedStyle(document.querySelector('h1')!).fontFamily,
         step: getComputedStyle(document.querySelector('article h2')!).fontFamily,

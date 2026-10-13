@@ -117,6 +117,8 @@ runs:
             - 'apps/site/**'
           admin:
             - 'apps/admin/**'
+            - 'scripts/ci/cloudflare-pages-watch-paths.json'
+            - 'scripts/ci/__tests__/selective-preview-policy.test.cjs'
             - 'packages/api-contract/**'
             - '.github/actions/changed-paths/**'
             - '.github/actions/setup-monorepo/**'
@@ -129,6 +131,8 @@ runs:
             - 'tsconfig.base.json'
           dashboard:
             - 'apps/dashboard/**'
+            - 'scripts/ci/cloudflare-pages-watch-paths.json'
+            - 'scripts/ci/__tests__/selective-preview-policy.test.cjs'
             - 'packages/api-contract/**'
             - 'packages/design-tokens/**'
             - '.github/actions/changed-paths/**'

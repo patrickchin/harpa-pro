@@ -69,6 +69,7 @@ jobs:
           bash scripts/ci/__tests__/cloudflare-pages-build.test.sh
           node scripts/ci/__tests__/wrangler4-pages-runtime.test.mjs
           bash scripts/ci/__tests__/cloudflare-pages-git-policy.test.sh
+          node --test scripts/ci/__tests__/selective-preview-policy.test.cjs
           bash scripts/ci/__tests__/verify-pages-deployment.test.sh
           bash scripts/ci/__tests__/dependabot-trust-policy.test.sh
       - name: Shellcheck CI helpers

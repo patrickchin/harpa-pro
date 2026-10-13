@@ -1,7 +1,7 @@
 name: mobile-ota-pr
 
-# Push an OTA update to the `development` EAS channel on every PR
-# push (open / new commits / reopen) so devices with a `development`
+# Push an OTA update to the `development` EAS channel on mobile-related PR
+# pushes (open / new commits / reopen) so devices with a `development`
 # native build can pick up the PR's JS bundle on next launch.
 #
 # The changed-path check remains available to every PR. OTA publication runs
@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.paths.outputs.api }}
+      mobile: ${{ steps.paths.outputs.mobile }}
     steps:
       - uses: actions/checkout@v7
       - id: paths
@@ -48,6 +49,7 @@ jobs:
     # concurrency group and cancel any in-flight publish.
     if: >-
       github.event.action != 'closed' &&
+      needs.changes.outputs.mobile == 'true' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest

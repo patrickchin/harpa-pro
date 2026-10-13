@@ -7,6 +7,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'scripts/ci/cloudflare-pages-watch-paths.json'
+      - 'scripts/ci/__tests__/selective-preview-policy.test.cjs'
       - 'apps/site/**'
       - 'packages/api-contract/**'
       - 'scripts/ci/build-cloudflare-pages.sh'

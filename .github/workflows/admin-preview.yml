@@ -8,6 +8,8 @@ on:
   pull_request:
     branches: [dev, main]
     paths:
+      - 'scripts/ci/cloudflare-pages-watch-paths.json'
+      - 'scripts/ci/__tests__/selective-preview-policy.test.cjs'
       - 'apps/admin/**'
       - 'packages/api-contract/**'
       # The browser flow crosses the whole API process (routing, global

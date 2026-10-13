@@ -7,6 +7,8 @@ on:
   pull_request:
     branches: [dev, main]
     paths:
+      - 'scripts/ci/cloudflare-pages-watch-paths.json'
+      - 'scripts/ci/__tests__/selective-preview-policy.test.cjs'
       - 'apps/site/**'
       - 'packages/api-contract/**'
       - '.github/workflows/site-preview.yml'

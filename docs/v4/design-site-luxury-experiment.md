@@ -141,11 +141,19 @@ only after its button is activated, using its responsive `srcset` and `sizes`
 to choose an appropriate file for the viewport. Keep the current image visible
 while the requested scheme loads and decodes.
 
-After a successful decode, fade the ready image into full opacity and
-update its alt text, concept caption, and pressed button together. Keep the
-image frame's dimensions unchanged. Under reduced motion, replace it
-immediately. Cancel a pending fade when the reduced-motion preference changes.
-A late response from an earlier choice must not replace a more recent choice.
+After a successful decode, crossfade the complete previous image over the
+ready image for 900ms with ease-in-out timing. Keep the new image fully opaque
+underneath so the room stays visible throughout the transition. The outgoing
+layer is decorative and is removed after the fade. Update the current image's
+alt text, concept caption, and pressed button together when the fade begins.
+Keep the image frame's dimensions unchanged.
+
+Let an active crossfade finish before starting the latest decoded choice;
+discard earlier pending choices. Rapid clicks must preserve the current
+blend without snapping to an intermediate image. Under reduced motion,
+replace the image immediately. Cancel and clean up an active fade when the
+reduced-motion preference changes. A late response from an earlier choice
+must not replace a more recent choice.
 
 Use a polite caption/status region to announce loading and a recoverable
 failure. If loading or decoding fails, keep the previous image, its alt text,

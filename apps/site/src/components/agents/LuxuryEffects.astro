@@ -33,9 +33,19 @@
           nextImage.srcset = srcset;
           nextImage.src = src;
           await nextImage.decode();
+          await imageFade?.finished.catch(() => {});
           if (pendingRequest !== requestId) return;
 
-          imageFade?.cancel();
+          const outgoingImage = !reducedMotion.matches && typeof image.animate === "function"
+            ? image.cloneNode() as HTMLImageElement
+            : undefined;
+          if (outgoingImage) {
+            outgoingImage.removeAttribute("data-material-image");
+            outgoingImage.setAttribute("data-material-outgoing", "");
+            outgoingImage.setAttribute("aria-hidden", "true");
+            outgoingImage.alt = "";
+            image.after(outgoingImage);
+          }
           image.sizes = sizes;
           image.srcset = srcset;
           image.src = src;
@@ -45,10 +55,16 @@
           caption.textContent = description;
           choices.forEach((choice) => choice.setAttribute("aria-pressed", String(choice === button)));
 
-          if (!reducedMotion.matches && image.animate) {
-            imageFade = image.animate([{ opacity: 0.75 }, { opacity: 1 }], {
-              duration: 500,
-              easing: "ease-out",
+          if (outgoingImage) {
+            const fade = outgoingImage.animate([{ opacity: 1 }, { opacity: 0 }], {
+              duration: 900,
+              easing: "ease-in-out",
+              fill: "forwards",
+            });
+            imageFade = fade;
+            void fade.finished.catch(() => {}).finally(() => {
+              outgoingImage.remove();
+              if (imageFade === fade) imageFade = undefined;
             });
           }
         } catch {

@@ -2,6 +2,11 @@
 
 Status: implemented.
 
+The header's Procurement destinations below are refined by
+[the clarified menu scope](design-site-two-page-navigation.md). Restore the
+styled dropdowns and grouped footer from `112a01b9`; Site Reporting, contact,
+app, documentation, and evidence-page behavior still applies.
+
 ## Context
 
 The public site contains two separate Harpa Pro offers:
@@ -27,11 +32,11 @@ presentation. Do not restore the old waitlist or other server-backed controls.
 
 The shared header names each offer by its purpose:
 
-- **Procurement** opens a full-width panel with the procurement overview,
-  consideration, example, evidence, and contact links;
+- **Procurement** opens a full-width panel with **Procurement Overview** and
+  **How to Buy from China**;
 - **Site reporting** opens a full-width panel with **Harpa Pro app**,
   **Guides**, **Roadmap**, and App Store links;
-- **Contact Haruna** opens `/#contact`.
+- **Contact Us** opens `/#contact`.
 
 Do not show **App**, **App guides**, and **App roadmap** as three peer links.
 They describe one product and compete with the primary procurement offer.

@@ -12,6 +12,7 @@ const STATIC_PATHS = [
   "/privacy",
   "/account-deletion",
   "/docs",
+  "/how-to-buy-from-china",
 ];
 
 export const GET: APIRoute = async ({ site }) => {

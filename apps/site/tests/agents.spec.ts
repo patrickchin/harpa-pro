@@ -725,13 +725,13 @@ test('uses accessible mega navigation and closes it after outside interaction', 
 
   await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(3);
   const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
-  await expect(desktopItemIcons).toHaveCount(10);
-  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(10);
+  await expect(desktopItemIcons).toHaveCount(11);
+  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(11);
   expect(
     await desktopItemIcons.evaluateAll(
       (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
     ),
-  ).toBe(10);
+  ).toBe(11);
   expect(
     await page
       .locator('[data-site-header]')
@@ -746,6 +746,9 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(
     procurementMenu.getByRole('link', { name: 'Selected Factory Partners', exact: true }),
   ).toHaveAttribute('href', '/#factory-partners');
+  await expect(
+    procurementMenu.getByRole('link', { name: 'How to Buy from China', exact: true }),
+  ).toHaveAttribute('href', '/how-to-buy-from-china');
 
   await siteReportingSummary.hover();
   await expect(siteReportingMenu).toHaveAttribute('open', '');
@@ -785,20 +788,27 @@ test('uses accessible mega navigation and closes it after outside interaction', 
       .first(),
   ).toHaveAttribute('href', '/');
   await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('footer').getByRole('link', { name: 'How to Buy from China', exact: true }),
+  ).toHaveAttribute('href', '/how-to-buy-from-china');
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(3);
   const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
-  await expect(mobileItemIcons).toHaveCount(8);
-  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(8);
+  await expect(mobileItemIcons).toHaveCount(9);
+  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(9);
   expect(
     await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
-  ).toBe(8);
+  ).toBe(9);
   await expect(
     mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
   ).toHaveAttribute('href', '/');
+  await mobileMenu.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
+  await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   await expect(mobileMenu.getByRole('link', { name: 'Contact Us', exact: true })).toHaveAttribute(
     'href',
     '/#contact',

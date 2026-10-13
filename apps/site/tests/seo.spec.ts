@@ -83,8 +83,43 @@ test('every sitemap page has unique metadata and an accurate production identity
       await expect(page.locator('[data-voice-demo]')).toContainText('Summary:');
     }
 
-    if (url.pathname.startsWith('/docs')) {
-      expect(pageNode?.['@type']).toBe(url.pathname === '/docs' ? 'CollectionPage' : 'TechArticle');
+    if (url.pathname === '/how-to-buy-from-china') {
+      expect(graph.find((node) => node['@type'] === 'Article')).toMatchObject({
+        headline: 'How to buy from China',
+        url: location,
+        mainEntityOfPage: { '@id': `${location}#webpage` },
+        author: { '@id': 'https://harpapro.com/#organization' },
+      });
+      await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'article');
+      await expect(page.locator('article h2')).toHaveCount(6);
+      await expect(page.getByRole('navigation', { name: 'On this page' }).locator('a')).toHaveCount(
+        6,
+      );
+      await expect(page.locator('article')).toContainText('Keep the approved sample.');
+      await expect(page.locator('article figure')).toContainText('Generated material concept');
+      await expect(page.locator('article figure img')).toHaveAttribute('alt', /Generated/);
+      await page.evaluate(() => document.fonts.ready);
+      const fonts = await page.evaluate(() => ({
+        title: getComputedStyle(document.querySelector('h1')!).fontFamily,
+        step: getComputedStyle(document.querySelector('article h2')!).fontFamily,
+        body: getComputedStyle(document.querySelector('.article-copy p')!).fontFamily,
+        wordmark: getComputedStyle(document.querySelector('[data-site-header] > div > a span')!).fontFamily,
+        titleColor: getComputedStyle(document.querySelector('h1')!).color,
+        bodyColor: getComputedStyle(document.querySelector('.article-copy')!).color,
+        walnut: getComputedStyle(document.querySelector('[data-site-header]')!).backgroundColor,
+      }));
+      expect(fonts.title).toContain('Cormorant Garamond');
+      expect(fonts.step).toContain('Cormorant Garamond');
+      expect(fonts.body).toContain('Inter');
+      expect(fonts.wordmark).toContain('Inter');
+      expect(fonts.titleColor).toBe(fonts.walnut);
+      expect(fonts.bodyColor).toBe(fonts.walnut);
+    }
+
+    if (url.pathname.startsWith('/docs') || url.pathname === '/how-to-buy-from-china') {
+      if (url.pathname.startsWith('/docs')) {
+        expect(pageNode?.['@type']).toBe(url.pathname === '/docs' ? 'CollectionPage' : 'TechArticle');
+      }
       const breadcrumb = graph.find((node) => node['@type'] === 'BreadcrumbList');
       const items = breadcrumb?.itemListElement as { name: string; item: string; position: number }[];
       const visible = await page.locator('.docs-breadcrumbs a, .docs-breadcrumbs [aria-current="page"]').allTextContents();

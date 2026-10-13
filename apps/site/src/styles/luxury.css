@@ -65,7 +65,7 @@
   width: 3rem;
 }
 
-/* Studio masthead. Menus keep the light, readable page palette. */
+/* Studio masthead and its two page links. */
 .luxury-site [data-site-header] {
   background: var(--luxury-walnut);
   border-color: color-mix(in oklab, var(--luxury-bronze) 25%, transparent);
@@ -77,17 +77,16 @@
 .luxury-site [data-site-header] > div > a .text-ink {
   color: var(--luxury-porcelain);
 }
-.luxury-site [data-site-header] summary {
+.luxury-site [data-site-header] nav[aria-label='Primary'] a {
   color: var(--luxury-porcelain);
+  opacity: 0.8;
 }
-.luxury-site [data-mega-menu] summary:hover {
-  background: oklch(1 0 0 / 0.08);
+.luxury-site [data-site-header] nav[aria-label='Primary'] a:hover,
+.luxury-site [data-site-header] nav[aria-label='Primary'] a[aria-current='page'] {
+  opacity: 1;
 }
-.luxury-site [data-mega-menu] summary [data-nav-icon] {
-  color: var(--luxury-bronze);
-}
-.luxury-site [data-site-header] nav[aria-label='Primary'] > a {
-  border-radius: 2px;
+.luxury-site [data-site-header] nav[aria-label='Primary'] a[aria-current='page'] {
+  border-color: var(--luxury-bronze);
 }
 
 /* Cinematic hero and its optional material concepts */

@@ -111,10 +111,9 @@ appearance and behaviour.
 
 ## Discovery
 
-Add “How to Buy from China” to the Procurement group in both desktop and
-mobile shared navigation and in the footer Procurement links. Use the
-existing menu item styling and `file-text` icon. Add the canonical path to
-the static sitemap list. Existing navigation interaction stays unchanged.
+Use the shared [two-page navigation](design-site-two-page-navigation.md) in
+the header and footer: Home and How to Buy from China. Add the canonical path
+to the static sitemap list.
 
 Show visible breadcrumbs “Home → How to buy from China”. The page uses a
 unique procurement-specific title and description. Use the existing Wood

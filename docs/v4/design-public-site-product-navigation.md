@@ -2,6 +2,10 @@
 
 Status: implemented.
 
+The shared header and footer decisions below are superseded by
+[two-page navigation](design-site-two-page-navigation.md). Existing app,
+documentation, contact, and evidence-page behavior still applies.
+
 ## Context
 
 The public site contains two separate Harpa Pro offers:

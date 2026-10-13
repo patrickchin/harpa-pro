@@ -145,7 +145,7 @@ describe('docs content model', () => {
 
     const header = readFileSync(resolve(srcRoot, 'components/landing/Header.astro'), 'utf8');
     expect(header).not.toContain('https://docs.harpapro.com');
-    expect(header).toContain('href="/docs"');
+    expect(header).toContain('href="/how-to-buy-from-china"');
 
     const docsIndex = readFileSync(resolve(srcRoot, 'pages/docs/index.astro'), 'utf8');
     expect(docsIndex).toContain('Site Reporting Guides');

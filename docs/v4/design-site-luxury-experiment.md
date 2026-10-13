@@ -162,8 +162,12 @@ the visitor can try again. Do not clear the hero, expose a broken image, or
 disable the other choices. Selecting the same failed scheme again retries it.
 
 Make the header feel like an interiors studio masthead with an opaque sticky
-surface. Follow the shared [two-page navigation](design-site-two-page-navigation.md)
-contract: Home and How to Buy from China remain visible on desktop and phones.
+surface. Follow the clarified
+[Procurement menu scope](design-site-two-page-navigation.md): retain the styled
+Procurement and Site Reporting dropdowns and grouped mobile menu. Procurement
+contains Procurement Overview and How to Buy from China; Site Reporting keeps
+its previous destinations. Restore the grouped footer and desktop Contact Us
+button.
 
 Treat What We Consider as a dark material workspace with a larger selected
 image, quiet detail framing, and visible category controls. Keep the existing

@@ -111,9 +111,12 @@ appearance and behaviour.
 
 ## Discovery
 
-Use the shared [two-page navigation](design-site-two-page-navigation.md) in
-the header and footer: Home and How to Buy from China. Add the canonical path
-to the static sitemap list.
+Follow the shared [Procurement menu scope](design-site-two-page-navigation.md):
+the restored desktop dropdown and mobile Procurement group contain Procurement
+Overview and How to Buy from China. Retain the previous Site Reporting links,
+separate desktop Contact Us button, and grouped footer. Keep the buying guide
+in the footer Procurement links. Add its canonical path to the static sitemap
+list.
 
 Show visible breadcrumbs “Home → How to buy from China”. The page uses a
 unique procurement-specific title and description. Use the existing Wood

@@ -152,10 +152,13 @@ describe('site smoke', () => {
     expect(home).not.toContain('Send a sourcing brief');
     expect(home).toContain('mailto:haruna@harpapro.com');
     expect(header).toContain('href="/"');
-    expect(header).toContain('href="/how-to-buy-from-china"');
+    expect(header).toContain('href="/app"');
+    expect(header).toContain('Site Reporting');
+    expect(header).toContain('href="/#contact"');
     expect(header).not.toContain('View evidence');
     expect(footer).toContain('href="/"');
-    expect(footer).toContain('href="/how-to-buy-from-china"');
+    expect(footer).toContain('href="/app"');
+    expect(footer).toContain('Site Reporting');
     expect(sitemap).not.toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');
     expect(sitemap).toContain('"/app"');

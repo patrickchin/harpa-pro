@@ -1,45 +1,70 @@
 import { expect, test } from "@playwright/test";
 
-test("keeps two page links visible on desktop and phones without JavaScript", async ({
-  page, browser, baseURL,
+test("keeps the unreleased dashboard out of public navigation", async ({
+  page,
 }) => {
   await page.goto("/");
-  const primary = page.getByRole("navigation", { name: "Primary", exact: true });
-  const links = primary.getByRole("link");
-  await expect(links).toHaveText(["Home", "How to Buy from China"]);
-  await expect(page.locator("[data-site-header] details")).toHaveCount(0);
-  await expect(primary.getByRole("link", { name: "Home", exact: true }))
-    .toHaveAttribute("aria-current", "page");
 
-  for (const width of [320, 390, 768, 1440]) {
-    await page.setViewportSize({ width, height: 844 });
-    for (const link of await links.all()) {
-      await expect(link).toBeVisible();
-      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    }
-    expect((await page.locator("[data-site-header]").boundingBox())!.height)
-      .toBeLessThanOrEqual(66);
-    const overflow = await page.evaluate(() =>
-      document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(1);
-  }
-
-  const context = await browser.newContext({
-    javaScriptEnabled: false, baseURL, viewport: { width: 390, height: 844 },
+  const desktopNav = page.locator("header nav");
+  const desktopDashboard = desktopNav.getByRole("link", {
+    name: "Dashboard",
+    exact: true,
   });
+  await expect(desktopDashboard).toHaveCount(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileMenu = page.locator("details.site-menu");
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
+
+  const mobileDashboard = mobileMenu.getByRole("link", {
+    name: "Dashboard",
+    exact: true,
+  });
+  await expect(mobileDashboard).toHaveCount(0);
+
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("keeps procurement and reporting destinations usable without JavaScript", async ({
+  browser, baseURL,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
   try {
-    const noScriptPage = await context.newPage();
-    await noScriptPage.goto("/");
-    const noScriptNav = noScriptPage.getByRole("navigation", { name: "Primary", exact: true });
-    await noScriptNav.getByRole("link", { name: "How to Buy from China", exact: true }).click();
-    await expect(noScriptNav.getByRole("link", { name: "How to Buy from China", exact: true }))
-      .toHaveAttribute("aria-current", "page");
-    await expect(noScriptPage.getByRole("heading", { level: 1, name: "How to buy from China" }))
-      .toBeVisible();
-    await noScriptNav.getByRole("link", { name: "Home", exact: true }).click();
-    await expect(noScriptNav.getByRole("link", { name: "Home", exact: true }))
-      .toHaveAttribute("aria-current", "page");
+    const page = await context.newPage();
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/");
+      const mobile = width < 768;
+      const menu = mobile
+        ? page.locator("[data-mobile-menu]")
+        : page.locator('[data-mega-menu="procurement"]');
+      await menu.locator("summary").click();
+      const procurement = mobile ? menu.locator("[data-mobile-procurement]") : menu;
+      await expect(procurement.getByRole("link")).toHaveCount(2);
+      await expect(procurement.getByRole("link", { name: "Procurement Overview", exact: true }))
+        .toHaveAttribute("href", "/");
+      const overflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(1);
+      expect((await page.locator("[data-site-header] > div").boundingBox())!.height).toBe(64);
+      await procurement.getByRole("link", { name: "How to Buy from China", exact: true }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "How to buy from China" }))
+        .toBeVisible();
+      const reporting = mobile
+        ? page.locator("[data-mobile-site-reporting]")
+        : page.locator('[data-mega-menu="site-reporting"]');
+      await page.locator(mobile ? "[data-mobile-menu] summary" : '[data-mega-menu="site-reporting"] summary')
+        .click();
+      await expect(reporting.getByRole("link")).toHaveCount(mobile ? 3 : 4);
+      await reporting.getByRole("link", { name: "Guides", exact: true }).click();
+      await expect(page).toHaveURL(/\/docs$/);
+    }
   } finally {
     await context.close();
   }

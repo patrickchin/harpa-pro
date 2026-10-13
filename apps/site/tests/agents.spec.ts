@@ -712,31 +712,132 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await expect(contact.locator('form')).toHaveCount(0);
 });
 
-test('uses two direct page links in the shared header and footer', async ({ page }) => {
+test('uses accessible mega navigation and closes it after outside interaction', async ({
+  page,
+}) => {
   await page.goto('/');
-  const primary = page.getByRole('navigation', { name: 'Primary', exact: true });
-  const footer = page.getByRole('navigation', { name: 'Footer', exact: true });
-  await expect(primary.getByRole('link')).toHaveText(['Home', 'How to Buy from China']);
-  await expect(footer.getByRole('link')).toHaveText(['Home', 'How to Buy from China']);
-  await expect(primary.getByRole('link', { name: 'Home', exact: true }))
-    .toHaveAttribute('aria-current', 'page');
-  expect(await page.locator('[data-site-header]').evaluate(header =>
-    getComputedStyle(header).backgroundColor,
-  )).not.toBe('rgba(0, 0, 0, 0)');
 
-  await primary.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
-  await expect(primary.getByRole('link', { name: 'How to Buy from China', exact: true }))
-    .toHaveAttribute('aria-current', 'page');
-  await expect(footer.getByRole('link', { name: 'How to Buy from China', exact: true }))
-    .toHaveAttribute('aria-current', 'page');
+  const desktopNav = page.locator('header nav[aria-label="Primary"]');
+  const procurementMenu = desktopNav.locator('[data-mega-menu="procurement"]');
+  const procurementSummary = procurementMenu.locator('summary');
+  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
+  const siteReportingSummary = siteReportingMenu.locator('summary');
+
+  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(3);
+  const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
+  await expect(desktopItemIcons).toHaveCount(6);
+  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(6);
+  expect(
+    await desktopItemIcons.evaluateAll(
+      (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
+    ),
+  ).toBe(6);
+  expect(
+    await page
+      .locator('[data-site-header]')
+      .evaluate((header) => getComputedStyle(header).backgroundColor),
+  ).not.toBe('rgba(0, 0, 0, 0)');
+
+  await procurementSummary.hover();
+  await expect(procurementMenu).toHaveAttribute('open', '');
+  await expect(procurementMenu.getByRole('link')).toHaveCount(2);
+  await expect(
+    procurementMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+  ).toHaveAttribute('href', '/');
+  await expect(
+    procurementMenu.getByRole('link', { name: 'How to Buy from China', exact: true }),
+  ).toHaveAttribute('href', '/how-to-buy-from-china');
+
+  await siteReportingSummary.hover();
+  await expect(siteReportingMenu).toHaveAttribute('open', '');
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
+  await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
+  await expect(
+    siteReportingMenu.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+  ).toHaveAttribute('href', '/app');
+  await expect(
+    siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
+  ).toHaveAttribute('href', '/docs');
+  await expect(
+    siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
+  ).toHaveAttribute('href', '/roadmap');
+  await expect(siteReportingMenu.getByRole('link', { name: 'Get the App', exact: true }))
+    .toHaveAttribute('target', '_blank');
+  await page.mouse.click(20, 700);
+  await expect(siteReportingMenu).not.toHaveAttribute('open', '');
+
+  await siteReportingSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(siteReportingMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(siteReportingMenu).not.toHaveAttribute('open', '');
+  await expect(siteReportingSummary).toBeFocused();
+
+  await expect(
+    desktopNav.getByRole('link', {
+      name: 'Contact Us',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/#contact');
+  await expect(
+    page
+      .locator('footer')
+      .getByRole('link', {
+        name: 'Overview',
+        exact: true,
+      })
+      .first(),
+  ).toHaveAttribute('href', '/');
+  await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
+  await expect(page.locator('footer nav[aria-label="Site Reporting"]').getByRole('link'))
+    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Account Deletion']);
+  await expect(page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }))
+    .toHaveAttribute('href', '/privacy');
+  await expect(
+    page.locator('footer').getByRole('link', { name: 'How to Buy from China', exact: true }),
+  ).toHaveAttribute('href', '/how-to-buy-from-china');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileMenu = page.locator('details.site-menu');
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
+  await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(2);
+  const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
+  await expect(mobileItemIcons).toHaveCount(5);
+  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(5);
+  expect(
+    await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
+  ).toBe(5);
+  await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
+    .toHaveText(['Procurement Overview', 'How to Buy from China']);
+  await expect(
+    mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+  ).toHaveAttribute('href', '/');
+  await mobileMenu.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
+  await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
+  const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
+  await expect(mobileSiteReporting.getByRole('link')).toHaveText(['Harpa Pro App', 'Guides', 'Roadmap']);
+  await expect(mobileSiteReporting.getByText('Site Reporting', { exact: true })).toBeVisible();
+  await expect(
+    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+  ).toHaveAttribute('href', '/app');
+  await expect(
+    mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
+  ).toHaveAttribute('href', '/docs');
+  await expect(
+    mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
+  ).toHaveAttribute('href', '/roadmap');
+  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
+
   await expect(page.getByRole('navigation', { name: 'On this page' }).getByRole('link'))
     .toHaveCount(6);
 
-  await primary.getByRole('link', { name: 'Home', exact: true }).focus();
-  await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/$/);
-  await expect(primary.getByRole('link', { name: 'Home', exact: true }))
-    .toHaveAttribute('aria-current', 'page');
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
 });
 
 test('uses valid tab semantics and accessible contrast for procurement actions', async ({
@@ -756,10 +857,10 @@ test('uses valid tab semantics and accessible contrast for procurement actions',
   await expect(panel).toHaveJSProperty('tagName', 'DIV');
 
   const procurementActions = page.locator(
-    'button[data-copy-email]',
+    'nav[aria-label="Primary"] > a[href="/#contact"], button[data-copy-email]',
   );
-  await expect(procurementActions).toHaveCount(1);
-  for (let index = 0; index < 1; index += 1) {
+  await expect(procurementActions).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
     await expect(procurementActions.nth(index)).toHaveClass(/\bbg-accent-ink\b/);
     await expect(procurementActions.nth(index)).toHaveClass(/\btext-accent-foreground\b/);
   }

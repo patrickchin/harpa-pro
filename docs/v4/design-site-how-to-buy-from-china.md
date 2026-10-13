@@ -166,6 +166,14 @@ at 390px confirmed no horizontal overflow, six working contents anchors,
 and headings clear of the sticky header. Firefox checks could not complete
 because the local browser failed to find its temporary profile folder.
 
+Luxury revision verification on 2026-10-13: all 32 Chromium browser checks
+passed. Desktop, tablet, and phone review at 1440, 1024, 768, and 390 CSS
+pixels confirmed the intended typography, zero horizontal overflow, and
+responsive contents placement. The desktop rail remains usable in a 500px
+tall viewport, and step anchors clear the sticky masthead. The same PR removes
+the homepage's image hover scaling at the user's request, as recorded in
+the [luxury experiment](design-site-luxury-experiment.md).
+
 Luxury revision verified locally on 2026-10-13: all 28 unit tests and 32
 Chromium browser tests passed, alongside typecheck, lint, and the static
 build. The article's Lighthouse desktop scores were 100 for performance,

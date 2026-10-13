@@ -8,19 +8,54 @@ import Header from "../components/landing/Header.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
-import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
+import LuxuryEffects from "../components/agents/LuxuryEffects.astro";
+import "../styles/luxury.css";
+import woodInteriorImg from "../assets/agents/finishes/wood.webp";
+import stoneInteriorImg from "../assets/agents/finishes/stone.webp";
+import modernInteriorImg from "../assets/agents/finishes/modern.webp";
 import hashyImg from "../assets/team/hashy.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
 
 const title = "Luxury Interior Procurement in China | Harpa Pro";
 const description = "Harpa Pro coordinates interior procurement in China: design specifications, factory coordination, quality checks, shipping, and procurement documentation.";
 const homeUrl = new URL("/", Astro.site).href;
+const materialSchemes = await Promise.all([
+  {
+    key: "wood",
+    label: "Wood",
+    source: woodInteriorImg,
+    alt: "Generated interior concept with warm wood finishes in a contemporary living room",
+  },
+  {
+    key: "stone",
+    label: "Stone & Marble",
+    source: stoneInteriorImg,
+    alt: "Generated interior concept with stone and marble finishes in the same contemporary living room",
+  },
+  {
+    key: "modern",
+    label: "Glass & Modern",
+    source: modernInteriorImg,
+    alt: "Generated interior concept with glass and modern finishes in the same contemporary living room",
+  },
+].map(async (scheme) => ({
+  ...scheme,
+  caption: `Material concept · ${scheme.label}`,
+  image: await getImage({
+    src: scheme.source,
+    widths: [640, 960, 1280, 1600],
+    sizes: "100vw",
+    format: "webp",
+    quality: 84,
+  }),
+})));
 const socialImage = await getImage({
-  src: procurementInteriorImg,
+  src: woodInteriorImg,
   width: 1200,
   height: 630,
   format: "png",
 });
+const defaultScheme = materialSchemes[0]!;
 const structuredData = [{
   "@type": "Service",
   "@id": `${homeUrl}#procurement`,
@@ -56,51 +91,92 @@ const procurementQuestions = [
   title={title}
   description={description}
   image={socialImage.src}
-  imageAlt="Harpa Pro interior procurement in China — living room with stone, timber, and fabric samples"
+  imageAlt={defaultScheme.alt}
   structuredData={structuredData}
 >
-  <div class="min-h-screen bg-background text-ink">
+  <div class="luxury-site min-h-screen bg-background text-ink">
     <Header />
+    <div class="luxury-reading-progress" aria-hidden="true"></div>
     <main class="agents-page">
       <section id="top" class="bg-background">
-        <div class="mx-auto max-w-7xl sm:px-6 sm:py-10 lg:py-12">
+        <div class="luxury-hero-shell">
           <figure
             data-hero-visual
-            class="relative isolate min-h-[40rem] overflow-hidden border-y border-primary/15 bg-primary shadow-lg sm:min-h-[40rem] sm:rounded-2xl sm:border md:min-h-[43rem]"
+            data-material-view="wood"
+            class="luxury-hero relative isolate overflow-hidden bg-primary"
           >
             <Image
-              src={procurementInteriorImg}
-              alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
+              src={woodInteriorImg}
+              alt={defaultScheme.alt}
+              data-material-image
+              aria-busy="false"
               widths={[640, 960, 1280, 1600]}
-              sizes="(min-width: 80rem) 80rem, (min-width: 40rem) calc(100vw - 3rem), 100vw"
+              sizes="100vw"
               format="webp"
               quality={84}
               priority
-              class="absolute inset-0 h-full w-full object-cover"
+              class="luxury-hero-image absolute inset-0 h-full w-full object-cover"
             />
             <div
               data-hero-scrim
               aria-hidden="true"
               class="hero-scrim absolute inset-0"
             ></div>
+            <div class="luxury-hero-topline" aria-hidden="true">
+              <span>Interior procurement · China</span>
+              <span>Design / Materials / Detail</span>
+            </div>
             <figcaption
               data-hero-copy
-              class="relative z-10 flex min-h-[40rem] items-end p-5 sm:min-h-[40rem] sm:p-8 md:min-h-[43rem] lg:p-12"
+              class="luxury-hero-copy relative z-10"
             >
-              <div class="max-w-6xl">
-                <h1
-                  class="text-[2rem] font-semibold leading-[1.02] tracking-tight text-primary-foreground sm:text-5xl lg:text-[3.75rem] xl:whitespace-nowrap xl:text-[4.25rem]"
-                >
-                  Luxury Interior Procurement in China
+              <div class="luxury-hero-title-group">
+                <h1 class="luxury-hero-title">
+                  <span>Luxury Interior</span>{" "}<span><em>Procurement</em> in China</span>
                 </h1>
-                <p class="mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
+                <p class="luxury-hero-description">
                   We manage design specifications, factory coordination, quality
                   checks, shipment, and complete procurement documentation
                   (approved health, safety, and quality standards).
                 </p>
+                <div class="luxury-hero-actions">
+                  <a href="#contact" class="luxury-button ring-focus">
+                    Discuss your project <Icon name="arrow-up-right" class="h-4 w-4" />
+                  </a>
+                  <a href="#considerations" class="luxury-text-link ring-focus">
+                    Explore our approach <Icon name="arrow-down" class="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </figcaption>
+            <div class="luxury-material-controls" data-material-controls hidden>
+              <p>A closer look</p>
+              <div role="group" aria-label="Interior material concepts">
+                {materialSchemes.map((scheme) => (
+                  <button
+                    type="button"
+                    data-material-choice={scheme.key}
+                    data-material-src={scheme.image.src}
+                    data-material-srcset={scheme.image.srcSet.attribute}
+                    data-material-sizes="100vw"
+                    data-material-alt={scheme.alt}
+                    data-material-description={scheme.caption}
+                    data-material-label={scheme.label}
+                    aria-pressed={scheme.key === "wood" ? "true" : "false"}
+                    class="ring-focus"
+                  >
+                    <span class={`luxury-swatch luxury-swatch-${scheme.key}`} aria-hidden="true"></span>
+                    {scheme.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span class="luxury-material-caption" data-material-caption role="status" aria-live="polite">{defaultScheme.caption}</span>
           </figure>
+        </div>
+        <div class="luxury-service-line">
+          <p>Design specifications <span aria-hidden="true">↗</span> Factory coordination <span aria-hidden="true">↗</span> Quality checks <span aria-hidden="true">↗</span> Delivery</p>
+          <a href="#evidence" class="ring-focus">Explore the project details <Icon name="arrow-down-right" class="h-4 w-4" /></a>
         </div>
       </section>
 
@@ -363,6 +439,7 @@ const procurementQuestions = [
       </Section>
     </main>
     <Footer />
+    <LuxuryEffects />
   </div>
 
   <script>

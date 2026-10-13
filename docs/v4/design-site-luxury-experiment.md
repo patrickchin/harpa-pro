@@ -141,11 +141,19 @@ only after its button is activated, using its responsive `srcset` and `sizes`
 to choose an appropriate file for the viewport. Keep the current image visible
 while the requested scheme loads and decodes.
 
-After a successful decode, fade the ready image into full opacity and
-update its alt text, concept caption, and pressed button together. Keep the
-image frame's dimensions unchanged. Under reduced motion, replace it
-immediately. Cancel a pending fade when the reduced-motion preference changes.
-A late response from an earlier choice must not replace a more recent choice.
+After a successful decode, crossfade the complete previous image over the
+ready image for 900ms with ease-in-out timing. Keep the new image fully opaque
+underneath so the room stays visible throughout the transition. The outgoing
+layer is decorative and is removed after the fade. Update the current image's
+alt text, concept caption, and pressed button together when the fade begins.
+Keep the image frame's dimensions unchanged.
+
+Let an active crossfade finish before starting the latest decoded choice;
+discard earlier pending choices. Rapid clicks must preserve the current
+blend without snapping to an intermediate image. Under reduced motion,
+replace the image immediately. Cancel and clean up an active fade when the
+reduced-motion preference changes. A late response from an earlier choice
+must not replace a more recent choice.
 
 Use a polite caption/status region to announce loading and a recoverable
 failure. If loading or decoding fails, keep the previous image, its alt text,
@@ -153,10 +161,13 @@ and its pressed button; say that the requested scheme could not load and that
 the visitor can try again. Do not clear the hero, expose a broken image, or
 disable the other choices. Selecting the same failed scheme again retries it.
 
-Make the header feel like an interiors studio masthead while retaining its
-opaque sticky surface and native disclosure behavior. Keep Procurement, Site
-Reporting, and Contact Us available on desktop and the current grouped mobile
-menu. The app offer continues to live under `/app`.
+Make the header feel like an interiors studio masthead with an opaque sticky
+surface. Follow the clarified
+[Procurement menu scope](design-site-two-page-navigation.md): retain the styled
+Procurement and Site Reporting dropdowns and grouped mobile menu. Procurement
+contains Procurement Overview and How to Buy from China; Site Reporting keeps
+its previous destinations. Restore the grouped footer and desktop Contact Us
+button.
 
 Treat What We Consider as a dark material workspace with a larger selected
 image, quiet detail framing, and visible category controls. Keep the existing
@@ -186,8 +197,9 @@ without replacing content or changing navigation:
   explicit activation, with a short fade once the next image is ready.
 - A restrained scroll reveal brings section headings or image frames into
   place as the visitor reaches them. Do not hide substantive body content.
-- Fine-pointer hover gently enlarges photos inside their existing crop and
-  moves action arrows a few pixels. Focus has an equally clear treatment.
+- Keep image scale unchanged on hover, as requested by the user. Fine-pointer
+  hover may emphasize photo color and move action arrows a few pixels. Focus
+  has an equally clear treatment.
 - Quiet paper/material texture, inset framing, or reflection accents may
   enrich surfaces without obscuring text, drawings, or document previews.
 - A thin reading-progress rule may sit on the masthead, marked decorative,

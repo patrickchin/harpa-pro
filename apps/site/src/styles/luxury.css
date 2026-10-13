@@ -463,12 +463,6 @@
   .luxury-site [data-factory-partner]:hover img {
     filter: saturate(1.15) contrast(1.03);
   }
-  .luxury-site [data-product-image-mode='cover'] img {
-    transition: transform 900ms cubic-bezier(0.2, 0.65, 0.2, 1);
-  }
-  .luxury-site [data-product-brief]:hover [data-product-image-mode='cover'] img {
-    transform: scale(1.045);
-  }
   .luxury-button svg {
     transition: transform 250ms ease;
   }

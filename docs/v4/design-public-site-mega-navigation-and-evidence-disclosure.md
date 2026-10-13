@@ -21,6 +21,12 @@ Use two full-width desktop disclosures: **Procurement** and **Site reporting**.
 Each disclosure spans the header and groups related destinations in a compact
 panel. The Site reporting panel names the **Harpa Pro app** explicitly.
 
+The clarified [Procurement menu scope](design-site-two-page-navigation.md)
+limits that header group to Procurement Overview and How to Buy from China
+on desktop and mobile. Site Reporting keeps every previous destination, the
+desktop retains its separate Contact Us button, and the grouped footer is
+restored.
+
 The desktop disclosures use native `details` and `summary` elements so their
 links remain available without JavaScript. A small enhancement must:
 

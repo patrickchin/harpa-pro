@@ -208,6 +208,41 @@ test('swaps complete material concepts with pointer and keyboard controls', asyn
   expect(imageSources.size).toBe(3);
 });
 
+test('crossfades complete material images and queues the latest choice during a fade', async ({ page }) => {
+  await page.goto('/');
+  const hero = page.locator('[data-hero-visual]');
+  const image = hero.locator('[data-material-image]');
+  const outgoing = hero.locator('[data-material-outgoing]');
+  const initialSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
+
+  await hero.getByRole('button', { name: 'Stone & Marble', exact: true }).click();
+  await expect(hero).toHaveAttribute('data-material-view', 'stone');
+  const midpoint = await outgoing.evaluate((element: HTMLImageElement) => {
+    const fade = element.getAnimations()[0]!;
+    fade.pause();
+    fade.currentTime = 450;
+    return { opacity: Number(getComputedStyle(element).opacity), source: element.currentSrc };
+  });
+  expect(midpoint.source).toBe(initialSource);
+  expect(midpoint.opacity).toBeGreaterThan(0);
+  expect(midpoint.opacity).toBeLessThan(1);
+  expect(await image.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  await expect(outgoing).toHaveAttribute('aria-hidden', 'true');
+
+  await hero.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
+  await expect(hero.locator('[data-material-caption]')).toHaveText('Loading Glass & Modern concept…');
+  await expect(hero).toHaveAttribute('data-material-view', 'stone');
+  await hero.getByRole('button', { name: 'Wood', exact: true }).click();
+  await expect(hero.locator('[data-material-caption]')).toHaveText('Loading Wood concept…');
+  await outgoing.evaluate((element) => element.getAnimations()[0]!.finish());
+  await expect(hero).toHaveAttribute('data-material-view', 'wood');
+  await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Wood');
+  await expect(hero.getByRole('button', { name: 'Glass & Modern', exact: true }))
+    .toHaveAttribute('aria-pressed', 'false');
+  await expect(outgoing).toHaveCount(0);
+  await expect(image).toHaveJSProperty('currentSrc', initialSource);
+});
+
 test('retains the loaded image while fetching and keeps the latest material choice', async ({ page }) => {
   await page.goto('/');
   const hero = page.locator('[data-hero-visual]');
@@ -322,7 +357,8 @@ test('honors reduced motion at load and when the preference changes', async ({ p
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
-  const image = page.locator('.luxury-hero-image');
+  const image = page.locator('[data-material-image]');
+  const outgoing = page.locator('[data-material-outgoing]');
   await expect(page.locator('.luxury-reading-progress')).not.toBeVisible();
   expect(await page.locator('html').evaluate((element) => getComputedStyle(element).scrollBehavior))
     .toBe('auto');
@@ -342,11 +378,12 @@ test('honors reduced motion at load and when the preference changes', async ({ p
   await page.goto('/');
   await page.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
   await expect(page.locator('[data-hero-visual]')).toHaveAttribute('data-material-view', 'modern');
-  expect(await image.evaluate((element) =>
+  expect(await outgoing.evaluate((element) =>
     element.getAnimations().some((animation) => animation.playState === 'running'),
   )).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect.poll(() => image.evaluate((element) => element.getAnimations().length)).toBe(0);
+  await expect(outgoing).toHaveCount(0);
+  expect(await image.evaluate((element) => element.getAnimations().length)).toBe(0);
 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');

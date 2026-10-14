@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { test } = require('node:test');
+const { execFileSync } = require('node:child_process');
 
 const root = resolve(__dirname, '../../..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -39,27 +40,91 @@ test('shared dependencies and backend preview inputs retain their consumers', ()
   assert.deepEqual(builds('pnpm-lock.yaml'), ['site', 'admin', 'dashboard']);
   assert.deepEqual(builds('packages/api/src/app.ts'), ['admin', 'dashboard']);
   assert.deepEqual(builds('packages/design-tokens/src/index.ts'), ['dashboard']);
+  assert.deepEqual(builds('packages/ai-fixtures/src/index.ts'), ['admin', 'dashboard']);
+  assert.deepEqual(builds('scripts/ci/build-cloudflare-pages.sh'), ['site', 'admin', 'dashboard']);
 });
 
-test('provider includes cover every exact-SHA verification trigger', () => {
+test('CI-only edits do not request Pages deployments', () => {
+  for (const path of [
+    'scripts/ci/__tests__/future-test.test.cjs',
+    'scripts/ci/verify-pages-deployment.sh',
+    'scripts/ci/cloudflare-pages-watch-paths.json',
+    '.github/workflows/dashboard-preview.yml',
+    '.github/actions/setup-monorepo/action.yml',
+    '.github/actions/pages-changes/action.yml',
+    'lighthouserc.json',
+  ]) {
+    assert.deepEqual(builds(path), [], path);
+  }
+});
+
+test('GitHub deployment filters derive from the provider policy', () => {
+  const action = read('.github/actions/pages-changes/action.yml');
+  const script = action
+    .match(/node <<'NODE'[^\n]*\n([\s\S]*?)\n        NODE/)[1]
+    .replace(/^        /gm, '');
+  const output = execFileSync(process.execPath, ['-e', script], { cwd: root, encoding: 'utf8' });
+  const filters = JSON.parse(output.trim().slice('filters='.length));
+  for (const [project, policy] of Object.entries(config)) {
+    assert.deepEqual(policy.exclude, []);
+    assert(!policy.include.includes('*'));
+    assert.deepEqual(
+      filters[project],
+      policy.include.map((pattern) => pattern.replaceAll('*', '**')),
+    );
+  }
+  assert(
+    action.includes("token: ''"),
+    'PR detection uses the push range instead of the PR files API',
+  );
+  assert(
+    action.includes(
+      'base: ${{ github.event.before || github.event.pull_request.base.sha || github.ref }}',
+    ),
+    'CI-only follow-up commits do not redeploy earlier PR app changes',
+  );
+  assert(action.includes('ref: ${{ github.sha }}'), 'pushes use the immutable event commit');
+});
+
+const job = (workflow, name) => workflow.split(`\n  ${name}:\n`)[1].split(/\n  [\w-]+:\n/)[0];
+
+test('automatic Pages verifiers require build inputs; preview CI stays available', () => {
   for (const [app, project] of Object.entries(projects)) {
-    const { include, exclude } = config[project];
-    assert(!include.includes('*'), `${project} must not build every change`);
-    assert.deepEqual(exclude, []);
     for (const environment of ['preview', 'dev', 'prod']) {
       const path = `.github/workflows/${app}-${environment}.yml`;
-      const paths = read(path).split('    paths:\n')[1].split('\n\n')[0];
-      const triggers = [...paths.matchAll(/^      - ['"]([^'"]+)['"]/gm)].map((match) => match[1]);
-      assert(triggers.length > 0, `${path} has path filters`);
-      for (const trigger of triggers) {
-        const normalized = trigger.replaceAll('**', '*');
+      const workflow = read(path);
+      const changes = job(workflow, 'changes');
+      assert(changes.includes('uses: ./.github/actions/pages-changes'), path);
+      assert(
+        changes.includes('ref: ${{ github.event.pull_request.head.sha || github.sha }}'),
+        path,
+      );
+      assert(changes.includes('deploy: ${{ steps.paths.outputs.' + app + ' }}'), path);
+      const gate = job(
+        workflow,
+        environment === 'preview'
+          ? 'deployment'
+          : app === 'dashboard' && environment === 'prod'
+            ? 'api'
+            : 'verify',
+      );
+      assert(gate.includes("needs.changes.outputs.deploy == 'true'"), path);
+      assert(gate.includes('needs:'), path);
+      if (environment === 'preview') {
+        const verify = job(workflow, 'verify');
+        assert(!verify.includes('needs.changes.outputs.deploy'), `${path} retains CI-only checks`);
+        assert(gate.includes('needs: [verify, changes]'), path);
+      } else {
+        assert(gate.includes("github.event_name == 'workflow_dispatch'"), path);
+      }
+      const paths = workflow.split('    paths:\n')[1].split('\n\n')[0];
+      assert(paths.includes("- 'scripts/ci/**'"), `${path} covers future CI scripts`);
+      assert(paths.includes("- '.github/**'"), `${path} covers workflow edits`);
+      for (const input of config[project].include) {
+        const trigger = input.endsWith('/*') ? input.replaceAll('*', '**') : input;
         assert(
-          include.some(
-            (pattern) =>
-              pattern === normalized ||
-              (pattern.endsWith('*') && normalized.startsWith(pattern.slice(0, -1))),
-          ),
-          `${project} must build for ${path}'s ${trigger}`,
+          paths.includes(`- '${trigger}'`) || input.startsWith('scripts/ci/'),
+          `${path} covers build input ${input}`,
         );
       }
     }
@@ -77,11 +142,10 @@ test('mobile PR publication requires mobile inputs, not just a detector change',
   assert(condition.includes("github.event.pull_request.user.login != 'dependabot[bot]'"));
 });
 
-test('watch-policy edits provision the backend required by browser previews', () => {
-  const filters = read('.github/actions/changed-paths/action.yml');
+test('browser preview build inputs also provision their matching API', () => {
+  const changes = job(read('.github/workflows/pr-preview.yml'), 'changes');
+  assert(changes.includes('uses: ./.github/actions/pages-changes'));
   for (const app of ['admin', 'dashboard']) {
-    const area = filters.split(`          ${app}:\n`)[1].split(/\n          [\w-]+:/)[0];
-    assert(area.includes("- 'scripts/ci/cloudflare-pages-watch-paths.json'"));
-    assert(area.includes("- 'scripts/ci/__tests__/selective-preview-policy.test.cjs'"));
+    assert(changes.includes(`steps.pages.outputs.${app} == 'true'`));
   }
 });

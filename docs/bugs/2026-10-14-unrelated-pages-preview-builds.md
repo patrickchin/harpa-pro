@@ -11,12 +11,15 @@ branches. The mobile PR publisher also lacked a mobile-output guard when its
 shared detector triggered the workflow.
 
 **Fix.** Replace the provider wildcard with application-specific includes in
-`scripts/ci/cloudflare-pages-watch-paths.json`. Gate mobile PR publication on
-the existing mobile output. Keep lockfiles as conservative shared inputs.
+`scripts/ci/cloudflare-pages-watch-paths.json`. Derive Pages deployment guards
+from that policy, keeping workflow and CI-test edits separate from actual build
+inputs. Gate mobile PR publication on the existing mobile output. Keep lockfiles
+as conservative shared inputs.
 
 **Test.** `selective-preview-policy.test.cjs` asserts application isolation,
-shared-input coverage, compatibility with every Pages verification trigger,
-and the mobile publication guard. Saved provider lists are checked in the UI.
+shared-input coverage, CI-only deployment skips, shared-policy generation,
+Pages verification guards, and the mobile publication guard. Saved provider
+lists are checked in the UI.
 
 **Pattern.** Provider and workflow trigger drift; related to the earlier
 [Pages queue timeouts](2026-08-05-cloudflare-pages-queue-timeout.md) and

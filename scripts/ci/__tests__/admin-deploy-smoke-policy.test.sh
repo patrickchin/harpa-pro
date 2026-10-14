@@ -40,7 +40,7 @@ for environment in dev prod; do
   fi
 
   check "$workflow" \
-    "if: github.event_name == 'push' || github.ref == 'refs/heads/$branch'" \
+    "github.ref == 'refs/heads/$branch' &&" \
     "$environment rejects manual verification from another ref"
   check "$workflow" "$origin" \
     "$environment verifies its stable Pages origin"

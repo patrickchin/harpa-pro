@@ -98,12 +98,10 @@ for workflow in "$PREVIEW" "$DEV" "$PROD"; do
     "$label proves the exact marker before the SPA check"
 done
 
-require_fixed "$PREVIEW" ".github/workflows/pages-preview-ref.yml" \
-  "preview-ref changes rerun the dashboard preview"
-require_fixed "$PREVIEW" "scripts/ci/build-cloudflare-pages.sh" \
-  "Cloudflare builder changes rerun the dashboard preview"
-require_fixed "$PREVIEW" "scripts/ci/verify-pages-deployment.sh" \
-  "exact-SHA verifier changes rerun the dashboard preview"
+require_fixed "$PREVIEW" "- '.github/**'" \
+  "CI workflow changes rerun dashboard checks"
+require_fixed "$PREVIEW" "- 'scripts/ci/**'" \
+  "CI helper changes rerun dashboard checks"
 require_fixed "$PREVIEW" \
   'DASHBOARD_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev' \
   "preview targets the stable Cloudflare Git alias"

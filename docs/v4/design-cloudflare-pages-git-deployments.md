@@ -28,8 +28,9 @@ the exact `pr-211` branch. Dev activation expands that allowlist to `dev` and
 ephemeral `pr-*` branches. Each project uses application-specific build watch
 includes from
 [`scripts/ci/cloudflare-pages-watch-paths.json`](../../scripts/ci/cloudflare-pages-watch-paths.json).
-The lists cover its preview, dev, and production verification triggers, so only
-relevant commits need an exact-SHA deployment. Shared contracts, lockfiles, and
+The lists describe build inputs. GitHub derives deployment guards from the same
+policy while local CI runs on broader directory filters. Workflow and CI test
+edits do not require new Pages deployments. Shared contracts, lockfiles, and
 build configuration still trigger their consumers. See
 [Selective preview deployments](design-selective-preview-deployments.md).
 

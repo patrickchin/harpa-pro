@@ -451,6 +451,9 @@ as a product regression.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-10-15** — Procurement WhatsApp URL omitted the displayed number's
+  final digit; align the URL and assert it matches the visible number.
+  [detail](2026-10-15-whatsapp-contact-number.md)
 - **2026-10-10** _(R22)_ — Fresh API tests could no longer pull pinned MinIO
   Quay images. Build pinned official server/client source for integration
   tests and local fixtures.

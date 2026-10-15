@@ -113,7 +113,7 @@ describe('site smoke', () => {
     expect(considerations).not.toContain('Stage ');
     expect(home).toContain('Contact Us');
     expect(home).toContain('haruna@harpapro.com');
-    expect(home).toContain('https://wa.me/861937283726');
+    expect(home).toContain('href="https://wa.me/8619372837269"');
     expect(home).toContain('data-procurement-profiles');
     expect(home).toContain('data-procurement-profile="hashy"');
     expect(home).toContain('Procurement Specialist');

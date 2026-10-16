@@ -455,6 +455,7 @@ Most recent first. One line per bug — open the linked file only for the full r
   admin smoke tests because their reviewed-version assertions still expected
   Astro 7.3.3 and Vite 8.3.0. Align assertions with Astro 7.3.6 / Vite 8.3.3
   and document keeping them in sync during dependency refreshes.
+  [detail](2026-10-16-dependency-smoke-version-drift.md)
 - **2026-10-10** _(R22)_ — Fresh API tests could no longer pull pinned MinIO
   Quay images. Build pinned official server/client source for integration
   tests and local fixtures.

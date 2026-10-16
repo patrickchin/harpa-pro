@@ -401,6 +401,7 @@ const procurementQuestions = [
                     </button>
                     <a
                       href="mailto:haruna@harpapro.com"
+                      data-contact-event="contact_email_opened"
                       class="inline-flex h-10 items-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus"
                     >
                       Open email app
@@ -424,6 +425,7 @@ const procurementQuestions = [
                   <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
                   <a
                     href="https://wa.me/861937283726"
+                    data-contact-event="contact_whatsapp_clicked"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="mt-5 inline-flex h-10 items-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-card ring-focus"
@@ -443,6 +445,8 @@ const procurementQuestions = [
   </div>
 
   <script>
+    import { captureContact } from "../lib/analytics";
+
     const copyEmailButton = document.querySelector<HTMLButtonElement>("[data-copy-email]");
     const copyEmailStatus = document.querySelector<HTMLElement>("[data-copy-email-status]");
 
@@ -454,6 +458,7 @@ const procurementQuestions = [
         if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
         await navigator.clipboard.writeText(email);
         copyEmailStatus.textContent = "Email copied";
+        captureContact('contact_email_copied');
       } catch {
         copyEmailStatus.textContent = "Select and copy the email address above";
       }

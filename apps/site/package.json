@@ -15,7 +15,8 @@
     "lint": "eslint . --ext .ts,.tsx,.astro --max-warnings=0",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:analytics": "playwright test --config playwright.analytics.config.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.8",
@@ -26,6 +27,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.3",
     "lucide-static": "^1.47.0",
+    "posthog-js": "^1.438.12",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tailwindcss": "^4.3.3",

@@ -9,15 +9,17 @@ on:
     paths:
       - 'apps/site/**'
       - 'packages/api-contract/**'
-      - '.github/workflows/site-preview.yml'
-      - '.github/workflows/pages-preview-ref.yml'
-      - 'lighthouserc.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
-      - 'scripts/ci/build-cloudflare-pages.sh'
-      - 'scripts/ci/verify-pages-deployment.sh'
-      - 'tsconfig.base.json'
+      - 'tsconfig*'
+      - 'turbo.json'
+      - '.npmrc'
+      - '.nvmrc'
+      - 'patches/**'
+      - 'lighthouserc.json'
+      - 'scripts/ci/**'
+      - '.github/**'
 
 # Cancel stale builds when a PR gets a new push.
 concurrency:
@@ -25,6 +27,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      deploy: ${{ steps.paths.outputs.site }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - id: paths
+        uses: ./.github/actions/pages-changes
+
   verify:
     runs-on: ubuntu-latest
     permissions:
@@ -80,8 +96,9 @@ jobs:
         run: pnpm exec lhci autorun --config=./lighthouserc.json
 
   deployment:
-    needs: verify
+    needs: [verify, changes]
     if: >-
+      needs.changes.outputs.deploy == 'true' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest

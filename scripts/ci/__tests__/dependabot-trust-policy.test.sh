@@ -264,7 +264,7 @@ for workflow in admin-preview site-preview; do
     "$workflow verification does not depend on repository secrets"
   forbid_job_fixed "$path" verify "pull-requests: write" \
     "$workflow verification cannot comment on pull requests"
-  require_job_fixed "$path" deployment "needs: verify" \
+  require_job_fixed "$path" deployment "needs: [verify, changes]" \
     "$workflow deployment check waits for verification"
   require_job_fixed "$path" deployment "$AUTHOR_GUARD" \
     "$workflow deployment check excludes Dependabot by PR author"

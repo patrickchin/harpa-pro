@@ -1,5 +1,10 @@
 # Dashboard typography and density correction
 
+> **Typography update (2026-10-16):** The user-requested
+> [workspace refresh](design-dashboard-workspace-refresh.md) supersedes this
+> document’s dashboard font, route-heading, label-tracking, surface-radius, and density rules.
+> The shared mobile palette and accessibility requirements still apply.
+
 **Status:** approved correction for PR #211 on 2026-08-05
 **Applies to:** `apps/dashboard` only
 **Visual source of truth:** the checked-in mobile implementation

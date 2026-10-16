@@ -87,6 +87,9 @@ does not define this repository's runtime; `nvm use` does.
     [Admin AI usage ledger](design-admin-ai-usage.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
+  The current reviewed patches are Astro 7.3.6 and Vite 8.3.3; dependency
+  refreshes must update the site and admin smoke-test version assertions
+  alongside the manifests and shared lockfile.
   Repository builds use the shared Node 24.19.0 runtime.
 - **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
   Pages project `harpa-pro-dashboard`.

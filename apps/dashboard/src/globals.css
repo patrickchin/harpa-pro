@@ -1,6 +1,22 @@
 @import "@harpa/design-tokens/tokens.css";
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-variable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("/fonts/plus-jakarta-sans-latin-variable.woff2") format("woff2");
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,7 +59,28 @@
   --color-info-text: var(--info-text);
   --color-info-border: var(--info-border);
 
-  --font-app: var(--font-sans);
+  --font-app: "Manrope", var(--font-sans);
+  --font-heading: "Plus Jakarta Sans", "Manrope", var(--font-sans);
+  --text-page: 2rem;
+  --text-page--line-height: 2.5rem;
+  --text-page--font-weight: 700;
+  --text-page--letter-spacing: -0.035em;
+  --text-page-compact: 1.625rem;
+  --text-page-compact--line-height: 2rem;
+  --text-page-compact--font-weight: 700;
+  --text-page-compact--letter-spacing: -0.035em;
+  --text-section: 1.125rem;
+  --text-section--line-height: 1.625rem;
+  --text-section--font-weight: 600;
+  --text-section--letter-spacing: -0.02em;
+  --text-stat: 2.5rem;
+  --text-stat--line-height: 2.75rem;
+  --text-stat--font-weight: 700;
+  --text-stat--letter-spacing: -0.04em;
+  --text-stat-compact: 2.125rem;
+  --text-stat-compact--line-height: 2.5rem;
+  --text-stat-compact--font-weight: 700;
+  --text-stat-compact--letter-spacing: -0.04em;
   --text-display: var(--font-size-display);
   --text-display--line-height: var(--line-height-display);
   --text-display--font-weight: 700;
@@ -63,14 +100,14 @@
   --text-meta: var(--font-size-meta);
   --text-meta--line-height: var(--line-height-meta);
   --text-label: var(--font-size-label);
-  --text-label--line-height: var(--line-height-label);
-  --text-label--letter-spacing: var(--letter-spacing-label);
-  --text-label--font-weight: 700;
+  --text-label--line-height: 1.125rem;
+  --text-label--letter-spacing: normal;
+  --text-label--font-weight: 600;
   --tracking-label: var(--letter-spacing-label);
 
   --radius-control-ui: var(--radius-control);
-  --radius-card-ui: var(--radius-card);
-  --radius-panel-ui: var(--radius-xl);
+  --radius-card-ui: 1.25rem;
+  --radius-panel-ui: 1.25rem;
   --shadow-raised-ui: var(--shadow-raised);
   --shadow-floating-ui: var(--shadow-floating);
   --container-reading: var(--reading-max);
@@ -81,7 +118,7 @@
 @layer base {
   :root {
     color-scheme: light;
-    font-family: var(--font-sans);
+    font-family: "Manrope", var(--font-sans);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
   }

@@ -66,7 +66,7 @@ export function ReportReview({
         <ol className="grid list-none gap-3 p-0">
           {comments.map((comment) => (
             <li key={comment.id}>
-              <article className="grid gap-2 rounded-card-ui border border-border bg-card p-3">
+              <article className="grid gap-2 rounded-card-ui border border-border/40 bg-card p-3">
                 <header className="flex flex-wrap items-start justify-between gap-2">
                   <strong className="font-semibold">{comment.authorDisplayName}</strong>
                   <time

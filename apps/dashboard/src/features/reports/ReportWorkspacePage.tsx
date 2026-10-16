@@ -146,7 +146,7 @@ function ConfirmationDialog({
       onClose={onCancel}
       role="alertdialog"
     >
-      <h2 className="text-title-sm" id="report-confirmation-title">
+      <h2 className="font-heading text-title-sm" id="report-confirmation-title">
         {copy.title}
       </h2>
       <p className="mt-3 text-body text-muted-foreground" id="report-confirmation-description">
@@ -561,11 +561,13 @@ export function ReportWorkspacePage({
   if (reportQuery.error) {
     return (
       <section
-        className="grid min-h-72 min-w-0 place-items-center rounded-card-ui border border-border bg-card p-5 text-center shadow-raised-ui"
+        className="grid min-h-72 min-w-0 place-items-center rounded-card-ui border border-border/40 bg-card p-5 text-center"
         data-testid="report-workspace"
       >
         <div className="max-w-reading space-y-4">
-          <h1 className="text-title-sm">Couldn&apos;t load Site Visit #{reportNumber}</h1>
+          <h1 className="font-heading text-title-sm">
+            Couldn&apos;t load Site Visit #{reportNumber}
+          </h1>
           <p className="text-muted-foreground">{errorMessage(reportQuery.error)}</p>
           <Button variant="secondary" onClick={() => void reportQuery.refetch()}>
             Retry report
@@ -602,11 +604,11 @@ export function ReportWorkspacePage({
 
   return (
     <section
-      className="min-w-0 space-y-6 text-foreground"
+      className="min-w-0 space-y-6 text-foreground sm:space-y-8"
       data-testid="report-workspace"
       aria-labelledby="report-title"
     >
-      <header className="grid min-w-0 gap-3 border-b border-border pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+      <header className="grid min-w-0 gap-3 border-b border-border/40 pb-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-meta font-semibold">
             <span>Site Visit #{report.number}</span>
@@ -615,7 +617,7 @@ export function ReportWorkspacePage({
             {report.status === 'draft' ? (
               <span
                 className={cn(
-                  'border-l border-border pl-3 text-meta font-normal text-muted-foreground',
+                  'border-l border-border/40 pl-3 text-meta font-normal text-muted-foreground',
                   saveState.status === 'failed' || saveState.status === 'conflict'
                     ? 'text-danger-text'
                     : null,
@@ -626,7 +628,10 @@ export function ReportWorkspacePage({
               </span>
             ) : null}
           </div>
-          <h1 className="mt-2 max-w-content break-words text-title-sm" id="report-title">
+          <h1
+            className="mt-3 max-w-content break-words font-heading text-page-compact sm:text-page"
+            id="report-title"
+          >
             {displayReportTitle(localBody)}
           </h1>
         </div>
@@ -672,7 +677,7 @@ export function ReportWorkspacePage({
               ) : null}
               <Button
                 className="w-full sm:w-auto"
-                variant="destructive"
+                variant="danger-quiet"
                 onClick={() => setConfirmation('delete')}
               >
                 <Trash2 aria-hidden="true" className="size-4" />
@@ -710,7 +715,7 @@ export function ReportWorkspacePage({
                   </Button>
                   <Button
                     className="w-full sm:w-auto"
-                    variant="destructive"
+                    variant="danger-quiet"
                     onClick={() => setConfirmation('delete')}
                   >
                     <Trash2 aria-hidden="true" className="size-4" />
@@ -758,7 +763,7 @@ export function ReportWorkspacePage({
           aria-labelledby="report-conflict-heading"
         >
           <div className="min-w-0 max-w-reading">
-            <h2 className="text-title-sm" id="report-conflict-heading">
+            <h2 className="font-heading text-title-sm" id="report-conflict-heading">
               This report changed on another device
             </h2>
             <p className="mt-1">
@@ -796,7 +801,7 @@ export function ReportWorkspacePage({
           }}
         >
           <TabList
-            className="grid w-full grid-cols-2 gap-1 rounded-card-ui border border-border bg-surface-muted p-1 sm:w-fit"
+            className="grid w-full grid-cols-2 gap-1 rounded-card-ui border border-border/40 bg-surface-muted p-1 sm:w-fit"
             aria-label="Report surfaces"
           >
             <Tab className="min-h-11 rounded-control-ui px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-colors data-[selected]:bg-primary data-[selected]:text-primary-foreground">

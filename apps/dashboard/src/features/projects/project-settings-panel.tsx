@@ -71,7 +71,7 @@ export function ProjectSettingsPanel({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6 sm:gap-8">
       <PageHeader
         eyebrow={project.name}
         title="Project settings"
@@ -79,9 +79,9 @@ export function ProjectSettingsPanel({
       />
 
       {canEdit ? (
-        <section className="w-full max-w-3xl rounded-card-ui border border-border bg-card p-4 shadow-raised-ui sm:p-5">
+        <section className="w-full max-w-3xl rounded-card-ui border border-border/40 bg-card p-5 sm:p-7">
           <div>
-            <h2 className="text-title-sm">Project details</h2>
+            <h2 className="font-heading text-section">Project details</h2>
             <p className="mt-1 text-meta text-muted-foreground">
               These details appear in the project shell and report exports.
             </p>
@@ -121,25 +121,19 @@ export function ProjectSettingsPanel({
           </form>
         </section>
       ) : (
-        <section className="w-full max-w-3xl rounded-card-ui border border-border bg-card p-4 shadow-raised-ui sm:p-5">
-          <h2 className="text-title-sm">Project details</h2>
+        <section className="w-full max-w-3xl rounded-card-ui border border-border/40 bg-card p-5 sm:p-7">
+          <h2 className="font-heading text-section">Project details</h2>
           <dl className="mt-5 grid gap-4">
-            <div className="border-t border-border pt-3 first:border-t-0 first:pt-0">
-              <dt className="text-label text-muted-foreground uppercase">
-                Project name
-              </dt>
+            <div className="border-t border-border/40 pt-3 first:border-t-0 first:pt-0">
+              <dt className="text-label text-muted-foreground uppercase">Project name</dt>
               <dd className="mt-1 break-words">{project.name}</dd>
             </div>
-            <div className="border-t border-border pt-3">
-              <dt className="text-label text-muted-foreground uppercase">
-                Client
-              </dt>
+            <div className="border-t border-border/40 pt-3">
+              <dt className="text-label text-muted-foreground uppercase">Client</dt>
               <dd className="mt-1 break-words">{project.clientName ?? 'Not provided'}</dd>
             </div>
-            <div className="border-t border-border pt-3">
-              <dt className="text-label text-muted-foreground uppercase">
-                Address
-              </dt>
+            <div className="border-t border-border/40 pt-3">
+              <dt className="text-label text-muted-foreground uppercase">Address</dt>
               <dd className="mt-1 break-words">{project.address ?? 'Not provided'}</dd>
             </div>
           </dl>
@@ -150,9 +144,9 @@ export function ProjectSettingsPanel({
       )}
 
       {project.myRole === 'owner' ? (
-        <section className="flex w-full max-w-3xl flex-col gap-4 rounded-card-ui border border-danger-border bg-danger-soft p-4 shadow-raised-ui sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <section className="flex w-full max-w-3xl flex-col gap-4 rounded-card-ui border border-danger-border bg-danger-soft p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
-            <h2 className="text-title-sm text-danger-text">Delete project</h2>
+            <h2 className="font-heading text-title-sm text-danger-text">Delete project</h2>
             <p className="mt-1 text-meta text-danger-text">
               Permanently remove this project, its reports, and attached project records.
             </p>
@@ -180,10 +174,8 @@ export function ProjectSettingsPanel({
           initialFocusRef={deleteConfirmationRef}
           onClose={() => setDeleteOpen(false)}
         >
-          <p className="text-label text-danger-text uppercase">
-            Permanent action
-          </p>
-          <h2 className="mt-2 text-title-sm" id="delete-project-title">
+          <p className="text-label text-danger-text uppercase">Permanent action</p>
+          <h2 className="font-heading mt-2 text-title-sm" id="delete-project-title">
             Delete {project.name}?
           </h2>
           <p className="mt-2 text-meta text-muted-foreground" id="delete-project-description">

@@ -8,16 +8,14 @@ export function TableShell({
 }: HTMLAttributes<HTMLDivElement>): React.JSX.Element {
   return (
     <div
-      className={cn(
-        'overflow-x-auto rounded-card-ui border border-border bg-card shadow-raised-ui',
-        className,
-      )}
+      className={cn('overflow-x-auto rounded-card-ui border border-border/40 bg-card', className)}
       {...props}
     />
   );
 }
 
-export const tableClassName = 'w-full border-collapse text-left';
+export const tableClassName =
+  'w-full border-collapse text-left [&_tbody_tr:last-child>td]:border-b-0 [&_tbody_tr:last-child>th]:border-b-0';
 export const tableHeadClassName =
-  'bg-surface-muted px-4 py-3 text-label text-muted-foreground uppercase';
-export const tableCellClassName = 'border-b border-border px-4 py-3 align-middle text-meta';
+  'border-b border-border/40 bg-surface-emphasis px-6 py-4 text-xs font-semibold whitespace-nowrap text-muted-foreground';
+export const tableCellClassName = 'border-b border-border/30 px-6 py-5 align-middle text-meta';

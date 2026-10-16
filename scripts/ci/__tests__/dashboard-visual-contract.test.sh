@@ -75,7 +75,7 @@ expect_contains "$mobile_colors" "foreground: '#2d3a5a'"
 expect_contains "$mobile_colors" "DEFAULT: '#ea580c'"
 expect_contains "$mobile_colors" "border: '#b9b4a8'"
 
-# The dashboard consumes the mobile-authored CSS mirror.
+# The dashboard shares the mobile palette and adds its approved web typography.
 expect_contains "$dashboard_package" '"@harpa/design-tokens"'
 expect_contains "$dashboard_package" '"@headlessui/react"'
 expect_contains "$dashboard_package" '"clsx"'
@@ -87,12 +87,23 @@ expect_contains "$dashboard_css" '@import "@harpa/design-tokens/tokens.css";'
 expect_contains "$dashboard_css" '@import "tailwindcss";'
 expect_contains "$dashboard_css" '@theme inline'
 expect_contains "$dashboard_css" '--text-title-sm--font-weight: 700;'
-expect_contains "$dashboard_css" '--text-label--letter-spacing: var(--letter-spacing-label);'
-expect_contains "$dashboard_css" '--text-label--font-weight: 700;'
+expect_contains "$dashboard_css" '--text-label--letter-spacing: normal;'
+expect_contains "$dashboard_css" '--text-label--font-weight: 600;'
 expect_contains "$dashboard_vite" "import tailwindcss from '@tailwindcss/vite';"
 expect_contains "$dashboard_vite" 'plugins: [react(), tailwindcss()]'
 expect_contains "$dashboard_main" "import '@/globals.css';"
 expect_contains "$dashboard_index" 'name="theme-color" content="#ea580c"'
+
+# Self-hosted typography from design-dashboard-workspace-refresh.md.
+for asset in manrope-latin-variable.woff2 plus-jakarta-sans-latin-variable.woff2 manrope-OFL.txt plus-jakarta-sans-OFL.txt; do
+  expect_file "$repo_root/apps/dashboard/public/fonts/$asset"
+done
+expect_contains "$dashboard_css" '--font-heading: "Plus Jakarta Sans", "Manrope", var(--font-sans);'
+expect_contains "$dashboard_css" '--text-page: 2rem;'
+expect_contains "$dashboard_css" '--text-stat: 2.5rem;'
+expect_contains "$dashboard_css" '--radius-card-ui: 1.25rem;'
+expect_contains "$dashboard_css" '--radius-panel-ui: 1.25rem;'
+expect_contains "$dashboard_index" 'href="/fonts/manrope-latin-variable.woff2"'
 
 cmp -s "$mobile_brand" "$dashboard_brand" || fail 'dashboard brand icon must match mobile icon.svg'
 
@@ -129,4 +140,4 @@ for workflow in "${deploy_workflows[@]}"; do
   expect_contains "$workflow" 'packages/design-tokens/**'
 done
 
-printf 'PASS: dashboard follows the mobile visual contract\n'
+printf 'PASS: dashboard shares mobile foundations and approved web typography\n'

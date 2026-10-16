@@ -44,7 +44,7 @@ case "$application" in
     # Production metrics must exclude dev/PR traffic, even if Pages variables
     # were accidentally shared between production and preview environments.
     if [[ "$branch" != main ]]; then
-      export PUBLIC_POSTHOG_KEY= PUBLIC_POSTHOG_HOST=
+      export PUBLIC_POSTHOG_KEY='' PUBLIC_POSTHOG_HOST=''
     fi
     # Preserve the existing public-site preview contract: PR builds submit to
     # production, while the stable dev branch submits to the development API.

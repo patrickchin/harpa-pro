@@ -14,7 +14,9 @@ describe('PageHeader', () => {
 
     expect(screen.getByRole('heading')).toHaveClass(
       'break-words',
-      'text-title-sm',
+      'font-heading',
+      'text-page-compact',
+      'sm:text-page',
       '[overflow-wrap:anywhere]',
     );
     expect(screen.getByRole('heading')).not.toHaveClass('text-title');

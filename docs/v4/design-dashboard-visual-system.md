@@ -1,5 +1,10 @@
 # Dashboard visual system
 
+> **Typography update (2026-10-16):** The user-requested
+> [workspace refresh](design-dashboard-workspace-refresh.md) supersedes this
+> document’s dashboard font, route-heading, label-tracking, surface-radius, and density rules.
+> The shared mobile palette and accessibility requirements still apply.
+
 **Status:** approved direction for the office dashboard
 **Source of truth:** the shipped mobile app
 

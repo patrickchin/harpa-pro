@@ -25,7 +25,7 @@ describe('site smoke', () => {
       '@astrojs/mdx': '^7.0.8',
       '@astrojs/react': '^6.0.6',
       '@tailwindcss/vite': '^4.3.3',
-      astro: '^7.3.3',
+      astro: '^7.3.6',
       react: '19.2.0',
       'react-dom': '19.2.0',
       tailwindcss: '^4.3.3',
@@ -35,7 +35,7 @@ describe('site smoke', () => {
       '@types/react': '^19.2.18',
       '@types/react-dom': '~19.2.4',
       cookie: '2.0.1',
-      vite: '8.3.0',
+      vite: '8.3.3',
     });
     expect(pkg.engines.node).toBe('>=22.12.0');
   });

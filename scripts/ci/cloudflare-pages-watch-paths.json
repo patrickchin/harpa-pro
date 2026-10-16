@@ -1,0 +1,55 @@
+{
+  "harpa-pro": {
+    "include": [
+      "apps/site/*",
+      "packages/api-contract/*",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "tsconfig*",
+      "turbo.json",
+      ".npmrc",
+      ".nvmrc",
+      "patches/*",
+      "scripts/ci/build-cloudflare-pages.sh"
+    ],
+    "exclude": []
+  },
+  "harpa-pro-admin": {
+    "include": [
+      "apps/admin/*",
+      "packages/api-contract/*",
+      "packages/api/*",
+      "packages/ai-fixtures/*",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "tsconfig*",
+      "turbo.json",
+      ".npmrc",
+      ".nvmrc",
+      "patches/*",
+      "scripts/ci/build-cloudflare-pages.sh"
+    ],
+    "exclude": []
+  },
+  "harpa-pro-dashboard": {
+    "include": [
+      "apps/dashboard/*",
+      "packages/api-contract/*",
+      "packages/design-tokens/*",
+      "packages/api/*",
+      "packages/ai-fixtures/*",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "tsconfig*",
+      "turbo.json",
+      ".npmrc",
+      ".nvmrc",
+      "patches/*",
+      "scripts/ci/build-cloudflare-pages.sh"
+    ],
+    "exclude": []
+  }
+}

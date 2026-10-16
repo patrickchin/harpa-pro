@@ -32,6 +32,8 @@ else
     "${PUBLIC_API_BASE_URL:-}" \
     "${PUBLIC_SITE_BASE_URL:-}" \
     "${PUBLIC_DASHBOARD_URL:-}" > "apps/$app/dist/app.js"
+  printf 'posthog-key=%s\nposthog-host=%s\n' \
+    "${PUBLIC_POSTHOG_KEY:-}" "${PUBLIC_POSTHOG_HOST:-}" >> "apps/$app/dist/app.js"
 fi
 FAKE_PNPM
 chmod +x "$sandbox/bin/pnpm"
@@ -50,6 +52,8 @@ run_build() {
     CF_PAGES_BRANCH="$branch" \
     CF_PAGES_COMMIT_SHA="$sha" \
     PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
+    PUBLIC_POSTHOG_KEY=phc_production \
+    PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com \
     VITE_PASSWORD_ACCOUNT_EMAILS='owner@example.com,editor@example.com' \
       bash scripts/ci/build-cloudflare-pages.sh "$app"
   )
@@ -74,6 +78,13 @@ run_build() {
     grep -Fq "sentry-release=$sha" "$sandbox/apps/$app/dist/app.js"
   elif [[ "$app" == site ]]; then
     grep -Fq "dashboard=$expected_dashboard" "$sandbox/apps/$app/dist/app.js"
+    if [[ "$branch" == main ]]; then
+      grep -Fxq 'posthog-key=phc_production' "$sandbox/apps/$app/dist/app.js"
+      grep -Fxq 'posthog-host=https://eu.i.posthog.com' "$sandbox/apps/$app/dist/app.js"
+    else
+      grep -Fxq 'posthog-key=' "$sandbox/apps/$app/dist/app.js"
+      grep -Fxq 'posthog-host=' "$sandbox/apps/$app/dist/app.js"
+    fi
   elif [[ "$app" == admin ]]; then
     grep -Fq "site=$expected_site" "$sandbox/apps/$app/dist/app.js"
     grep -Fq "dashboard=$expected_dashboard" "$sandbox/apps/$app/dist/app.js"

@@ -26,7 +26,7 @@ export function EmptyState({
       )}
     >
       <BrandMark className="mb-1 size-12" decorative />
-      <h2 className="text-title-sm">{title}</h2>
+      <h2 className="font-heading text-title-sm">{title}</h2>
       <p className="max-w-lg text-muted-foreground">{description}</p>
       {action}
     </Card>

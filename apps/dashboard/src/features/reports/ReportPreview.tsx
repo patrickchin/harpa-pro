@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui';
 import { formatDate } from './format';
 import { displayReportTitle } from './report-body';
 
-const previewSectionClassName = 'grid gap-3 border-t border-border pt-4';
+const previewSectionClassName = 'grid gap-3 border-t border-border/40 pt-4';
 const previewSectionHeadingClassName = 'text-label text-foreground';
 const previewListClassName = 'grid gap-3';
 const previewItemClassName = 'rounded-card-ui bg-surface-emphasis p-3';
@@ -16,7 +16,7 @@ function Value({ label, children }: { label: string; children: React.ReactNode }
   }
   return (
     <div className="min-w-0">
-      <dt className="text-label text-muted-foreground uppercase">{label}</dt>
+      <dt className="text-label text-muted-foreground">{label}</dt>
       <dd className="mt-1 break-words">{children}</dd>
     </div>
   );
@@ -38,13 +38,15 @@ function AttachmentReference({ attachments }: { attachments?: reports.ReportAtta
 export function ReportPreview({ body }: { body: reports.ReportBody }) {
   return (
     <article
-      className="grid gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
+      className="grid gap-5 rounded-card-ui border border-border/40 bg-card p-5 sm:p-7"
       data-testid="report-preview"
       aria-label="Live report preview"
     >
       <header className="grid gap-2">
-        <p className="text-label text-accent-ink uppercase">Live preview</p>
-        <h2 className="break-words text-title-sm">{displayReportTitle(body)}</h2>
+        <p className="text-meta text-muted-foreground">Live preview</p>
+        <h2 className="break-words font-heading text-title-sm tracking-tight">
+          {displayReportTitle(body)}
+        </h2>
         <p className="text-muted-foreground">{formatDate(body.meta.visitDate)}</p>
       </header>
 

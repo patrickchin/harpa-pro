@@ -1,0 +1,34 @@
+name: Detect Pages build inputs
+description: Derive deployment decisions from the Cloudflare build-watch policy.
+outputs:
+  site:
+    description: Public-site build inputs changed.
+    value: ${{ steps.filter.outputs.harpa-pro }}
+  admin:
+    description: Admin build inputs changed.
+    value: ${{ steps.filter.outputs.harpa-pro-admin }}
+  dashboard:
+    description: Dashboard build inputs changed.
+    value: ${{ steps.filter.outputs.harpa-pro-dashboard }}
+runs:
+  using: composite
+  steps:
+    - id: policy
+      shell: bash
+      run: |
+        node <<'NODE' >> "$GITHUB_OUTPUT"
+        const policy = require('./scripts/ci/cloudflare-pages-watch-paths.json');
+        const filters = Object.fromEntries(Object.entries(policy).map(([project, { include }]) =>
+          [project, include.map((pattern) => pattern.replaceAll('*', '**'))]));
+        console.log(`filters=${JSON.stringify(filters)}`);
+        NODE
+
+    - id: filter
+      uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+      with:
+        # Use this push's range, not the cumulative PR diff. A CI-only follow-up
+        # must not wait for a new Pages build after an earlier app-code push.
+        token: ''
+        base: ${{ github.event.before || github.event.pull_request.base.sha || github.ref }}
+        ref: ${{ github.sha }}
+        filters: ${{ steps.policy.outputs.filters }}

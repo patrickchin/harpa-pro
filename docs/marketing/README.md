@@ -72,11 +72,12 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
 ### Strongly recommended (free)
 
 - **Sentry** — error tracking (free 5k/mo).
-- **Cloudflare Web Analytics** — pageviews + Web Vitals, cookieless, no banner.
+- **PostHog EU** — selected for public-site visits and contact conversions,
+  using cookieless collection. The Free project and production build variables
+  are configured; live ingestion awaits deployment.
 
 ### Defer
 
-- PostHog / Plausible — only when funnels become useful.
 - Loops / Customer.io — only when drip campaigns are useful.
 - Crisp / Intercom — only when live chat is useful.
 - BetterStack / Statuspage — only when uptime page is useful.
@@ -97,9 +98,12 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
    the API boundary.
 4. **Email provider**: Resend. Generous free tier, React Email
    support, good deliverability.
-5. **Analytics**: If analytics is enabled, Cloudflare Web Analytics is the
-   approved cookieless option. Provider state is `UNKNOWN`. PostHog needs a
-   specific funnel requirement and a consent review.
+5. **Analytics**: PostHog is selected for page visits, clicks, and WhatsApp /
+   email contact conversions. It uses cookieless mode with no identified
+   profiles or recordings; see the scoped
+   [collection and consent review](../v4/design-public-site-posthog.md).
+   EU project `308052` and the production build variables are configured.
+   Live website ingestion awaits deployment.
 6. **Demo recordings (M4 only)**: R2 prefix `demo/<sessionId>/`
    with 24h lifecycle. Negligible cost; useful for debugging and
    abuse investigation. Not relevant at launch (no audio uploaded).
@@ -111,14 +115,14 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
 | M0              | Foundation            | [`plan-m0-foundation.md`](plan-m0-foundation.md)           | Astro app scaffolded into monorepo; Lovable JSX ported to `.astro`; deploys to Cloudflare Pages preview; Lighthouse performance/accessibility ≥ 90 and best practices/SEO ≥ 95. |
 | M1              | Waitlist              | [`plan-m1-waitlist.md`](plan-m1-waitlist.md)               | `waitlist_signups` table + Hono route + scope test + double-opt-in email + Turnstile + admin CSV export. **Only backend work needed before launch.**                            |
 | M2              | Voice demo (static)   | [`plan-m2-voice-demo.md`](plan-m2-voice-demo.md)           | Simulated recording state plus a committed fixture. No audio capture, API, R2, or authentication.                                                                               |
-| M3              | Partial               | [`plan-m3-launch.md`](plan-m3-launch.md)                   | Custom domain, privacy, OG image, sitemap, robots, and public guides are present. Terms, public-site Sentry, and analytics are not repository-confirmed.                        |
+| M3              | Partial               | [`plan-m3-launch.md`](plan-m3-launch.md)                   | Custom domain, privacy, OG image, sitemap, robots, public guides, and PostHog wiring are present. Terms, public-site Sentry, and analytics activation are not confirmed.                        |
 | M4 _(deferred)_ | Voice demo (live API) | [`plan-m4-voice-demo-live.md`](plan-m4-voice-demo-live.md) | Replace M2's fake pipeline with `POST /demo/session` → R2 → `/voice/transcribe` → `/reports/:id/generate`. Tackled after launch.                                                |
 
 ## Hard rules (extend AGENTS.md)
 
 These add to the existing hard rules in [`../../AGENTS.md`](../../AGENTS.md):
 
-1. **No JS unless an island needs it.** Default-export `.astro`
+1. **JS only for interactions and configured analytics.** Default-export `.astro`
    components. Reach for React only when you need state, effects, or
    browser APIs (recorder, form).
 2. **No new direct-to-LLM code paths.** When M4 wires the demo live,
@@ -126,7 +130,7 @@ These add to the existing hard rules in [`../../AGENTS.md`](../../AGENTS.md):
    M2 ships only committed JSON fixtures — never call an LLM at
    build or runtime.
 3. **No analytics with cookies before the consent gate ships.**
-   Cloudflare Web Analytics only until PostHog lands (if ever).
+   PostHog must use cookieless mode until a separate consent gate ships.
 4. **Lighthouse gate.** CI runs Lighthouse on each PR. Performance and
    Accessibility must be ≥ 90; Best Practices and SEO must be ≥ 95.
 5. **Waitlist storage stays in Neon.** No third-party form services

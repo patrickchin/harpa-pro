@@ -17,7 +17,7 @@ describe('admin site smoke', () => {
 
     expect(pkg.name).toBe('@harpa/admin');
     expect(pkg.dependencies).not.toHaveProperty('astro');
-    expect(pkg.devDependencies.astro).toBe('^7.3.3');
+    expect(pkg.devDependencies.astro).toBe('^7.3.6');
     expect(pkg.engines.node).toBe('>=22.12.0');
     expect(config).toMatch(/site:\s*['"]https:\/\/admin\.harpapro\.com['"]/);
     expect(config).toMatch(/output:\s*['"]static['"]/);
@@ -42,7 +42,7 @@ describe('admin site smoke', () => {
       '@types/react-dom': '~19.2.4',
       cookie: '2.0.1',
       tailwindcss: '^4.3.3',
-      vite: '8.3.0',
+      vite: '8.3.3',
     });
   });
 

@@ -1,6 +1,7 @@
 ---
 import "@fontsource-variable/inter";
 import "../styles/globals.css";
+import { getAnalyticsEnv } from "../lib/env";
 
 interface Props {
   title?: string;
@@ -63,6 +64,8 @@ const jsonLd = JSON.stringify({
     ...structuredData,
   ],
 }).replace(/</g, "\\u003c");
+// Validate optional analytics configuration during the static build too.
+getAnalyticsEnv();
 ---
 
 <!doctype html>
@@ -103,5 +106,15 @@ const jsonLd = JSON.stringify({
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">
     <slot />
+    <script>
+      import { getAnalyticsEnv } from "../lib/env";
+      import { initAnalytics } from "../lib/analytics";
+
+      const analytics = getAnalyticsEnv();
+      if (analytics) {
+        // Analytics must never prevent navigation or contact actions.
+        void initAnalytics(analytics).catch(() => {});
+      }
+    </script>
   </body>
 </html>

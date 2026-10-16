@@ -705,9 +705,10 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
     'href',
     'mailto:haruna@harpapro.com',
   );
+  const whatsappNumber = await contact.getByText('+86 193 7283 7269', { exact: true }).innerText();
   await expect(contact.getByRole('link', { name: 'Message on WhatsApp' })).toHaveAttribute(
     'href',
-    'https://wa.me/861937283726',
+    `https://wa.me/${whatsappNumber.replace(/\D/g, '')}`,
   );
   await expect(contact.locator('form')).toHaveCount(0);
 });

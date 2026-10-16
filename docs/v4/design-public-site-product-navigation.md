@@ -66,8 +66,12 @@ Haruna as the procurement contact and gives three actions:
 1. **Copy email** copies `haruna@harpapro.com` and confirms the action on the
    page.
 2. **Open email app** uses `mailto:haruna@harpapro.com` as a secondary action.
-3. **Message on WhatsApp** opens `https://wa.me/861937283726` in a new tab and
+3. **Message on WhatsApp** opens `https://wa.me/8619372837269` in a new tab and
    displays `+86 193 7283 7269` beside the action.
+
+The WhatsApp URL must include every digit of the displayed number, with spaces
+and the leading plus removed. Browser coverage compares these two values so a
+truncated link cannot silently redirect an enquiry to another number.
 
 The copy action comes first because it does not open another application. The
 section does not use a form, account, scheduler, or API.

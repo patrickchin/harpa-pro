@@ -27,9 +27,10 @@ Capture pageviews/pageleaves and click-only autocapture for links and
 buttons. Mask DOM text and attributes, and exclude forms and the docs search
 component entirely. Never capture search input, confirmation tokens, email
 addresses, or clipboard contents. Strip URL queries and fragments from event
-properties and referrers, and disable campaign-parameter persistence.
+properties and referrers, and disable SDK campaign-parameter persistence.
+The five approved campaign labels described below are separate event properties.
 
-Explicit contact events carry only `page_path` and the fixed
+Explicit contact events carry `page_path`, approved campaign labels, and the fixed
 `location: 'home_contact'` property:
 
 | Event | Trigger |
@@ -80,3 +81,53 @@ receiving live website events.
 - Run site unit tests, lint, Astro typecheck/build, and focused browser tests.
 
 Reference: [PostHog cookieless tracking](https://posthog.com/tutorials/cookieless-tracking).
+
+## UTM attribution
+
+Capture only `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and
+`utm_term`. Accept campaign labels of 1–80 ASCII letters, digits, underscores,
+or hyphens; normalize to lowercase. Reject duplicate and malformed values.
+Do not collect ad click identifiers or arbitrary query parameters. Keep the
+SDK's broad campaign capture disabled and attach approved labels in the
+shared event sanitizer, including the first pageview and contact events.
+
+Carry approved labels on same-origin page links, preserving destination
+queries and fragments. A destination with its own UTM parameters starts its
+own campaign rather than mixing two campaigns. Skip external links,
+fragment-only links, and downloads. Decorate rendered links on initialization
+and dynamically inserted links on ordinary or middle clicks. This follows
+the existing cookieless,
+no-browser-storage decision: labels last only along tagged navigation;
+return visits through an untagged URL cannot recover prior attribution.
+
+The published China buying guide campaign uses `utm_medium=social` and
+`utm_campaign=china_buying_guide`, sources `facebook`, `linkedin`, and `x`,
+and `utm_content=overview`. Seven draft topics use `clearance`,
+`specification`, `supplier`, `quotation`, `sample`, `payment`, and `inspection`.
+Instagram has a prepared `utm_source=instagram` link, but the published
+caption's plain URL does not establish attribution; use the tagged URL in
+the clickable profile/bio link. Historical visits cannot be backfilled.
+
+After production activation, use Web analytics → Sources → UTM source,
+campaign, and content, plus contact-event trends broken down by these
+properties. Recommended next reports are contact conversion goals and a
+buying-guide → contact funnel. Keep recordings/heatmaps disabled pending a
+separate collection and consent design; current traffic is too small for
+useful experiments. This change does not alter provider settings or posts.
+
+Verify a real SDK visit for each prepared source and a full guide → home →
+contact journey; assert preserved safe labels, removed tokens/referrer
+queries/ad identifiers, unchanged external contact URLs, and empty browser
+storage. Verify direct visits stay unattributed and an explicit new campaign
+replaces propagated labels.
+
+### Validation of the attribution update
+
+- 31 site unit tests pass, including label validation and sanitizer checks.
+- Nine browser tests pass using the real SDK with intercepted ingestion in
+  system Chrome, covering all four social sources and destination campaigns.
+- Site lint and Astro typecheck pass; browser tests build the production site.
+- Existing privacy signals, blocked requests, failed copying, URL sanitizing,
+  and zero-browser-storage checks remain covered.
+
+Reference: [PostHog UTM segmentation](https://posthog.com/docs/data/utm-segmentation).

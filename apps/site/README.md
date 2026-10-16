@@ -33,9 +33,45 @@ the current shared header does not expose the dashboard.
   `@astrojs/cloudflare` adapter is intentionally not installed because every
   route is static.
 
-Hard rules: no JS unless an island needs it; no analytics with
+Hard rules: JS only for interactions and configured analytics; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
 practices/SEO ≥ 95.
+
+## Website analytics
+
+PostHog measures page visits, link/button clicks, and these contact actions:
+`contact_whatsapp_clicked`, `contact_email_opened`, and
+`contact_email_copied` (only after successful copying). Clicks indicate
+contact intent, not a successfully sent message.
+
+Set both variables in the **production** Cloudflare Pages build environment:
+
+- `PUBLIC_POSTHOG_KEY`: the public `phc_…` project token, never a personal key.
+- `PUBLIC_POSTHOG_HOST`: `https://eu.i.posthog.com` (chosen EU region).
+
+Leave both unset to disable analytics. Partial or invalid configuration fails
+the build. The Cloudflare build script disables analytics on `dev` and PR
+branches even if the production variables were accidentally inherited.
+Local builds can use a separate test project; never use production tokens
+for automated checks.
+
+In the EU PostHog project, enable **Cookieless server hash mode** under
+**Project settings → Web analytics**. Without it, PostHog discards these
+events. Keep the free plan without a payment card to stop at the free
+allowance instead of incurring usage charges. Add the three events above as
+conversion goals in PostHog's Web analytics dashboard.
+
+Collection uses no analytics cookies or browser storage, no identified
+profiles, and no recordings. Autocapture is limited to clicks, with DOM
+text/attributes masked and forms/docs search excluded. URLs lose queries
+and fragments; clipboard contents are never collected. The privacy page
+discloses this setup. Reconcile the externally hosted Termly policy before
+production activation. See the
+[analytics design](../../docs/v4/design-public-site-posthog.md).
+
+Run `pnpm --filter @harpa/site test:analytics` for browser checks using the
+real SDK, a fake project token, and intercepted ingestion; no test data goes
+to PostHog.
 
 ## Product guides
 

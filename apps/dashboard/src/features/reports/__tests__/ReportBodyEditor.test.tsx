@@ -35,7 +35,7 @@ describe('ReportBodyEditor', () => {
     ];
     expect(sectionHeadings.length).toBeGreaterThan(0);
     sectionHeadings.forEach((heading) => {
-      expect(heading).toHaveClass('text-label');
+      expect(heading).toHaveClass('font-heading', 'text-section');
       expect(heading).not.toHaveClass('text-title-sm', 'font-bold', 'tracking-label');
     });
     expect(field(rendered.container, 'Report title')).toHaveClass(

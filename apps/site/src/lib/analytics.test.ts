@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getAnalyticsEnv } from './env';
-import { sanitizeAnalyticsEvent } from './analytics';
+import { getCampaignParams, sanitizeAnalyticsEvent } from './analytics';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -45,4 +45,19 @@ it('removes URL queries, fragments, nested attribution and person updates before
   });
   expect(JSON.stringify(event)).not.toMatch(/secret|private/);
   expect(sanitizeAnalyticsEvent(null)).toBeNull();
+});
+
+it('allows bounded campaign labels and rejects free text, duplicates and identifiers', () => {
+  const campaign = getCampaignParams(new URL('https://harpapro.com/?utm_source=LinkedIn&utm_medium=social&utm_campaign=china_buying_guide&utm_content=overview&utm_term=office-lighting&token=secret&gclid=private'));
+  expect(campaign).toEqual({
+    utm_source: 'linkedin', utm_medium: 'social', utm_campaign: 'china_buying_guide',
+    utm_content: 'overview', utm_term: 'office-lighting',
+  });
+  expect(getCampaignParams(new URL(`https://harpapro.com/?utm_source=one&utm_source=two&utm_medium=&utm_campaign=${'a'.repeat(81)}&utm_content=private@example.com&utm_term=private+search`))).toEqual({});
+  const event = sanitizeAnalyticsEvent({ uuid: 'test', event: '$pageview', properties: {
+    utm_source: 'unvalidated', $session_entry_utm_term: 'private search',
+    gclid: 'private', $session_entry_fbclid: 'private', $initial_utm_content: 'private',
+    $current_url: 'https://harpapro.com/?token=secret&utm_source=LinkedIn',
+  } }, campaign);
+  expect(event?.properties).toEqual({ $current_url: 'https://harpapro.com/', ...campaign });
 });

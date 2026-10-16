@@ -38,7 +38,7 @@ async function observeAnalytics(page: Page) {
 
 test('real SDK sends visits, clicks and successful contact conversions without browser storage', async ({ page }) => {
   const events = await observeAnalytics(page);
-  await page.goto('/?token=private-token-e2e&utm_source=private-campaign-e2e#contact', {
+  await page.goto('/?token=private-token-e2e&utm_source=private%40campaign-e2e#contact', {
     referer: 'https://example.com/source?email=private-referrer-e2e',
   });
   await expect.poll(() => events.filter((event) => event.event === '$pageview').length, { timeout: 12_000 }).toBe(1);
@@ -107,4 +107,68 @@ test('honours browser privacy signals without disabling contact actions', async 
   await expect(page.locator('[data-copy-email-status]')).toHaveText('Email copied');
   await page.goto('/app');
   expect(events).toHaveLength(0);
+});
+
+for (const source of ['facebook', 'linkedin', 'x', 'instagram']) {
+  test(`attributes the buying guide and contact conversions to ${source} without storage`, async ({ page }) => {
+    const events = await observeAnalytics(page);
+    const campaign = {
+      utm_source: source, utm_medium: 'social', utm_campaign: 'china_buying_guide',
+      utm_content: 'overview', utm_term: 'interior-procurement',
+    };
+    await page.goto(`/how-to-buy-from-china/?${new URLSearchParams(campaign)}&token=private-token-e2e&gclid=private-click-e2e#buying-checks`);
+    await expect.poll(() => events.some((event) => event.event === '$pageview')).toBe(true);
+    expect(events.find((event) => event.event === '$pageview')?.properties).toMatchObject(campaign);
+    const contact = page.locator('a[href*="#contact"]').first();
+    await expect(contact).toHaveAttribute('href', new RegExp(`utm_source=${source}.*#contact$`));
+    await contact.click();
+    await expect(page).toHaveURL(new RegExp(`[?]utm_source=${source}.*#contact$`));
+    await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
+    await page.getByRole('button', { name: 'Copy email', exact: true }).click();
+    await page.getByRole('link', { name: 'Open email app', exact: true }).click();
+    await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
+    for (const name of ['contact_email_copied', 'contact_email_opened', 'contact_whatsapp_clicked']) {
+      await expect.poll(() => events.filter((event) => event.event === name).length).toBe(1);
+      expect(events.find((event) => event.event === name)?.properties).toMatchObject(campaign);
+    }
+    await expect(page.getByRole('link', { name: 'Open email app', exact: true })).toHaveAttribute('href', 'mailto:haruna@harpapro.com');
+    await expect(page.getByRole('link', { name: 'Message on WhatsApp', exact: true })).not.toHaveAttribute('href', /utm_/);
+    expect(JSON.stringify(events)).not.toMatch(/private-.*-e2e|gclid|fbclid|token=/);
+    expect(await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie }))).toEqual({ local: [], session: [], cookies: '' });
+    // A fresh untagged visit cannot recover an earlier campaign without storage.
+    await page.goto('/');
+    await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(3);
+    expect(events.filter((event) => event.event === '$pageview').at(-1)?.properties).not.toHaveProperty('utm_source');
+  });
+}
+
+test('propagates only onto internal page links and preserves explicit destination campaigns', async ({ page }) => {
+  const events = await observeAnalytics(page);
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      for (const [id, href] of Object.entries({
+        internal: '/app?plan=demo#features', own: '/app?utm_source=google&utm_medium=cpc#features',
+        external: 'https://example.com/path', fragment: '#contact', download: '/guide.pdf',
+      })) {
+        const link = document.createElement('a');
+        link.id = `utm-test-${id}`; link.href = href; link.textContent = id;
+        if (id === 'download') link.download = '';
+        document.body.append(link);
+      }
+    });
+  });
+  await page.goto('/?utm_source=facebook&utm_medium=social&utm_campaign=china_buying_guide&utm_content=overview');
+  await expect.poll(() => events.some((event) => event.event === '$pageview')).toBe(true);
+  await expect(page.locator('#utm-test-own')).toHaveAttribute('href', '/app?utm_source=google&utm_medium=cpc#features');
+  await expect(page.locator('#utm-test-external')).toHaveAttribute('href', 'https://example.com/path');
+  await expect(page.locator('#utm-test-fragment')).toHaveAttribute('href', '#contact');
+  await expect(page.locator('#utm-test-download')).toHaveAttribute('href', '/guide.pdf');
+  await page.locator('#utm-test-internal').click();
+  await expect(page).toHaveURL(/[?]plan=demo&utm_source=facebook.*#features$/);
+  await expect(page.locator('a[href*="utm_source=facebook"]').first()).toBeAttached();
+  await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
+  await page.locator('#utm-test-own').click();
+  await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(3);
+  expect(events.filter((event) => event.event === '$pageview').at(-1)?.properties).toMatchObject({ utm_source: 'google', utm_medium: 'cpc' });
+  expect(events.filter((event) => event.event === '$pageview').at(-1)?.properties).not.toHaveProperty('utm_campaign');
 });

@@ -45,6 +45,12 @@ jobs:
       - name: Typecheck public site
         run: pnpm --filter @harpa/site typecheck
 
+      - name: Install Playwright browsers
+        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium firefox
+
+      - name: Browser-test analytics with intercepted ingestion
+        run: pnpm --filter @harpa/site test:analytics
+
       - name: Build public site
         # This credential-free build uses Cloudflare's public test key.
         # Cloudflare Git independently builds the deployable bytes with the
@@ -56,9 +62,6 @@ jobs:
 
       - name: Verify public build excludes admin routes
         run: test ! -e apps/site/dist/admin
-
-      - name: Install Playwright browsers
-        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium firefox
 
       - name: Browser-test documentation
         run: pnpm --filter @harpa/site test:e2e

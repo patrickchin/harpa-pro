@@ -434,7 +434,7 @@ test('keeps the hero and contact routes useful without JavaScript', async ({ bro
     await expect(page.locator('#contact').getByRole('link', { name: 'Open email app' }))
       .toHaveAttribute('href', 'mailto:haruna@harpapro.com');
     await expect(page.locator('#contact').getByRole('link', { name: 'Message on WhatsApp' }))
-      .toHaveAttribute('href', 'https://wa.me/861937283726');
+      .toHaveAttribute('href', 'https://wa.me/8619372837269');
   } finally {
     await context.close();
   }

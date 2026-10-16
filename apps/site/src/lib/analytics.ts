@@ -2,6 +2,39 @@ import type { CaptureResult, PostHog } from 'posthog-js';
 
 let client: PostHog | undefined;
 
+const campaignKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
+type Campaign = Partial<Record<typeof campaignKeys[number], string>>;
+
+export function getCampaignParams(url: URL): Campaign {
+  const campaign: Campaign = {};
+  for (const key of campaignKeys) {
+    const values = url.searchParams.getAll(key);
+    const value = values[0];
+    if (values.length === 1 && value && /^[a-z0-9_-]{1,80}$/i.test(value)) {
+      campaign[key] = value.toLowerCase();
+    }
+  }
+  return campaign;
+}
+
+function propagateCampaignLinks(campaign: Campaign): void {
+  if (!Object.keys(campaign).length) return;
+  const decorate = (link: HTMLAnchorElement) => {
+    if (link.hasAttribute('download') || link.getAttribute('href')?.startsWith('#')) return;
+    let url: URL;
+    try { url = new URL(link.href); } catch { return; }
+    if (url.origin !== window.location.origin || campaignKeys.some((key) => url.searchParams.has(key))) return;
+    for (const [key, value] of Object.entries(campaign)) url.searchParams.set(key, value);
+    link.href = url.href;
+  };
+  document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(decorate);
+  // Docs search inserts links after initialization; decorate before native navigation too.
+  for (const name of ['click', 'auxclick']) document.addEventListener(name, (event) => {
+    const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
+    if (link) decorate(link);
+  });
+}
+
 type ContactEvent =
   | 'contact_whatsapp_clicked'
   | 'contact_email_opened'
@@ -19,9 +52,14 @@ export function captureContact(event: ContactEvent): void {
 }
 
 /** Confirmation tokens and arbitrary query input must never leave the site. */
-export function sanitizeAnalyticsEvent(event: CaptureResult | null): CaptureResult | null {
+export function sanitizeAnalyticsEvent(event: CaptureResult | null, campaign: Campaign = {}): CaptureResult | null {
   if (!event) return null;
   for (const [key, value] of Object.entries(event.properties)) {
+    // Only our validated labels may leave the page, including SDK-prefixed attribution.
+    if (/(^|_)(utm_.*|gclid|dclid|fbclid|msclkid|gbraid|wbraid|gad_source|gclsrc|fbc|fbp)$/i.test(key.replace(/^\$/, ''))) {
+      delete event.properties[key];
+      continue;
+    }
     if (typeof value !== 'string' || !/url|referrer/i.test(key)) continue;
     try {
       const url = new URL(value);
@@ -33,12 +71,15 @@ export function sanitizeAnalyticsEvent(event: CaptureResult | null): CaptureResu
   delete event.properties.$initial_person_info;
   delete event.$set;
   delete event.$set_once;
+  Object.assign(event.properties, campaign);
   return event;
 }
 
 export async function initAnalytics(config: { key: string; host: string }): Promise<void> {
   if (client || navigator.doNotTrack === '1' ||
     ('globalPrivacyControl' in navigator && navigator.globalPrivacyControl === true)) return;
+  const campaign = getCampaignParams(new URL(window.location.href));
+  propagateCampaignLinks(campaign);
   const { default: posthog } = await import('posthog-js');
   posthog.init(config.key, {
     api_host: config.host,
@@ -69,7 +110,7 @@ export async function initAnalytics(config: { key: string; host: string }): Prom
     advanced_disable_flags: true,
     disable_external_dependency_loading: true,
     respect_dnt: true,
-    before_send: sanitizeAnalyticsEvent,
+    before_send: (event) => sanitizeAnalyticsEvent(event, campaign),
   });
   client = posthog;
   document.addEventListener('click', (event) => {

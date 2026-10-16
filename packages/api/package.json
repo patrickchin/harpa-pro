@@ -50,8 +50,8 @@
   "devDependencies": {
     "@testcontainers/postgresql": "^12.1.0",
     "@types/pg": "^8.21.0",
-    "@typescript-eslint/eslint-plugin": "^8.70.0",
-    "@typescript-eslint/parser": "^8.70.0",
+    "@typescript-eslint/eslint-plugin": "^8.71.2",
+    "@typescript-eslint/parser": "^8.71.2",
     "@vitest/coverage-v8": "^5.0.1",
     "auth": "1.7.5",
     "drizzle-kit": "0.31.10",

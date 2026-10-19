@@ -41,7 +41,7 @@
     "@sentry/hono": "^10.75.0",
     "@sentry/node": "^10.75.0",
     "better-auth": "1.7.7",
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "0.45.4",
     "hono": "^4.13.8",
     "nanoid": "^6.0.1",
     "pg": "^8.23.0",

@@ -1,69 +1,79 @@
 import { expect, test } from '@playwright/test';
 
-test('builds a first message from the topic and optional details', async ({ page }) => {
+test('keeps contact compact and opens one editable message on demand', async ({ page }) => {
   await page.goto('/#contact');
-  const topic = page.getByLabel('What would you like to do?');
-  const details = page.getByLabel('Your project details');
-  const preview = page.locator('[data-whatsapp-preview]');
-  const link = page.getByRole('link', { name: 'Message on WhatsApp', exact: true });
-  await expect(preview).toContainText('walk me through the process');
-
-  const project = '20 oak desks & chairs for São Paulo\nTarget: March. Reference: <table> 家具 + 50%';
-  await details.fill(project);
+  const dialog = page.getByRole('dialog', { name: 'Start a conversation' });
+  await expect(dialog).toBeHidden();
+  expect(await page.locator('#whatsapp-message').evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(260);
+  await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
+  await expect(dialog).toBeVisible();
+  const topic = dialog.getByLabel('I need help with');
+  const draft = dialog.getByLabel('Your message');
+  const link = dialog.getByRole('link', { name: 'Continue in WhatsApp' });
+  await expect(topic).toBeFocused();
+  const opening = await draft.inputValue();
+  const details = '20 oak desks & chairs for São Paulo\nReference: <table> 家具 + 50%';
+  await draft.fill(`${opening}\n${details}`);
   for (const value of ['source', 'quality', 'brief', 'understand']) {
     await topic.selectOption(value);
-    await expect(details).toHaveValue(project);
-    await expect(preview).toContainText(project);
+    expect(await draft.inputValue()).toContain(details);
     const url = new URL((await link.getAttribute('href'))!);
     expect(url.origin).toBe('https://wa.me');
     const number = await page.getByText('+86 193 7283 7269', { exact: true }).innerText();
     expect(url.pathname).toBe(`/${number.replace(/\D/g, '')}`);
-    expect(url.searchParams.get('text')).toBe(await preview.textContent());
-    await expect(preview.locator('table')).toHaveCount(0);
+    expect(url.searchParams.get('text')).toBe(await draft.inputValue());
   }
-
-  await details.fill('   ');
-  await expect(preview).not.toContainText(project);
-  expect(new URL((await link.getAttribute('href'))!).searchParams.get('text'))
-    .toBe(await preview.textContent());
+  await draft.fill('Hello, can you help with my hotel project?');
+  await topic.selectOption('source');
+  await expect(draft).toHaveValue('Hello, can you help with my hotel project?');
+  expect(new URL((await link.getAttribute('href'))!).searchParams.get('text')).toBe(await draft.inputValue());
+  await draft.fill('   ');
+  expect(new URL((await link.getAttribute('href'))!).searchParams.get('text')).toContain('sourcing');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-  await expect(page.getByText('Press Send there', { exact: false })).toBeVisible();
-});
-
-test('FAQ links select the matching topic and preserve details', async ({ page }) => {
-  await page.goto('/');
-  const details = page.getByLabel('Your project details');
-  await details.fill('Hotel furniture, 60 rooms');
-  for (const value of ['source', 'quality', 'brief', 'understand']) {
-    await page.locator(`[data-whatsapp-topic="${value}"]`).click();
-    await expect(page).toHaveURL(/#whatsapp-message$/);
-    await expect(page.getByLabel('What would you like to do?')).toHaveValue(value);
-    await expect(details).toBeFocused();
-    await expect(details).toHaveValue('Hotel furniture, 60 rooms');
-  }
-  await page.getByLabel('What would you like to do?').focus();
-  await page.keyboard.press('Tab');
-  await expect(details).toBeFocused();
-  await page.keyboard.press('Tab');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   await expect(page.getByRole('link', { name: 'Message on WhatsApp', exact: true })).toBeFocused();
 });
 
-test('message composer fits a narrow mobile screen', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+test('FAQ opens the matching topic and returns focus when closed', async ({ page }) => {
+  await page.goto('/');
+  const dialog = page.getByRole('dialog', { name: 'Start a conversation' });
+  for (const value of ['source', 'quality', 'brief', 'understand']) {
+    const trigger = page.locator(`[data-whatsapp-topic="${value}"]`);
+    await trigger.click();
+    await expect(dialog.getByLabel('I need help with')).toHaveValue(value);
+    await expect(dialog.getByLabel('I need help with')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(dialog.getByLabel('Your message')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(dialog.getByRole('link', { name: 'Continue in WhatsApp' })).toBeFocused();
+    await dialog.getByRole('button', { name: 'Close message helper' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+  }
+});
+
+test('message helper fits a narrow mobile screen', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
   await page.goto('/#contact');
-  await page.getByLabel('What would you like to do?').selectOption('quality');
-  await page.getByLabel('Your project details').fill('Product-reference-'.repeat(80));
-  await expect(page.locator('[data-whatsapp-preview]')).toContainText('Product-reference-');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
-  await expect(page.getByRole('link', { name: 'Message on WhatsApp', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Start a conversation' });
+  await dialog.getByLabel('I need help with').selectOption('quality');
+  await dialog.getByLabel('Your message').fill('Product-reference-'.repeat(80));
+  const bounds = await dialog.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(375);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(667);
+  await expect(dialog.getByRole('link', { name: 'Continue in WhatsApp' })).toBeInViewport();
 });
 
 test('keeps direct contact available without JavaScript', async ({ browser, baseURL }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto(`${baseURL}/#contact`);
-  await expect(page.getByLabel('What would you like to do?')).toBeHidden();
+  await expect(page.getByRole('dialog')).toBeHidden();
   await expect(page.getByRole('link', { name: 'Message on WhatsApp', exact: true }))
     .toHaveAttribute('href', 'https://wa.me/8619372837269');
   await expect(page.getByRole('link', { name: 'Open email app', exact: true }))

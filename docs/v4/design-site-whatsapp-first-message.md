@@ -8,23 +8,25 @@ the source for the enquiry topics and suggested opening messages.
 
 ## Interaction
 
-At `/#contact`, the WhatsApp card offers a topic, optional project details,
-and a preview of the message that will open in WhatsApp. Topics cover
-understanding the service, sourcing products, checking quality, and
-preparing a project brief. Each FAQ answer links to its matching topic.
+Keep the WhatsApp and email cards compact and side by side on wider screens.
+The WhatsApp card contains only the number and **Message on WhatsApp** link.
+Clicking it opens a native dialog with a topic chooser and one editable
+message. Each FAQ answer can open the same dialog with its topic selected.
+Use one short **Ask us** link under each answer.
 
-Use a native select and a labelled textarea. Give topic-specific guidance
-about useful details. Details are optional; a visitor who is still exploring
-can continue with the suggested opening alone. Changing topics preserves
-anything the visitor has already typed. Render details as plain text.
+Use short topic labels and opening messages. Avoid a separate preview and
+introductory paragraphs. One brief hint suggests products, quantities,
+delivery location, or timing. The visitor can continue with the suggested
+message alone. Switching topics updates an untouched opening while preserving
+appended details; a fully rewritten message remains unchanged.
 
-The existing **Message on WhatsApp** link opens the published number
-`+86 193 7283 7269` with the preview encoded in the `text` query parameter.
-Explain that the visitor can edit the message in WhatsApp and must press
-Send there. Do not claim a message was sent on link click.
+**Continue in WhatsApp** opens the published number `+86 193 7283 7269` with
+the message encoded in the `text` query parameter. A short note says
+**Review and send in WhatsApp.** Closing the dialog or pressing Escape returns
+focus to its trigger. Keep the dialog within the viewport on mobile.
 
 This is a static browser enhancement, with no API or persistence. Without
-JavaScript, hide the interactive fields and retain the direct WhatsApp link.
+JavaScript, retain the direct WhatsApp link and keep the dialog closed.
 Keep the email actions and the existing contact conversion event. Exclude
 the entire composer from autocapture; typed details and the message URL must
 not enter analytics. Use existing site tokens and responsive contact styles.
@@ -32,10 +34,11 @@ not enter analytics. Use existing site tokens and responsive contact styles.
 ## Validation
 
 Run site unit tests, lint, Astro check, and production build. Browser tests
-cover topic selection from both the card and FAQ, optional details, topic
-changes, URL encoding and the complete phone number, keyboard interaction,
-mobile overflow, and the direct-link fallback without JavaScript. Extend
-the real-SDK analytics test to verify that composed details remain private.
+cover topic selection from both the card and FAQ, editable messages, topic
+changes, URL encoding and the complete phone number, Escape and focus return,
+mobile overflow, compact page height, and the direct-link fallback without
+JavaScript. The real-SDK analytics test verifies that composed details remain
+private and opening the helper does not count as an outbound contact click.
 
 This refines the direct-link behaviour in
 [public site product navigation](design-public-site-product-navigation.md).

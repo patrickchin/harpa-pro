@@ -364,6 +364,25 @@
 .luxury-site #contact :is(select, textarea) {
   color-scheme: dark;
 }
+.whatsapp-dialog {
+  margin: auto;
+  padding: 0;
+  width: min(28rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--card);
+  color: var(--foreground);
+}
+.whatsapp-dialog::backdrop {
+  background: color-mix(in oklab, var(--luxury-walnut) 75%, transparent);
+  backdrop-filter: blur(3px);
+}
+body:has(.whatsapp-dialog[open]) {
+  overflow: hidden;
+}
 .luxury-site #contact button,
 .luxury-site #contact dd a {
   border-radius: 2px;

@@ -70,8 +70,9 @@ Haruna as the procurement contact and gives three actions:
    displays `+86 193 7283 7269` beside the action.
 
 The [guided first-message flow](design-site-whatsapp-first-message.md) adds
-a topic chooser, optional project details, and a preview before this action.
-With JavaScript, the URL carries the preview in its `text` query parameter.
+a compact dialog with a topic chooser and editable message before this action.
+With JavaScript, **Message on WhatsApp** opens the helper; **Continue in
+WhatsApp** carries the draft in the URL's `text` query parameter.
 
 The WhatsApp URL must include every digit of the displayed number, with spaces
 and the leading plus removed. Browser coverage compares these two values so a

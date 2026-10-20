@@ -708,7 +708,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   const whatsappNumber = await contact.getByText('+86 193 7283 7269', { exact: true }).innerText();
   await expect(contact.getByRole('link', { name: 'Message on WhatsApp' })).toHaveAttribute(
     'href',
-    `https://wa.me/${whatsappNumber.replace(/\D/g, '')}`,
+    new RegExp(`^https://wa\\.me/${whatsappNumber.replace(/\D/g, '')}\\?text=.+`),
   );
   await expect(contact.locator('form')).toHaveCount(0);
 });

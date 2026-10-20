@@ -361,6 +361,9 @@
 .luxury-site #contact dt svg {
   color: var(--luxury-bronze);
 }
+.luxury-site #contact :is(select, textarea) {
+  color-scheme: dark;
+}
 .luxury-site #contact button,
 .luxury-site #contact dd a {
   border-radius: 2px;

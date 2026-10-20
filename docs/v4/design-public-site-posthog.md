@@ -30,6 +30,12 @@ addresses, or clipboard contents. Strip URL queries and fragments from event
 properties and referrers, and disable SDK campaign-parameter persistence.
 The five approved campaign labels described below are separate event properties.
 
+The [WhatsApp message composer](design-site-whatsapp-first-message.md) is
+excluded from autocapture, including its preview and outbound link. Keep the
+explicit `contact_whatsapp_clicked` event, which sends only the fixed contact
+properties and approved campaign labels. Never send project details or the
+composed message URL to analytics.
+
 Explicit contact events carry `page_path`, approved campaign labels, and the fixed
 `location: 'home_contact'` property:
 

@@ -69,12 +69,17 @@ Haruna as the procurement contact and gives three actions:
 3. **Message on WhatsApp** opens `https://wa.me/8619372837269` in a new tab and
    displays `+86 193 7283 7269` beside the action.
 
+The [guided first-message flow](design-site-whatsapp-first-message.md) adds
+a topic chooser, optional project details, and a preview before this action.
+With JavaScript, the URL carries the preview in its `text` query parameter.
+
 The WhatsApp URL must include every digit of the displayed number, with spaces
 and the leading plus removed. Browser coverage compares these two values so a
 truncated link cannot silently redirect an enquiry to another number.
 
-The copy action comes first because it does not open another application. The
-section does not use a form, account, scheduler, or API.
+The email copy action comes before the email-app link because it does not
+open another application. The section does not submit a form or use an
+account, scheduler, or API.
 
 ## Evidence image dialog
 

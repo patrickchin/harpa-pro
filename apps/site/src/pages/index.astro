@@ -10,6 +10,7 @@ import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
 import LuxuryEffects from "../components/agents/LuxuryEffects.astro";
 import "../styles/luxury.css";
+import "../styles/procurement-hero.css";
 import woodInteriorImg from "../assets/agents/finishes/wood.webp";
 import stoneInteriorImg from "../assets/agents/finishes/stone.webp";
 import modernInteriorImg from "../assets/agents/finishes/modern.webp";
@@ -150,26 +151,21 @@ const procurementQuestions = [
               aria-hidden="true"
               class="hero-scrim absolute inset-0"
             ></div>
-            <div class="luxury-hero-topline" aria-hidden="true">
-              <span>Interior procurement · China</span>
-              <span>Design / Materials / Detail</span>
-            </div>
             <figcaption
               data-hero-copy
               class="luxury-hero-copy relative z-10"
             >
               <div class="luxury-hero-title-group">
                 <h1 class="luxury-hero-title">
-                  <span>Luxury Interior</span>{" "}<span><em>Procurement</em> in China</span>
+                  <span>Interior</span>{" "}<span>procurement</span>
                 </h1>
                 <p class="luxury-hero-description">
-                  We manage design specifications, factory coordination, quality
-                  checks, shipment, and complete procurement documentation
-                  (approved health, safety, and quality standards).
+                  We coordinate interior procurement in China, from design
+                  specifications and factory checks to shipping and project records.
                 </p>
                 <div class="luxury-hero-actions">
                   <a href="#contact" class="luxury-button ring-focus">
-                    Discuss your project <Icon name="arrow-up-right" class="h-4 w-4" />
+                    Send your project brief <Icon name="arrow-up-right" class="h-4 w-4" />
                   </a>
                   <a href="#considerations" class="luxury-text-link ring-focus">
                     Explore our approach <Icon name="arrow-down" class="h-4 w-4" />
@@ -178,7 +174,7 @@ const procurementQuestions = [
               </div>
             </figcaption>
             <div class="luxury-material-controls" data-material-controls hidden>
-              <p>A closer look</p>
+              <p>Explore material concepts</p>
               <div role="group" aria-label="Interior material concepts">
                 {materialSchemes.map((scheme) => (
                   <button
@@ -201,10 +197,6 @@ const procurementQuestions = [
             </div>
             <span class="luxury-material-caption" data-material-caption role="status" aria-live="polite">{defaultScheme.caption}</span>
           </figure>
-        </div>
-        <div class="luxury-service-line">
-          <p>Design specifications <span aria-hidden="true">↗</span> Factory coordination <span aria-hidden="true">↗</span> Quality checks <span aria-hidden="true">↗</span> Delivery</p>
-          <a href="#evidence" class="ring-focus">Explore the project details <Icon name="arrow-down-right" class="h-4 w-4" /></a>
         </div>
       </section>
 

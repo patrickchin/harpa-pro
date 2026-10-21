@@ -93,7 +93,7 @@ describe('site smoke', () => {
 
     expect(home).toContain('Luxury Interior Procurement in China');
     expect(home).toMatch(
-      /We manage design specifications, factory coordination, quality\s+checks, shipment, and complete procurement documentation\s+\(approved health, safety, and quality standards\)\./,
+      /We coordinate interior procurement in China, from design\s+specifications and factory checks to shipping and project records\./,
     );
     expect(home).toContain('ProcurementConsiderations');
     expect(home).toContain('ProcurementEvidence');

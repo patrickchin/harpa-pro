@@ -54,6 +54,26 @@ import Wordmark from "./Wordmark.astro";
                   <span class="mt-1 block leading-relaxed text-ink-soft">Our procurement service</span>
                 </span>
               </a>
+              <a href="/#factory-partners" aria-label="Products and factories"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="armchair" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Products and factories</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Joinery, furniture, bathrooms, and source records</span>
+                </span>
+              </a>
+              <a href="/#considerations" aria-label="Our process"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="list-checks" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Our process</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Design coordination, quality checks, and delivery</span>
+                </span>
+              </a>
               <a
                 href="/how-to-buy-from-china"
                 aria-label="How to Buy from China"
@@ -179,7 +199,7 @@ import Wordmark from "./Wordmark.astro";
         <Icon name="x" class="hidden h-4 w-4 group-open:block" />
       </summary>
       <div
-        class="absolute inset-x-0 top-16 border-t border-hairline bg-background shadow-lg"
+        class="absolute inset-x-0 top-16 max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-hairline bg-background shadow-lg"
       >
         <div class="mx-auto grid max-w-6xl gap-4 p-4">
           <div class="grid gap-1" data-mobile-procurement>
@@ -194,6 +214,18 @@ import Wordmark from "./Wordmark.astro";
                 <Icon name="package-search" class="h-4 w-4" />
               </span>
               Procurement Overview
+            </a>
+            <a href="/#factory-partners" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="armchair" class="h-4 w-4" />
+              </span>
+              Products and factories
+            </a>
+            <a href="/#considerations" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="list-checks" class="h-4 w-4" />
+              </span>
+              Our process
             </a>
             <a href="/how-to-buy-from-china" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
               <span class="shrink-0 text-accent-ink" data-nav-item-icon>

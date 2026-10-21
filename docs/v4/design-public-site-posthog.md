@@ -36,7 +36,8 @@ answers, custom materials, free-text notes, message preview, and outbound link.
 Keep the explicit `contact_whatsapp_clicked` event,
 which sends only the fixed contact properties and approved campaign labels,
 when either **Message on WhatsApp** or **Continue in WhatsApp** is clicked.
-Opening the helper is not a contact conversion. Never send project details
+Opening the helper or reviewing the message is not a contact conversion.
+Never send project details
 or the composed message URL to analytics.
 
 Explicit contact events carry `page_path`, approved campaign labels, and the fixed

@@ -55,7 +55,7 @@ test('real SDK sends visits, clicks and successful contact conversions without b
   await page.getByRole('checkbox', { name: 'Wood', exact: true }).check();
   await page.getByLabel('Other materials').fill('private-material-e2e');
   await page.getByLabel('Anything else?').fill('private-notes-e2e');
-  await page.getByText('Preview WhatsApp message', { exact: true }).click();
+  await page.getByRole('button', { name: 'Review message', exact: true }).click();
   await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();
   await page.getByRole('button', { name: 'Close message helper' }).click();
   await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
@@ -139,6 +139,7 @@ for (const source of ['facebook', 'linkedin', 'x', 'instagram']) {
     await page.getByRole('button', { name: 'Copy email', exact: true }).click();
     await page.getByRole('link', { name: 'Open email app', exact: true }).click();
     await page.getByRole('button', { name: 'Help me write a message', exact: true }).click();
+    await page.getByRole('button', { name: 'Review message', exact: true }).click();
     await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();
     await page.getByRole('button', { name: 'Close message helper' }).click();
     for (const name of ['contact_email_copied', 'contact_email_opened', 'contact_whatsapp_clicked']) {

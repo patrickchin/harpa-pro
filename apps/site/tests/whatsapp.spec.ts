@@ -18,6 +18,12 @@ test('offers independent direct WhatsApp and guided actions', async ({ page, con
   await expect(dialog.getByLabel('I need help with')).toBeFocused();
   await expect(dialog.getByLabel('What would you like to know?')).toBeVisible();
   await expect(dialog.getByLabel('What are you looking for?')).toBeHidden();
+  await expect(dialog.locator('[data-whatsapp-link]')).toBeHidden();
+  await dialog.getByRole('button', { name: 'Review message', exact: true }).click();
+  await expect(dialog.getByRole('heading', { name: 'Review your message' })).toBeFocused();
+  await expect(dialog.getByRole('link', { name: 'Continue in WhatsApp' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Edit details' }).click();
+  await expect(dialog.getByLabel('I need help with')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('button', { name: 'Help me write a message' })).toBeFocused();
@@ -32,10 +38,11 @@ test('tailors every topic and previews the exact message with custom materials a
   const destination = dialog.getByLabel('Where should it be delivered?');
   const otherMaterials = dialog.getByLabel('Other materials');
   const notes = dialog.locator('#whatsapp-notes');
-  const link = dialog.getByRole('link', { name: 'Continue in WhatsApp' });
+  const link = dialog.locator('[data-whatsapp-link]');
   const message = async () => new URL((await link.getAttribute('href'))!).searchParams.get('text')!;
   expect(await message()).toBe('Hi Harpa Pro, how can you help with interior procurement in China?');
   await topic.selectOption('source');
+  await expect(notes).toBeInViewport({ ratio: 1 });
   const productText = '20 desks & chairs <table> 家具 + 50%';
   await products.fill(productText);
   await destination.fill('São Paulo, Brazil');
@@ -43,8 +50,8 @@ test('tailors every topic and previews the exact message with custom materials a
   await dialog.getByRole('checkbox', { name: 'Wood', exact: true }).check();
   await dialog.getByRole('checkbox', { name: 'Metal', exact: true }).check();
   await otherMaterials.fill('Bamboo & rattan');
+  await expect(dialog.locator('[data-whatsapp-material-count]')).toHaveText('3 selected');
   await notes.fill('Can you check the finish? <script>test</script>');
-  await dialog.getByText('Preview WhatsApp message', { exact: true }).click();
   const preview = dialog.locator('[data-whatsapp-message]');
   const topics = [
     { value: 'source', prompt: 'What are you looking for?', subject: 'Products', note: 'Notes', intro: 'sourcing furniture' },
@@ -62,7 +69,6 @@ test('tailors every topic and previews the exact message with custom materials a
       await notes.fill(`Details for ${entry.value} <script>test</script>`);
     }
     expect(await message()).toContain(`${entry.note}: ${await notes.inputValue()}`);
-    expect(await preview.textContent()).toBe(await message());
     await expect(preview.locator('script, table')).toHaveCount(0);
     if (entry.value === 'understand') {
       await expect(products).toBeHidden();
@@ -80,6 +86,10 @@ test('tailors every topic and previews the exact message with custom materials a
       await expect(destination).toBeHidden();
       expect(text).not.toContain('Delivery:');
     }
+    await dialog.getByRole('button', { name: 'Review message', exact: true }).click();
+    await expect(preview).toBeVisible();
+    expect(await preview.textContent()).toBe(await message());
+    await dialog.getByRole('button', { name: 'Edit details' }).click();
   }
   await topic.selectOption('source');
   await expect(notes).toHaveValue('Can you check the finish? <script>test</script>');
@@ -129,13 +139,14 @@ test('guided brief stays bounded on a narrow mobile screen', async ({ page }) =>
   await dialog.getByRole('checkbox', { name: 'Stone / marble', exact: true }).check();
   await dialog.getByLabel('Other materials').fill('Ceramic');
   await dialog.getByLabel('What should we check?').fill('Please check for cracks.');
-  await dialog.getByText('Preview WhatsApp message', { exact: true }).click();
   const bounds = await dialog.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.y).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(375);
   expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(667);
-  await dialog.getByRole('link', { name: 'Continue in WhatsApp' }).scrollIntoViewIfNeeded();
+  await expect(dialog.getByRole('button', { name: 'Review message', exact: true })).toBeInViewport();
+  await dialog.getByRole('button', { name: 'Review message', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Close message helper' })).toBeInViewport();
   await expect(dialog.getByRole('link', { name: 'Continue in WhatsApp' })).toBeInViewport();
   expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 });

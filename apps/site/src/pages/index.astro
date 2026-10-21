@@ -429,56 +429,83 @@ const procurementQuestions = [
                     <Icon name="message-circle" class="h-4 w-4 shrink-0" />
                     Help me write a message
                   </button>
-                  <dialog class="whatsapp-dialog ph-no-autocapture" aria-labelledby="whatsapp-title" data-whatsapp-dialog>
-                    <div class="p-6">
-                      <div class="flex items-center justify-between gap-4">
-                        <h3 id="whatsapp-title" class="text-xl font-semibold text-ink">Tell us what you need</h3>
-                        <button type="button" data-whatsapp-close aria-label="Close message helper" class="inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink ring-focus">
-                          <Icon name="x" class="h-5 w-5" />
-                        </button>
+                  <dialog class="whatsapp-dialog ph-no-autocapture" aria-labelledby="whatsapp-title" aria-describedby="whatsapp-hint" data-whatsapp-dialog>
+                    <header class="whatsapp-header">
+                      <div>
+                        <p class="whatsapp-eyebrow"><Icon name="message-circle" class="h-4 w-4" /> WhatsApp enquiry</p>
+                        <h3 id="whatsapp-title">Tell us what you need</h3>
                       </div>
-                      <label for="whatsapp-topic" class="mt-3 block text-sm font-medium text-ink">I need help with</label>
-                      <select id="whatsapp-topic" autofocus class="whatsapp-field mt-2 ring-focus">
-                        {procurementQuestions.map(({ topic, label, message, prompt, placeholder, notesLabel, notesPlaceholder }) => (
-                          <option value={topic} data-message={message} data-prompt={prompt} data-placeholder={placeholder} data-notes-label={notesLabel} data-notes-placeholder={notesPlaceholder}>{label}</option>
-                        ))}
-                      </select>
-                      <p id="whatsapp-hint" class="mt-3 text-xs text-ink-soft">Share what you know. These details are optional.</p>
-                      <div data-whatsapp-subject-field class="mt-4" hidden>
-                        <label for="whatsapp-products" class="block text-sm font-medium text-ink" data-whatsapp-subject-label>What are you looking for?</label>
-                        <input id="whatsapp-products" type="text" maxlength="300" placeholder="e.g. 30 desks for a hotel" class="whatsapp-field mt-2 ring-focus" />
-                      </div>
-                      <details class="mt-3" data-whatsapp-materials hidden>
-                        <summary class="cursor-pointer py-3 text-sm font-medium text-ink ring-focus">Materials <span class="font-normal text-ink-soft">(optional)</span></summary>
-                        <fieldset>
-                        <legend class="sr-only">Materials</legend>
-                        <div class="mt-2 flex flex-wrap gap-2">
-                          {["Wood", "Stone / marble", "Metal", "Glass", "Fabric / leather"].map((material) => (
-                            <label class="whatsapp-material">
-                              <input type="checkbox" name="whatsapp-material" value={material} />
-                              {material}
-                            </label>
-                          ))}
+                      <button type="button" data-whatsapp-close aria-label="Close message helper" class="whatsapp-close">
+                        <Icon name="x" class="h-5 w-5" />
+                      </button>
+                    </header>
+                    <div class="whatsapp-scroll" data-whatsapp-scroll>
+                      <div class="whatsapp-form" data-whatsapp-brief>
+                        <p id="whatsapp-hint" class="whatsapp-intro">A few details are enough. Skip anything you’re unsure about.</p>
+                        <div class="whatsapp-group">
+                          <label for="whatsapp-topic">I need help with</label>
+                          <select id="whatsapp-topic" name="enquiry-topic" autofocus class="whatsapp-field">
+                            {procurementQuestions.map(({ topic, label, message, prompt, placeholder, notesLabel, notesPlaceholder }) => (
+                              <option value={topic} data-message={message} data-prompt={prompt} data-placeholder={placeholder} data-notes-label={notesLabel} data-notes-placeholder={notesPlaceholder}>{label}</option>
+                            ))}
+                          </select>
                         </div>
-                        <label for="whatsapp-other-materials" class="mt-3 block text-sm font-medium text-ink">Other materials</label>
-                        <input id="whatsapp-other-materials" type="text" maxlength="200" placeholder="e.g. rattan, acrylic, bamboo" class="whatsapp-field mt-2 ring-focus" />
-                        </fieldset>
-                      </details>
-                      <div data-whatsapp-destination-field class="mt-4" hidden>
-                        <label for="whatsapp-destination" class="block text-sm font-medium text-ink">Where should it be delivered?</label>
-                        <input id="whatsapp-destination" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field mt-2 ring-focus" />
+                        <div class="whatsapp-context-grid" data-whatsapp-context-fields hidden>
+                          <div data-whatsapp-subject-field class="whatsapp-group" hidden>
+                            <label for="whatsapp-products" data-whatsapp-subject-label>What are you looking for?</label>
+                            <input id="whatsapp-products" name="products" autocomplete="off" type="text" maxlength="300" placeholder="e.g. 30 desks for a hotel" class="whatsapp-field" />
+                          </div>
+                          <div data-whatsapp-destination-field class="whatsapp-group" hidden>
+                            <label for="whatsapp-destination">Where should it be delivered?</label>
+                            <input id="whatsapp-destination" name="destination" autocomplete="off" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field" />
+                          </div>
+                        </div>
+                        <details class="whatsapp-materials" data-whatsapp-materials hidden>
+                          <summary>
+                            <span>Materials <span class="whatsapp-optional" data-whatsapp-material-count>Optional</span></span>
+                            <Icon name="chevron-down" class="h-4 w-4" />
+                          </summary>
+                          <fieldset>
+                            <legend class="sr-only">Materials</legend>
+                            <div class="whatsapp-material-grid">
+                              {["Wood", "Stone / marble", "Metal", "Glass", "Fabric / leather"].map((material) => (
+                                <label class="whatsapp-material">
+                                  <input type="checkbox" name="whatsapp-material" value={material} />
+                                  {material}
+                                </label>
+                              ))}
+                            </div>
+                            <div class="whatsapp-group whatsapp-other-materials">
+                              <label for="whatsapp-other-materials">Other materials</label>
+                              <input id="whatsapp-other-materials" name="other-materials" autocomplete="off" type="text" maxlength="200" placeholder="e.g. rattan, acrylic, bamboo" class="whatsapp-field" />
+                            </div>
+                          </fieldset>
+                        </details>
+                        <div class="whatsapp-group">
+                          <label for="whatsapp-notes" data-whatsapp-notes-label>What would you like to know?</label>
+                          <textarea id="whatsapp-notes" name="notes" autocomplete="off" rows="3" maxlength="1500" class="whatsapp-field"></textarea>
+                        </div>
                       </div>
-                      <label for="whatsapp-notes" class="mt-4 block text-sm font-medium text-ink" data-whatsapp-notes-label>What would you like to know?</label>
-                      <textarea id="whatsapp-notes" rows="2" maxlength="1500" class="whatsapp-field mt-2 resize-y ring-focus"></textarea>
-                      <details class="mt-3" data-whatsapp-preview>
-                        <summary class="cursor-pointer py-3 text-sm font-medium text-ink ring-focus">Preview WhatsApp message</summary>
-                        <p class="whitespace-pre-line break-words border-l-2 border-hairline pl-3 text-sm leading-relaxed text-ink-soft" data-whatsapp-message></p>
-                      </details>
-                      <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="whatsapp-continue mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm px-4 text-sm font-medium ring-focus">
-                        Continue in WhatsApp <Icon name="external-link" class="h-4 w-4" />
-                      </a>
-                      <p class="mt-2 text-center text-xs text-ink-soft">Review and send in WhatsApp.</p>
+                      <div class="whatsapp-review" data-whatsapp-review hidden>
+                        <h4 tabindex="-1" data-whatsapp-review-heading>Review your message</h4>
+                        <p>You can edit it again in WhatsApp before sending.</p>
+                        <div class="whatsapp-message" data-whatsapp-message></div>
+                      </div>
                     </div>
+                    <footer class="whatsapp-footer">
+                      <button type="button" class="whatsapp-primary" data-whatsapp-review-button>
+                        Review message <Icon name="arrow-right" class="h-4 w-4" />
+                      </button>
+                      <div class="whatsapp-review-actions" data-whatsapp-review-actions hidden>
+                        <button type="button" class="whatsapp-back" data-whatsapp-edit>
+                          <Icon name="arrow-left" class="h-4 w-4" /> Edit details
+                        </button>
+                        <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="whatsapp-primary">
+                          Continue in WhatsApp <Icon name="external-link" class="h-4 w-4" />
+                        </a>
+                      </div>
+                      <p>Review and send in WhatsApp.</p>
+                    </footer>
                   </dialog>
                 </dd>
               </div>
@@ -545,6 +572,17 @@ const procurementQuestions = [
       let trigger: HTMLElement | null = null;
       let activeTopic = topic.value;
       const topicNotes = new Map<string, string>();
+      const reviewButton = dialog.querySelector<HTMLButtonElement>("[data-whatsapp-review-button]")!;
+      const showReview = (review: boolean) => {
+        dialog.querySelector<HTMLElement>("[data-whatsapp-brief]")!.hidden = review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-review]")!.hidden = !review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-review-actions]")!.hidden = !review;
+        reviewButton.hidden = review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-scroll]")!.scrollTop = 0;
+        (review ? dialog.querySelector<HTMLElement>("[data-whatsapp-review-heading]")! : topic).focus({ preventScroll: true });
+      };
+      reviewButton.addEventListener("click", () => showReview(true));
+      dialog.querySelector("[data-whatsapp-edit]")?.addEventListener("click", () => showReview(false));
       const updateLink = () => {
         if (topic.value !== activeTopic) {
           topicNotes.set(activeTopic, notes.value);
@@ -554,6 +592,7 @@ const procurementQuestions = [
         const selected = topic.selectedOptions[0]!;
         const isQuestion = topic.value === "understand";
         const isQuality = topic.value === "quality";
+        dialog.querySelector<HTMLElement>("[data-whatsapp-context-fields]")!.hidden = isQuestion;
         dialog.querySelector<HTMLElement>("[data-whatsapp-subject-field]")!.hidden = isQuestion;
         dialog.querySelector<HTMLElement>("[data-whatsapp-materials]")!.hidden = isQuestion;
         dialog.querySelector<HTMLElement>("[data-whatsapp-destination-field]")!.hidden = isQuestion || isQuality;
@@ -563,6 +602,7 @@ const procurementQuestions = [
         notes.placeholder = selected.dataset.notesPlaceholder!;
         const materials = Array.from(dialog.querySelectorAll<HTMLInputElement>('input[name="whatsapp-material"]:checked'), (input) => input.value);
         if (otherMaterials.value.trim()) materials.push(otherMaterials.value.trim());
+        dialog.querySelector<HTMLElement>("[data-whatsapp-material-count]")!.textContent = materials.length ? `${materials.length} selected` : "Optional";
         const message = [
           selected.dataset.message!,
           !isQuestion && products.value.trim() && `${topic.value === "brief" ? "Project" : isQuality ? "Goods to check" : "Products"}: ${products.value.trim()}`,
@@ -585,6 +625,7 @@ const procurementQuestions = [
           if (link.dataset.whatsappTopic) topic.value = link.dataset.whatsappTopic;
           updateLink();
           dialog.showModal();
+          showReview(false);
         });
       });
       dialog.querySelector("[data-whatsapp-close]")?.addEventListener("click", () => dialog.close());

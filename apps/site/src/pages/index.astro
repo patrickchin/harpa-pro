@@ -72,6 +72,10 @@ const procurementQuestions = [
     topic: "understand",
     label: "How it works",
     message: "Hi Harpa Pro, how can you help with interior procurement in China?",
+    prompt: "",
+    placeholder: "",
+    notesLabel: "What would you like to know?",
+    notesPlaceholder: "Ask about our process, fees, factory visits, or anything else.",
     question: "What does an interior procurement agent in China do?",
     answer: "Harpa Pro coordinates design specifications, factory selection, technical approvals, production quality checks, packing, and shipping records. We keep drawings, product data, approvals, and procurement documents together for the project.",
   },
@@ -79,6 +83,10 @@ const procurementQuestions = [
     topic: "source",
     label: "Find products",
     message: "Hi Harpa Pro, I'd like help sourcing furniture or interior products from China.",
+    prompt: "What are you looking for?",
+    placeholder: "e.g. 30 desks for a hotel",
+    notesLabel: "Anything else?",
+    notesPlaceholder: "Budget, timing, dimensions, a reference link, or a question.",
     question: "What furniture and interior products can Harpa Pro help source?",
     answer: "Our selected factory partners cover custom cabinetry and joinery, hospitality furniture, office desks and seating, steel storage, and bathroom cabinets and shower systems. We match each order with the factory that meets its design specifications.",
   },
@@ -86,6 +94,10 @@ const procurementQuestions = [
     topic: "quality",
     label: "Quality checks",
     message: "Hi Harpa Pro, I'd like help checking materials or production quality for my order.",
+    prompt: "What needs checking?",
+    placeholder: "e.g. 20 marble tabletops",
+    notesLabel: "What should we check?",
+    notesPlaceholder: "Finish, dimensions, test reports, concerns, or the factory location.",
     question: "How are materials and production quality checked?",
     answer: "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements. At agreed points during production, we inspect materials, workmanship, dimensions, finishes, and finished goods. Packing, labels, quantities, and freight documents are checked against the order.",
   },
@@ -93,6 +105,10 @@ const procurementQuestions = [
     topic: "brief",
     label: "Start a project",
     message: "Hi Harpa Pro, I'd like to start an interior procurement project. What should I send you?",
+    prompt: "What is the project?",
+    placeholder: "e.g. furnishing a 30-room hotel",
+    notesLabel: "Anything else?",
+    notesPlaceholder: "Scope, timing, budget, approval requirements, or a question.",
     question: "What should I send to start a procurement project?",
     answer: "Send the project brief, drawings or product references, dimensions, finishes, quantities, and approval requirements. Our procurement team coordinates technical approvals and keeps the project record complete.",
   },
@@ -423,15 +439,19 @@ const procurementQuestions = [
                       </div>
                       <label for="whatsapp-topic" class="mt-3 block text-sm font-medium text-ink">I need help with</label>
                       <select id="whatsapp-topic" autofocus class="whatsapp-field mt-2 ring-focus">
-                        {procurementQuestions.map(({ topic, label, message }) => (
-                          <option value={topic} data-message={message}>{label}</option>
+                        {procurementQuestions.map(({ topic, label, message, prompt, placeholder, notesLabel, notesPlaceholder }) => (
+                          <option value={topic} data-message={message} data-prompt={prompt} data-placeholder={placeholder} data-notes-label={notesLabel} data-notes-placeholder={notesPlaceholder}>{label}</option>
                         ))}
                       </select>
                       <p id="whatsapp-hint" class="mt-3 text-xs text-ink-soft">Share what you know. These details are optional.</p>
-                      <label for="whatsapp-products" class="mt-4 block text-sm font-medium text-ink">What are you looking for?</label>
-                      <input id="whatsapp-products" type="text" maxlength="300" placeholder="e.g. 30 desks for a hotel" class="whatsapp-field mt-2 ring-focus" />
-                      <fieldset class="mt-4">
-                        <legend class="text-sm font-medium text-ink">Any preferred materials?</legend>
+                      <div data-whatsapp-subject-field class="mt-4" hidden>
+                        <label for="whatsapp-products" class="block text-sm font-medium text-ink" data-whatsapp-subject-label>What are you looking for?</label>
+                        <input id="whatsapp-products" type="text" maxlength="300" placeholder="e.g. 30 desks for a hotel" class="whatsapp-field mt-2 ring-focus" />
+                      </div>
+                      <details class="mt-3" data-whatsapp-materials hidden>
+                        <summary class="cursor-pointer py-3 text-sm font-medium text-ink ring-focus">Materials <span class="font-normal text-ink-soft">(optional)</span></summary>
+                        <fieldset>
+                        <legend class="sr-only">Materials</legend>
                         <div class="mt-2 flex flex-wrap gap-2">
                           {["Wood", "Stone / marble", "Metal", "Glass", "Fabric / leather"].map((material) => (
                             <label class="whatsapp-material">
@@ -440,9 +460,20 @@ const procurementQuestions = [
                             </label>
                           ))}
                         </div>
-                      </fieldset>
-                      <label for="whatsapp-destination" class="mt-4 block text-sm font-medium text-ink">Where should it be delivered?</label>
-                      <input id="whatsapp-destination" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field mt-2 ring-focus" />
+                        <label for="whatsapp-other-materials" class="mt-3 block text-sm font-medium text-ink">Other materials</label>
+                        <input id="whatsapp-other-materials" type="text" maxlength="200" placeholder="e.g. rattan, acrylic, bamboo" class="whatsapp-field mt-2 ring-focus" />
+                        </fieldset>
+                      </details>
+                      <div data-whatsapp-destination-field class="mt-4" hidden>
+                        <label for="whatsapp-destination" class="block text-sm font-medium text-ink">Where should it be delivered?</label>
+                        <input id="whatsapp-destination" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field mt-2 ring-focus" />
+                      </div>
+                      <label for="whatsapp-notes" class="mt-4 block text-sm font-medium text-ink" data-whatsapp-notes-label>What would you like to know?</label>
+                      <textarea id="whatsapp-notes" rows="2" maxlength="1500" class="whatsapp-field mt-2 resize-y ring-focus"></textarea>
+                      <details class="mt-3" data-whatsapp-preview>
+                        <summary class="cursor-pointer py-3 text-sm font-medium text-ink ring-focus">Preview WhatsApp message</summary>
+                        <p class="whitespace-pre-line break-words border-l-2 border-hairline pl-3 text-sm leading-relaxed text-ink-soft" data-whatsapp-message></p>
+                      </details>
                       <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="whatsapp-continue mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm px-4 text-sm font-medium ring-focus">
                         Continue in WhatsApp <Icon name="external-link" class="h-4 w-4" />
                       </a>
@@ -506,18 +537,40 @@ const procurementQuestions = [
     const topic = document.querySelector<HTMLSelectElement>("#whatsapp-topic");
     const products = document.querySelector<HTMLInputElement>("#whatsapp-products");
     const destination = document.querySelector<HTMLInputElement>("#whatsapp-destination");
+    const otherMaterials = document.querySelector<HTMLInputElement>("#whatsapp-other-materials");
+    const notes = document.querySelector<HTMLTextAreaElement>("#whatsapp-notes");
     const whatsappLink = document.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
 
-    if (dialog?.showModal && topic && products && destination && whatsappLink) {
+    if (dialog?.showModal && topic && products && destination && otherMaterials && notes && whatsappLink) {
       let trigger: HTMLElement | null = null;
+      let activeTopic = topic.value;
+      const topicNotes = new Map<string, string>();
       const updateLink = () => {
+        if (topic.value !== activeTopic) {
+          topicNotes.set(activeTopic, notes.value);
+          notes.value = topicNotes.get(topic.value) ?? "";
+          activeTopic = topic.value;
+        }
+        const selected = topic.selectedOptions[0]!;
+        const isQuestion = topic.value === "understand";
+        const isQuality = topic.value === "quality";
+        dialog.querySelector<HTMLElement>("[data-whatsapp-subject-field]")!.hidden = isQuestion;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-materials]")!.hidden = isQuestion;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-destination-field]")!.hidden = isQuestion || isQuality;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-subject-label]")!.textContent = selected.dataset.prompt!;
+        products.placeholder = selected.dataset.placeholder!;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-notes-label]")!.textContent = selected.dataset.notesLabel!;
+        notes.placeholder = selected.dataset.notesPlaceholder!;
         const materials = Array.from(dialog.querySelectorAll<HTMLInputElement>('input[name="whatsapp-material"]:checked'), (input) => input.value);
+        if (otherMaterials.value.trim()) materials.push(otherMaterials.value.trim());
         const message = [
-          topic.selectedOptions[0]!.dataset.message!,
-          products.value.trim() && `Products: ${products.value.trim()}`,
-          materials.length && `Preferred materials: ${materials.join(", ")}`,
-          destination.value.trim() && `Delivery: ${destination.value.trim()}`,
+          selected.dataset.message!,
+          !isQuestion && products.value.trim() && `${topic.value === "brief" ? "Project" : isQuality ? "Goods to check" : "Products"}: ${products.value.trim()}`,
+          !isQuestion && materials.length && `${isQuality ? "Materials involved" : "Preferred materials"}: ${materials.join(", ")}`,
+          !isQuestion && !isQuality && destination.value.trim() && `Delivery: ${destination.value.trim()}`,
+          notes.value.trim() && `${isQuestion ? "Question" : isQuality ? "Checks requested" : "Notes"}: ${notes.value.trim()}`,
         ].filter(Boolean).join("\n\n");
+        dialog.querySelector<HTMLElement>("[data-whatsapp-message]")!.textContent = message;
         const url = new URL(whatsappLink.href);
         url.searchParams.set("text", message);
         whatsappLink.href = url.href;

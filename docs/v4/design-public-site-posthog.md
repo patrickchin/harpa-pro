@@ -32,7 +32,8 @@ The five approved campaign labels described below are separate event properties.
 
 The [WhatsApp message composer](design-site-whatsapp-first-message.md) is
 excluded from autocapture, including its product, material, and delivery
-answers and outbound link. Keep the explicit `contact_whatsapp_clicked` event,
+answers, custom materials, free-text notes, message preview, and outbound link.
+Keep the explicit `contact_whatsapp_clicked` event,
 which sends only the fixed contact properties and approved campaign labels,
 when either **Message on WhatsApp** or **Continue in WhatsApp** is clicked.
 Opening the helper is not a contact conversion. Never send project details

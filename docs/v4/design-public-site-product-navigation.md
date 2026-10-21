@@ -71,8 +71,9 @@ Haruna as the procurement contact and gives four actions:
 4. **Help me write a message** opens a compact guided brief.
 
 The [guided first-message flow](design-site-whatsapp-first-message.md) adds
-a light dialog with a topic chooser and optional product, material, and
-delivery prompts. **Message on WhatsApp** always opens WhatsApp directly;
+a light dialog with topic-specific prompts, optional materials (including
+custom materials), free-text questions/notes, and a collapsed exact-message
+preview. **Message on WhatsApp** always opens WhatsApp directly;
 **Continue in WhatsApp** carries the generated brief in the URL's `text`
 query parameter. The helper button is hidden without JavaScript.
 

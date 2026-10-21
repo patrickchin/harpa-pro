@@ -15,10 +15,21 @@ the native helper dialog. Each FAQ answer can open the same dialog with its
 topic selected. Use one short **Ask us** link under each answer.
 
 Use a white dialog, charcoal text, and a green WhatsApp action. Keep the
-existing page palette. Use the topic selector followed by three optional
-prompts: products and rough quantity in one field, a multi-select material
-picker, and delivery city/country. Materials are wood, stone/marble, metal,
-glass, and fabric/leather. Use native labelled checkboxes and inputs.
+existing page palette. All details are optional. Tailor the questions:
+
+| Topic | Prompts |
+| --- | --- |
+| How it works | A free-text question |
+| Find products | Products/quantity, optional materials, delivery, general notes |
+| Quality checks | Goods, optional materials, checks or concerns in free text |
+| Start a project | Project, optional materials, delivery, general notes |
+
+Keep materials in a native disclosure to keep the initial form short. Its
+multi-select picker includes wood, stone/marble, metal, glass, and fabric/leather,
+plus an always-available **Other materials** input inside the disclosure.
+Use native labelled checkboxes, inputs, and a free-text notes area. Preserve
+product, material, and delivery answers when changing topics; keep free-text
+questions/notes separately for each topic. Omit hidden fields from the message.
 
 This takes inspiration from YoumanChina's focused product/quantity questions
 and service-specific pickers on its
@@ -28,7 +39,8 @@ Keep this first conversation shorter: no account, upload, budget, or full
 quotation form. Visitors can skip any detail they do not know yet.
 
 Build the WhatsApp message from the topic and only the details supplied.
-Avoid a separate editable message field or expanded preview. Preserve all
+Offer a collapsed **Preview WhatsApp message** disclosure that shows exactly
+the text encoded in the WhatsApp URL, rendered safely as plain text. Preserve all
 answers when changing topics or closing and reopening the helper. Escape,
 the close button, and backdrop clicks close it and restore focus.
 

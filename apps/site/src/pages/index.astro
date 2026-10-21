@@ -70,18 +70,46 @@ const structuredData = [{
 }];
 const procurementQuestions = [
   {
+    topic: "understand",
+    label: "How it works",
+    message: "Hi Harpa Pro, how can you help with interior procurement in China?",
+    prompt: "",
+    placeholder: "",
+    notesLabel: "What would you like to know?",
+    notesPlaceholder: "Ask about our process, fees, factory visits, or anything else.",
     question: "What does an interior procurement agent in China do?",
     answer: "Harpa Pro coordinates design specifications, factory selection, technical approvals, production quality checks, packing, and shipping records. We keep drawings, product data, approvals, and procurement documents together for the project.",
   },
   {
+    topic: "source",
+    label: "Find products",
+    message: "Hi Harpa Pro, I'd like help sourcing furniture or interior products from China.",
+    prompt: "What are you looking for?",
+    placeholder: "e.g. desks for a hotel",
+    notesLabel: "Anything else?",
+    notesPlaceholder: "Budget, timing, dimensions, a reference link, or a question.",
     question: "What furniture and interior products can Harpa Pro help source?",
     answer: "Our selected factory partners cover custom cabinetry and joinery, hospitality furniture, office desks and seating, steel storage, and bathroom cabinets and shower systems. We match each order with the factory that meets its design specifications.",
   },
   {
+    topic: "quality",
+    label: "Quality checks",
+    message: "Hi Harpa Pro, I'd like help checking materials or production quality for my order.",
+    prompt: "What needs checking?",
+    placeholder: "e.g. marble tabletops",
+    notesLabel: "What should we check?",
+    notesPlaceholder: "Finish, dimensions, test reports, concerns, or the factory location.",
     question: "How are materials and production quality checked?",
     answer: "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements. At agreed points during production, we inspect materials, workmanship, dimensions, finishes, and finished goods. Packing, labels, quantities, and freight documents are checked against the order.",
   },
   {
+    topic: "brief",
+    label: "Start a project",
+    message: "Hi Harpa Pro, I'd like to start an interior procurement project. What should I send you?",
+    prompt: "What is the project?",
+    placeholder: "e.g. furnishing a 30-room hotel",
+    notesLabel: "Anything else?",
+    notesPlaceholder: "Scope, timing, budget, approval requirements, or a question.",
     question: "What should I send to start a procurement project?",
     answer: "Send the project brief, drawings or product references, dimensions, finishes, quantities, and approval requirements. Our procurement team coordinates technical approvals and keeps the project record complete.",
   },
@@ -345,10 +373,13 @@ const procurementQuestions = [
             Procurement Questions
           </h2>
           <div class="mt-8 grid gap-8 md:grid-cols-2">
-            {procurementQuestions.map(({ question, answer }) => (
+            {procurementQuestions.map(({ question, answer, topic }) => (
               <article class="max-w-xl">
                 <h3 class="text-lg font-semibold leading-snug text-ink">{question}</h3>
                 <p class="mt-3 text-base leading-relaxed text-ink-soft">{answer}</p>
+                <a href="#whatsapp-message" data-whatsapp-topic={topic} aria-label={`Ask us: ${question}`} class="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink underline underline-offset-4 ring-focus">
+                  Ask us <Icon name="arrow-up-right" class="h-4 w-4" />
+                </a>
               </article>
             ))}
           </div>
@@ -368,7 +399,91 @@ const procurementQuestions = [
               </p>
             </div>
 
-            <dl class="grid gap-5 sm:grid-cols-2">
+            <dl class="grid min-w-0 gap-5 sm:grid-cols-2">
+              <div id="whatsapp-message" class="scroll-mt-24 rounded-xl border border-hairline bg-card p-6 shadow-sm ph-no-autocapture">
+                <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Icon name="message-circle" class="h-4 w-4 text-accent-ink" />
+                  WhatsApp
+                </dt>
+                <dd class="mt-4">
+                  <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
+                  <a
+                    href="https://wa.me/8619372837269"
+                    data-contact-event="contact_whatsapp_clicked"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-card ring-focus"
+                  >
+                    Message on WhatsApp
+                    <Icon name="external-link" class="h-4 w-4" />
+                  </a>
+                  <button type="button" data-whatsapp-open hidden class="mt-3 min-h-11 items-center gap-2 rounded-sm border border-primary/30 px-4 text-left text-sm font-medium text-primary hover:bg-secondary ring-focus">
+                    <Icon name="message-circle" class="h-4 w-4 shrink-0" />
+                    Help me write a message
+                  </button>
+                  <dialog class="whatsapp-dialog ph-no-autocapture" aria-labelledby="whatsapp-title" aria-describedby="whatsapp-hint" data-whatsapp-dialog>
+                    <header class="whatsapp-header">
+                      <div>
+                        <p class="whatsapp-eyebrow"><Icon name="message-circle" class="h-4 w-4" /> WhatsApp enquiry</p>
+                        <h3 id="whatsapp-title">Tell us what you need</h3>
+                      </div>
+                      <button type="button" data-whatsapp-close aria-label="Close message helper" class="whatsapp-close">
+                        <Icon name="x" class="h-5 w-5" />
+                      </button>
+                    </header>
+                    <div class="whatsapp-scroll" data-whatsapp-scroll>
+                      <div class="whatsapp-form" data-whatsapp-brief>
+                        <p id="whatsapp-hint" class="whatsapp-intro">A few details are enough. Skip anything you’re unsure about.</p>
+                        <div class="whatsapp-group">
+                          <label for="whatsapp-topic">I need help with</label>
+                          <select id="whatsapp-topic" name="enquiry-topic" autofocus class="whatsapp-field">
+                            {procurementQuestions.map(({ topic, label, message, prompt, placeholder, notesLabel, notesPlaceholder }) => (
+                              <option value={topic} data-message={message} data-prompt={prompt} data-placeholder={placeholder} data-notes-label={notesLabel} data-notes-placeholder={notesPlaceholder}>{label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div class="whatsapp-context-grid" data-whatsapp-context-fields hidden>
+                          <div data-whatsapp-subject-field class="whatsapp-group" hidden>
+                            <label for="whatsapp-products" data-whatsapp-subject-label>What are you looking for?</label>
+                            <input id="whatsapp-products" name="products" autocomplete="off" type="text" maxlength="300" placeholder="e.g. desks for a hotel" class="whatsapp-field" />
+                          </div>
+                          <div class="whatsapp-group">
+                            <label for="whatsapp-quantity">Quantity</label>
+                            <input id="whatsapp-quantity" name="quantity" autocomplete="off" type="text" maxlength="100" placeholder="e.g. 30 pieces" class="whatsapp-field" />
+                          </div>
+                          <div data-whatsapp-destination-field class="whatsapp-group" hidden>
+                            <label for="whatsapp-destination">Where should it be delivered?</label>
+                            <input id="whatsapp-destination" name="destination" autocomplete="off" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field" />
+                          </div>
+                        </div>
+                        <div class="whatsapp-group">
+                          <label for="whatsapp-notes" data-whatsapp-notes-label>What would you like to know?</label>
+                          <textarea id="whatsapp-notes" name="notes" autocomplete="off" rows="2" maxlength="1500" class="whatsapp-field"></textarea>
+                        </div>
+                      </div>
+                      <div class="whatsapp-review" data-whatsapp-review hidden>
+                        <h4 tabindex="-1" data-whatsapp-review-heading>Review your message</h4>
+                        <p>You can edit it again in WhatsApp before sending.</p>
+                        <div class="whatsapp-message" data-whatsapp-message></div>
+                      </div>
+                    </div>
+                    <footer class="whatsapp-footer">
+                      <button type="button" class="whatsapp-primary" data-whatsapp-review-button>
+                        Review message <Icon name="arrow-right" class="h-4 w-4" />
+                      </button>
+                      <div class="whatsapp-review-actions" data-whatsapp-review-actions hidden>
+                        <button type="button" class="whatsapp-back" data-whatsapp-edit>
+                          <Icon name="arrow-left" class="h-4 w-4" /> Edit details
+                        </button>
+                        <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="whatsapp-primary">
+                          Continue in WhatsApp <Icon name="external-link" class="h-4 w-4" />
+                        </a>
+                      </div>
+                      <p>Review and send in WhatsApp.</p>
+                    </footer>
+                  </dialog>
+                </dd>
+              </div>
               <div class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
                 <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
                   <Icon name="mail" class="h-4 w-4 text-accent-ink" />
@@ -408,25 +523,6 @@ const procurementQuestions = [
                 </dd>
               </div>
 
-              <div class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
-                <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <Icon name="message-circle" class="h-4 w-4 text-accent-ink" />
-                  WhatsApp
-                </dt>
-                <dd class="mt-4">
-                  <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
-                  <a
-                    href="https://wa.me/8619372837269"
-                    data-contact-event="contact_whatsapp_clicked"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="mt-5 inline-flex h-10 items-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-card ring-focus"
-                  >
-                    Message on WhatsApp
-                    <Icon name="external-link" class="h-4 w-4" />
-                  </a>
-                </dd>
-              </div>
             </dl>
           </div>
         </Container>
@@ -438,6 +534,81 @@ const procurementQuestions = [
 
   <script>
     import { captureContact } from "../lib/analytics";
+
+    const dialog = document.querySelector<HTMLDialogElement>("[data-whatsapp-dialog]");
+    const topic = document.querySelector<HTMLSelectElement>("#whatsapp-topic");
+    const products = document.querySelector<HTMLInputElement>("#whatsapp-products");
+    const destination = document.querySelector<HTMLInputElement>("#whatsapp-destination");
+    const quantity = document.querySelector<HTMLInputElement>("#whatsapp-quantity");
+    const notes = document.querySelector<HTMLTextAreaElement>("#whatsapp-notes");
+    const whatsappLink = document.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
+
+    if (dialog?.showModal && topic && products && destination && quantity && notes && whatsappLink) {
+      let trigger: HTMLElement | null = null;
+      let activeTopic = topic.value;
+      const topicNotes = new Map<string, string>();
+      const reviewButton = dialog.querySelector<HTMLButtonElement>("[data-whatsapp-review-button]")!;
+      const showReview = (review: boolean) => {
+        dialog.querySelector<HTMLElement>("[data-whatsapp-brief]")!.hidden = review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-review]")!.hidden = !review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-review-actions]")!.hidden = !review;
+        reviewButton.hidden = review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-scroll]")!.scrollTop = 0;
+        (review ? dialog.querySelector<HTMLElement>("[data-whatsapp-review-heading]")! : topic).focus({ preventScroll: true });
+      };
+      reviewButton.addEventListener("click", () => showReview(true));
+      dialog.querySelector("[data-whatsapp-edit]")?.addEventListener("click", () => showReview(false));
+      const updateLink = () => {
+        if (topic.value !== activeTopic) {
+          topicNotes.set(activeTopic, notes.value);
+          notes.value = topicNotes.get(topic.value) ?? "";
+          activeTopic = topic.value;
+        }
+        const selected = topic.selectedOptions[0]!;
+        const isQuestion = topic.value === "understand";
+        const isQuality = topic.value === "quality";
+        dialog.querySelector<HTMLElement>("[data-whatsapp-context-fields]")!.hidden = isQuestion;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-subject-field]")!.hidden = isQuestion;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-destination-field]")!.hidden = isQuestion || isQuality;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-subject-label]")!.textContent = selected.dataset.prompt!;
+        products.placeholder = selected.dataset.placeholder!;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-notes-label]")!.textContent = selected.dataset.notesLabel!;
+        notes.placeholder = selected.dataset.notesPlaceholder!;
+        const message = [
+          selected.dataset.message!,
+          !isQuestion && products.value.trim() && `${topic.value === "brief" ? "Project" : isQuality ? "Goods to check" : "Products"}: ${products.value.trim()}`,
+          !isQuestion && quantity.value.trim() && `Quantity: ${quantity.value.trim()}`,
+          !isQuestion && !isQuality && destination.value.trim() && `Delivery: ${destination.value.trim()}`,
+          notes.value.trim() && `${isQuestion ? "Question" : isQuality ? "Checks requested" : "Notes"}: ${notes.value.trim()}`,
+        ].filter(Boolean).join("\n\n");
+        dialog.querySelector<HTMLElement>("[data-whatsapp-message]")!.textContent = message;
+        const url = new URL(whatsappLink.href);
+        url.searchParams.set("text", message);
+        whatsappLink.href = url.href;
+      };
+      dialog.addEventListener("input", updateLink);
+      dialog.addEventListener("change", updateLink);
+      document.querySelectorAll<HTMLElement>("[data-whatsapp-open], [data-whatsapp-topic]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          trigger = link;
+          if (link.dataset.whatsappTopic) topic.value = link.dataset.whatsappTopic;
+          updateLink();
+          dialog.showModal();
+          showReview(false);
+        });
+      });
+      dialog.querySelector("[data-whatsapp-close]")?.addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+      dialog.addEventListener("close", () => trigger?.focus());
+      const helperButton = document.querySelector<HTMLButtonElement>("[data-whatsapp-open]");
+      if (helperButton) {
+        helperButton.hidden = false;
+        helperButton.classList.add("inline-flex");
+      }
+      updateLink();
+    }
 
     const copyEmailButton = document.querySelector<HTMLButtonElement>("[data-copy-email]");
     const copyEmailStatus = document.querySelector<HTMLElement>("[data-copy-email-status]");

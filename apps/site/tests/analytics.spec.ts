@@ -46,13 +46,17 @@ test('real SDK sends visits, clicks and successful contact conversions without b
   await page.getByRole('button', { name: 'Copy email', exact: true }).click();
   await expect(page.locator('[data-copy-email-status]')).toHaveText('Email copied');
   await page.getByRole('link', { name: 'Open email app', exact: true }).click();
-  await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
+  await page.getByRole('button', { name: 'Help me write a message', exact: true }).click();
   expect(events.filter((event) => event.event === 'contact_whatsapp_clicked')).toHaveLength(0);
   await page.getByLabel('I need help with').selectOption('source');
-  await page.getByLabel('Your message').fill('private-project-e2e: 40 desks for Lagos, contact buyer@example.com');
+  await page.getByLabel('What are you looking for?').fill('private-project-e2e: 40 desks for Lagos, contact buyer@example.com');
+  await page.getByLabel('Where should it be delivered?').fill('private-destination-e2e');
+  await page.getByRole('checkbox', { name: 'Wood', exact: true }).check();
   await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();
+  await page.getByRole('button', { name: 'Close message helper' }).click();
+  await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
   for (const name of ['contact_email_copied', 'contact_email_opened', 'contact_whatsapp_clicked']) {
-    await expect.poll(() => events.filter((event) => event.event === name).length).toBe(1);
+    await expect.poll(() => events.filter((event) => event.event === name).length).toBe(name === 'contact_whatsapp_clicked' ? 2 : 1);
     expect(events.find((event) => event.event === name)?.properties).toMatchObject({
       page_path: '/', location: 'home_contact',
     });
@@ -130,7 +134,7 @@ for (const source of ['facebook', 'linkedin', 'x', 'instagram']) {
     await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
     await page.getByRole('button', { name: 'Copy email', exact: true }).click();
     await page.getByRole('link', { name: 'Open email app', exact: true }).click();
-    await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
+    await page.getByRole('button', { name: 'Help me write a message', exact: true }).click();
     await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();
     await page.getByRole('button', { name: 'Close message helper' }).click();
     for (const name of ['contact_email_copied', 'contact_email_opened', 'contact_whatsapp_clicked']) {

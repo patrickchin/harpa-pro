@@ -61,18 +61,20 @@ links.
 ## Contact section
 
 Add a static contact section at `/#contact`. The section identifies
-Haruna as the procurement contact and gives three actions:
+Haruna as the procurement contact and gives four actions:
 
 1. **Copy email** copies `haruna@harpapro.com` and confirms the action on the
    page.
 2. **Open email app** uses `mailto:haruna@harpapro.com` as a secondary action.
 3. **Message on WhatsApp** opens `https://wa.me/8619372837269` in a new tab and
    displays `+86 193 7283 7269` beside the action.
+4. **Help me write a message** opens a compact guided brief.
 
 The [guided first-message flow](design-site-whatsapp-first-message.md) adds
-a compact dialog with a topic chooser and editable message before this action.
-With JavaScript, **Message on WhatsApp** opens the helper; **Continue in
-WhatsApp** carries the draft in the URL's `text` query parameter.
+a light dialog with a topic chooser and optional product, material, and
+delivery prompts. **Message on WhatsApp** always opens WhatsApp directly;
+**Continue in WhatsApp** carries the generated brief in the URL's `text`
+query parameter. The helper button is hidden without JavaScript.
 
 The WhatsApp URL must include every digit of the displayed number, with spaces
 and the leading plus removed. Browser coverage compares these two values so a

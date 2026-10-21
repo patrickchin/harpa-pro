@@ -401,7 +401,7 @@ const procurementQuestions = [
                   <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
                   <a
                     href="https://wa.me/8619372837269"
-                    data-whatsapp-open
+                    data-contact-event="contact_whatsapp_clicked"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-card ring-focus"
@@ -409,24 +409,41 @@ const procurementQuestions = [
                     Message on WhatsApp
                     <Icon name="external-link" class="h-4 w-4" />
                   </a>
+                  <button type="button" data-whatsapp-open hidden class="mt-3 min-h-11 items-center gap-2 rounded-sm border border-primary/30 px-4 text-left text-sm font-medium text-primary hover:bg-secondary ring-focus">
+                    <Icon name="message-circle" class="h-4 w-4 shrink-0" />
+                    Help me write a message
+                  </button>
                   <dialog class="whatsapp-dialog ph-no-autocapture" aria-labelledby="whatsapp-title" data-whatsapp-dialog>
                     <div class="p-6">
                       <div class="flex items-center justify-between gap-4">
-                        <h3 id="whatsapp-title" class="text-xl font-semibold text-ink">Start a conversation</h3>
+                        <h3 id="whatsapp-title" class="text-xl font-semibold text-ink">Tell us what you need</h3>
                         <button type="button" data-whatsapp-close aria-label="Close message helper" class="inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink ring-focus">
                           <Icon name="x" class="h-5 w-5" />
                         </button>
                       </div>
-                      <label for="whatsapp-topic" class="mt-4 block text-sm font-medium text-ink">I need help with</label>
-                      <select id="whatsapp-topic" autofocus class="mt-2 min-h-11 w-full rounded-sm border border-hairline bg-card px-3 py-2 text-base text-ink ring-focus">
+                      <label for="whatsapp-topic" class="mt-3 block text-sm font-medium text-ink">I need help with</label>
+                      <select id="whatsapp-topic" autofocus class="whatsapp-field mt-2 ring-focus">
                         {procurementQuestions.map(({ topic, label, message }) => (
                           <option value={topic} data-message={message}>{label}</option>
                         ))}
                       </select>
-                      <label for="whatsapp-draft" class="mt-4 block text-sm font-medium text-ink">Your message</label>
-                      <textarea id="whatsapp-draft" rows="4" maxlength="2000" aria-describedby="whatsapp-hint" class="mt-2 block w-full resize-y rounded-sm border border-hairline bg-card px-3 py-3 text-base leading-relaxed text-ink ring-focus"></textarea>
-                      <p id="whatsapp-hint" class="mt-2 text-xs leading-relaxed text-ink-soft">Add products, quantities, delivery location, or timing.</p>
-                      <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-secondary ring-focus">
+                      <p id="whatsapp-hint" class="mt-3 text-xs text-ink-soft">Share what you know. These details are optional.</p>
+                      <label for="whatsapp-products" class="mt-4 block text-sm font-medium text-ink">What are you looking for?</label>
+                      <input id="whatsapp-products" type="text" maxlength="300" placeholder="e.g. 30 desks for a hotel" class="whatsapp-field mt-2 ring-focus" />
+                      <fieldset class="mt-4">
+                        <legend class="text-sm font-medium text-ink">Any preferred materials?</legend>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                          {["Wood", "Stone / marble", "Metal", "Glass", "Fabric / leather"].map((material) => (
+                            <label class="whatsapp-material">
+                              <input type="checkbox" name="whatsapp-material" value={material} />
+                              {material}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <label for="whatsapp-destination" class="mt-4 block text-sm font-medium text-ink">Where should it be delivered?</label>
+                      <input id="whatsapp-destination" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field mt-2 ring-focus" />
+                      <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="whatsapp-continue mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm px-4 text-sm font-medium ring-focus">
                         Continue in WhatsApp <Icon name="external-link" class="h-4 w-4" />
                       </a>
                       <p class="mt-2 text-center text-xs text-ink-soft">Review and send in WhatsApp.</p>
@@ -487,41 +504,44 @@ const procurementQuestions = [
 
     const dialog = document.querySelector<HTMLDialogElement>("[data-whatsapp-dialog]");
     const topic = document.querySelector<HTMLSelectElement>("#whatsapp-topic");
-    const draft = document.querySelector<HTMLTextAreaElement>("#whatsapp-draft");
+    const products = document.querySelector<HTMLInputElement>("#whatsapp-products");
+    const destination = document.querySelector<HTMLInputElement>("#whatsapp-destination");
     const whatsappLink = document.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
 
-    if (dialog?.showModal && topic && draft && whatsappLink) {
-      let trigger: HTMLAnchorElement | null = null;
-      let opening = topic.selectedOptions[0]!.dataset.message!;
-      draft.value = opening;
+    if (dialog?.showModal && topic && products && destination && whatsappLink) {
+      let trigger: HTMLElement | null = null;
       const updateLink = () => {
+        const materials = Array.from(dialog.querySelectorAll<HTMLInputElement>('input[name="whatsapp-material"]:checked'), (input) => input.value);
+        const message = [
+          topic.selectedOptions[0]!.dataset.message!,
+          products.value.trim() && `Products: ${products.value.trim()}`,
+          materials.length && `Preferred materials: ${materials.join(", ")}`,
+          destination.value.trim() && `Delivery: ${destination.value.trim()}`,
+        ].filter(Boolean).join("\n\n");
         const url = new URL(whatsappLink.href);
-        url.searchParams.set("text", draft.value.trim() || opening);
+        url.searchParams.set("text", message);
         whatsappLink.href = url.href;
       };
-      const updateTopic = () => {
-        const next = topic.selectedOptions[0]!.dataset.message!;
-        if (draft.value.startsWith(opening)) {
-          draft.value = next + draft.value.slice(opening.length);
-        }
-        opening = next;
-        updateLink();
-      };
-      topic.addEventListener("change", updateTopic);
-      draft.addEventListener("input", updateLink);
-      document.querySelectorAll<HTMLAnchorElement>("[data-whatsapp-open], [data-whatsapp-topic]").forEach((link) => {
+      dialog.addEventListener("input", updateLink);
+      dialog.addEventListener("change", updateLink);
+      document.querySelectorAll<HTMLElement>("[data-whatsapp-open], [data-whatsapp-topic]").forEach((link) => {
         link.addEventListener("click", (event) => {
           if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
           event.preventDefault();
           trigger = link;
           if (link.dataset.whatsappTopic) topic.value = link.dataset.whatsappTopic;
-          updateTopic();
+          updateLink();
           dialog.showModal();
         });
       });
       dialog.querySelector("[data-whatsapp-close]")?.addEventListener("click", () => dialog.close());
       dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
       dialog.addEventListener("close", () => trigger?.focus());
+      const helperButton = document.querySelector<HTMLButtonElement>("[data-whatsapp-open]");
+      if (helperButton) {
+        helperButton.hidden = false;
+        helperButton.classList.add("inline-flex");
+      }
       updateLink();
     }
 

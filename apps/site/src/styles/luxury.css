@@ -361,13 +361,17 @@
 .luxury-site #contact dt svg {
   color: var(--luxury-bronze);
 }
-.luxury-site #contact :is(select, textarea) {
-  color-scheme: dark;
-}
 .whatsapp-dialog {
+  --foreground: oklch(0.23 0.008 250);
+  --primary: var(--foreground);
+  --card: oklch(1 0 0);
+  --border: oklch(0.82 0.008 250);
+  --secondary: oklch(0.96 0.005 250);
+  --luxury-muted: oklch(0.46 0.01 250);
+  --whatsapp-green: oklch(0.43 0.1 155);
   margin: auto;
   padding: 0;
-  width: min(28rem, calc(100vw - 2rem));
+  width: min(32rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
@@ -377,8 +381,49 @@
   color: var(--foreground);
 }
 .whatsapp-dialog::backdrop {
-  background: color-mix(in oklab, var(--luxury-walnut) 75%, transparent);
+  background: oklch(0.2 0.005 250 / 0.65);
   backdrop-filter: blur(3px);
+}
+.whatsapp-field {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--card);
+  color: var(--foreground);
+  color-scheme: light;
+  font-size: 1rem;
+}
+.whatsapp-material {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+.whatsapp-material input {
+  accent-color: var(--whatsapp-green);
+}
+.whatsapp-material:has(input:checked) {
+  border-color: var(--whatsapp-green);
+  background: oklch(0.96 0.02 155);
+}
+.whatsapp-material:has(input:focus-visible) {
+  outline: 2px solid var(--whatsapp-green);
+  outline-offset: 2px;
+}
+.whatsapp-continue {
+  background: var(--whatsapp-green);
+  color: white;
+}
+.whatsapp-continue:hover {
+  filter: brightness(1.12);
 }
 body:has(.whatsapp-dialog[open]) {
   overflow: hidden;

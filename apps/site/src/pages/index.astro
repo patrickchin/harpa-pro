@@ -84,7 +84,7 @@ const procurementQuestions = [
     label: "Find products",
     message: "Hi Harpa Pro, I'd like help sourcing furniture or interior products from China.",
     prompt: "What are you looking for?",
-    placeholder: "e.g. 30 desks for a hotel",
+    placeholder: "e.g. desks for a hotel",
     notesLabel: "Anything else?",
     notesPlaceholder: "Budget, timing, dimensions, a reference link, or a question.",
     question: "What furniture and interior products can Harpa Pro help source?",
@@ -95,7 +95,7 @@ const procurementQuestions = [
     label: "Quality checks",
     message: "Hi Harpa Pro, I'd like help checking materials or production quality for my order.",
     prompt: "What needs checking?",
-    placeholder: "e.g. 20 marble tabletops",
+    placeholder: "e.g. marble tabletops",
     notesLabel: "What should we check?",
     notesPlaceholder: "Finish, dimensions, test reports, concerns, or the factory location.",
     question: "How are materials and production quality checked?",
@@ -453,37 +453,20 @@ const procurementQuestions = [
                         <div class="whatsapp-context-grid" data-whatsapp-context-fields hidden>
                           <div data-whatsapp-subject-field class="whatsapp-group" hidden>
                             <label for="whatsapp-products" data-whatsapp-subject-label>What are you looking for?</label>
-                            <input id="whatsapp-products" name="products" autocomplete="off" type="text" maxlength="300" placeholder="e.g. 30 desks for a hotel" class="whatsapp-field" />
+                            <input id="whatsapp-products" name="products" autocomplete="off" type="text" maxlength="300" placeholder="e.g. desks for a hotel" class="whatsapp-field" />
+                          </div>
+                          <div class="whatsapp-group">
+                            <label for="whatsapp-quantity">Quantity</label>
+                            <input id="whatsapp-quantity" name="quantity" autocomplete="off" type="text" maxlength="100" placeholder="e.g. 30 pieces" class="whatsapp-field" />
                           </div>
                           <div data-whatsapp-destination-field class="whatsapp-group" hidden>
                             <label for="whatsapp-destination">Where should it be delivered?</label>
                             <input id="whatsapp-destination" name="destination" autocomplete="off" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field" />
                           </div>
                         </div>
-                        <details class="whatsapp-materials" data-whatsapp-materials hidden>
-                          <summary>
-                            <span>Materials <span class="whatsapp-optional" data-whatsapp-material-count>Optional</span></span>
-                            <Icon name="chevron-down" class="h-4 w-4" />
-                          </summary>
-                          <fieldset>
-                            <legend class="sr-only">Materials</legend>
-                            <div class="whatsapp-material-grid">
-                              {["Wood", "Stone / marble", "Metal", "Glass", "Fabric / leather"].map((material) => (
-                                <label class="whatsapp-material">
-                                  <input type="checkbox" name="whatsapp-material" value={material} />
-                                  {material}
-                                </label>
-                              ))}
-                            </div>
-                            <div class="whatsapp-group whatsapp-other-materials">
-                              <label for="whatsapp-other-materials">Other materials</label>
-                              <input id="whatsapp-other-materials" name="other-materials" autocomplete="off" type="text" maxlength="200" placeholder="e.g. rattan, acrylic, bamboo" class="whatsapp-field" />
-                            </div>
-                          </fieldset>
-                        </details>
                         <div class="whatsapp-group">
                           <label for="whatsapp-notes" data-whatsapp-notes-label>What would you like to know?</label>
-                          <textarea id="whatsapp-notes" name="notes" autocomplete="off" rows="3" maxlength="1500" class="whatsapp-field"></textarea>
+                          <textarea id="whatsapp-notes" name="notes" autocomplete="off" rows="2" maxlength="1500" class="whatsapp-field"></textarea>
                         </div>
                       </div>
                       <div class="whatsapp-review" data-whatsapp-review hidden>
@@ -564,11 +547,11 @@ const procurementQuestions = [
     const topic = document.querySelector<HTMLSelectElement>("#whatsapp-topic");
     const products = document.querySelector<HTMLInputElement>("#whatsapp-products");
     const destination = document.querySelector<HTMLInputElement>("#whatsapp-destination");
-    const otherMaterials = document.querySelector<HTMLInputElement>("#whatsapp-other-materials");
+    const quantity = document.querySelector<HTMLInputElement>("#whatsapp-quantity");
     const notes = document.querySelector<HTMLTextAreaElement>("#whatsapp-notes");
     const whatsappLink = document.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
 
-    if (dialog?.showModal && topic && products && destination && otherMaterials && notes && whatsappLink) {
+    if (dialog?.showModal && topic && products && destination && quantity && notes && whatsappLink) {
       let trigger: HTMLElement | null = null;
       let activeTopic = topic.value;
       const topicNotes = new Map<string, string>();
@@ -594,19 +577,15 @@ const procurementQuestions = [
         const isQuality = topic.value === "quality";
         dialog.querySelector<HTMLElement>("[data-whatsapp-context-fields]")!.hidden = isQuestion;
         dialog.querySelector<HTMLElement>("[data-whatsapp-subject-field]")!.hidden = isQuestion;
-        dialog.querySelector<HTMLElement>("[data-whatsapp-materials]")!.hidden = isQuestion;
         dialog.querySelector<HTMLElement>("[data-whatsapp-destination-field]")!.hidden = isQuestion || isQuality;
         dialog.querySelector<HTMLElement>("[data-whatsapp-subject-label]")!.textContent = selected.dataset.prompt!;
         products.placeholder = selected.dataset.placeholder!;
         dialog.querySelector<HTMLElement>("[data-whatsapp-notes-label]")!.textContent = selected.dataset.notesLabel!;
         notes.placeholder = selected.dataset.notesPlaceholder!;
-        const materials = Array.from(dialog.querySelectorAll<HTMLInputElement>('input[name="whatsapp-material"]:checked'), (input) => input.value);
-        if (otherMaterials.value.trim()) materials.push(otherMaterials.value.trim());
-        dialog.querySelector<HTMLElement>("[data-whatsapp-material-count]")!.textContent = materials.length ? `${materials.length} selected` : "Optional";
         const message = [
           selected.dataset.message!,
           !isQuestion && products.value.trim() && `${topic.value === "brief" ? "Project" : isQuality ? "Goods to check" : "Products"}: ${products.value.trim()}`,
-          !isQuestion && materials.length && `${isQuality ? "Materials involved" : "Preferred materials"}: ${materials.join(", ")}`,
+          !isQuestion && quantity.value.trim() && `Quantity: ${quantity.value.trim()}`,
           !isQuestion && !isQuality && destination.value.trim() && `Delivery: ${destination.value.trim()}`,
           notes.value.trim() && `${isQuestion ? "Question" : isQuality ? "Checks requested" : "Notes"}: ${notes.value.trim()}`,
         ].filter(Boolean).join("\n\n");

@@ -51,9 +51,7 @@ test('real SDK sends visits, clicks and successful contact conversions without b
   await page.getByLabel('I need help with').selectOption('source');
   await page.getByLabel('What are you looking for?').fill('private-project-e2e: 40 desks for Lagos, contact buyer@example.com');
   await page.getByLabel('Where should it be delivered?').fill('private-destination-e2e');
-  await page.locator('[data-whatsapp-materials] summary').click();
-  await page.getByRole('checkbox', { name: 'Wood', exact: true }).check();
-  await page.getByLabel('Other materials').fill('private-material-e2e');
+  await page.getByLabel('Quantity', { exact: true }).fill('private-quantity-e2e');
   await page.getByLabel('Anything else?').fill('private-notes-e2e');
   await page.getByRole('button', { name: 'Review message', exact: true }).click();
   await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();

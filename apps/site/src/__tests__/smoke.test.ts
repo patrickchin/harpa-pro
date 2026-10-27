@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { FIRST_REVISION_DOC_REDIRECTS, LEGACY_DOC_REDIRECTS } from '../lib/docs';
+import { FIRST_REVISION_DOC_REDIRECTS, LEGACY_DOC_REDIRECTS } from '../lib/reports/docs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -78,22 +78,22 @@ describe('site smoke', () => {
 
   it('publishes the procurement-first site in navigation and discovery', () => {
     const home = readFileSync(resolve(here, '../pages/index.astro'), 'utf8');
-    const app = readFileSync(resolve(here, '../pages/app.astro'), 'utf8');
+    const app = readFileSync(resolve(here, '../pages/reports/index.astro'), 'utf8');
     const considerations = readFileSync(
-      resolve(here, '../components/agents/ProcurementConsiderations.astro'),
+      resolve(here, '../components/procurement/ProcurementConsiderations.astro'),
       'utf8',
     );
     const evidence = readFileSync(
-      resolve(here, '../components/agents/ProcurementEvidence.astro'),
+      resolve(here, '../components/procurement/ProcurementEvidence.astro'),
       'utf8',
     );
-    const header = readFileSync(resolve(here, '../components/landing/Header.astro'), 'utf8');
-    const footer = readFileSync(resolve(here, '../components/landing/Footer.astro'), 'utf8');
+    const header = readFileSync(resolve(here, '../components/site/Header.astro'), 'utf8');
+    const footer = readFileSync(resolve(here, '../components/site/Footer.astro'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
     expect(home).toContain('Luxury Interior Procurement in China');
     expect(home).toMatch(
-      /We manage design specifications, factory coordination, quality\s+checks, shipment, and complete procurement documentation\s+\(approved health, safety, and quality standards\)\./,
+      /We coordinate interior procurement in China, from design\s+specifications and factory checks to shipping and project records\./,
     );
     expect(home).toContain('ProcurementConsiderations');
     expect(home).toContain('ProcurementEvidence');
@@ -152,16 +152,16 @@ describe('site smoke', () => {
     expect(home).not.toContain('Send a sourcing brief');
     expect(home).toContain('mailto:haruna@harpapro.com');
     expect(header).toContain('href="/"');
-    expect(header).toContain('href="/app"');
+    expect(header).toContain('href="/reports"');
     expect(header).toContain('Site Reporting');
     expect(header).toContain('href="/#contact"');
     expect(header).not.toContain('View evidence');
     expect(footer).toContain('href="/"');
-    expect(footer).toContain('href="/app"');
+    expect(footer).toContain('href="/reports"');
     expect(footer).toContain('Site Reporting');
     expect(sitemap).not.toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');
-    expect(sitemap).toContain('"/app"');
+    expect(sitemap).toContain('"/reports"');
 
     expect(
       existsSync(resolve(here, '../../public/downloads/harpa-pro-interior-procurement.pdf')),

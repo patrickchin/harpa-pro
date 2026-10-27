@@ -1,0 +1,89 @@
+---
+import About from "../../components/reports/About.astro";
+import FAQ from "../../components/reports/FAQ.astro";
+import Features from "../../components/reports/Features.astro";
+import Footer from "../../components/site/Footer.astro";
+import Header from "../../components/site/Header.astro";
+import HowItWorks from "../../components/reports/HowItWorks.astro";
+import SiteReportingHero from "../../components/reports/SiteReportingHero.astro";
+import Icon from "../../components/Icon.astro";
+import Container from "../../components/primitives/Container.astro";
+import Section from "../../components/primitives/Section.astro";
+import Layout from "../../layouts/Layout.astro";
+import { APP_STORE_URL } from "../../lib/reports/links";
+
+const description = "Create AI construction daily report drafts from voice notes, photos, and text with Harpa Pro. Review, edit, finalize, and export reports as PDFs.";
+const homeUrl = new URL("/", Astro.site).href;
+const appUrl = new URL("/reports", Astro.site).href;
+const structuredData = [{
+  "@type": "SoftwareApplication",
+  "@id": `${appUrl}#software`,
+  name: "Harpa Pro",
+  description,
+  url: appUrl,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "iOS",
+  downloadUrl: APP_STORE_URL,
+  publisher: { "@id": `${homeUrl}#organization` },
+  mainEntityOfPage: { "@id": `${appUrl}#webpage` },
+}];
+---
+
+<Layout
+  title="AI Construction Daily Report App | Harpa Pro"
+  description={description}
+  structuredData={structuredData}
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header />
+    <main>
+      <SiteReportingHero />
+      <HowItWorks />
+      <Features />
+      <About />
+      <FAQ />
+
+      <Section tone="paper-2" bordered="top">
+        <Container padding="lg">
+          <div class="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-start">
+            <div class="max-w-md">
+              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+                Guides and Roadmap
+              </h2>
+              <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+                Use the guides for app tasks. Use the roadmap to check current
+                and planned work.
+              </p>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <a
+                href="/reports/docs"
+                aria-label="View guides"
+                class="group rounded-xl border border-hairline bg-card p-6 shadow-sm hover:bg-secondary ring-focus"
+              >
+                <span class="text-lg font-semibold text-ink">View guides</span>
+                <span class="mt-2 block text-sm leading-relaxed text-ink-soft">
+                  Learn how to capture updates, create reports, edit content,
+                  and manage projects.
+                </span>
+                <Icon name="arrow-right" class="mt-5 h-4 w-4 text-primary" />
+              </a>
+              <a
+                href="/reports/roadmap"
+                aria-label="View roadmap"
+                class="group rounded-xl border border-hairline bg-card p-6 shadow-sm hover:bg-secondary ring-focus"
+              >
+                <span class="text-lg font-semibold text-ink">View roadmap</span>
+                <span class="mt-2 block text-sm leading-relaxed text-ink-soft">
+                  Check the current app capabilities and planned work.
+                </span>
+                <Icon name="arrow-right" class="mt-5 h-4 w-4 text-primary" />
+              </a>
+            </div>
+          </div>
+        </Container>
+      </Section>
+    </main>
+    <Footer />
+  </div>
+</Layout>

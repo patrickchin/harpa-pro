@@ -46,9 +46,19 @@ test('real SDK sends visits, clicks and successful contact conversions without b
   await page.getByRole('button', { name: 'Copy email', exact: true }).click();
   await expect(page.locator('[data-copy-email-status]')).toHaveText('Email copied');
   await page.getByRole('link', { name: 'Open email app', exact: true }).click();
+  await page.getByRole('button', { name: 'Help me write a message', exact: true }).click();
+  expect(events.filter((event) => event.event === 'contact_whatsapp_clicked')).toHaveLength(0);
+  await page.getByLabel('I need help with').selectOption('source');
+  await page.getByLabel('What are you looking for?').fill('private-project-e2e: 40 desks for Lagos, contact buyer@example.com');
+  await page.getByLabel('Where should it be delivered?').fill('private-destination-e2e');
+  await page.getByLabel('Quantity', { exact: true }).fill('private-quantity-e2e');
+  await page.getByLabel('Anything else?').fill('private-notes-e2e');
+  await page.getByRole('button', { name: 'Review message', exact: true }).click();
+  await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();
+  await page.getByRole('button', { name: 'Close message helper' }).click();
   await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
   for (const name of ['contact_email_copied', 'contact_email_opened', 'contact_whatsapp_clicked']) {
-    await expect.poll(() => events.filter((event) => event.event === name).length).toBe(1);
+    await expect.poll(() => events.filter((event) => event.event === name).length).toBe(name === 'contact_whatsapp_clicked' ? 2 : 1);
     expect(events.find((event) => event.event === name)?.properties).toMatchObject({
       page_path: '/', location: 'home_contact',
     });
@@ -59,14 +69,14 @@ test('real SDK sends visits, clicks and successful contact conversions without b
     local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie,
   }))).toEqual({ local: [], session: [], cookies: '' });
 
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
   await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
   await page.getByRole('searchbox', { name: 'Search guides' }).fill('private-search-e2e');
   await page.getByRole('button', { name: 'Clear search', exact: true }).click();
   // A subsequent pageview flushes the preceding pageleave and click batch.
-  await page.goto('/app');
+  await page.goto('/reports');
   await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(3);
-  expect(events.filter((event) => event.event === '$autocapture' && event.properties.$pathname === '/docs')).toHaveLength(0);
+  expect(events.filter((event) => event.event === '$autocapture' && event.properties.$pathname === '/reports/docs')).toHaveLength(0);
   expect(JSON.stringify(events)).not.toContain('private-search-e2e');
 });
 
@@ -82,7 +92,7 @@ test('failed copying has no successful-copy conversion', async ({ page }) => {
   await expect.poll(() => events.some((event) => event.event === '$pageview')).toBe(true);
   await page.getByRole('button', { name: 'Copy email', exact: true }).click();
   await expect(page.locator('[data-copy-email-status]')).toHaveText('Select and copy the email address above');
-  await page.goto('/app');
+  await page.goto('/reports');
   await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
   expect(events.filter((event) => event.event === 'contact_email_copied')).toHaveLength(0);
 });
@@ -105,7 +115,7 @@ test('honours browser privacy signals without disabling contact actions', async 
   await page.goto('/#contact');
   await page.getByRole('button', { name: 'Copy email', exact: true }).click();
   await expect(page.locator('[data-copy-email-status]')).toHaveText('Email copied');
-  await page.goto('/app');
+  await page.goto('/reports');
   expect(events).toHaveLength(0);
 });
 
@@ -116,7 +126,7 @@ for (const source of ['facebook', 'linkedin', 'x', 'instagram']) {
       utm_source: source, utm_medium: 'social', utm_campaign: 'china_buying_guide',
       utm_content: 'overview', utm_term: 'interior-procurement',
     };
-    await page.goto(`/how-to-buy-from-china/?${new URLSearchParams(campaign)}&token=private-token-e2e&gclid=private-click-e2e#buying-checks`);
+    await page.goto(`/procurement/how-to-buy-from-china?${new URLSearchParams(campaign)}&token=private-token-e2e&gclid=private-click-e2e#buying-checks`);
     await expect.poll(() => events.some((event) => event.event === '$pageview')).toBe(true);
     expect(events.find((event) => event.event === '$pageview')?.properties).toMatchObject(campaign);
     const contact = page.locator('a[href*="#contact"]').first();
@@ -126,7 +136,10 @@ for (const source of ['facebook', 'linkedin', 'x', 'instagram']) {
     await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
     await page.getByRole('button', { name: 'Copy email', exact: true }).click();
     await page.getByRole('link', { name: 'Open email app', exact: true }).click();
-    await page.getByRole('link', { name: 'Message on WhatsApp', exact: true }).click();
+    await page.getByRole('button', { name: 'Help me write a message', exact: true }).click();
+    await page.getByRole('button', { name: 'Review message', exact: true }).click();
+    await page.getByRole('link', { name: 'Continue in WhatsApp', exact: true }).click();
+    await page.getByRole('button', { name: 'Close message helper' }).click();
     for (const name of ['contact_email_copied', 'contact_email_opened', 'contact_whatsapp_clicked']) {
       await expect.poll(() => events.filter((event) => event.event === name).length).toBe(1);
       expect(events.find((event) => event.event === name)?.properties).toMatchObject(campaign);
@@ -147,7 +160,7 @@ test('propagates only onto internal page links and preserves explicit destinatio
   await page.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
       for (const [id, href] of Object.entries({
-        internal: '/app?plan=demo#features', own: '/app?utm_source=google&utm_medium=cpc#features',
+        internal: '/reports?plan=demo#features', own: '/reports?utm_source=google&utm_medium=cpc#features',
         external: 'https://example.com/path', fragment: '#contact', download: '/guide.pdf',
       })) {
         const link = document.createElement('a');
@@ -159,7 +172,7 @@ test('propagates only onto internal page links and preserves explicit destinatio
   });
   await page.goto('/?utm_source=facebook&utm_medium=social&utm_campaign=china_buying_guide&utm_content=overview');
   await expect.poll(() => events.some((event) => event.event === '$pageview')).toBe(true);
-  await expect(page.locator('#utm-test-own')).toHaveAttribute('href', '/app?utm_source=google&utm_medium=cpc#features');
+  await expect(page.locator('#utm-test-own')).toHaveAttribute('href', '/reports?utm_source=google&utm_medium=cpc#features');
   await expect(page.locator('#utm-test-external')).toHaveAttribute('href', 'https://example.com/path');
   await expect(page.locator('#utm-test-fragment')).toHaveAttribute('href', '#contact');
   await expect(page.locator('#utm-test-download')).toHaveAttribute('href', '/guide.pdf');

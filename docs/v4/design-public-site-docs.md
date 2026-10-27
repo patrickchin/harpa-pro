@@ -1,12 +1,18 @@
 # Public site and documentation design
 
+Current URL and source ownership is defined by
+[product URL organization](design-site-product-url-organization.md). That
+later decision supersedes the route and source paths below; the content and
+interaction requirements still apply.
+
+
 Status: implemented. Guide content and all nine release screenshots were
 reverified on 2026-08-04.
 
 ## Context
 
-The public documentation at `docs.harpapro.com` was a manually deployed
-Next.js build from an older codebase. At the time of this decision, the
+Earlier public documentation used a manually deployed Next.js build from
+an older codebase. At the time of this decision, the
 current repository contained only a placeholder under `apps/docs`, so the
 live site had drifted from the v4 product. Its instructions still described
 SMS authentication, Admin roles, a dedicated report Edit tab, manual-only
@@ -28,10 +34,9 @@ at `https://harpapro.com/docs`. Remove the obsolete `apps/docs` Next.js
 placeholder. Continue deploying one static output to the existing Cloudflare
 Pages project `harpa-pro`.
 
-After production verification, redirect `docs.harpapro.com` to
-`harpapro.com/docs` at the Cloudflare zone. Preserve the legacy path where a
-known equivalent exists. Retire the old Vercel project only after the redirect
-and canonical site have been verified.
+Current app guides live at `/reports/docs` within the same site deployment,
+as defined by [product URL organization](design-site-product-url-organization.md).
+A separate documentation hostname is not required.
 
 ## Alternatives considered
 
@@ -183,9 +188,9 @@ Canonical guide slugs mirror the original task names where possible, including
 `browse-saved-reports`. Known old documentation paths receive permanent
 redirects to the matching `/docs/guides/...` route. The temporary slugs from
 the first pull-request revision also redirect so review links remain valid.
-The Cloudflare hostname rule redirects other
-`docs.harpapro.com/<path>` requests to the canonical `/docs` destination. The
-cutover runbook records the exact redirect map and a rollback procedure.
+Current compatibility redirects live in `apps/site/public/_redirects` and
+point directly to `/reports/docs`. The deployment runbook verifies these
+paths as part of the same public-site deployment.
 
 ## Deployment
 

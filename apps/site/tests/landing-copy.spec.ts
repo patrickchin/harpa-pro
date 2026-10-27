@@ -11,10 +11,10 @@ test('uses the complete procurement page as home without a reporting promotion',
   const hero = page.locator('main > section').first();
   const heroHeading = hero.locator('h1');
   await page.evaluate(() => document.fonts.ready);
-  await expect(heroHeading).toHaveText('Luxury Interior Procurement in China');
+  await expect(heroHeading).toHaveText('Interior procurement');
   await expect(
     hero.getByText(
-      'We manage design specifications, factory coordination, quality checks, shipment, and complete procurement documentation (approved health, safety, and quality standards).',
+      'We coordinate interior procurement in China, from design specifications and factory checks to shipping and project records.',
       { exact: false },
     ),
   ).toBeVisible();
@@ -92,7 +92,7 @@ test('uses the complete procurement page as home without a reporting promotion',
   expect(heroTreatment.fontFamily).toContain('Cormorant Garamond');
   expect(heroTreatment.whiteSpace).toBe('normal');
   expect(heroHeadingBox!.height).toBeGreaterThan(heroTreatment.lineHeight * 1.5);
-  await expect(hero.getByRole('link', { name: 'Discuss your project' })).toHaveAttribute(
+  await expect(hero.getByRole('link', { name: 'Send your project brief' })).toHaveAttribute(
     'href',
     '#contact',
   );
@@ -410,7 +410,7 @@ test('keeps the hero and contact routes useful without JavaScript', async ({ bro
     const hero = page.locator('#top');
     await expect(hero.getByRole('heading', {
       level: 1,
-      name: 'Luxury Interior Procurement in China',
+      name: 'Interior procurement',
     })).toBeVisible();
     const image = hero.getByRole('img', {
       name: 'Generated interior concept with warm wood finishes in a contemporary living room',
@@ -419,7 +419,7 @@ test('keeps the hero and contact routes useful without JavaScript', async ({ bro
     expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
     await expect(hero.locator('[data-material-caption]')).toBeVisible();
     await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Wood');
-    await expect(hero.getByText(/We manage design specifications/)).toBeVisible();
+    await expect(hero.getByText(/We coordinate interior procurement in China/)).toBeVisible();
     await expect(hero.locator('[data-material-controls]')).toBeHidden();
     await expect(hero.getByRole('button')).toHaveCount(0);
     await hero.getByRole('link', { name: 'Explore our approach' }).click();
@@ -429,7 +429,7 @@ test('keeps the hero and contact routes useful without JavaScript', async ({ bro
       name: 'What We Consider',
     })).toBeVisible();
     await page.goto('/');
-    await hero.getByRole('link', { name: 'Discuss your project' }).click();
+    await hero.getByRole('link', { name: 'Send your project brief' }).click();
     await expect(page).toHaveURL(/\/#contact$/);
     await expect(page.locator('#contact').getByRole('link', { name: 'Open email app' }))
       .toHaveAttribute('href', 'mailto:haruna@harpapro.com');
@@ -526,7 +526,7 @@ test('uses collective service copy and keeps team names in profiles', async ({ p
   await expect(page.getByRole('link', { name: /haruna/i })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Contact Us' })).toBeVisible();
 
-  await page.goto('/app');
+  await page.goto('/reports');
   await expect(page.getByText('Haruna Bayoh', { exact: true })).toHaveCount(1);
 
   await page.goto('/not-a-real-page');

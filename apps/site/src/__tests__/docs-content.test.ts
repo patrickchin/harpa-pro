@@ -12,12 +12,12 @@ import {
   guideHref,
   guideSlug,
   sortGuides,
-} from '../lib/docs';
-import { DOCS_SCREENSHOTS } from '../lib/docs-screenshots';
+} from '../lib/reports/docs';
+import { DOCS_SCREENSHOTS } from '../lib/reports/docs-screenshots';
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const docsDir = resolve(srcRoot, 'content/docs');
-const screenshotDir = resolve(srcRoot, 'assets/docs');
+const docsDir = resolve(srcRoot, 'content/reports/docs');
+const screenshotDir = resolve(srcRoot, 'assets/reports/docs');
 
 const EXPECTED_GUIDES = [
   '01-generate-ai-report.mdx',
@@ -103,7 +103,7 @@ describe('docs content model', () => {
 
     expect(sortGuides(guides).map(({ id }) => id)).toEqual(['first', 'second', 'setup']);
     expect(docsTierLabel('everyday')).toBe('Everyday Tasks');
-    expect(guideHref('01-getting-started.mdx')).toBe('/docs/guides/getting-started');
+    expect(guideHref('01-getting-started.mdx')).toBe('/reports/docs/guides/getting-started');
   });
 
   it('maps every live v3 guide path to one unique v4 destination', () => {
@@ -125,29 +125,28 @@ describe('docs content model', () => {
     const targets = Object.values(LEGACY_DOC_REDIRECTS);
     expect(new Set(targets).size).toBe(targets.length);
     expect(LEGACY_DOC_REDIRECTS['/guides/generate-ai-report']).toBe(
-      '/docs/guides/generate-ai-report',
+      '/reports/docs/guides/generate-ai-report',
     );
   });
 
   it('keeps first-revision routes compatible', () => {
     expect(FIRST_REVISION_DOC_REDIRECTS['/docs/guides/ai-generation']).toBe(
-      '/docs/guides/generate-ai-report',
+      '/reports/docs/guides/generate-ai-report',
     );
     expect(FIRST_REVISION_DOC_REDIRECTS['/docs/guides/account-deletion-and-help']).toBe(
-      '/docs/guides/your-account',
+      '/reports/docs/guides/your-account',
     );
   });
 
   it('ships docs routes in the public site shell', () => {
-    expect(existsSync(resolve(srcRoot, 'pages/docs/index.astro'))).toBe(true);
-    expect(existsSync(resolve(srcRoot, 'pages/docs/guides/[...slug].astro'))).toBe(true);
-    expect(existsSync(resolve(srcRoot, 'layouts/DocsLayout.astro'))).toBe(true);
+    expect(existsSync(resolve(srcRoot, 'pages/reports/docs/index.astro'))).toBe(true);
+    expect(existsSync(resolve(srcRoot, 'pages/reports/docs/guides/[...slug].astro'))).toBe(true);
+    expect(existsSync(resolve(srcRoot, 'layouts/reports/DocsLayout.astro'))).toBe(true);
 
-    const header = readFileSync(resolve(srcRoot, 'components/landing/Header.astro'), 'utf8');
-    expect(header).not.toContain('https://docs.harpapro.com');
-    expect(header).toContain('href="/docs"');
+    const header = readFileSync(resolve(srcRoot, 'components/site/Header.astro'), 'utf8');
+    expect(header).toContain('href="/reports/docs"');
 
-    const docsIndex = readFileSync(resolve(srcRoot, 'pages/docs/index.astro'), 'utf8');
+    const docsIndex = readFileSync(resolve(srcRoot, 'pages/reports/docs/index.astro'), 'utf8');
     expect(docsIndex).toContain('Site Reporting Guides');
     expect(docsIndex).toContain('Guides and Workflows');
     expect(docsIndex).toContain('docs-core-grid');
@@ -156,16 +155,16 @@ describe('docs content model', () => {
     expect(docsIndex).toContain('<DocsMontage');
     expect(docsIndex).not.toContain('<PhoneFrame');
 
-    const guidePage = readFileSync(resolve(srcRoot, 'pages/docs/guides/[...slug].astro'), 'utf8');
+    const guidePage = readFileSync(resolve(srcRoot, 'pages/reports/docs/guides/[...slug].astro'), 'utf8');
     expect(guidePage).toContain('docsTierLabel');
     expect(guidePage).not.toContain('guide.data.heroScreenshot');
     expect(guidePage).not.toContain('<PhoneFrame');
 
-    const guideStep = readFileSync(resolve(srcRoot, 'components/docs/GuideStep.astro'), 'utf8');
+    const guideStep = readFileSync(resolve(srcRoot, 'components/reports/docs/GuideStep.astro'), 'utf8');
     expect(guideStep).toContain('<GuideStepMedia');
-    expect(existsSync(resolve(srcRoot, 'components/docs/GuideStepMedia.astro'))).toBe(true);
+    expect(existsSync(resolve(srcRoot, 'components/reports/docs/GuideStepMedia.astro'))).toBe(true);
 
-    const sidebar = readFileSync(resolve(srcRoot, 'components/docs/DocsSidebar.astro'), 'utf8');
+    const sidebar = readFileSync(resolve(srcRoot, 'components/reports/docs/DocsSidebar.astro'), 'utf8');
     expect(sidebar).toContain('DOCS_TIERS');
     expect(sidebar).toContain('aria-label="Guide sections"');
   });
@@ -180,9 +179,9 @@ describe('docs content model', () => {
     const slugs = new Set(files.map((file) => guideSlug(file)));
     expect(slugs.size).toBe(files.length);
 
-    const routes = new Set([...slugs].map((slug) => `/docs/guides/${slug}`));
+    const routes = new Set([...slugs].map((slug) => `/reports/docs/guides/${slug}`));
     for (const target of Object.values(LEGACY_DOC_REDIRECTS)) {
-      if (target !== '/docs') expect(routes.has(target), target).toBe(true);
+      if (target !== '/reports/docs') expect(routes.has(target), target).toBe(true);
     }
     for (const target of Object.values(FIRST_REVISION_DOC_REDIRECTS)) {
       expect(routes.has(target), target).toBe(true);
@@ -222,7 +221,7 @@ describe('docs content model', () => {
   });
 
   it('registers every approved v4 docs screenshot', () => {
-    const registryPath = resolve(srcRoot, 'lib/docs-screenshots.ts');
+    const registryPath = resolve(srcRoot, 'lib/reports/docs-screenshots.ts');
     expect(existsSync(registryPath)).toBe(true);
     expect(DOCS_SCREENSHOT_IDS).toEqual(EXPECTED_SCREENSHOTS);
     expect(Object.keys(DOCS_SCREENSHOTS)).toEqual(EXPECTED_SCREENSHOTS);

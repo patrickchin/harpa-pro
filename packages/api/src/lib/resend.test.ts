@@ -25,7 +25,7 @@ describe('fake Resend diagnostics', () => {
     const email = 'private.person+preview@buildco.example';
     const otp = '918273';
     const token = 'RAW_CONFIRMATION_TOKEN_SENTINEL';
-    const url = `https://harpapro.com/confirm?token=${token}`;
+    const url = `https://harpapro.com/reports/confirm?token=${token}`;
     const bodySentinel = 'PRIVATE_RENDERED_EMAIL_BODY_SENTINEL';
     const params = {
       to: email,

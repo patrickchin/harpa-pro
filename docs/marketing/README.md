@@ -1,44 +1,36 @@
 # Public site (`apps/site`)
 
-> Status: the public site is live. This directory preserves its original
-> M0–M4 implementation plans; current product guides are maintained alongside
-> the site in `apps/site/src/content/docs`.
+The public site presents interior procurement and the Harpa Pro site-reporting
+app in one static Astro application at `harpapro.com`.
 
-A mostly-static public site at `harpapro.com` with:
+- Procurement overview: `/`; buying guide:
+  `/procurement/how-to-buy-from-china`.
+- Site reporting app: `/reports`; app resources: `/reports/docs`,
+  `/reports/roadmap`, and `/reports/account-deletion`.
+- Shared website and app privacy notice: `/privacy`.
+- App updates confirmation: `/reports/confirm`, excluded from search.
 
-- Hero + how-it-works + sample report + FAQ + footer.
-- **Interactive voice-to-report demo** — simulates recording in the browser
-  and reveals a committed fixture. It captures no audio. Live API wiring is a
-  deferred M4 proposal.
-- **Waitlist signup** with double opt-in via Resend — the only
-  backend work needed before launch.
-- A privacy page. A terms page is not implemented.
-- Current product guides under `/docs`.
+App components, content, helpers, screenshots, and fixtures live beneath
+`reports/` directories in `apps/site/src`. Procurement has its own
+`procurement/` directories. Shared header, footer, and wordmark live in
+`src/components/site`. Current guides live in
+`apps/site/src/content/reports/docs`.
 
-A separate office-dashboard proposal uses `apps/dashboard`. It is not part of
-the current `dev` branch and has no production hostname.
+The reporting page includes a browser demo using
+`apps/site/src/fixtures/reports/demoReport.ts`. It captures no audio and
+calls no API or AI provider. The legacy waitlist form remains in source but
+is not mounted on the public pages. Existing email confirmation links still
+work through permanent redirects, and new emails use `/reports/confirm`.
 
-Astro 7 static site with two React islands (waitlist form + voice
-demo), deployed to Cloudflare Pages. Waitlist signups post directly
-to `api.harpapro.com` (CORS) → `POST /waitlist`,
-storing data in a new `waitlist_signups` table in Neon with
-per-request scope tests. Confirmation emails send via Resend using
-a one-time hashed token.
-
-The voice demo is **fully client-side**. It does not capture audio. It animates
-a recording state and reveals committed data from
-`apps/site/src/fixtures/demoReport.ts` on a scripted timer. It does not call
-the API, R2, authentication, or an AI provider.
-
-M4 (deferred until after launch) replaces the fake pipeline with a
-real anonymous demo-session JWT (15-min TTL, `scope=demo`) issued
-by `POST /demo/session`, scoped to presign R2 uploads under
-`demo/<sessionId>/`, transcribe those files, and generate a single
-ephemeral report. Demo recordings get a 24h R2 lifecycle. All LLM
-calls replay fixtures from `packages/ai-fixtures` in CI.
+The M0–M4 plans below preserve the original app-only launch history. Use the
+[site README](../../apps/site/README.md) and
+[product URL design](../v4/design-site-product-url-organization.md) for the
+current route map, ownership, and verification. The office dashboard remains
+a separate application and deployment; see
+[operations](../v4/arch-ops.md).
 
 Repository configuration does not prove that public-site analytics or Sentry
-is active. Treat provider-console state as `UNKNOWN` until it is checked.
+is active. Treat provider-console state as `UNKNOWN` until checked.
 
 ## Stack decision
 

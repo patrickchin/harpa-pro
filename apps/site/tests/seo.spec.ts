@@ -70,7 +70,7 @@ test('every sitemap page has unique metadata and an accurate production identity
       expect((await request.get(new URL(socialImage!).pathname)).status()).toBe(200);
     }
 
-    if (url.pathname === '/app') {
+    if (url.pathname === '/reports') {
       expect(graph.find((node) => node['@type'] === 'SoftwareApplication')).toMatchObject({
         operatingSystem: 'iOS',
         applicationCategory: 'BusinessApplication',
@@ -83,7 +83,7 @@ test('every sitemap page has unique metadata and an accurate production identity
       await expect(page.locator('[data-voice-demo]')).toContainText('Summary:');
     }
 
-    if (url.pathname === '/how-to-buy-from-china') {
+    if (url.pathname === '/procurement/how-to-buy-from-china') {
       expect(graph.find((node) => node['@type'] === 'Article')).toMatchObject({
         headline: 'How to buy from China',
         url: location,
@@ -115,9 +115,9 @@ test('every sitemap page has unique metadata and an accurate production identity
       expect(fonts.bodyColor).toBe(fonts.walnut);
     }
 
-    if (url.pathname.startsWith('/docs') || url.pathname === '/how-to-buy-from-china') {
-      if (url.pathname.startsWith('/docs')) {
-        expect(pageNode?.['@type']).toBe(url.pathname === '/docs' ? 'CollectionPage' : 'TechArticle');
+    if (url.pathname.startsWith('/reports/docs') || url.pathname === '/procurement/how-to-buy-from-china') {
+      if (url.pathname.startsWith('/reports/docs')) {
+        expect(pageNode?.['@type']).toBe(url.pathname === '/reports/docs' ? 'CollectionPage' : 'TechArticle');
       }
       const breadcrumb = graph.find((node) => node['@type'] === 'BreadcrumbList');
       const items = breadcrumb?.itemListElement as { name: string; item: string; position: number }[];
@@ -130,7 +130,7 @@ test('every sitemap page has unique metadata and an accurate production identity
 });
 
 test('normalizes canonicals and excludes utility and error pages from indexing', async ({ page, request }) => {
-  for (const path of ['/app/?utm_source=search', '/docs/guides/generate-ai-report/?ref=ai']) {
+  for (const path of ['/reports?utm_source=search', '/reports/docs/guides/generate-ai-report?ref=ai']) {
     await page.goto(path);
     const canonical = `https://harpapro.com${new URL(path, 'https://harpapro.com').pathname.replace(/\/$/, '')}`;
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical);
@@ -138,9 +138,9 @@ test('normalizes canonicals and excludes utility and error pages from indexing',
   }
 
   const sitemap = await (await request.get('/sitemap.xml')).text();
-  for (const path of ['/confirm?token=example', '/not-a-real-page']) {
+  for (const path of ['/reports/confirm?token=example', '/not-a-real-page']) {
     const response = await page.goto(path);
-    expect(response?.status()).toBe(path.startsWith('/confirm') ? 200 : 404);
+    expect(response?.status()).toBe(path.startsWith('/reports/confirm') ? 200 : 404);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
     await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
     expect(sitemap).not.toContain(new URL(path, 'https://harpapro.com').pathname);

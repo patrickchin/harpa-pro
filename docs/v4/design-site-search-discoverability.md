@@ -1,5 +1,11 @@
 # Public site search discoverability
 
+Current URL and source ownership is defined by
+[product URL organization](design-site-product-url-organization.md). That
+later decision supersedes the route and source paths below; the content and
+interaction requirements still apply.
+
+
 ## Purpose
 
 Make the public Harpa Pro site easier for search engines and AI search
@@ -130,14 +136,11 @@ and Daily Report ConstructionAI. A direct Perplexity check stopped at its
 automatic security verification page, so visibility there is unverified.
 This audit does not establish ChatGPT visibility or search volume.
 
-The same review found indexed pages on `docs.harpapro.com` hosted on Vercel,
-including outdated phone-sign-in instructions. The current site guides use
-email sign-in. The old domain is an unresolved infrastructure cutover gap
-outside this repository's deployed site. Do not claim its redirects,
-deindexing, or content migration are complete. Identify its hosting owner,
-map old paths to relevant `/docs` guides, and configure redirects on that
-origin before treating the gap as resolved. Current-site redirects alone
-cannot redirect requests served by the old host.
+Current app documentation is maintained and deployed with the public site
+at `/reports/docs`. Repository notes about an earlier standalone docs host
+are superseded by [product URL organization](design-site-product-url-organization.md).
+Verify current guide content, canonicals, and redirects on this site's
+preview and dev deployments.
 
 Sampled competitor pages suggest useful content patterns: Source Foshan
 explains quality checks with questions and answers; Sorse Furniture states

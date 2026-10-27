@@ -1,0 +1,340 @@
+---
+import { APP_STORE_URL } from "../../lib/reports/links";
+import Icon from "../Icon.astro";
+import Wordmark from "./Wordmark.astro";
+---
+
+<header
+  class="relative sticky top-0 z-40 border-b border-border bg-paper-2 shadow-sm"
+  data-site-header
+>
+  <div
+    class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6"
+  >
+    <Wordmark />
+    <nav aria-label="Primary" class="hidden items-center gap-2 md:flex">
+      <details class="group static" data-mega-menu="procurement">
+        <summary
+          class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden"
+        >
+          <span class="text-accent-ink" data-nav-icon>
+            <Icon name="package-search" class="h-4 w-4" />
+          </span>
+          Procurement
+          <Icon
+            name="chevron-down"
+            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div
+          class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
+          data-mega-panel
+        >
+          <div
+            class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]"
+          >
+            <div class="max-w-sm">
+              <p class="text-lg font-semibold text-ink">Procurement in China</p>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                We coordinate factory information, product specifications,
+                quality checks, and shipping records.
+              </p>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <a
+                href="/"
+                aria-label="Procurement Overview"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="package-search" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Procurement Overview</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Our procurement service</span>
+                </span>
+              </a>
+              <a href="/#factory-partners" aria-label="Products and factories"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="armchair" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Products and factories</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Joinery, furniture, bathrooms, and source records</span>
+                </span>
+              </a>
+              <a href="/#considerations" aria-label="Our process"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="list-checks" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Our process</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Design coordination, quality checks, and delivery</span>
+                </span>
+              </a>
+              <a
+                href="/procurement/how-to-buy-from-china"
+                aria-label="How to Buy from China"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="file-text" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">How to Buy from China</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">A guide for architects and designers</span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="group static" data-mega-menu="site-reporting">
+        <summary
+          class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden"
+        >
+          <span class="text-accent-ink" data-nav-icon>
+            <Icon name="clipboard-list" class="h-4 w-4" />
+          </span>
+          Site Reporting
+          <Icon
+            name="chevron-down"
+            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div
+          class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
+          data-mega-panel
+        >
+          <div
+            class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]"
+          >
+            <div class="max-w-sm">
+              <p class="text-lg font-semibold text-ink">Site Reporting</p>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                Turn voice notes, photos, and text updates into daily report
+                drafts that you can review and share.
+              </p>
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <a
+                href="/reports"
+                aria-label="Harpa Pro App"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="smartphone" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Harpa Pro App</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">See the reporting workflow</span>
+                </span>
+              </a>
+              <a
+                href="/reports/docs"
+                aria-label="Guides"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="book-open" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Guides</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Learn each app task</span>
+                </span>
+              </a>
+              <a
+                href="/reports/roadmap"
+                aria-label="Roadmap"
+                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+              >
+                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                  <Icon name="map" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold text-ink">Roadmap</span>
+                  <span class="mt-1 block leading-relaxed text-ink-soft">Current and planned work</span>
+                </span>
+              </a>
+              <a
+                href={APP_STORE_URL}
+                aria-label="Get the App"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-start gap-3 rounded-lg bg-primary p-3 text-sm text-primary-foreground ring-focus"
+              >
+                <span class="mt-0.5 shrink-0 text-primary-foreground/80" data-nav-item-icon>
+                  <Icon name="download" class="h-4 w-4" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-semibold">Get the App</span>
+                  <span class="mt-1 block leading-relaxed opacity-80">Open the App Store</span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <a
+        href="/#contact"
+        class="ml-2 inline-flex h-9 items-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
+      >
+        <span data-nav-icon>
+          <Icon name="message-circle" class="h-4 w-4" />
+        </span>
+        Contact Us
+      </a>
+    </nav>
+
+    <details class="site-menu group md:hidden" data-mobile-menu>
+      <summary
+        aria-label="Toggle menu"
+        class="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-md border border-hairline text-ink [&::-webkit-details-marker]:hidden"
+      >
+        <Icon name="menu" class="h-4 w-4 group-open:hidden" />
+        <Icon name="x" class="hidden h-4 w-4 group-open:block" />
+      </summary>
+      <div
+        class="absolute inset-x-0 top-16 max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-hairline bg-background shadow-lg"
+      >
+        <div class="mx-auto grid max-w-6xl gap-4 p-4">
+          <div class="grid gap-1" data-mobile-procurement>
+            <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name="package-search" class="h-4 w-4" />
+              </span>
+              Procurement
+            </p>
+            <a href="/" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="package-search" class="h-4 w-4" />
+              </span>
+              Procurement Overview
+            </a>
+            <a href="/#factory-partners" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="armchair" class="h-4 w-4" />
+              </span>
+              Products and factories
+            </a>
+            <a href="/#considerations" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="list-checks" class="h-4 w-4" />
+              </span>
+              Our process
+            </a>
+            <a href="/procurement/how-to-buy-from-china" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="file-text" class="h-4 w-4" />
+              </span>
+              How to Buy from China
+            </a>
+          </div>
+          <div class="grid gap-1 border-t border-hairline pt-4" data-mobile-site-reporting>
+            <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name="clipboard-list" class="h-4 w-4" />
+              </span>
+              Site Reporting
+            </p>
+            <a href="/reports" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="smartphone" class="h-4 w-4" />
+              </span>
+              Harpa Pro App
+            </a>
+            <a href="/reports/docs" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="book-open" class="h-4 w-4" />
+              </span>
+              Guides
+            </a>
+            <a href="/reports/roadmap" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
+              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                <Icon name="map" class="h-4 w-4" />
+              </span>
+              Roadmap
+            </a>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<script>
+  const siteHeader = document.querySelector<HTMLElement>("[data-site-header]");
+
+  if (siteHeader) {
+    const megaMenus = Array.from(
+      siteHeader.querySelectorAll<HTMLDetailsElement>("[data-mega-menu]"),
+    );
+    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+    let closeTimer: number | undefined;
+
+    const closeMenus = (except?: HTMLDetailsElement) => {
+      megaMenus.forEach((menu) => {
+        if (menu !== except) menu.open = false;
+      });
+    };
+
+    const cancelClose = () => {
+      if (closeTimer !== undefined) window.clearTimeout(closeTimer);
+      closeTimer = undefined;
+    };
+
+    megaMenus.forEach((menu) => {
+      const summary = menu.querySelector<HTMLElement>("summary");
+
+      summary?.addEventListener("pointerenter", () => {
+        if (!finePointer.matches) return;
+        cancelClose();
+        closeMenus(menu);
+        menu.open = true;
+      });
+
+      menu.addEventListener("pointerenter", cancelClose);
+      menu.addEventListener("pointerleave", () => {
+        if (!finePointer.matches) return;
+        cancelClose();
+        closeTimer = window.setTimeout(() => {
+          menu.open = false;
+        }, 120);
+      });
+
+      summary?.addEventListener("click", () => closeMenus(menu));
+      menu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          menu.open = false;
+        });
+      });
+    });
+
+    siteHeader.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const openMenu = megaMenus.find((menu) => menu.open);
+      if (!openMenu) return;
+      openMenu.open = false;
+      openMenu.querySelector<HTMLElement>("summary")?.focus();
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (event.target instanceof Node && !siteHeader.contains(event.target)) {
+        closeMenus();
+      }
+    });
+
+    const mobileMenu = siteHeader.querySelector<HTMLDetailsElement>(
+      "[data-mobile-menu]",
+    );
+    mobileMenu?.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        mobileMenu.open = false;
+      });
+    });
+  }
+</script>

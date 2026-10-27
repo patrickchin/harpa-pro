@@ -79,6 +79,9 @@ jobs:
       - name: Verify public build excludes admin routes
         run: test ! -e apps/site/dist/admin
 
+      - name: Verify Cloudflare Pages redirects
+        run: pnpm --filter @harpa/site test:redirects
+
       - name: Browser-test documentation
         run: pnpm --filter @harpa/site test:e2e
 
@@ -118,4 +121,4 @@ jobs:
           --commit "${{ github.event.pull_request.head.sha }}"
           --branch "$SITE_BRANCH"
           --redirect-path /guides/getting-started
-          --redirect-suffix /docs/guides/getting-started
+          --redirect-suffix /reports/docs/guides/getting-started

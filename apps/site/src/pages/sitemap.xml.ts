@@ -1,23 +1,23 @@
 import { getCollection } from "astro:content";
 import type { APIRoute } from "astro";
 
-import { guideHref, sortGuides } from "../lib/docs";
+import { guideHref, sortGuides } from "../lib/reports/docs";
 
 export const prerender = true;
 
 const STATIC_PATHS = [
   "/",
-  "/app",
-  "/roadmap",
+  "/reports",
+  "/reports/roadmap",
   "/privacy",
-  "/account-deletion",
-  "/docs",
-  "/how-to-buy-from-china",
+  "/reports/account-deletion",
+  "/reports/docs",
+  "/procurement/how-to-buy-from-china",
 ];
 
 export const GET: APIRoute = async ({ site }) => {
   const baseUrl = site ?? new URL("https://harpapro.com");
-  const guides = sortGuides(await getCollection("docs"));
+  const guides = sortGuides(await getCollection("reportsDocs"));
   const paths = [...STATIC_PATHS, ...guides.map((guide) => guideHref(guide.id))];
   const urls = paths
     .map((path) => `  <url><loc>${new URL(path, baseUrl)}</loc></url>`)

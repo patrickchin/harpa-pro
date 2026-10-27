@@ -1,0 +1,84 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+import DocsSidebar from "../../components/reports/docs/DocsSidebar.astro";
+import Footer from "../../components/site/Footer.astro";
+import Header from "../../components/site/Header.astro";
+import Layout from "../Layout.astro";
+import { canonicalPathname } from "../../lib/urls";
+
+interface Props {
+  title: string;
+  description: string;
+  guides: CollectionEntry<"reportsDocs">[];
+  currentSlug?: string;
+  currentTitle?: string;
+}
+
+const { title, description, guides, currentSlug, currentTitle } = Astro.props;
+const breadcrumbs = [
+  { name: "Home", path: "/" },
+  { name: "Site Reporting", path: "/reports" },
+  { name: "Guides", path: "/reports/docs" },
+  ...(currentTitle && currentSlug ? [{
+    name: currentTitle,
+    path: `/reports/docs/guides/${currentSlug}`,
+  }] : []),
+];
+const structuredData = [{
+  "@type": "BreadcrumbList",
+  "@id": `${new URL(canonicalPathname(Astro.url.pathname), Astro.site)}#breadcrumbs`,
+  itemListElement: breadcrumbs.map(({ name, path }, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    name,
+    item: new URL(path, Astro.site).href,
+  })),
+}];
+---
+
+<Layout
+  title={`${title} | Harpa Pro`}
+  description={description}
+  pageType={currentSlug ? "TechArticle" : "CollectionPage"}
+  structuredData={structuredData}
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header />
+    <div class="docs-shell">
+      <details class="docs-mobile-nav">
+        <summary>Browse Site Reporting Guides</summary>
+        <DocsSidebar guides={guides} currentSlug={currentSlug} />
+      </details>
+
+      <div class="docs-columns">
+        <aside class="docs-desktop-nav">
+          <a class="docs-home-link" href="/reports/docs">Site Reporting Guides</a>
+          <DocsSidebar guides={guides} currentSlug={currentSlug} />
+        </aside>
+
+        <main class="docs-main" id="main-content">
+          <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
+            <a href="/">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="/reports">Site Reporting</a>
+            <span aria-hidden="true">/</span>
+            {
+              currentTitle ? (
+                <>
+                  <a href="/reports/docs">Guides</a>
+                  <span aria-hidden="true">/</span>
+                  <span aria-current="page">{currentTitle}</span>
+                </>
+              ) : (
+                <span aria-current="page">Guides</span>
+              )
+            }
+          </nav>
+          <slot />
+        </main>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>

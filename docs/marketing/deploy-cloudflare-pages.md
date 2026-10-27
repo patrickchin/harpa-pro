@@ -1,7 +1,7 @@
 # Public site deploy notes (Cloudflare Pages)
 
 This runbook covers the Astro app at `apps/site`, including the marketing,
-roadmap, legal, and `/docs` routes. All routes deploy as one static output to
+roadmap, legal, and `/reports/docs` routes. All routes deploy as one static output to
 the Cloudflare Pages project `harpa-pro`.
 
 ## Why Cloudflare Pages
@@ -68,92 +68,36 @@ Git is the deployment source of truth. For a manual diagnostic rebuild, retry
 the selected Git deployment in the Cloudflare dashboard. Do not restore a
 credentialed Wrangler workflow or a long-lived GitHub API token.
 
-## Documentation hostname cutover
+## URL migration release order
 
-The canonical documentation location is `https://harpapro.com/docs`. The old
-hostname must redirect, not serve a second copy.
+The reporting app and its resources now use `/reports`; procurement keeps
+`/` and `/procurement/how-to-buy-from-china`. Privacy remains shared at
+`/privacy`. The site ships permanent redirects from old URLs, including
+`/app` and `/confirm`, and emits file-format HTML for extensionless canonicals.
 
-### Before changing DNS
+Deploy and verify the website routes before rolling out the API's new default
+confirmation URL. If `WAITLIST_CONFIRM_BASE_URL` is explicitly configured in
+Doppler or Fly, update its path to `/reports/confirm` for that environment;
+changing the schema default does not override configured values. Existing
+confirmation emails remain valid through the `/confirm` redirect, which
+preserves tokens. No auth or dashboard hostname changes are needed.
 
-1. Verify the pull request preview, including Playwright, Lighthouse, and the
-   deployed `_redirects` check.
-2. Merge through `dev` and verify `https://dev.harpa-pro.pages.dev/docs`.
-3. Promote through the protected `main` process and verify:
-   - `/docs` and every guide;
-   - `/robots.txt` and `/sitemap.xml`;
-   - one unknown guide returns the branded 404;
-   - the known paths in `apps/site/public/_redirects` return `301`.
-4. Export or screenshot the current Vercel project and domain settings.
-5. Record the current DNS value. As of 2026-07-03 it is:
+Run `pnpm --filter @harpa/site test:redirects` after building to exercise the
+actual Pages redirect rules locally. The static Lighthouse inputs use
+`reports.html` and `reports/docs.html`; public links use extensionless URLs.
 
-   ```text
-   docs.harpapro.com CNAME 61fa887e5c112c19.vercel-dns-017.com
-   ```
+## Documentation deployment verification
 
-### Configure Cloudflare
+The app guides are part of this same static deployment at
+`https://harpapro.com/reports/docs`. A separate documentation site, hostname,
+DNS change, or hosting cutover is not required.
 
-Cloudflare Single Redirects require proxied traffic. In the `harpapro.com`
-zone:
+Before merging, verify the PR preview and its required checks. After merging
+into `dev`, verify `/reports/docs` and representative guides on the dev
+origin. Production uses the same paths after the normal protected promotion
+to `main`.
 
-1. Replace the Vercel record with a proxied CNAME:
-
-   ```text
-   docs CNAME harpa-pro.pages.dev (Proxied)
-   ```
-
-2. Under **Rules → Redirect Rules**, create a higher-priority root rule:
-   - Match: hostname equals `docs.harpapro.com` and URI path equals `/`.
-   - Target: `https://harpapro.com/docs`.
-   - Status: `301`.
-   - Preserve query string: enabled.
-
-3. Create a lower-priority wildcard rule:
-   - Request URL: `http*://docs.harpapro.com/*`.
-   - Target URL: `https://harpapro.com/${2}`.
-   - Status: `301`.
-   - Preserve query string: enabled.
-
-The second rule preserves old paths on the apex. The checked-in `_redirects`
-file then maps the nine known v3 guide paths and `/search` to their canonical
-v4 destinations. Unknown paths reach the branded 404 instead of silently
-claiming an unrelated guide.
-
-This setup follows Cloudflare's current
-[Single Redirects dashboard workflow](https://developers.cloudflare.com/rules/url-forwarding/single-redirects/create-dashboard/)
-and its
-[cross-host wildcard example](https://developers.cloudflare.com/rules/url-forwarding/examples/redirect-all-different-hostname/).
-
-### Verify the cutover
-
-Check root, known, unknown, and query-string cases:
-
-```bash
-curl -I https://docs.harpapro.com/
-curl -I https://docs.harpapro.com/guides/getting-started
-curl -I https://docs.harpapro.com/guides/manage-projects
-curl -I 'https://docs.harpapro.com/search?q=voice'
-curl -I https://docs.harpapro.com/not-a-real-guide
-```
-
-Expected outcomes:
-
-- root ends at `https://harpapro.com/docs`;
-- known guide paths end at their matching `/docs/guides/...` page;
-- the search query is preserved when `/search` redirects to `/docs`;
-- an unknown path reaches the Harpa Pro 404 page;
-- TLS is valid and no URL loops.
-
-Monitor Cloudflare requests for unexpected 4xx responses through the rollback
-window. Retire the Vercel project only after the custom hostname has remained
-healthy.
-
-## Rollback
-
-If the hostname redirect fails:
-
-1. Disable both Cloudflare Single Redirect rules.
-2. Restore the captured Vercel CNAME value as DNS-only.
-3. Confirm `https://docs.harpapro.com` serves the prior deployment.
-4. Leave `https://harpapro.com/docs` online; it is independent of the hostname
-   redirect.
-5. Correct and re-test the rules before attempting the cutover again.
+Check the sitemap, canonical metadata, an unknown guide's branded 404, and
+the old path redirects listed in `apps/site/public/_redirects`. Redirects
+preserve query strings, including existing confirmation tokens. Roll back a
+site regression through the normal Git deployment process.

@@ -37,7 +37,7 @@ PAGES_VERIFY_TIMEOUT_SEC=5 \
   --title 'Business activity — Harpa Pro Admin' \
   --missing-route /__missing_admin_route__ \
   --redirect-path /guides/getting-started \
-  --redirect-suffix /docs/guides/getting-started
+  --redirect-suffix /reports/docs/guides/getting-started
 
 if PAGES_VERIFY_TIMEOUT_SEC=5 \
   bash "$repo_root/scripts/ci/verify-pages-deployment.sh" \
@@ -45,7 +45,7 @@ if PAGES_VERIFY_TIMEOUT_SEC=5 \
   --commit "$sha" \
   --branch pr-42 \
   --redirect-path /guides/cross-origin \
-  --redirect-suffix /docs/guides/getting-started >/dev/null 2>&1; then
+  --redirect-suffix /reports/docs/guides/getting-started >/dev/null 2>&1; then
   echo 'cross-origin redirect unexpectedly passed' >&2
   exit 1
 fi
@@ -56,7 +56,7 @@ if PAGES_VERIFY_TIMEOUT_SEC=5 \
   --commit "$sha" \
   --branch pr-42 \
   --redirect-path /guides/wrong-path \
-  --redirect-suffix /docs/guides/getting-started >/dev/null 2>&1; then
+  --redirect-suffix /reports/docs/guides/getting-started >/dev/null 2>&1; then
   echo 'same-origin redirect to the wrong exact path unexpectedly passed' >&2
   exit 1
 fi

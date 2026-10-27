@@ -1,5 +1,11 @@
 # Procurement menu with two page links
 
+Current URL and source ownership is defined by
+[product URL organization](design-site-product-url-organization.md). That
+later decision supersedes the route and source paths below; the content and
+interaction requirements still apply.
+
+
 ## Decision
 
 The user clarifies that only the header's Procurement destinations should

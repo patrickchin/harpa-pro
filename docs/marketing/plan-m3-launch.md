@@ -28,8 +28,9 @@ indexable, and ready to drive traffic to.
       managed in Cloudflare).
 - [ ] Cloudflare Pages → attach apex domain to the production project.
 - [ ] DNS records: - `A` + `AAAA` for `harpapro.com` → Cloudflare Pages IPs. - `CNAME app.harpapro.com` → parked / 302 redirect to apex for now
-      (future home of `apps/web`). - Proxied `docs.harpapro.com` record → Cloudflare redirect rules for
-      canonical `harpapro.com/docs` routes. - Resend DNS records (DKIM/SPF/DMARC) if not already done in M1.
+      (future home of `apps/web`). App guides now share the site deployment
+      at `/reports/docs`; no separate docs DNS setup is required. - Resend DNS
+      records (DKIM/SPF/DMARC) if not already done in M1.
 - [ ] HSTS preload submission once domain is stable for a week (defer
       until post-launch if time-constrained).
 - [ ] Commit: `docs(marketing): dns + domain setup`.

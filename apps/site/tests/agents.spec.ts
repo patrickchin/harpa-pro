@@ -747,7 +747,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   ).toHaveAttribute('href', '/');
   await expect(
     procurementMenu.getByRole('link', { name: 'How to Buy from China', exact: true }),
-  ).toHaveAttribute('href', '/how-to-buy-from-china');
+  ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await siteReportingSummary.hover();
   await expect(siteReportingMenu).toHaveAttribute('open', '');
@@ -755,13 +755,13 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Harpa Pro App', exact: true }),
-  ).toHaveAttribute('href', '/app');
+  ).toHaveAttribute('href', '/reports');
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
-  ).toHaveAttribute('href', '/docs');
+  ).toHaveAttribute('href', '/reports/docs');
   await expect(
     siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
-  ).toHaveAttribute('href', '/roadmap');
+  ).toHaveAttribute('href', '/reports/roadmap');
   await expect(siteReportingMenu.getByRole('link', { name: 'Get the App', exact: true }))
     .toHaveAttribute('target', '_blank');
   await page.mouse.click(20, 700);
@@ -796,7 +796,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
     .toHaveAttribute('href', '/privacy');
   await expect(
     page.locator('footer').getByRole('link', { name: 'How to Buy from China', exact: true }),
-  ).toHaveAttribute('href', '/how-to-buy-from-china');
+  ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
@@ -822,13 +822,13 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(mobileSiteReporting.getByText('Site Reporting', { exact: true })).toBeVisible();
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Harpa Pro App', exact: true }),
-  ).toHaveAttribute('href', '/app');
+  ).toHaveAttribute('href', '/reports');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
-  ).toHaveAttribute('href', '/docs');
+  ).toHaveAttribute('href', '/reports/docs');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
-  ).toHaveAttribute('href', '/roadmap');
+  ).toHaveAttribute('href', '/reports/roadmap');
   await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
   await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
 

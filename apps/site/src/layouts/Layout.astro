@@ -2,6 +2,7 @@
 import "@fontsource-variable/inter";
 import "../styles/globals.css";
 import { getAnalyticsEnv } from "../lib/env";
+import { canonicalPathname } from "../lib/urls";
 
 interface Props {
   title?: string;
@@ -25,7 +26,7 @@ const {
   structuredData = [],
 } = Astro.props;
 
-const canonicalUrl = new URL(Astro.url.pathname.replace(/\/+$/, "") || "/", Astro.site);
+const canonicalUrl = new URL(canonicalPathname(Astro.url.pathname), Astro.site);
 const ogImageUrl = new URL(image, Astro.site);
 const homeUrl = new URL("/", Astro.site).href;
 const organizationId = `${homeUrl}#organization`;

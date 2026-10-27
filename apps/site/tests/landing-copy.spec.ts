@@ -526,7 +526,7 @@ test('uses collective service copy and keeps team names in profiles', async ({ p
   await expect(page.getByRole('link', { name: /haruna/i })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Contact Us' })).toBeVisible();
 
-  await page.goto('/app');
+  await page.goto('/reports');
   await expect(page.getByText('Haruna Bayoh', { exact: true })).toHaveCount(1);
 
   await page.goto('/not-a-real-page');

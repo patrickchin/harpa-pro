@@ -2,16 +2,16 @@ import { expect, test } from '@playwright/test';
 
 const REQUIRED_ROUTES = [
   '/',
-  '/app',
-  '/docs',
-  '/roadmap',
+  '/reports',
+  '/reports/docs',
+  '/reports/roadmap',
   '/privacy',
-  '/account-deletion',
-  '/how-to-buy-from-china',
+  '/reports/account-deletion',
+  '/procurement/how-to-buy-from-china',
 ] as const;
 
 test('separates procurement from site reporting', async ({ page }) => {
-  await page.goto('/app');
+  await page.goto('/reports');
 
   await expect(
     page.getByRole('heading', {
@@ -30,17 +30,17 @@ test('separates procurement from site reporting', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 2, name: 'Questions' })).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'View guides', exact: true }).first(),
-  ).toHaveAttribute('href', '/docs');
+  ).toHaveAttribute('href', '/reports/docs');
   await expect(
     page.getByRole('link', { name: 'View roadmap', exact: true }).first(),
-  ).toHaveAttribute('href', '/roadmap');
+  ).toHaveAttribute('href', '/reports/roadmap');
   await expect(page.locator('form')).toHaveCount(0);
   await expect(
     page.getByText(/waitlist|schedule a meeting|join the product updates list/i),
   ).toHaveCount(0);
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
 
-  await page.goto('/roadmap');
+  await page.goto('/reports/roadmap');
   await expect(page.getByText('Site Reporting Roadmap', { exact: true })).toBeVisible();
 });
 
@@ -57,6 +57,9 @@ test('all sitemap pages, internal links, assets, and fragments resolve', async (
 
   for (const route of REQUIRED_ROUTES) {
     expect(sitemapRoutes, `sitemap route ${route}`).toContain(route);
+  }
+  for (const oldRoute of ['/app', '/docs', '/roadmap', '/account-deletion', '/how-to-buy-from-china', '/confirm', '/reports/confirm']) {
+    expect(sitemapRoutes, `noncanonical or private route ${oldRoute}`).not.toContain(oldRoute);
   }
 
   const checkedTargets = new Set<string>();
@@ -99,4 +102,17 @@ test('all sitemap pages, internal links, assets, and fragments resolve', async (
       ).toBe(true);
     }
   }
+});
+
+test('app update confirmation uses the existing API and returns to site reporting', async ({ page }) => {
+  let submittedToken: string | undefined;
+  await page.route('**/waitlist/confirm', async (route) => {
+    submittedToken = route.request().postDataJSON().token;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+  await page.goto('/reports/confirm?token=existing-email-token');
+  await expect(page.locator('#confirm-title')).toHaveText('You’re confirmed. 🎉');
+  expect(submittedToken).toBe('existing-email-token');
+  await expect(page.locator('#confirm-home')).toHaveAttribute('href', '/reports');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
 });

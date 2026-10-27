@@ -59,4 +59,4 @@ jobs:
           --commit "${{ github.sha }}"
           --branch dev
           --redirect-path /guides/getting-started
-          --redirect-suffix /docs/guides/getting-started
+          --redirect-suffix /reports/docs/guides/getting-started

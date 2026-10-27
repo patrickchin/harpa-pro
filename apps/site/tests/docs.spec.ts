@@ -1,19 +1,19 @@
 import { expect, test } from '@playwright/test';
 
 const CANONICAL_GUIDES = [
-  '/docs/guides/generate-ai-report',
-  '/docs/guides/export-share-pdf',
-  '/docs/guides/manage-projects',
-  '/docs/guides/capture-notes-voice',
-  '/docs/guides/collaborate-members',
-  '/docs/guides/edit-report-manually',
-  '/docs/guides/browse-saved-reports',
-  '/docs/guides/getting-started',
-  '/docs/guides/your-account',
+  '/reports/docs/guides/generate-ai-report',
+  '/reports/docs/guides/export-share-pdf',
+  '/reports/docs/guides/manage-projects',
+  '/reports/docs/guides/capture-notes-voice',
+  '/reports/docs/guides/collaborate-members',
+  '/reports/docs/guides/edit-report-manually',
+  '/reports/docs/guides/browse-saved-reports',
+  '/reports/docs/guides/getting-started',
+  '/reports/docs/guides/your-account',
 ] as const;
 
 test('presents two core workflows and concise supporting tasks', async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
 
   await expect(
     page.getByRole('heading', {
@@ -26,7 +26,7 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
       name: 'Site Reporting',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/app');
+  ).toHaveAttribute('href', '/reports');
   await expect(page.locator('#core-workflows-heading')).toBeVisible();
   await expect(page.locator('.docs-core-grid > *')).toHaveCount(2);
   await expect(page.locator('.docs-everyday-grid > *')).toHaveCount(5);
@@ -35,9 +35,9 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
   const montageCards = page.locator('.docs-montage-card');
   await expect(montageCards).toHaveCount(3);
   const montageDestinations = [
-    '/docs/guides/capture-notes-voice',
-    '/docs/guides/generate-ai-report',
-    '/docs/guides/export-share-pdf',
+    '/reports/docs/guides/capture-notes-voice',
+    '/reports/docs/guides/generate-ai-report',
+    '/reports/docs/guides/export-share-pdf',
   ];
   for (const [index, destination] of montageDestinations.entries()) {
     await expect(montageCards.nth(index)).toHaveAttribute('href', destination);
@@ -45,7 +45,7 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
   await expect(page.locator('.docs-phone-frame')).toHaveCount(0);
 });
 test('searches guides locally and stays quiet before a query', async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
 
   const search = page.getByLabel('Search guides');
   await search.fill('voice');
@@ -64,7 +64,7 @@ test('searches guides locally and stays quiet before a query', async ({ page }) 
 });
 
 test('renders the core workflow with optimized screenshots and pagination', async ({ page }) => {
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Generate an AI report' }),
   ).toBeVisible();
@@ -95,7 +95,7 @@ test('renders the core workflow with optimized screenshots and pagination', asyn
 
 test('opens a full screenshot in a dismissible dialog', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
 
   const trigger = page.getByRole('link', {
     name: 'View full screenshot for Finalize and review together',
@@ -187,7 +187,7 @@ test('opens a full screenshot in a dismissible dialog', async ({ page }) => {
 });
 
 test('keeps modified screenshot clicks as native new-tab links', async ({ browserName, page }) => {
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
 
   const trigger = page.getByRole('link', {
     name: 'View full screenshot for Start a report',
@@ -228,7 +228,7 @@ test('keeps modified screenshot clicks as native new-tab links', async ({ browse
 
 test('keeps tier navigation usable on a phone viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
 
   const mobileNav = page.locator('.docs-mobile-nav');
   await mobileNav.getByText('Browse Site Reporting Guides', { exact: true }).click();
@@ -242,7 +242,7 @@ test('keeps tier navigation usable on a phone viewport', async ({ page }) => {
 });
 
 test('serves canonical docs links and generated images', async ({ page, request }) => {
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
 
   const duplicateIds = await page.locator('[id]').evaluateAll((elements) => {
     const counts = new Map<string, number>();
@@ -278,7 +278,7 @@ test('serves canonical docs links and generated images', async ({ page, request 
 });
 
 test('uses the branded not-found page for an unknown guide', async ({ page }) => {
-  const response = await page.goto('/docs/guides/not-a-real-guide');
+  const response = await page.goto('/reports/docs/guides/not-a-real-guide');
   expect(response?.status()).toBe(404);
   await expect(
     page.getByRole('heading', { level: 1, name: 'That Page Is Not Here.' }),

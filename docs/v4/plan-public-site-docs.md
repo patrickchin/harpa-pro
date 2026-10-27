@@ -373,7 +373,7 @@ expect(existsSync(resolve(srcRoot, 'pages/docs/index.astro'))).toBe(true);
 expect(existsSync(resolve(srcRoot, 'pages/docs/guides/[...slug].astro'))).toBe(true);
 expect(existsSync(resolve(srcRoot, 'layouts/DocsLayout.astro'))).toBe(true);
 expect(readFileSync(resolve(srcRoot, 'components/landing/Header.astro'), 'utf8'))
-  .not.toContain('https://docs.harpapro.com');
+  .toContain('href="/reports/docs"');
 ```
 
 - [x] **Step 2: Implement the shared docs layout**
@@ -743,26 +743,13 @@ renamed workflows, Playwright coverage, and Cloudflare Pages project
 `harpa-pro`. Historical plan prose may retain the word "marketing" as a product
 area, but no command or current path may point to `apps/marketing`.
 
-- [x] **Step 2: Write the exact cutover and rollback runbook**
+- [x] **Step 2: Document public-site deployment verification**
 
-Use current official Cloudflare documentation to record the supported Single
-Redirect expression or wildcard rule for:
-
-```text
-docs.harpapro.com/<legacy-path> -> harpapro.com/docs/<mapped-path>
-```
-
-The runbook must include:
-
-1. Verify PR and dev deployments.
-2. Verify the production `/docs` routes after protected promotion to `main`.
-3. Export the existing Vercel project/domain settings for rollback.
-4. Move `docs.harpapro.com` DNS/proxy handling to Cloudflare.
-5. Apply the hostname rule and test root, known, unknown, and query-string URLs.
-6. Monitor 4xx responses and TLS.
-7. Retire Vercel only after the rollback window.
-8. Roll back by restoring the previous Vercel DNS record and disabling the
-   redirect rule.
+App guides now use `/reports/docs` within the public-site deployment. The
+[product URL organization](design-site-product-url-organization.md) supersedes
+the former hostname-cutover plan. Verify PR, dev, and normal production
+promotion using the canonical routes, known path redirects, query strings,
+and branded 404 responses. No separate docs host or DNS migration is required.
 
 - [x] **Step 3: Search for stale operational references**
 

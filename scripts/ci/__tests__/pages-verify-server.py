@@ -29,14 +29,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/guides/getting-started":
             self.send_response(301)
-            self.send_header("Location", "/docs/guides/getting-started")
+            self.send_header("Location", "/reports/docs/guides/getting-started")
             self.end_headers()
             return
         if self.path == "/guides/cross-origin":
             self.send_response(301)
             self.send_header(
                 "Location",
-                "https://attacker.example/docs/guides/getting-started",
+                "https://attacker.example/reports/docs/guides/getting-started",
             )
             self.end_headers()
             return
@@ -44,7 +44,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(301)
             self.send_header(
                 "Location",
-                "/unexpected/docs/guides/getting-started",
+                "/unexpected/reports/docs/guides/getting-started",
             )
             self.end_headers()
             return

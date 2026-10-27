@@ -1,5 +1,11 @@
 # Public site product navigation
 
+Current URL and source ownership is defined by
+[product URL organization](design-site-product-url-organization.md). That
+later decision supersedes the route and source paths below; the content and
+interaction requirements still apply.
+
+
 Status: implemented.
 
 The header's Procurement destinations below are refined by

@@ -4,16 +4,16 @@ import { z } from "astro/zod";
 
 const DOCS_TIERS = ["core", "everyday", "setup"] as const;
 
-const faq = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/faq" }),
+const reportsFaq = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/faq" }),
   schema: z.object({
     question: z.string(),
     order: z.number().default(0),
   }),
 });
 
-const features = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/features" }),
+const reportsFeatures = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/features" }),
   schema: z.object({
     title: z.string(),
     icon: z.string(),
@@ -21,8 +21,8 @@ const features = defineCollection({
   }),
 });
 
-const roadmap = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/roadmap" }),
+const reportsRoadmap = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/roadmap" }),
   schema: z.object({
     title: z.string(),
     icon: z.string(),
@@ -31,8 +31,8 @@ const roadmap = defineCollection({
   }),
 });
 
-const docs = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/docs" }),
+const reportsDocs = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/docs" }),
   schema: z.object({
     title: z.string().min(1),
     description: z.string().min(1),
@@ -44,4 +44,4 @@ const docs = defineCollection({
   }),
 });
 
-export const collections = { faq, features, roadmap, docs };
+export const collections = { reportsFaq, reportsFeatures, reportsRoadmap, reportsDocs };

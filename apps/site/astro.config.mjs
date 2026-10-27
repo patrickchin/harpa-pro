@@ -11,6 +11,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   site: 'https://harpapro.com',
   output: 'static',
+  trailingSlash: 'never',
+  build: { format: 'file' },
   compressHTML: true,
   integrations: [react(), mdx()],
   vite: {

@@ -15,6 +15,7 @@
     "lint": "eslint . --ext .ts,.tsx,.astro --max-warnings=0",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:redirects": "playwright test --config playwright.redirects.config.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:analytics": "playwright test --config playwright.analytics.config.ts"
   },

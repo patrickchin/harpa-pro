@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  testIgnore: /(admin-activity|analytics)\.spec\.ts/,
+  testIgnore: /(admin-activity|analytics|redirects)\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
@@ -34,7 +34,7 @@ export default defineConfig({
         "PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA " +
         "PUBLIC_DASHBOARD_URL=http://127.0.0.1:3003 " +
         "corepack pnpm build && corepack pnpm preview --host 127.0.0.1",
-    url: "http://127.0.0.1:3002/docs",
+    url: "http://127.0.0.1:3002/reports/docs",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

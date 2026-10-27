@@ -1,0 +1,82 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+
+import DocsScreenshotDialog from "../../../../components/reports/docs/DocsScreenshotDialog.astro";
+import DocsPager from "../../../../components/reports/docs/DocsPager.astro";
+import DocsLayout from "../../../../layouts/reports/DocsLayout.astro";
+import {
+  docsTierLabel,
+  guideHref,
+  guideSlug,
+  sortGuides,
+} from "../../../../lib/reports/docs";
+
+interface Props {
+  guide: CollectionEntry<"reportsDocs">;
+  guides: CollectionEntry<"reportsDocs">[];
+  previous?: CollectionEntry<"reportsDocs">;
+  next?: CollectionEntry<"reportsDocs">;
+}
+
+export async function getStaticPaths() {
+  const guides = sortGuides(await getCollection("reportsDocs"));
+
+  return guides.map((guide, index) => ({
+    params: { slug: guideSlug(guide.id) },
+    props: {
+      guide,
+      guides,
+      previous: guides[index - 1],
+      next: guides[index + 1],
+    },
+  }));
+}
+
+const { guide, guides, previous, next } = Astro.props;
+const { Content } = await render(guide);
+const slug = guideSlug(guide.id);
+const relatedGuides = guide.data.related
+  .map((relatedSlug) =>
+    guides.find((candidate) => guideSlug(candidate.id) === relatedSlug),
+  )
+  .filter((candidate): candidate is CollectionEntry<"reportsDocs"> => Boolean(candidate));
+---
+
+<DocsLayout
+  title={guide.data.title}
+  description={guide.data.description}
+  guides={guides}
+  currentSlug={slug}
+  currentTitle={guide.data.title}
+>
+  <header class="docs-guide-heading">
+    <div>
+      <p>{docsTierLabel(guide.data.tier)}</p>
+      <h1>{guide.data.title}</h1>
+      <span>{guide.data.description}</span>
+    </div>
+  </header>
+
+  <article class="docs-prose">
+    <Content />
+  </article>
+
+  <DocsScreenshotDialog />
+
+  {
+    relatedGuides.length > 0 && (
+      <section class="docs-related" aria-labelledby="related-guides-heading">
+        <h2 id="related-guides-heading">Related Guides</h2>
+        <ul>
+          {relatedGuides.map((related) => (
+            <li>
+              <a href={guideHref(related.id)}>{related.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <DocsPager previous={previous} next={next} />
+</DocsLayout>

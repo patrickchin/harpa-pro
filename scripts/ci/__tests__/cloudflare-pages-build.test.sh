@@ -17,6 +17,12 @@ case "$*" in
   *'@harpa/site build'*) app=site ;;
   *'@harpa/admin build'*) app=admin ;;
   *'@harpa/dashboard build'*) app=dashboard ;;
+  *'@harpa/ifc-viewer build:viewer'*)
+    mkdir -p packages/ifc-viewer/dist/assets
+    printf '<title>Local IFC viewer — Harpa Pro</title>\n' > packages/ifc-viewer/dist/index.html
+    touch packages/ifc-viewer/dist/assets/web-ifc.wasm packages/ifc-viewer/dist/THIRD_PARTY_NOTICES.txt
+    exit 0
+    ;;
   *) echo "unexpected pnpm invocation: $*" >&2; exit 1 ;;
 esac
 mkdir -p "apps/$app/dist"
@@ -103,6 +109,21 @@ run_build admin pr-42 https://harpa-pro-api-pr-42.fly.dev \
 run_build dashboard main https://api.harpapro.com
 run_build dashboard dev https://harpa-pro-api-dev.fly.dev
 run_build dashboard pr-42 https://harpa-pro-api-pr-42.fly.dev
+
+for viewer_branch in dev pr-42 main; do
+  (
+    cd "$sandbox"
+    unset PUBLIC_TURNSTILE_SITE_KEY VITE_PASSWORD_ACCOUNT_EMAILS
+    PATH="$sandbox/bin:$PATH" \
+    CF_PAGES_BRANCH="$viewer_branch" \
+    CF_PAGES_COMMIT_SHA="$sha" \
+      bash scripts/ci/build-cloudflare-pages.sh viewer
+  )
+  grep -Fq "\"commit\":\"$sha\"" \
+    "$sandbox/packages/ifc-viewer/dist/_cf-pages-deployment.json"
+  grep -Fq "\"branch\":\"$viewer_branch\"" \
+    "$sandbox/packages/ifc-viewer/dist/_cf-pages-deployment.json"
+done
 
 if (
   cd "$sandbox"

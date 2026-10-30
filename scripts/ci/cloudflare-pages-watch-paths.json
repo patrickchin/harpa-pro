@@ -33,6 +33,24 @@
     ],
     "exclude": []
   },
+  "harpa-pro-viewer": {
+    "include": [
+      "packages/ifc-viewer/*",
+      "apps/site/src/styles/globals.css",
+      "apps/site/public/brand-icon.svg",
+      "apps/site/package.json",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "tsconfig*",
+      "turbo.json",
+      ".npmrc",
+      ".nvmrc",
+      "patches/*",
+      "scripts/ci/build-cloudflare-pages.sh"
+    ],
+    "exclude": []
+  },
   "harpa-pro-dashboard": {
     "include": [
       "apps/dashboard/*",

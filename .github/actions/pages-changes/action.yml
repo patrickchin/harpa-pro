@@ -10,6 +10,9 @@ outputs:
   dashboard:
     description: Dashboard build inputs changed.
     value: ${{ steps.filter.outputs.harpa-pro-dashboard }}
+  viewer:
+    description: Local IFC viewer build inputs changed.
+    value: ${{ steps.filter.outputs.harpa-pro-viewer }}
 runs:
   using: composite
   steps:

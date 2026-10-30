@@ -741,6 +741,22 @@ importers:
 
   packages/design-tokens: {}
 
+  packages/ifc-viewer:
+    dependencies:
+      three:
+        specifier: 0.180.0
+        version: 0.180.0
+      web-ifc:
+        specifier: 0.0.78
+        version: 0.0.78
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      playwright:
+        specifier: 1.63.0
+        version: 1.63.0
+
 packages:
 
   '@adobe/css-tools@4.5.0':
@@ -11370,6 +11386,12 @@ packages:
     resolution: {integrity: sha512-DdOn/G5F+qvZELWeO5ZFFwcN611TfMybxPV0LUUoutUmiH2t47MZSB7gLV9O9YLhvudBdnzQNAoFOu4Xz8eOrQ==}
     peerDependencies:
       '@types/emscripten': '>=1.39.6'
+
+  three@0.180.0:
+    resolution: {integrity: sha512-o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==}
+
+  web-ifc@0.0.78:
+    resolution: {integrity: sha512-LGKMNYFVNyz9vVERN0iz+zvPQJqT7MEGBxslzcuuhwDDOA116LmJLKkg8sZ5SEvQJSc5NRVMWgpRNkDmuoQoJg==}
 
 snapshots:
 
@@ -23736,3 +23758,7 @@ snapshots:
     dependencies:
       '@types/emscripten': 1.41.5
       type-fest: 5.6.0
+
+  three@0.180.0: {}
+
+  web-ifc@0.0.78: {}

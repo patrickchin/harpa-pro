@@ -161,7 +161,8 @@ function display(data) {
       opacity: rgba[3],
     });
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.applyMatrix4(new THREE.Matrix4().fromArray(batch.transform));
+    mesh.matrix.fromArray(batch.transform);
+    mesh.matrixAutoUpdate = false;
     model.add(mesh);
   }
   if (!model.children.length)

@@ -6,11 +6,11 @@ API credentials are required.
 
 ## Current status
 
-Code and local browser verification are prepared. Project creation, Git
-connection and public dev deployment require restored Cloudflare access and
-have not yet been verified. `VIEWER_PREVIEWS_ENABLED` is deliberately unset
-until that setup is complete. This switch controls GitHub verification; it
-does not disable publishing in Cloudflare.
+On 30 October 2026, the `harpa-pro-viewer` project was created and its GitHub
+connection, build command, output directory, custom preview branches and watch
+paths were verified through the Cloudflare API. Automatic production
+deployments are disabled and no production custom domain is attached.
+Public PR/dev deployment verification follows the first protected PR.
 
 ## Provider configuration
 
@@ -18,16 +18,15 @@ does not disable publishing in Cloudflare.
    `patrickchin/harpa-pro`. Use the repository root as the build root.
 2. Set production branch `main`, and disable automatic production deployments.
    Allow only `dev` and mirrored `pr-*` branches as custom preview branches.
-3. Set `SKIP_DEPENDENCY_INSTALL=1` and `NODE_VERSION=24.19.0` in preview and
-   production build environments. No secrets or analytics keys are needed.
+3. Set `SKIP_DEPENDENCY_INSTALL=1`, `NODE_VERSION=24.19.0` and
+   `PNPM_VERSION=9.12.3` in preview and production build environments.
+   No secrets or analytics keys are needed.
 4. Build command:
    `pnpm install --frozen-lockfile && bash scripts/ci/build-cloudflare-pages.sh viewer`.
    Output directory: `packages/ifc-viewer/dist`.
 5. Apply the `harpa-pro-viewer` include list in
    [`cloudflare-pages-watch-paths.json`](../../scripts/ci/cloudflare-pages-watch-paths.json),
    with no excludes. Leave other projects' watch settings unchanged.
-6. Enable the GitHub repository variable `VIEWER_PREVIEWS_ENABLED=true` after
-   the Git integration and preview configuration are verified.
 
 The existing preview-ref workflow mirrors exact PR heads to `pr-N`. Cloudflare
 Git builds those commits; the viewer workflows verify the deployment marker.

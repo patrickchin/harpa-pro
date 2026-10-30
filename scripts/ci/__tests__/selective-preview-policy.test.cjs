@@ -51,7 +51,6 @@ test('the IFC viewer watches its copied assets without building other apps', () 
   assert(!viewerBuilds('apps/site/src/pages/index.astro'));
   for (const environment of ['preview', 'dev']) {
     const workflow = read(`.github/workflows/viewer-${environment}.yml`);
-    assert(workflow.includes("vars.VIEWER_PREVIEWS_ENABLED == 'true'"));
     assert(workflow.includes("needs.changes.outputs.deploy == 'true'"));
     for (const input of viewer.include) {
       const trigger = input.endsWith('/*') ? input.replaceAll('*', '**') : input;

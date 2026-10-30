@@ -42,7 +42,6 @@ jobs:
   verify:
     needs: changes
     if: >-
-      vars.VIEWER_PREVIEWS_ENABLED == 'true' &&
       github.ref == 'refs/heads/dev' &&
       (github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy == 'true')
     runs-on: ubuntu-latest

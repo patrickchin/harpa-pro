@@ -1,0 +1,59 @@
+name: viewer-dev
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'packages/ifc-viewer/**'
+      - 'apps/site/src/styles/globals.css'
+      - 'apps/site/public/brand-icon.svg'
+      - 'apps/site/package.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig*'
+      - 'turbo.json'
+      - '.npmrc'
+      - '.nvmrc'
+      - 'patches/**'
+      - 'scripts/ci/**'
+      - '.github/**'
+  workflow_dispatch: {}
+
+concurrency:
+  group: viewer-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.paths.outputs.viewer }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: paths
+        uses: ./.github/actions/pages-changes
+
+  verify:
+    needs: changes
+    if: >-
+      vars.VIEWER_PREVIEWS_ENABLED == 'true' &&
+      github.ref == 'refs/heads/dev' &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin https://dev.harpa-pro-viewer.pages.dev
+          --commit "${{ github.sha }}"
+          --branch dev
+          --title 'Local IFC viewer — Harpa Pro'
+          --missing-route /assets/missing.wasm

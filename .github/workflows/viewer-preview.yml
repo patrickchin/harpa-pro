@@ -1,0 +1,79 @@
+name: viewer-preview
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'packages/ifc-viewer/**'
+      - 'apps/site/src/styles/globals.css'
+      - 'apps/site/public/brand-icon.svg'
+      - 'apps/site/package.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig*'
+      - 'turbo.json'
+      - '.npmrc'
+      - '.nvmrc'
+      - 'patches/**'
+      - 'scripts/ci/**'
+      - '.github/**'
+
+concurrency:
+  group: viewer-preview-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.paths.outputs.viewer }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - id: paths
+        uses: ./.github/actions/pages-changes
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-monorepo
+      - name: Build and test the real IFC engine
+        run: pnpm --filter @harpa/ifc-viewer test
+      - name: Install Chromium
+        run: pnpm --filter @harpa/ifc-viewer exec playwright install --with-deps chromium
+      - name: Verify local-file and offline browser flows
+        run: pnpm --filter @harpa/ifc-viewer test:browser
+      - name: Upload browser evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: viewer-browser-report
+          path: packages/ifc-viewer/artifacts/
+          retention-days: 14
+
+  deployment:
+    needs: [verify, changes]
+    if: >-
+      vars.VIEWER_PREVIEWS_ENABLED == 'true' &&
+      needs.changes.outputs.deploy == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify Cloudflare Git deployment
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin https://pr-${{ github.event.pull_request.number }}.harpa-pro-viewer.pages.dev
+          --commit "${{ github.event.pull_request.head.sha }}"
+          --branch pr-${{ github.event.pull_request.number }}
+          --title 'Local IFC viewer — Harpa Pro'
+          --missing-route /assets/missing.wasm

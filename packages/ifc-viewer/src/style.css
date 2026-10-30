@@ -1,0 +1,365 @@
+:root {
+  color-scheme: light;
+  --hairline: color-mix(in oklab, var(--border) 60%, transparent);
+  font:
+    15px/1.6 'Inter Variable',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+  color: var(--foreground);
+  background: var(--background);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input {
+  font: inherit;
+}
+button,
+.file-label {
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible,
+canvas:focus-visible,
+summary:focus-visible,
+input:focus-visible + * {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+[hidden] {
+  display: none !important;
+}
+header {
+  min-height: 64px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px max(24px, calc((100% - 1200px) / 2));
+}
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--foreground);
+  text-decoration: none;
+}
+.wordmark img {
+  border-radius: calc(var(--radius) - 4px);
+}
+.privacy {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.privacy span {
+  padding-right: 6px;
+  color: var(--accent-ink);
+}
+main {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: calc(100svh - 112px);
+  max-width: 1200px;
+  margin: 24px auto;
+  border: 1px solid var(--hairline);
+  border-radius: calc(var(--radius) + 6px);
+  overflow: hidden;
+  background: var(--card);
+}
+aside {
+  padding: 32px 24px;
+  border-right: 1px solid var(--hairline);
+}
+.eyebrow {
+  color: var(--accent-ink);
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  font-weight: 600;
+}
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.9px;
+  margin: 15px 0;
+}
+.intro {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin-bottom: 28px;
+}
+.file-label {
+  background: var(--accent);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 11px 20px;
+  color: var(--accent-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 8%, transparent);
+  transition: filter 150ms;
+}
+.file-label:hover {
+  filter: brightness(0.95);
+}
+.file-label.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+#model-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.file-label:has(+ input:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.hint,
+.footnote {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.hint {
+  text-align: center;
+  margin-top: 8px;
+}
+.status-box {
+  margin: 25px 0;
+  font-size: 12px;
+}
+progress {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 5px;
+  display: block;
+  margin-top: 15px;
+}
+.text-button {
+  background: none;
+  border: none;
+  padding: 8px 0;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  font-size: 12px;
+}
+.file-info {
+  padding: 18px 0 0;
+}
+.file-info h2 {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.file-info p {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin: 3px 0;
+}
+dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  font-size: 12px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 15px;
+  gap: 8px;
+}
+dt {
+  color: var(--muted-foreground);
+}
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+details {
+  font-size: 12px;
+  margin: 24px 0;
+}
+summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+}
+details ul {
+  padding-left: 18px;
+  max-height: 200px;
+  overflow: auto;
+  color: var(--muted-foreground);
+}
+details li {
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+}
+.notice {
+  background: color-mix(in oklab, var(--accent) 5%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--accent) 20%, transparent);
+  border-radius: var(--radius);
+  padding: 15px;
+  margin-top: 28px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.notice strong {
+  color: var(--foreground);
+}
+.notice p {
+  margin: 5px 0 0;
+}
+.footnote {
+  margin-top: 22px;
+}
+.footnote a {
+  color: var(--accent-ink);
+  text-underline-offset: 3px;
+}
+.viewer {
+  position: relative;
+  min-height: 650px;
+  background: var(--background);
+  overflow: hidden;
+}
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+.toolbar {
+  position: absolute;
+  z-index: 2;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.toolbar button {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+  transition: background-color 150ms;
+}
+.toolbar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.toolbar button:not(:disabled):hover {
+  background: var(--secondary);
+}
+.empty-state {
+  position: absolute;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 80%;
+  color: var(--muted-foreground);
+}
+.empty-state .cube {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  border: 1px solid var(--hairline);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--card);
+  color: var(--accent-ink);
+}
+.cube svg {
+  width: 32px;
+  height: 32px;
+}
+.empty-state h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--foreground);
+}
+.empty-state p {
+  font-size: 12px;
+}
+.view-caption {
+  position: absolute;
+  bottom: 22px;
+  left: 24px;
+  right: 24px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  pointer-events: none;
+}
+.view-caption span {
+  background: color-mix(in oklab, var(--background) 90%, transparent);
+  padding: 3px 5px;
+  border-radius: 3px;
+}
+@media (max-width: 760px) {
+  header {
+    min-height: 64px;
+    gap: 12px;
+    padding: 12px 18px;
+  }
+  .privacy {
+    font-size: 10px;
+    max-width: 110px;
+    line-height: 1.4;
+  }
+  main {
+    grid-template-columns: 1fr;
+    margin: 16px 12px;
+  }
+  aside {
+    padding: 24px;
+    border-right: 0;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  .viewer {
+    min-height: 65svh;
+  }
+  .toolbar {
+    gap: 5px;
+    left: 16px;
+    right: 16px;
+  }
+  .toolbar button {
+    padding: 7px 10px;
+  }
+  .view-caption {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .file-label,
+  .toolbar button {
+    transition: none;
+  }
+}

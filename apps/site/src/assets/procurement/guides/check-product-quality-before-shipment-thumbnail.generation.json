@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/check-product-quality-before-shipment",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: product-mockup. Create a NEW square 1:1 photorealistic studio editorial thumbnail for a China procurement guide index. The image will display at only 80 to 160 pixels. Subject: one simple plain steel caliper with its outer jaws contacting the two opposite faces of a thick walnut sample block at its edge, demonstrating a thickness check. Clear physically plausible tool geometry; no readable scale or digital screen. Plain warm ivory seamless studio background and surface, very soft natural shadow, restrained walnut, limestone, kraft and brushed brass palette, realistic materials with restrained grain. Single clear central subject occupies roughly 65–75 percent of the square, generous clean margin, crisp silhouette, calm premium product photography. No people or hands, no room or workshop, no extra props, collage, inset panels, text, letters, numbers, labels, logos, certificates, shipping marks, watermarks or decorative graphics. A generated illustrative object study, no real project or supplier claim.",
+  "generatedOriginal": "exec-5a9078e9-6e9f-4bf8-a42d-b7215d004828.png",
+  "originalSha256": "4909330a6f76179d903b0e37d6010abd8376b476ed5fd16dc0faf38aaa2afb46",
+  "asset": "check-product-quality-before-shipment-thumbnail.webp",
+  "alt": "Generated illustration of a steel caliper checking a walnut edge on a light background",
+  "caption": "Generated illustration · Quality checks"
+}

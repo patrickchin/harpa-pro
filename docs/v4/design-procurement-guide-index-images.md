@@ -10,9 +10,16 @@ on the [article series](design-procurement-article-series.md) and
 
 ## Index composition
 
-Keep the title, introductory copy, article order, typography, and material
+Keep the title, introductory copy, article order, and material
 palette. Use an editorial list with one native link per article row. The
 image supports the title and summary without dominating either.
+
+Reserve Cormorant Garamond for the page's main title. Use the existing Inter
+sans-serif face for section headings, the buying-guide heading, and article
+titles, with semibold weight and a smaller scale than the previous serif
+headings. Section headings range from 24–32px and article titles from 18–22px.
+Keep body text, image sizes, row dividers, and native link behaviour. This
+reduces repeated serif styling while retaining one clear editorial accent.
 
 Use square thumbnails at approximately 160 CSS pixels on desktop and 80–96
 CSS pixels on phones. Keep thumbnail and text side by side on phones instead

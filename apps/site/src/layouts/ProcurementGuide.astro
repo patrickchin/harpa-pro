@@ -1,5 +1,6 @@
 ---
 import { getImage, Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
 import woodInteriorImg from "../assets/procurement/finishes/wood.webp";
 import Footer from "../components/site/Footer.astro";
 import Header from "../components/site/Header.astro";
@@ -16,6 +17,7 @@ interface Props {
   seoTitle?: string;
   headings: { slug: string; text: string }[];
   showIndexBreadcrumb?: boolean;
+  hero?: { image: ImageMetadata; alt: string; caption: string };
 }
 
 const {
@@ -25,12 +27,17 @@ const {
   seoTitle = `${headline} | Harpa Pro`,
   headings,
   showIndexBreadcrumb = true,
+  hero = {
+    image: woodInteriorImg,
+    alt: "Generated living-room material concept with walnut joinery, pale stone, and linen upholstery",
+    caption: "Generated material concept · Wood",
+  },
 } = Astro.props;
 const homeUrl = new URL("/", Astro.site).href;
 const articleUrl = new URL(canonicalPathname(Astro.url.pathname), Astro.site).href;
-const imageAlt = "Generated living-room material concept with walnut joinery, pale stone, and linen upholstery";
+const imageAlt = hero.alt;
 const socialImage = await getImage({
-  src: woodInteriorImg,
+  src: hero.image,
   width: 1200,
   height: 630,
   format: "png",
@@ -102,7 +109,7 @@ const structuredData = [
               </header>
               <figure class="guide-material">
                 <Image
-                  src={woodInteriorImg}
+                  src={hero.image}
                   alt={imageAlt}
                   widths={[400, 640, 960]}
                   sizes="(min-width: 1024px) 460px, (min-width: 640px) 640px, calc(100vw - 32px)"
@@ -110,7 +117,7 @@ const structuredData = [
                   quality={84}
                   priority
                 />
-                <figcaption>Generated material concept · Wood</figcaption>
+                <figcaption>{hero.caption}</figcaption>
               </figure>
             </div>
             <div class="guide-reading-layout">

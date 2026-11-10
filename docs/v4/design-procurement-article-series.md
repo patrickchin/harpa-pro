@@ -53,8 +53,9 @@ fetching.
 Create a simple static `/procurement/guides` index. Reuse shared `Layout`,
 `Header`, `Footer`, `Container`, `Section`, and luxury tokens. Include the
 existing main buying guide first, then the collection sorted by `order`
-with each article's title and description. Use ordinary text links in a
-single editorial list, with quiet rules. The index has one H1, visible
+with each article's title and description. Use linked image-and-text rows in
+a single editorial list, following the
+[index image design](design-procurement-guide-index-images.md). The index has one H1, visible
 breadcrumbs, a production canonical URL, and unique metadata. An empty
 collection still produces a useful page linking to the existing guide.
 

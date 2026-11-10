@@ -24,6 +24,12 @@ test("every article in the collection renders without scripts and is listed in t
   const articlePaths = await page.locator(".guide-list a").evaluateAll(
     (links) => links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
   );
+  const indexImageAlts = await page.locator(".guide-list a").evaluateAll(
+    (links) => Object.fromEntries(links.map((link) => [
+      new URL((link as HTMLAnchorElement).href).pathname,
+      link.querySelector("img")?.getAttribute("alt"),
+    ])),
+  );
   const sitemap = await (await request.get("/sitemap.xml")).text();
   const heroSources = new Set<string>();
   const socialSources = new Set<string>();
@@ -36,6 +42,7 @@ test("every article in the collection renders without scripts and is listed in t
     const heroSource = (await hero.getAttribute("src"))!;
     const socialSource = (await page.locator('meta[property="og:image"]').getAttribute("content"))!;
     const alt = await hero.getAttribute("alt");
+    if (indexImageAlts[path]) expect(alt).toBe(indexImageAlts[path]);
     await expect(hero).toHaveAttribute("width", /^\d+$/);
     await expect(hero).toHaveAttribute("height", /^\d+$/);
     await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute("content", alt!);

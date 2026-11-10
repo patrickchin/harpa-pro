@@ -1,0 +1,79 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+import Header from "../../components/site/Header.astro";
+import Footer from "../../components/site/Footer.astro";
+import Container from "../../components/primitives/Container.astro";
+import Section from "../../components/primitives/Section.astro";
+import { sortProcurementGuides } from "../../lib/procurement/guides";
+import "../../styles/luxury.css";
+
+const guides = sortProcurementGuides(await getCollection("procurementGuides"));
+const title = "Procurement guides";
+const description = "Practical China sourcing guides for architects and interior designers: supplier checks, order costs, quality inspections, payments, and shipping.";
+const homeUrl = new URL("/", Astro.site).href;
+const pageUrl = new URL("/procurement/guides", Astro.site).href;
+const structuredData = [{
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: homeUrl },
+    { "@type": "ListItem", position: 2, name: title, item: pageUrl },
+  ],
+}];
+---
+
+<Layout title={`${title} | Harpa Pro`} description={description} pageType="CollectionPage" structuredData={structuredData}>
+  <div class="luxury-site procurement-guides min-h-screen bg-background text-ink">
+    <Header />
+    <main id="main-content">
+      <Section>
+        <Container>
+          <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
+            <a href="/">Home</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{title}</span>
+          </nav>
+          <header class="guides-intro">
+            <h1>{title}</h1>
+            <p>Plan your order from China, check the supplier, and prepare for delivery.
+              These guides focus on furniture, finishes, lighting, and joinery for
+              architecture and interior projects.</p>
+          </header>
+          <section aria-labelledby="buying-guide" class="guides-start">
+            <h2 id="buying-guide"><a href="/procurement/how-to-buy-from-china" class="ring-focus">How to buy from China</a></h2>
+            <p>Start with the complete buying process, including import requirements
+              for Ghana, Kenya, Nigeria, and Tanzania.</p>
+            <a href="/procurement/how-to-buy-from-china" class="guide-link ring-focus">Read the buying guide</a>
+          </section>
+          {guides.length > 0 && <section aria-labelledby="specific-guides">
+            <h2 id="specific-guides">Guides for your next decision</h2>
+            <ul class="guide-list">
+              {guides.map((guide) => <li>
+                <h3><a href={`/procurement/${guide.id}`} class="ring-focus">{guide.data.title}</a></h3>
+                <p>{guide.data.description}</p>
+              </li>)}
+            </ul>
+          </section>}
+        </Container>
+      </Section>
+    </main>
+    <Footer />
+  </div>
+</Layout>
+
+<style>
+  .procurement-guides { color: var(--luxury-walnut); }
+  .docs-breadcrumbs { color: var(--luxury-muted); }
+  .guides-intro { margin: 2.5rem 0 3rem; max-width: 44rem; }
+  h1, h2, h3 { font-family: var(--luxury-serif); font-weight: 500; text-wrap: balance; }
+  h1 { font-size: clamp(3rem, 6vw, 5rem); letter-spacing: -0.035em; line-height: 1.05; }
+  h2 { font-size: clamp(2rem, 3vw, 2.6rem); line-height: 1.2; }
+  h3 { font-size: clamp(1.6rem, 2.4vw, 2rem); line-height: 1.25; }
+  p { font-size: 1.0625rem; line-height: 1.75; margin-top: 1rem; max-width: 44rem; }
+  .guides-start { background: var(--luxury-porcelain); margin-bottom: 3rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .guide-link { align-items: center; display: inline-flex; min-height: 2.75rem; margin-top: 1rem; text-decoration: underline; text-underline-offset: 0.2em; }
+  .guide-list { display: grid; gap: 2.5rem; margin-top: 2rem; max-width: 52rem; }
+  .guide-list a { display: inline-block; padding-block: 0.5rem; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+  .guide-list a:hover, .guides-start a:hover { color: var(--accent-ink); }
+  .guide-list p { margin-top: 0.5rem; }
+</style>

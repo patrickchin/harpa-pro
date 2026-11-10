@@ -6,6 +6,22 @@ procurement and the site-reporting app.
 See [`docs/marketing/`](../../docs/marketing/) for current architecture and
 historical M0–M4 plans.
 
+## Procurement guides
+
+The existing buying guide and country sections live at
+`/procurement/how-to-buy-from-china`. Additional articles are
+MDX files in `src/content/procurement/guides/`, with `title`, `description`,
+and a positive integer `order` in frontmatter. Each filename becomes its
+`/procurement/<filename>` URL and is listed automatically at
+`/procurement/guides` and in the sitemap. Use lowercase, hyphenated filenames;
+`guides` and `how-to-buy-from-china` are reserved.
+
+Add each article and its downloads in a separate PR. Draft PRs provide the
+editorial review gate; merging content adds it to the static site. Downloads
+belong in `public/downloads/procurement/`. Link only to existing pages and
+keep country requirements in the main buying guide. See the
+[series design](../../docs/v4/design-procurement-article-series.md).
+
 ## Product organization
 
 | Scope | Canonical routes | Source ownership beneath `src/` |

@@ -44,4 +44,16 @@ const reportsDocs = defineCollection({
   }),
 });
 
-export const collections = { reportsFaq, reportsFeatures, reportsRoadmap, reportsDocs };
+const procurementGuides = defineCollection({
+  loader: glob({
+    pattern: "**/*.mdx",
+    base: "./src/content/procurement/guides",
+  }),
+  schema: z.object({
+    title: z.string().min(1),
+    description: z.string().min(20),
+    order: z.number().int().positive(),
+  }),
+});
+
+export const collections = { reportsFaq, reportsFeatures, reportsRoadmap, reportsDocs, procurementGuides };

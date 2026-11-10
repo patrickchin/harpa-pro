@@ -24,6 +24,13 @@ and a caption beginning `Generated illustration · `. Astro
 uses that image for the responsive hero, social preview, and Article metadata.
 See the [article image design](../../docs/v4/design-procurement-article-images.md).
 
+Use optional `thumbnail` frontmatter with the same `image`, `alt`, and `caption`
+fields for a simpler square index image. Keep one clear subject on a plain
+background, readable at 80–160px. The index falls back to `hero` when no
+thumbnail is supplied; article heroes and social images always use `hero`.
+Save generation prompts alongside assets in `*.generation.json`. See the
+[index image design](../../docs/v4/design-procurement-guide-index-images.md).
+
 Add each article and its downloads in a separate PR. Draft PRs provide the
 editorial review gate; merging content adds it to the static site. Downloads
 belong in `public/downloads/procurement/`. Link only to existing pages and

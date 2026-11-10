@@ -24,12 +24,32 @@ test("every article in the collection renders without scripts and is listed in t
   const articlePaths = await page.locator(".guide-list a").evaluateAll(
     (links) => links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
   );
-  const indexImageAlts = await page.locator(".guide-list a").evaluateAll(
+  const indexImages = await page.locator(".guide-list a").evaluateAll(
     (links) => Object.fromEntries(links.map((link) => [
       new URL((link as HTMLAnchorElement).href).pathname,
-      link.querySelector("img")?.getAttribute("alt"),
+      link.querySelector("img") ? {
+        alt: link.querySelector("img")!.getAttribute("alt"),
+        src: link.querySelector("img")!.getAttribute("src")!,
+      } : undefined,
     ])),
   );
+  for (const image of Object.values(indexImages)) {
+    if (!image) continue;
+    expect(image.alt).toMatch(/^Generated illustration of /);
+    expect((await request.get(image.src)).status()).toBe(200);
+  }
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    for (const entry of await page.locator(".guide-entry-with-image").all()) {
+      const image = (await entry.locator("img").boundingBox())!;
+      const copy = (await entry.locator(".guide-entry-copy").boundingBox())!;
+      expect(image.width).toBe(width >= 768 ? 160 : 80);
+      expect(image.height).toBe(image.width);
+      expect(copy.x).toBeGreaterThan(image.x + image.width);
+      expect(Math.abs(copy.y - image.y)).toBeLessThan(1);
+    }
+  }
   const sitemap = await (await request.get("/sitemap.xml")).text();
   const heroSources = new Set<string>();
   const socialSources = new Set<string>();
@@ -42,7 +62,10 @@ test("every article in the collection renders without scripts and is listed in t
     const heroSource = (await hero.getAttribute("src"))!;
     const socialSource = (await page.locator('meta[property="og:image"]').getAttribute("content"))!;
     const alt = await hero.getAttribute("alt");
-    if (indexImageAlts[path]) expect(alt).toBe(indexImageAlts[path]);
+    if (indexImages[path]?.src.includes("-thumbnail")) {
+      expect(heroSource).not.toContain("-thumbnail");
+      expect(socialSource).not.toContain("-thumbnail");
+    }
     await expect(hero).toHaveAttribute("width", /^\d+$/);
     await expect(hero).toHaveAttribute("height", /^\d+$/);
     await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute("content", alt!);

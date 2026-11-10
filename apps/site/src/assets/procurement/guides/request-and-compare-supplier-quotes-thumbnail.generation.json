@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/request-and-compare-supplier-quotes",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: product-mockup. Asset type: square index thumbnail for a China procurement guide. Generate a new 1024 by 1024 square image, an elegant photorealistic studio object illustration with one large, simple, centered subject occupying roughly 80 percent of the square. Plain light warm ivory seamless background, soft directional studio light and a short soft contact shadow. Restrained warm-neutral palette, tactile realistic materials, crisp broad silhouette recognizable when reduced to 80 pixels. Deliberately simpler than an editorial hero photograph. No people, hands, faces, room scene, background props, collage, split screen, frame, writing, letters, numbers, logos, watermark, screenshots, certificates or decorative graphics. Subject: one compact still-life group of three clean ivory quotation sheets fanned slightly so their three silhouettes remain distinct, with a single chunky brushed-brass U-shaped cabinet handle resting across their lower center. Near-top-down view. Sheets completely blank except two or three broad faint grey horizontal rules; absolutely no writing or numerals. Brass handle large enough to remain recognizable at thumbnail size. The entire group is isolated and tightly framed; no desk, pens, samples, ruler or other props.",
+  "generatedOriginal": "exec-54435214-0bbd-48bd-9807-fdb099bf0f15.png",
+  "originalSha256": "b9787aad537dcd0690c8bf1ab52081c6d7abd099bedc5e22112d7825dc3ed851",
+  "asset": "request-and-compare-supplier-quotes-thumbnail.webp",
+  "alt": "Generated illustration of three plain quotation sheets with one brass cabinet-handle sample.",
+  "caption": "Generated illustration · Comparing quotations"
+}

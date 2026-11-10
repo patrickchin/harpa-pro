@@ -1,6 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
+import woodInteriorImg from "../../assets/procurement/finishes/wood.webp";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
 import Container from "../../components/primitives/Container.astro";
@@ -40,17 +42,38 @@ const structuredData = [{
               architecture and interior projects.</p>
           </header>
           <section aria-labelledby="buying-guide" class="guides-start">
-            <h2 id="buying-guide"><a href="/procurement/how-to-buy-from-china" class="ring-focus">How to buy from China</a></h2>
-            <p>Start with the complete buying process, including import requirements
-              for Ghana, Kenya, Nigeria, and Tanzania.</p>
-            <a href="/procurement/how-to-buy-from-china" class="guide-link ring-focus">Read the buying guide</a>
+            <figure class="guide-thumbnail">
+              <Image src={woodInteriorImg}
+                alt="Generated living-room material concept with walnut joinery, pale stone, and linen upholstery"
+                widths={[400, 640, 960]} sizes="(min-width: 768px) 320px, calc(100vw - 72px)"
+                format="webp" quality={84} priority />
+              <figcaption>Generated material concept · Wood</figcaption>
+            </figure>
+            <div>
+              <h2 id="buying-guide"><a href="/procurement/how-to-buy-from-china" class="ring-focus">How to buy from China</a></h2>
+              <p>Start with the complete buying process, including import requirements
+                for Ghana, Kenya, Nigeria, and Tanzania.</p>
+              <a href="/procurement/how-to-buy-from-china" class="guide-link ring-focus">Read the buying guide</a>
+            </div>
           </section>
           {guides.length > 0 && <section aria-labelledby="specific-guides">
             <h2 id="specific-guides">Guides for your next decision</h2>
             <ul class="guide-list">
               {guides.map((guide) => <li>
-                <h3><a href={`/procurement/${guide.id}`} class="ring-focus">{guide.data.title}</a></h3>
-                <p>{guide.data.description}</p>
+                <a href={`/procurement/${guide.id}`}
+                  aria-labelledby={`guide-${guide.id}`}
+                  class:list={["guide-entry ring-focus", { "guide-entry-with-image": Boolean(guide.data.hero) }]}>
+                  {guide.data.hero && <figure class="guide-thumbnail">
+                    <Image src={guide.data.hero.image} alt={guide.data.hero.alt}
+                      widths={[400, 640, 960]} sizes="(min-width: 768px) 320px, calc(100vw - 32px)"
+                      format="webp" quality={84} loading="lazy" />
+                    <figcaption>{guide.data.hero.caption}</figcaption>
+                  </figure>}
+                  <div class="guide-entry-copy">
+                    <h3 id={`guide-${guide.id}`}>{guide.data.title}</h3>
+                    <p>{guide.data.description}</p>
+                  </div>
+                </a>
               </li>)}
             </ul>
           </section>}
@@ -70,10 +93,18 @@ const structuredData = [{
   h2 { font-size: clamp(2rem, 3vw, 2.6rem); line-height: 1.2; }
   h3 { font-size: clamp(1.6rem, 2.4vw, 2rem); line-height: 1.25; }
   p { font-size: 1.0625rem; line-height: 1.75; margin-top: 1rem; max-width: 44rem; }
-  .guides-start { background: var(--luxury-porcelain); margin-bottom: 3rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .guides-start { align-items: center; background: var(--luxury-porcelain); display: grid; gap: 1.5rem; margin-bottom: 3rem; padding: clamp(1.25rem, 3vw, 2rem); }
   .guide-link { align-items: center; display: inline-flex; min-height: 2.75rem; margin-top: 1rem; text-decoration: underline; text-underline-offset: 0.2em; }
-  .guide-list { display: grid; gap: 2.5rem; margin-top: 2rem; max-width: 52rem; }
-  .guide-list a { display: inline-block; padding-block: 0.5rem; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
-  .guide-list a:hover, .guides-start a:hover { color: var(--accent-ink); }
+  .guide-list { display: grid; gap: 3rem; margin-top: 2rem; }
+  .procurement-guides .guide-entry { align-items: center; display: grid; gap: 1.5rem; min-width: 0; text-decoration: none; }
+  .guide-entry-copy { min-width: 0; }
+  .guide-entry h3 { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+  .guide-entry:hover h3, .guides-start a:hover { color: var(--accent-ink); }
   .guide-list p { margin-top: 0.5rem; }
+  .guide-thumbnail { margin: 0; min-width: 0; }
+  .guide-thumbnail img { aspect-ratio: 3 / 2; display: block; height: auto; object-fit: cover; width: 100%; }
+  .guide-thumbnail figcaption { color: var(--luxury-muted); font-size: 0.75rem; line-height: 1.5; margin-top: 0.5rem; }
+  @media (min-width: 48rem) {
+    .guides-start, .guide-entry-with-image { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); }
+  }
 </style>

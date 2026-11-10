@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Give `/procurement/guides` compact, simple thumbnails and clearly separated
-article rows. Provide one Cloudflare preview containing the complete
+Give `/procurement/guides` compact, concrete editorial thumbnails and clearly
+separated article rows. Provide one Cloudflare preview containing the complete
 fifteen-article series. Build
 on the [article series](design-procurement-article-series.md) and
 [article image contract](design-procurement-article-images.md).
@@ -36,18 +36,35 @@ same fields and Astro `image()` resolution as `hero`: `image`, descriptive
 required. On the index, select `thumbnail ?? hero` for each article. Entries
 with neither object remain ordinary text links without an empty image slot.
 
-Create distinct square studio images designed to be recognisable at 80px.
-Use one clear object or tightly grouped subject on a plain light background,
-realistic materials, soft shadows, and restrained walnut, limestone, kraft,
-and brass colours. Exclude people, workshops full of detail, collages, text,
-logos, certificates, and interface screenshots. The marketplace thumbnail
-may show a simple unbranded laptop with abstract product tiles, with no
-legible interface, platform identity, or implied real screenshot.
+Create distinct square photographic editorial scenes designed to be
+recognisable at 80px. Give each image a dominant concrete subject or action
+and no more than two or three supporting context cues. Vary the setting,
+viewpoint, crop, lighting, and colour across the list so adjacent articles
+can be distinguished quickly. Avoid repeating the same ivory backdrop or
+presenting every subject as an isolated studio object.
 
-The original buying guide gets a small walnut/stone/brass sample group.
-Article subjects follow their task: a sample and magnifier, carton and
-calculator, abstract marketplace laptop, small carton of brass handles,
-caliper on a walnut edge, and similarly focused subjects for later guides.
+Use realistic materials and recognisable procurement activities. Hands and
+people may appear when the action benefits from them; keep the action large
+enough to read at thumbnail size. A restrained blue packing bench or green
+workshop backdrop may distinguish a scene while wood, kraft, stone, and
+metal connect it with the subject matter. Keep the site's existing page
+palette and layout unchanged.
+
+The original buying guide shows a finished walnut kitchen with packed
+cabinetry in the foreground. The first five article scenes show a technician
+checking a cabinet hinge at a factory bench; an overhead carton, calculator,
+and cost-note arrangement; a buyer using a laptop with recognisable furniture
+product thumbnails; a small brass-handle shipment on a blue packing bench;
+and hands checking a wood edge with a caliper against a green workshop
+backdrop. Later articles use their own concrete settings and viewpoints.
+
+Use full-size real-world scenes rather than miniature models, abstract
+symbols, or collages. Exclude logos, legible text, certificates, purported
+test results, and fabricated evidence. Laptop imagery may show a generic
+unbranded furniture-shopping interface with actual product pictures; it
+must not imitate a named marketplace or be presented as a real screenshot.
+Every scene remains explicitly disclosed as generated imagery.
+
 Save originals and generation records, and commit optimised local assets
 named `<article-slug>-thumbnail.webp` alongside their article's image files.
 The original guide's index thumbnail is imported directly because that guide
@@ -95,5 +112,7 @@ the existing optional image contract retains hero fallback and text-only rows.
 Verify article heroes and their social and structured-data images stay
 unchanged when a thumbnail is supplied. Confirm compact image dimensions and
 side-by-side rows at desktop and phone sizes, clear dividers and padding,
-recognisable subjects, focus, text readability, and no document overflow.
+recognisable subjects, scene variety, focus, text readability, and no
+document overflow. Review thumbnails together at their actual compact size
+to catch repetitive composition or scenes whose action becomes unclear.
 Save screenshots under `~/Pictures/Screenshots/Codex/harpa-pro/`.

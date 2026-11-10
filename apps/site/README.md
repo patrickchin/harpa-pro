@@ -25,8 +25,10 @@ uses that image for the responsive hero, social preview, and Article metadata.
 See the [article image design](../../docs/v4/design-procurement-article-images.md).
 
 Use optional `thumbnail` frontmatter with the same `image`, `alt`, and `caption`
-fields for a simpler square index image. Keep one clear subject on a plain
-background, readable at 80–160px. The index falls back to `hero` when no
+fields for a square index image. Show a recognizable procurement activity,
+readable at 80–160px, with varied settings, crops, lighting, and colour across
+the series. Keep one dominant subject and a few context cues rather than
+repeating isolated studio objects. The index falls back to `hero` when no
 thumbnail is supplied; article heroes and social images always use `hero`.
 Save generation prompts alongside assets in `*.generation.json`. See the
 [index image design](../../docs/v4/design-procurement-guide-index-images.md).

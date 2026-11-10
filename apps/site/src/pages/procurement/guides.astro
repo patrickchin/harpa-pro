@@ -90,21 +90,20 @@ const structuredData = [{
   .procurement-guides { color: var(--luxury-walnut); }
   .docs-breadcrumbs { color: var(--luxury-muted); }
   .guides-intro { margin: 2.5rem 0 3rem; max-width: 44rem; }
-  h1, h2, h3 { font-family: var(--luxury-serif); font-weight: 500; text-wrap: balance; }
-  h1 { font-size: clamp(3rem, 6vw, 5rem); letter-spacing: -0.035em; line-height: 1.05; }
-  h2 { font-size: clamp(2rem, 3vw, 2.6rem); line-height: 1.2; }
-  h3 { font-size: clamp(1.6rem, 2.4vw, 2rem); line-height: 1.25; }
+  h1, h2, h3 { text-wrap: balance; }
+  h1 { font-family: var(--luxury-serif); font-weight: 500; font-size: clamp(3rem, 6vw, 5rem); letter-spacing: -0.035em; line-height: 1.05; }
+  .procurement-guides h2, .procurement-guides h3 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.02em; }
+  .procurement-guides h2 { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.3; }
   p { font-size: 1.0625rem; line-height: 1.75; margin-top: 1rem; max-width: 44rem; }
   .image-disclosure { color: var(--luxury-muted); font-size: 0.8125rem; margin-bottom: 1rem; }
   .guides-start { align-items: start; background: var(--luxury-porcelain); display: grid; gap: 1rem; grid-template-columns: 5rem minmax(0, 1fr); margin-bottom: 3rem; padding: 1.25rem; }
-  .guides-start h2 { font-size: clamp(1.5rem, 3vw, 2.6rem); }
   .guide-link { align-items: center; display: inline-flex; min-height: 2.75rem; margin-top: 1rem; text-decoration: underline; text-underline-offset: 0.2em; }
   .guide-list { border-top: 1px solid var(--border); display: grid; margin-top: 2rem; }
   .guide-list > li { border-bottom: 1px solid var(--border); padding-block: 1.5rem; }
   .procurement-guides .guide-entry { align-items: start; display: grid; gap: 1rem; min-width: 0; text-decoration: none; }
   .guide-entry-with-image { grid-template-columns: 5rem minmax(0, 1fr); }
   .guide-entry-copy { min-width: 0; }
-  .guide-entry h3 { font-size: clamp(1.4rem, 2.4vw, 2rem); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+  .guide-entry h3 { font-size: clamp(1.125rem, 1.6vw, 1.375rem); line-height: 1.35; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
   .guide-entry:hover h3, .guides-start a:hover { color: var(--accent-ink); }
   .guide-list p { margin-top: 0.5rem; }
   .guide-thumbnail { margin: 0; min-width: 0; }

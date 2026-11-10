@@ -3,10 +3,10 @@
   "purpose": "Compact guide index thumbnail; article hero unchanged",
   "generatedOn": "2026-11-10",
   "tool": "built-in image_gen",
-  "prompt": "Use case: product-mockup. Create a square 1:1 editorial INDEX THUMBNAIL designed for clear recognition at only 80 by 80 pixels. Main subject: one large bespoke curved cabinet pull made of rich walnut wood with brushed-brass mounting feet, with one matching raw pale-wood prototype placed just below it. Treat the finished handle and its prototype as one compact central product pairing, each a simple clear arch shape. Plain very light warm limestone seamless studio background, no workbench clutter or other objects. Oblique front view showing the arches and material difference, pairing fills about 80 percent of the square with clear margins. Soft warm studio light, gentle shadows, refined photorealistic product illustration, restrained walnut/bronze/cream palette and minimal detail. Generated concept of custom manufacturing, not a branded commercial product. No people, hands, packaging, drawings, tools, text, labels, logos, numbers, certificates, screenshots, collages or watermark.",
-  "generatedOriginal": "exec-4b3ed258-784b-4bd3-b1ed-a571ef0adbd2.png",
-  "originalSha256": "26dacd4d8be506e8691e33a4ea7521dc05c47aad9563a074a13bca6fc39e92da",
+  "prompt": "Use case: photorealistic-natural. Asset type: SQUARE 1:1 article INDEX thumbnail about custom manufacturing furniture hardware. Concrete life-size workshop photograph aesthetic: tight macro three-quarter crop of a craftsperson's two hands fitting a beautifully shaped custom brushed-brass pull handle to an actual vertical dark-walnut cabinet door front. One hand holds the handle aligned against the door; the other steadies the open door edge with a simple screwdriver near the mounting hole. Hand anatomy believable and the action mechanically plausible; no visible face. The brass handle and rich directional walnut grain dominate the frame, warm focused workshop side light with deep shaded background, copper-gold highlights and dark chocolate wood, clearly unlike an ivory studio product photo. A little unfinished cabinet edge shows workshop context, no extra clutter. Recognizable strong subject at 80 pixels, two or three visual cues maximum. Generated editorial illustration of a fabrication task, not an actual supplier or customer installation. No text, logos, packaging, paperwork, certificate, screens, collage, miniature models, watermarks or branded tools.",
+  "generatedOriginal": "exec-4734fb7e-c254-4e09-a094-beb0e172554f.png",
+  "originalSha256": "33e16406c76cf5a888b45520d4d41cf3968ca89e5024e98b062a24411f2f711e",
   "asset": "private-label-custom-manufacturing-china-thumbnail.webp",
-  "alt": "Generated illustration of a walnut and brass cabinet handle beside its raw wood prototype.",
-  "caption": "Generated illustration · Custom product development"
+  "alt": "Generated illustration of hands fitting a custom brass handle to a dark walnut cabinet door in a workshop.",
+  "caption": "Generated illustration · Fitting bespoke cabinet hardware"
 }

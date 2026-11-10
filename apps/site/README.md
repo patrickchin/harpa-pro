@@ -16,6 +16,14 @@ and a positive integer `order` in frontmatter. Each filename becomes its
 `/procurement/guides` and in the sitemap. Use lowercase, hyphenated filenames;
 `guides` and `how-to-buy-from-china` are reserved.
 
+Give an article its own image with optional `hero` frontmatter containing
+`image` (a path relative to the MDX file), descriptive `alt`, and a visible
+`caption`. All three fields are required when `hero` is present. These
+generated illustrations use alt text beginning `Generated illustration of `
+and a caption beginning `Generated illustration · `. Astro
+uses that image for the responsive hero, social preview, and Article metadata.
+See the [article image design](../../docs/v4/design-procurement-article-images.md).
+
 Add each article and its downloads in a separate PR. Draft PRs provide the
 editorial review gate; merging content adds it to the static site. Downloads
 belong in `public/downloads/procurement/`. Link only to existing pages and

@@ -21,6 +21,7 @@ const { Content, headings } = await render(guide);
 <ProcurementGuide
   headline={guide.data.title}
   description={guide.data.description}
+  hero={guide.data.hero}
   headings={headings.filter(({ depth }) => depth === 2)}
 >
   <Content components={{ table: ProcurementTable }} />

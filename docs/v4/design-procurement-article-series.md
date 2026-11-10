@@ -18,7 +18,8 @@ local `main` checkout predates this site. Use an isolated worktree based on
 Create one foundation PR before the fifteen content PRs. Reuse Astro's
 existing content collections, MDX renderer, shared site components, and
 static generation. Add no dependencies, CMS, client-side search, filters,
-pagination, or new image generation.
+pagination. Article-specific generated illustrations are added by the
+[article image design](design-procurement-article-images.md).
 
 Extract the existing procurement article wrapper into
 `apps/site/src/layouts/ProcurementGuide.astro`. Its inputs are title,

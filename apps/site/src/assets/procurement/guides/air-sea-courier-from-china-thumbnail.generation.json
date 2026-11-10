@@ -3,10 +3,10 @@
   "purpose": "Compact guide index thumbnail; article hero unchanged",
   "generatedOn": "2026-11-10",
   "tool": "built-in image_gen",
-  "prompt": "Use case: product-mockup. Create a square 1:1 editorial INDEX THUMBNAIL designed to remain immediately recognizable at only 80 by 80 pixels. One single large unbranded miniature cargo airplane model, warm ivory fuselage, muted charcoal wings and tail, resting on a plain very light limestone-coloured seamless studio background. Three-quarter view showing the recognizable airplane silhouette, wings fully visible, subject fills about 80 percent of the square with modest clear margin. Soft warm natural-looking studio light and one gentle grounding shadow. Premium photorealistic miniature materials with restrained detail; clean simple composition. This is a generated conceptual illustration of freight transport, not a real aircraft photograph. No other objects, no pedestal, no people, no lettering, logos, numbers, flags, collage, texture-heavy background, scenery, documents, screenshots, watermarks or gradients with strong visual features.",
-  "generatedOriginal": "exec-5bd4fca0-fd9b-404c-ba0f-d24c39ae6f02.png",
-  "originalSha256": "7d8033442d4a6ab3de33427ab8445c0531fd83534f85f46b1586fe01f4a1c4fb",
+  "prompt": "Use case: photorealistic-natural. Asset type: SQUARE 1:1 article index thumbnail about air/sea/courier freight from China. Create a concrete life-size photographic editorial scene: close three-quarter view of the nose of a full-size unbranded white cargo aircraft at an airport cargo apron at blue hour, with two wrapped freight pallets near its loading area in the foreground. The large aircraft nose dominates the top and left, pallets provide one obvious contextual cue. Cool deep-blue evening sky and blue-gray tarmac, a small amount of warm amber apron light on the wrapping. Strong recognizable silhouettes and realistic large-scale aviation proportions, composition clear when reduced to 80 pixels. Crop deliberately close; no broad empty airport panorama, no crowds, no miniature model or studio pedestal. Premium credible editorial photography aesthetic, clearly a generated illustrative scene rather than a record of a real business shipment. No airline logos, registration numbers, legible text, signage, flags, labels, watermarks, screenshots, paperwork, collage or fake customer evidence. Two or three contextual elements maximum, realistic restrained detail.",
+  "generatedOriginal": "exec-f6e94170-d445-41ed-8e57-c24b16150717.png",
+  "originalSha256": "820536ff027dc7d560c853664d111cf546dc15e9ac05bcce582839ccf51b4166",
   "asset": "air-sea-courier-from-china-thumbnail.webp",
-  "alt": "Generated illustration of a single cargo airplane model on a light studio background.",
-  "caption": "Generated illustration · Freight transport"
+  "alt": "Generated illustration of a cargo aircraft nose and wrapped freight pallets on an airport apron at blue hour.",
+  "caption": "Generated illustration · Air freight handling"
 }

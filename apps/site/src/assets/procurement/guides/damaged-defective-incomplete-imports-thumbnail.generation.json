@@ -3,10 +3,10 @@
   "purpose": "Compact guide index thumbnail; article hero unchanged",
   "generatedOn": "2026-11-10",
   "tool": "built-in image_gen",
-  "prompt": "Use case: product-mockup. Create a square 1:1 editorial INDEX THUMBNAIL that is instantly clear at 80 by 80 pixels. One large pale ivory ceramic pendant lampshade, bell shaped, resting at a slight angle so its broad open rim is visible. One clear dark crack runs from the lower side to the rim, with a small missing chip making the damage unmistakable at thumbnail scale. All the remaining shade intact, not shattered. Plain very light warm limestone seamless studio background. Centre the single subject, filling roughly 78 percent of the square with a generous clean edge margin. Soft warm natural-looking studio light, gentle grounding shadow and premium photorealistic ceramic texture, restrained cream and warm-neutral palette. This is a generated conceptual illustration of damaged goods, not a real customer claim photo. No other items, people, hands, smartphone, boxes, documents, text, labels, logos, numbers, collage, screenshots or watermarks.",
-  "generatedOriginal": "exec-ee6a592c-5b8f-4009-8a61-19b663782f4f.png",
-  "originalSha256": "1db97e1240986acb6b0dde6cfc7850acc47dd5563ad706bdf5a41b0aa845f63f",
+  "prompt": "Use case: photorealistic-natural. Asset type: SQUARE 1:1 article INDEX thumbnail about damaged imported goods. Create a concrete life-size photographic scene viewed almost directly from above: a single open battered brown shipping carton on a cool slate-gray receiving floor, revealing a broken pale ceramic table-lamp body cradled in white protective foam. One unmistakable large break and a few ceramic fragments visible inside the carton, retained foam chunks beside the lamp. The open carton and damaged object fill most of frame so damage is clear at only 80 pixels. Tight documentary-style crop, flat cool daylight from a receiving doorway, realistic cardboard fibre and ceramic fracture edges. Keep it restrained and factual rather than dramatic destruction; no people. Generated editorial illustration of a hypothetical delivery problem, not an actual claim photograph or customer evidence. No labels, text, invoice, logos, brand marks, numbers, barcodes, forms, screenshots, collage, watermarks, miniature setup or ivory studio backdrop. Maximum three contextual cues: carton, foam, broken lamp.",
+  "generatedOriginal": "exec-ae45c5c3-9cdd-4c6b-a539-2266641dd240.png",
+  "originalSha256": "48bf0dc66bf3f8299771f277d3d4bddeefed582ec3c27b44c91a1f193db2ded1",
   "asset": "damaged-defective-incomplete-imports-thumbnail.webp",
-  "alt": "Generated illustration of a single ceramic lampshade with a cracked and chipped rim.",
-  "caption": "Generated illustration · Damaged imported goods"
+  "alt": "Generated illustration of an opened shipping carton containing a broken ceramic lamp, protective foam, and fragments.",
+  "caption": "Generated illustration · Inspecting damaged goods"
 }

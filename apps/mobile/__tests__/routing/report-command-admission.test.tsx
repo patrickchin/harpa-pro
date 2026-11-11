@@ -215,6 +215,15 @@ describe('report command admission at the route boundary', () => {
     expect(state.finalize).not.toHaveBeenCalled();
   });
 
+  it('keeps an edit made while generation is pending instead of replacing it with the response', () => {
+    render();
+    act(() => { screen.onRegenerate?.(); });
+    const callbacks = state.generate.mock.calls[0]![1];
+    act(() => { screen.onSetReport?.({ meta: { title: 'New local edit', summary: '', visitDate: '' }, weather: null, workers: [], materials: [], issues: [], nextSteps: [], summarySections: [] }); });
+    act(() => { callbacks.onSuccess({ report: { body: { meta: { title: 'Old generated snapshot', summary: '', visitDate: '' }, weather: null, workers: [], materials: [], issues: [], nextSteps: [], summarySections: [] }, updatedAt: '2026-11-11T00:00:01Z' } }); callbacks.onSettled?.(); });
+    expect(screen.report?.meta.title).toBe('New local edit');
+  });
+
   it('requires the owner role to finalize, while an editor may generate', () => {
     state.role = 'editor';
     render();

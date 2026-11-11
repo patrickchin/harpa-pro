@@ -14,8 +14,10 @@ across report identities.
 **Fix.** Mobile autosave owns one active write and acknowledges the captured
 edit revision. Newer edits stay dirty and use the acknowledged server version
 for the next request. A report-scoped owner rejects callbacks after identity
-change or unmount. The dashboard keys its inner editor by report identity and
-preserves a departing unsaved draft.
+change or unmount. Conflicts stay blocked across later edits until explicit
+retry. Generation's acknowledged version advances the next queued save
+without replacing newer local edits. The dashboard keys its inner editor by
+report identity and preserves a departing unsaved draft.
 
 **Test.** Autosave tests hold A pending, edit B, then acknowledge A; B must
 remain dirty and be saved with the returned version. Additional tests cover

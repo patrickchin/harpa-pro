@@ -341,15 +341,21 @@ describe('useReportBodyAutosave', () => {
 
   it('saves edits made during generation against the version acknowledged by generation', () => {
     const initial = {
-      slug: 'proj', number: 1, report: makeReport('Before generation'),
-      expectedUpdatedAt: EXPECTED_UPDATED_AT, dirty: false, paused: true,
+      slug: 'proj',
+      number: 1,
+      report: makeReport('Before generation'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      dirty: false,
+      paused: true,
     };
     const harness = mount(initial);
     try {
       const edited = { ...initial, report: makeReport('Edited during generation'), dirty: true };
       harness.setProps(edited);
       harness.setProps({ ...edited, expectedUpdatedAt: '2026-07-29T00:00:01.000Z', paused: false });
-      act(() => vi.advanceTimersByTime(800));
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
       expect(mutateSpy.mock.calls[0]![0].body).toMatchObject({
         body: { meta: { title: 'Edited during generation' } },
         expectedUpdatedAt: '2026-07-29T00:00:01.000Z',
@@ -370,23 +376,33 @@ describe('useReportBodyAutosave', () => {
     };
     const harness = mount(initial);
     try {
-      act(() => vi.advanceTimersByTime(800));
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
       harness.setProps({ ...initial, report: makeReport('B'), revision: 2 });
       act(() => {
-        mutateSpy.mock.calls[0]![1].onError(new ApiError({
-          status: 409,
-          code: 'conflict',
-          message: 'Report changed elsewhere.',
-        }));
+        mutateSpy.mock.calls[0]![1].onError(
+          new ApiError({
+            status: 409,
+            code: 'conflict',
+            message: 'Report changed elsewhere.',
+          }),
+        );
       });
-      act(() => vi.advanceTimersByTime(1600));
+      act(() => {
+        vi.advanceTimersByTime(1600);
+      });
       expect(mutateSpy).toHaveBeenCalledTimes(1);
       harness.setProps({ ...initial, report: makeReport('C'), revision: 3 });
-      act(() => vi.advanceTimersByTime(1600));
+      act(() => {
+        vi.advanceTimersByTime(1600);
+      });
       expect(mutateSpy).toHaveBeenCalledTimes(1);
       expect(harness.result.error).toBe('Report changed elsewhere.');
       act(() => harness.result.retry());
-      act(() => vi.advanceTimersByTime(800));
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
       expect(mutateSpy).toHaveBeenCalledTimes(2);
       expect(mutateSpy.mock.calls[1]![0].body.body.meta.title).toBe('C');
     } finally {

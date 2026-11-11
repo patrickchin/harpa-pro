@@ -113,7 +113,7 @@ export function useReportBodyAutosave({
   type SaveState = { owner: typeof owner; lastSavedAt: number | null } & (
     | { status: 'idle'; error: null }
     | { status: 'saving'; error: null; revision: number }
-    | { status: 'failed'; error: string; revision: number }
+    | { status: 'failed'; error: string; revision: number; conflict: boolean }
   );
   const [state, setState] = useState<SaveState>({
     owner,
@@ -126,7 +126,13 @@ export function useReportBodyAutosave({
       ? state
       : { owner, status: 'idle' as const, error: null, lastSavedAt: null };
 
-  if (owner.version === null || (!dirty && !owner.active)) {
+  // The caller also acknowledges body writes made by generation. Accept
+  // that newer version while edits are queued, without rolling back to a
+  // stale query snapshot after this hook's own save has succeeded.
+  if (
+    owner.version === null ||
+    (!owner.active && expectedUpdatedAt !== null && expectedUpdatedAt > owner.version)
+  ) {
     owner.version = expectedUpdatedAt;
   }
 
@@ -150,7 +156,7 @@ export function useReportBodyAutosave({
   useEffect(() => {
     if (paused || !dirty || !slug || number === null || !report || !owner.version) return;
     if (owner.active || current.status === 'saving') return;
-    if (current.status === 'failed' && current.revision === revision) return;
+    if (current.status === 'failed' && (current.conflict || current.revision === revision)) return;
     if (owner.acknowledged?.revision === revision && owner.acknowledged.body === report) return;
 
     const handle = setTimeout(() => {
@@ -179,6 +185,7 @@ export function useReportBodyAutosave({
               owner,
               status: 'failed',
               revision,
+              conflict: err.status === 409,
               error: err.message ?? 'Autosave failed.',
               lastSavedAt,
             });

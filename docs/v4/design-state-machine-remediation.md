@@ -28,6 +28,10 @@ Relevant baselines are [mobile architecture](arch-mobile.md),
 
 ## First slice — reports
 
+Implemented locally: F1, F2, F5, and F8. Regression tests cover the owning
+autosave hook, dashboard workspace, route admission, and quota settlement.
+The remaining slices below are design decisions, not implemented repairs.
+
 ### Mobile edit acknowledgements — F1
 
 The route owns a monotonically increasing edit revision, local body, and
@@ -86,6 +90,19 @@ keeps a newer edit dirty when an older save succeeds.
 - Dirty manual edits block automatic generation and are not overwritten.
 - A quota rejection remains blocked across mutation settlement and dialog close.
 - Existing role, freshness, placement, generation, and dashboard tests stay green.
+
+Verified on 2026-11-11 against dev `f4d9eb45`:
+
+- Mobile: 950 tests pass; the configured coverage gates pass (78.91% lines
+  overall). Autosave and command admission each have 100% line coverage;
+  autosave branch coverage is 90.19% and admission branch coverage is 100%.
+- Dashboard: 154 tests pass, with 90.47% line coverage on the workspace.
+  Global branch coverage remains below its 80% gate: 78.03% after this slice,
+  versus 77.93% on an isolated clean-dev baseline. No threshold was lowered.
+- Both apps pass typecheck and lint. The Chromium two-session report-conflict
+  test passes against the local dashboard with intercepted API responses.
+- Native-device flows and real provider/database concurrency were not run.
+  This slice changes no API, database, upload protocol, or quota reservation.
 
 ## Second slice — upload and batch recovery
 

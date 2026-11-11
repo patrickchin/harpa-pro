@@ -447,6 +447,10 @@ as a product regression.
 
 ## Bugs
 
+- **2026-11-11** — Report commands bypassed pending input and quota failures
+  rearmed automatic generation. Fix: shared command admission and latched
+  generation errors. [detail](2026-11-11-report-command-admission.md)
+
 - **2026-11-11** — Save acknowledgements cleared newer mobile edits or
   mutated the next dashboard report after navigation. Fix: revision-scoped
   autosave and report-scoped editor ownership.

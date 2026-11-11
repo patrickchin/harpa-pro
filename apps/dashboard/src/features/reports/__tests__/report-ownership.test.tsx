@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
-import React, { act } from 'react';
+import { act } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
 import { ReportWorkspacePage } from '../ReportWorkspacePage';
+import type { ReportsApi } from '../api';
 import { fakeReportsApi, reportFixture } from './fixtures';
 import { change, field, flush, keydown, render, waitMs } from './dom';
 it('a late save for report A must not dirty and save report B after route reuse', async () => {
-  let resolveA!: (v: any) => void;
+  let resolveA!: (v: Awaited<ReturnType<ReportsApi['updateReport']>>) => void;
   const update = vi
-    .fn()
+    .fn<ReportsApi['updateReport']>()
     .mockImplementationOnce(
       () =>
         new Promise((r) => {

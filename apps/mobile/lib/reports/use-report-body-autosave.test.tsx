@@ -339,6 +339,26 @@ describe('useReportBodyAutosave', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it('saves edits made during generation against the version acknowledged by generation', () => {
+    const initial = {
+      slug: 'proj', number: 1, report: makeReport('Before generation'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT, dirty: false, paused: true,
+    };
+    const harness = mount(initial);
+    try {
+      const edited = { ...initial, report: makeReport('Edited during generation'), dirty: true };
+      harness.setProps(edited);
+      harness.setProps({ ...edited, expectedUpdatedAt: '2026-07-29T00:00:01.000Z', paused: false });
+      act(() => vi.advanceTimersByTime(800));
+      expect(mutateSpy.mock.calls[0]![0].body).toMatchObject({
+        body: { meta: { title: 'Edited during generation' } },
+        expectedUpdatedAt: '2026-07-29T00:00:01.000Z',
+      });
+    } finally {
+      act(() => harness.tree.unmount());
+    }
+  });
+
   it('keeps a conflict latched across newer edits until explicit retry', () => {
     const initial = {
       slug: 'proj',

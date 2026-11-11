@@ -91,6 +91,10 @@ keeps a newer edit dirty when an older save succeeds.
 - A quota rejection remains blocked across mutation settlement and dialog close.
 - Existing role, freshness, placement, generation, and dashboard tests stay green.
 
+The release-confidence policy checks placement pending/failure inputs and
+their shared admission blockers, rather than the removed route-local
+`placementWriteBlocked` declaration.
+
 Verified on 2026-11-11 against dev `f4d9eb45`:
 
 - Mobile: 950 tests pass; the configured coverage gates pass (78.91% lines

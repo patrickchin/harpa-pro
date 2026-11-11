@@ -126,28 +126,22 @@ server-side body is non-null.
 
 ### 3.6 `apps/mobile` — Edit-tab autosave
 
-New small hook `useReportBodyAutosave(slug, number, localReport)`:
+The per-card editor uses `useReportBodyAutosave` with the canonical local
+body, caller-owned dirty flag, edit revision and server version precondition.
+User edits advance the revision; hydration and generation do not create edits.
+The hook debounces for 800 ms and permits one active PATCH. Edits arriving
+while it saves remain dirty. Success acknowledges only the captured revision
+and advances the known server version for the next write.
 
-- Debounce 800 ms after `localReport` changes (matches keystrokes
-  → settle pattern used elsewhere).
-- Skips when `localReport === lastSavedReport` (deep-compare via
-  stable JSON or shallow ref check on slices).
-- Calls `useUpdateReportMutation` with `{ body: toReportBody(localReport) }`.
-- Exposes `{ isAutoSaving, lastSavedAt, error }`.
-- On mount, seeds `lastSavedReport` from the server payload so the
-  first dirty diff is the user's first edit, not the initial load.
+A failed save retains the draft. Automatic retry stops for that revision;
+explicit retry or a new edit can reattempt it. Identity changes and unmount
+invalidate old acknowledgements. See
+[workflow ownership](design-state-machine-remediation.md) for the state owners
+and command admission rules.
 
-Wire it inside `GenerateReportRoute`:
-
-```ts
-const autosave = useReportBodyAutosave(slug, reportNumber, localReport);
-…
-<GenerateNotes
-  …
-  isAutoSaving={autosave.isAutoSaving}
-  lastSavedAt={autosave.lastSavedAt}
-/>
-```
+The dashboard retains its existing save reducer and mounts an inner editor
+per project/report identity. Departing drafts are preserved; an old report's
+save response cannot mutate the next editor.
 
 ### 3.7 `apps/mobile` — Action-row + Finalize guard
 

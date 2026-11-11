@@ -447,6 +447,11 @@ as a product regression.
 
 ## Bugs
 
+- **2026-11-11** — Save acknowledgements cleared newer mobile edits or
+  mutated the next dashboard report after navigation. Fix: revision-scoped
+  autosave and report-scoped editor ownership.
+  [detail](2026-11-11-report-save-ownership.md)
+
 - **2026-10-14** — Marketing-only PRs queued unrelated admin/dashboard builds
   because Cloudflare watched `*` independently of GitHub's path filters. Fix:
   application-specific provider includes, a mobile PR publication guard, and

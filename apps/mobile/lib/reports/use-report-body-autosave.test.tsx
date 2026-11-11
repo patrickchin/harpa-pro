@@ -194,7 +194,7 @@ describe('useReportBodyAutosave', () => {
       onSuccess({ updatedAt: '2026-07-29T00:00:01.000Z' });
     });
 
-    expect(onSaved).toHaveBeenCalledWith('2026-07-29T00:00:01.000Z');
+    expect(onSaved).toHaveBeenCalledWith('2026-07-29T00:00:01.000Z', 0);
   });
 
   it('does not re-PATCH after caller clears dirty (no edit in the interim)', () => {

@@ -338,6 +338,7 @@ export default function GenerateReportRoute() {
   // the diff was always non-zero and produced a stuck "Saving…" label
   // + a PATCH-spam loop).
   const [userDirty, setUserDirty] = useState(false);
+  const editRevisionRef = useRef(0);
   // Keep the newest server version returned by this screen's own writes so
   // a fast autosave → finalize sequence cannot conflict with itself while
   // React Query is still refetching. Never advance it from a background
@@ -398,13 +399,14 @@ export default function GenerateReportRoute() {
   const currentReport = localReport ?? serverBody ?? fallbackReport;
 
   const handleEditReport = useCallback((next: reports.ReportBody) => {
+    editRevisionRef.current += 1;
     setLocalReport(next);
     setUserDirty(true);
   }, []);
 
-  const handleAutoSaved = useCallback((updatedAt: string) => {
+  const handleAutoSaved = useCallback((updatedAt: string, revision: number) => {
     expectedUpdatedAtRef.current = updatedAt;
-    setUserDirty(false);
+    if (revision === editRevisionRef.current) setUserDirty(false);
   }, []);
 
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -490,6 +492,7 @@ export default function GenerateReportRoute() {
     report: localReport,
     expectedUpdatedAt: expectedUpdatedAtRef.current ?? reportRow?.updatedAt ?? null,
     dirty: userDirty,
+    revision: editRevisionRef.current,
     onSaved: handleAutoSaved,
     paused: isGenerating || finalizeMutation.isPending,
   });

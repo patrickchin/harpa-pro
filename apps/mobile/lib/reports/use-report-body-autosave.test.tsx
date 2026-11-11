@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import React, { useState } from 'react';
 import { reports } from '@harpa/api-contract';
+import { ApiError } from '@/lib/api/errors';
 
 const mutateSpy = vi.hoisted(() => vi.fn());
 const mutationState = vi.hoisted(() => ({ isPending: false }));
@@ -336,6 +337,41 @@ describe('useReportBodyAutosave', () => {
       mutateSpy.mock.calls[0]![1].onSuccess({ updatedAt: EXPECTED_UPDATED_AT });
     });
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('keeps a conflict latched across newer edits until explicit retry', () => {
+    const initial = {
+      slug: 'proj',
+      number: 1,
+      report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      dirty: true,
+      revision: 1,
+    };
+    const harness = mount(initial);
+    try {
+      act(() => vi.advanceTimersByTime(800));
+      harness.setProps({ ...initial, report: makeReport('B'), revision: 2 });
+      act(() => {
+        mutateSpy.mock.calls[0]![1].onError(new ApiError({
+          status: 409,
+          code: 'conflict',
+          message: 'Report changed elsewhere.',
+        }));
+      });
+      act(() => vi.advanceTimersByTime(1600));
+      expect(mutateSpy).toHaveBeenCalledTimes(1);
+      harness.setProps({ ...initial, report: makeReport('C'), revision: 3 });
+      act(() => vi.advanceTimersByTime(1600));
+      expect(mutateSpy).toHaveBeenCalledTimes(1);
+      expect(harness.result.error).toBe('Report changed elsewhere.');
+      act(() => harness.result.retry());
+      act(() => vi.advanceTimersByTime(800));
+      expect(mutateSpy).toHaveBeenCalledTimes(2);
+      expect(mutateSpy.mock.calls[1]![0].body.body.meta.title).toBe('C');
+    } finally {
+      act(() => harness.tree.unmount());
+    }
   });
 
   it('surfaces error from onError', () => {

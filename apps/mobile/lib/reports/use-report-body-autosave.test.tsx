@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
-import React from 'react';
+import React, { useState } from 'react';
 import { reports } from '@harpa/api-contract';
 
 const mutateSpy = vi.hoisted(() => vi.fn());
@@ -187,9 +187,9 @@ describe('useReportBodyAutosave', () => {
     });
     expect(mutateSpy).toHaveBeenCalledTimes(1);
 
-    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as (
-      saved: { updatedAt: string },
-    ) => void;
+    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as (saved: {
+      updatedAt: string;
+    }) => void;
     act(() => {
       onSuccess({ updatedAt: '2026-07-29T00:00:01.000Z' });
     });
@@ -212,9 +212,9 @@ describe('useReportBodyAutosave', () => {
     expect(mutateSpy).toHaveBeenCalledTimes(1);
 
     // Simulate success → caller clears dirty.
-    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as (
-      saved: { updatedAt: string },
-    ) => void;
+    const onSuccess = mutateSpy.mock.calls[0]![1]!.onSuccess as (saved: {
+      updatedAt: string;
+    }) => void;
     act(() => {
       onSuccess({ updatedAt: '2026-07-29T00:00:01.000Z' });
     });
@@ -230,6 +230,112 @@ describe('useReportBodyAutosave', () => {
       vi.advanceTimersByTime(2000);
     });
     expect(mutateSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('serializes edits and acknowledges only the revision that was saved', () => {
+    let edit!: (title: string) => void;
+    let isDirty = false;
+    function Editor() {
+      const [report, setReport] = useState(makeReport('A'));
+      const [revision, setRevision] = useState(1);
+      const [savedRevision, setSavedRevision] = useState(0);
+      const [version, setVersion] = useState(EXPECTED_UPDATED_AT);
+      isDirty = revision !== savedRevision;
+      edit = (title) => {
+        setReport(makeReport(title));
+        setRevision((value) => value + 1);
+      };
+      useReportBodyAutosave({
+        slug: 'proj',
+        number: 1,
+        report,
+        revision,
+        dirty: isDirty,
+        expectedUpdatedAt: version,
+        onSaved: (updatedAt, acknowledgedRevision) => {
+          setVersion(updatedAt);
+          setSavedRevision(acknowledgedRevision);
+        },
+      });
+      return null;
+    }
+    let tree!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      tree = TestRenderer.create(<Editor />);
+    });
+    try {
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
+      act(() => {
+        edit('B');
+      });
+      act(() => {
+        vi.advanceTimersByTime(1600);
+      });
+      expect(mutateSpy).toHaveBeenCalledTimes(1);
+      act(() => {
+        mutateSpy.mock.calls[0]![1].onSuccess({ updatedAt: '2026-07-29T00:00:01.000Z' });
+      });
+      expect(isDirty).toBe(true);
+      act(() => {
+        vi.advanceTimersByTime(800);
+      });
+      expect(mutateSpy).toHaveBeenCalledTimes(2);
+      expect(mutateSpy.mock.calls[1]![0].body).toMatchObject({
+        expectedUpdatedAt: '2026-07-29T00:00:01.000Z',
+        body: { meta: { title: 'B' } },
+      });
+      act(() => {
+        mutateSpy.mock.calls[1]![1].onSuccess({ updatedAt: '2026-07-29T00:00:02.000Z' });
+      });
+      expect(isDirty).toBe(false);
+    } finally {
+      act(() => tree.unmount());
+    }
+  });
+
+  it('does not acknowledge a write after the editor changes report identity', () => {
+    const onSaved = vi.fn();
+    const initial = {
+      slug: 'proj',
+      number: 1,
+      report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      dirty: true,
+      onSaved,
+    };
+    const harness = mount(initial);
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+    const acknowledgeA = mutateSpy.mock.calls[0]![1].onSuccess;
+    harness.setProps({ ...initial, number: 2, report: makeReport('B') });
+    act(() => {
+      acknowledgeA({ updatedAt: '2026-07-29T00:00:01.000Z' });
+    });
+    expect(onSaved).not.toHaveBeenCalled();
+    act(() => harness.tree.unmount());
+  });
+
+  it('ignores save completion after unmount', () => {
+    const onSaved = vi.fn();
+    const harness = mount({
+      slug: 'proj',
+      number: 1,
+      report: makeReport('A'),
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      dirty: true,
+      onSaved,
+    });
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+    act(() => harness.tree.unmount());
+    act(() => {
+      mutateSpy.mock.calls[0]![1].onSuccess({ updatedAt: EXPECTED_UPDATED_AT });
+    });
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
   it('surfaces error from onError', () => {

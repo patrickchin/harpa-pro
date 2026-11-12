@@ -741,7 +741,9 @@ test('uses accessible mega navigation and closes it after outside interaction', 
 
   await procurementSummary.hover();
   await expect(procurementMenu).toHaveAttribute('open', '');
-  await expect(procurementMenu.getByRole('link')).toHaveCount(4);
+  await expect(procurementMenu.getByRole('link')).toHaveCount(5);
+  await expect(procurementMenu.getByRole('link', { name: 'Procurement guides', exact: true }))
+    .toHaveAttribute('href', '/procurement/guides');
   await expect(
     procurementMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
   ).toHaveAttribute('href', '/');
@@ -809,7 +811,7 @@ test('uses accessible mega navigation and closes it after outside interaction', 
     await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
   ).toBe(7);
   await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
-    .toHaveText(['Procurement Overview', 'Products and factories', 'Our process', 'How to Buy from China']);
+    .toHaveText(['Procurement Overview', 'Products and factories', 'Our process', 'How to Buy from China', 'Procurement guides']);
   await expect(
     mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
   ).toHaveAttribute('href', '/');

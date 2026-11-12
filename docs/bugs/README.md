@@ -447,6 +447,10 @@ as a product regression.
 
 ## Bugs
 
+- **2026-11-12** — Exact thumbnail-dimension equality rejected Firefox's
+  fractional DOM measurements. Fix: retain size and square-shape checks at
+  two-decimal precision. [detail](2026-11-12-thumbnail-subpixel-measurements.md)
+
 - **2026-11-11** — Report commands bypassed pending input and quota failures
   rearmed automatic generation. Fix: shared command admission and latched
   generation errors. [detail](2026-11-11-report-command-admission.md)

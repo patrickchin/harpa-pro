@@ -115,7 +115,7 @@ test('every sitemap page has unique metadata and an accurate production identity
       expect(fonts.bodyColor).toBe(fonts.walnut);
     }
 
-    if (url.pathname.startsWith('/reports/docs') || url.pathname === '/procurement/how-to-buy-from-china') {
+    if (url.pathname.startsWith('/reports/docs') || url.pathname.startsWith('/procurement/')) {
       if (url.pathname.startsWith('/reports/docs')) {
         expect(pageNode?.['@type']).toBe(url.pathname === '/reports/docs' ? 'CollectionPage' : 'TechArticle');
       }

@@ -15,7 +15,7 @@
   src: url('/fonts/cormorant-garamond-latin-500-italic.woff2') format('woff2');
 }
 
-/* Material palette and editorial typography */
+/* Material palette. Serif is reserved for the homepage hero. */
 .luxury-site {
   --luxury-walnut: oklch(0.265 0.018 65);
   --luxury-limestone: oklch(0.96 0.012 80);
@@ -49,11 +49,11 @@
   padding-block: clamp(3.5rem, 6vw, 6rem);
 }
 .luxury-site main > section h2 {
-  font-family: var(--luxury-serif);
-  font-size: clamp(2.5rem, 4.5vw, 3.65rem);
+  font-family: var(--font-sans);
+  font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 500;
   letter-spacing: -0.025em;
-  line-height: 1.08;
+  line-height: 1.15;
 }
 
 .luxury-site main > section:not(#top):not(#agent) h2::before {
@@ -346,13 +346,14 @@
   min-height: 18rem;
 }
 .luxury-site [data-consideration-panel] h3 {
-  font-family: var(--luxury-serif);
-  font-size: 2.3rem;
+  font-family: var(--font-sans);
+  font-size: 2rem;
   font-weight: 500;
-  line-height: 1.15;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 .luxury-site #contact h2 {
-  font-size: clamp(3.5rem, 7vw, 6rem);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
 }
 .luxury-site #contact dl > div {
   border-radius: 2px;
@@ -622,13 +623,14 @@ body:has(.whatsapp-dialog[open]) {
   box-shadow: none;
 }
 .luxury-site :is([data-factory-partner], [data-product-brief]) h3 {
-  font-family: var(--luxury-serif);
-  font-size: 1.65rem;
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
   font-weight: 500;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 .luxury-site [data-product-brief] h3 {
-  font-size: 1.85rem;
+  font-size: 1.5rem;
 }
 .luxury-site [data-product-brief] > div > div:first-child {
   align-items: flex-start;
@@ -641,7 +643,7 @@ body:has(.whatsapp-dialog[open]) {
   border-radius: 2px;
 }
 .luxury-site [data-procurement-profile] h2 {
-  font-size: 2rem;
+  font-size: 1.75rem;
 }
 .luxury-site #procurement-questions article {
   border-top: 1px solid var(--border);
@@ -792,7 +794,7 @@ body:has(.whatsapp-dialog[open]) {
     margin-inline: 0.2rem;
   }
   .luxury-site [data-consideration-panel] h3 {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

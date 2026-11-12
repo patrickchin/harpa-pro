@@ -8,6 +8,7 @@ const REQUIRED_ROUTES = [
   '/privacy',
   '/reports/account-deletion',
   '/procurement/how-to-buy-from-china',
+  '/procurement/guides',
 ] as const;
 
 test('separates procurement from site reporting', async ({ page }) => {

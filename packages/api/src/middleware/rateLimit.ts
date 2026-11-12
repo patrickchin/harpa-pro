@@ -21,7 +21,7 @@
  * (e.g. per-IP + per-phone for OTP). All must pass; the first to reject
  * short-circuits.
  */
-import type { Context, MiddlewareHandler } from 'hono';
+import type { Context, MiddlewareHandler, TypedResponse } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
 import { getRateLimiter, type RateLimiter, type RateLimiterResult } from '../lib/rateLimiter.js';
@@ -78,7 +78,11 @@ function attachHeaders(c: Context<AppEnv>, r: RateLimiterResult): void {
   c.header('X-RateLimit-Reset', String(Math.ceil(r.reset / 1000)));
 }
 
-export function rejectRateLimit(c: Context<AppEnv>, r: RateLimiterResult) {
+export function rejectRateLimit(
+  c: Context<AppEnv>,
+  r: RateLimiterResult,
+): Response &
+  TypedResponse<{ error: { code: string; message: string }; requestId: string }, 429, 'json'> {
   const retryAfter = Math.max(1, Math.ceil((r.reset - Date.now()) / 1000));
   const requestId = c.get('requestId');
   return c.json(

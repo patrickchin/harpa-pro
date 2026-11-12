@@ -181,7 +181,11 @@ export interface ReportWorkspacePageProps {
   onDeleted?: () => void;
 }
 
-export function ReportWorkspacePage({
+export function ReportWorkspacePage(props: ReportWorkspacePageProps) {
+  return <ReportWorkspace key={`${props.projectSlug}:${props.reportNumber}`} {...props} />;
+}
+
+function ReportWorkspace({
   api,
   projectSlug,
   reportNumber,
@@ -310,7 +314,10 @@ export function ReportWorkspacePage({
 
   useEffect(() => {
     window.addEventListener('pagehide', preserveDraft);
-    return () => window.removeEventListener('pagehide', preserveDraft);
+    return () => {
+      window.removeEventListener('pagehide', preserveDraft);
+      preserveDraft();
+    };
   }, [preserveDraft]);
 
   const handleConflict = useCallback(

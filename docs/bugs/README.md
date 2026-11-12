@@ -447,6 +447,19 @@ as a product regression.
 
 ## Bugs
 
+- **2026-11-12** — Exact thumbnail-dimension equality rejected Firefox's
+  fractional DOM measurements. Fix: retain size and square-shape checks at
+  two-decimal precision. [detail](2026-11-12-thumbnail-subpixel-measurements.md)
+
+- **2026-11-11** — Report commands bypassed pending input and quota failures
+  rearmed automatic generation. Fix: shared command admission and latched
+  generation errors. [detail](2026-11-11-report-command-admission.md)
+
+- **2026-11-11** — Save acknowledgements cleared newer mobile edits or
+  mutated the next dashboard report after navigation. Fix: revision-scoped
+  autosave and report-scoped editor ownership.
+  [detail](2026-11-11-report-save-ownership.md)
+
 - **2026-10-14** — Marketing-only PRs queued unrelated admin/dashboard builds
   because Cloudflare watched `*` independently of GitHub's path filters. Fix:
   application-specific provider includes, a mobile PR publication guard, and
@@ -457,6 +470,10 @@ as a product regression.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-11-12** — PR #502 repeated the Astro/Vite dependency smoke-test
+  drift: the manifests advanced while site/admin assertions retained the old
+  reviewed versions. Align both suites with the updated dependency graph.
+  [detail](2026-10-16-dependency-smoke-version-drift.md#2026-11-12-recurrence)
 - **2026-10-16** — The Astro/Vite Dependabot patch update failed site and
   admin smoke tests because their reviewed-version assertions still expected
   Astro 7.3.3 and Vite 8.3.0. Align assertions with Astro 7.3.6 / Vite 8.3.3

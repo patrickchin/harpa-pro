@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/check-product-quality-before-shipment",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: photorealistic-natural. Generate a NEW square 1:1 photographic editorial thumbnail for a procurement article index. This must look like a real full-size working scene, with recognizable context and one dominant action that remains clear at only80px. A very close documentary photograph of real inspector hands using an ordinary steel caliper to check the thickness of a walnut door edge, the caliper's external jaws correctly contacting the two opposite faces. Plain deep green workshop wall softly out of focus behind the action, only one blurred timber bench cue. Cropped around hands, steel tool and walnut edge, skin texture and wood grain realistic, no person face. Cool soft workshop light, green backdrop, warm wood and silver tool; tiny scale markings are too small to read. Frame one clear subject/action tightly with at most2–3 supporting context cues and crop-safe edges. Credible physical scale, material imperfections and natural light. NO studio ivory object-study background, miniature models, abstract symbols, collage, logos, legible text, certificates, test documents, shipping labels, pass/fail marks, watermark or text overlay. This is a fictional generated scene and must not imply evidence of a real Harpa project, client, supplier or inspection. Preserve photographic realism and a distinct scene composition.",
+  "generatedOriginal": "exec-6db630f1-74b5-44c9-97e8-58dd693e1a32.png",
+  "originalSha256": "ec0d1dd28032477c59a94b54486e056d8e57dd64ee453ad343f118fd817a5f46",
+  "asset": "check-product-quality-before-shipment-thumbnail.webp",
+  "alt": "Generated illustration of hands using a caliper on a walnut edge against a green workshop backdrop",
+  "caption": "Generated illustration · Quality checks"
+}

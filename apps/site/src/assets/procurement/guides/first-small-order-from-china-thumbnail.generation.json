@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/first-small-order-from-china",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: photorealistic-natural. Generate a NEW square 1:1 photographic editorial thumbnail for a procurement article index. This must look like a real full-size working scene, with recognizable context and one dominant action that remains clear at only80px. A tightly framed slightly overhead photograph of a small open shipment on a visibly blue packing bench: an ordinary real kraft carton contains four brushed brass cabinet handles resting in protective cream paper, with the box lid open and one edge of plain protective wrapping nearby. Real full-size hardware and believable packaging, not a miniature model. Dominant blue work surface makes this image distinct, soft angled warehouse daylight, crisp brass and paper textures. No people. Frame one clear subject/action tightly with at most2–3 supporting context cues and crop-safe edges. Credible physical scale, material imperfections and natural light. NO studio ivory object-study background, miniature models, abstract symbols, collage, logos, legible text, certificates, test documents, shipping labels, pass/fail marks, watermark or text overlay. This is a fictional generated scene and must not imply evidence of a real Harpa project, client, supplier or inspection. Preserve photographic realism and a distinct scene composition.",
+  "generatedOriginal": "exec-178d6494-f6f6-4960-9023-017fdc86c115.png",
+  "originalSha256": "acaa0203338f964e4fd60a7cecae72777c0985586730518d38bff75161c4082d",
+  "asset": "first-small-order-from-china-thumbnail.webp",
+  "alt": "Generated illustration of an open brass-handle shipment on a blue packing bench",
+  "caption": "Generated illustration · Trial shipment"
+}

@@ -6,6 +6,39 @@ procurement and the site-reporting app.
 See [`docs/marketing/`](../../docs/marketing/) for current architecture and
 historical M0–M4 plans.
 
+## Procurement guides
+
+The existing buying guide and country sections live at
+`/procurement/how-to-buy-from-china`. Additional articles are
+MDX files in `src/content/procurement/guides/`, with `title`, `description`,
+and a positive integer `order` in frontmatter. Each filename becomes its
+`/procurement/<filename>` URL and is listed automatically at
+`/procurement/guides` and in the sitemap. Use lowercase, hyphenated filenames;
+`guides` and `how-to-buy-from-china` are reserved.
+
+Give an article its own image with optional `hero` frontmatter containing
+`image` (a path relative to the MDX file), descriptive `alt`, and a visible
+`caption`. All three fields are required when `hero` is present. These
+generated illustrations use alt text beginning `Generated illustration of `
+and a caption beginning `Generated illustration · `. Astro
+uses that image for the responsive hero, social preview, and Article metadata.
+See the [article image design](../../docs/v4/design-procurement-article-images.md).
+
+Use optional `thumbnail` frontmatter with the same `image`, `alt`, and `caption`
+fields for a square index image. Show a recognizable procurement activity,
+readable at 80–160px, with varied settings, crops, lighting, and colour across
+the series. Keep one dominant subject and a few context cues rather than
+repeating isolated studio objects. The index falls back to `hero` when no
+thumbnail is supplied; article heroes and social images always use `hero`.
+Save generation prompts alongside assets in `*.generation.json`. See the
+[index image design](../../docs/v4/design-procurement-guide-index-images.md).
+
+Add each article and its downloads in a separate PR. Draft PRs provide the
+editorial review gate; merging content adds it to the static site. Downloads
+belong in `public/downloads/procurement/`. Link only to existing pages and
+keep country requirements in the main buying guide. See the
+[series design](../../docs/v4/design-procurement-article-series.md).
+
 ## Product organization
 
 | Scope | Canonical routes | Source ownership beneath `src/` |

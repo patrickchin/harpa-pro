@@ -470,6 +470,10 @@ as a product regression.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-11-12** — PR #502 repeated the Astro/Vite dependency smoke-test
+  drift: the manifests advanced while site/admin assertions retained the old
+  reviewed versions. Align both suites with the updated dependency graph.
+  [detail](2026-10-16-dependency-smoke-version-drift.md#2026-11-12-recurrence)
 - **2026-10-16** — The Astro/Vite Dependabot patch update failed site and
   admin smoke tests because their reviewed-version assertions still expected
   Astro 7.3.3 and Vite 8.3.0. Align assertions with Astro 7.3.6 / Vite 8.3.3

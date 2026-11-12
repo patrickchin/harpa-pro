@@ -14,3 +14,10 @@ update, and document updating assertions alongside manifests and the lockfile.
 **Test.** Existing site/admin smoke tests now pass with the updated graph;
 full workspace lint, typechecking, and tests also pass. Keep the exact version
 assertions as the reviewed baseline for future dependency changes.
+
+## 2026-11-12 recurrence
+
+PR #502 updated Astro to 7.4.7, Vite to 8.3.6, `@astrojs/check` to
+0.9.12, and `@tailwindcss/vite` to 4.3.4 without updating the site/admin
+smoke assertions. Align both suites with the reviewed manifests. The React,
+Tailwind, cookie, and Node requirements remain unchanged.

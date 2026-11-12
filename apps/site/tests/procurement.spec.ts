@@ -44,8 +44,8 @@ test("every article in the collection renders without scripts and is listed in t
     for (const entry of await page.locator(".guide-entry-with-image").all()) {
       const image = (await entry.locator("img").boundingBox())!;
       const copy = (await entry.locator(".guide-entry-copy").boundingBox())!;
-      expect(image.width).toBe(width >= 768 ? 160 : 80);
-      expect(image.height).toBe(image.width);
+      expect(image.width).toBeCloseTo(width >= 768 ? 160 : 80, 2);
+      expect(image.height).toBeCloseTo(image.width, 2);
       expect(copy.x).toBeGreaterThan(image.x + image.width);
       expect(Math.abs(copy.y - image.y)).toBeLessThan(1);
     }

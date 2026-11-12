@@ -35,6 +35,30 @@ test('application-only changes build only that web application', () => {
   assert.deepEqual(builds('.github/workflows/mobile-ota-pr.yml'), []);
 });
 
+test('the IFC viewer watches its copied assets without building other apps', () => {
+  const viewer = config['harpa-pro-viewer'];
+  const viewerBuilds = (path) => viewer.include.some((pattern) => matches(pattern, path));
+  for (const path of [
+    'packages/ifc-viewer/src/converter.js',
+    'apps/site/src/styles/globals.css',
+    'apps/site/public/brand-icon.svg',
+    'apps/site/package.json',
+    'pnpm-lock.yaml',
+  ])
+    assert(viewerBuilds(path), path);
+  assert.deepEqual(builds('packages/ifc-viewer/src/converter.js'), []);
+  assert(!viewerBuilds('packages/api/src/app.ts'));
+  assert(!viewerBuilds('apps/site/src/pages/index.astro'));
+  for (const environment of ['preview', 'dev']) {
+    const workflow = read(`.github/workflows/viewer-${environment}.yml`);
+    assert(workflow.includes("needs.changes.outputs.deploy == 'true'"));
+    for (const input of viewer.include) {
+      const trigger = input.endsWith('/*') ? input.replaceAll('*', '**') : input;
+      assert(workflow.includes(`- '${trigger}'`) || input.startsWith('scripts/ci/'), input);
+    }
+  }
+});
+
 test('shared dependencies and backend preview inputs retain their consumers', () => {
   assert.deepEqual(builds('packages/api-contract/src/index.ts'), ['site', 'admin', 'dashboard']);
   assert.deepEqual(builds('pnpm-lock.yaml'), ['site', 'admin', 'dashboard']);

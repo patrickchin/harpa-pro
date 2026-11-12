@@ -1,0 +1,120 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { Image } from "astro:assets";
+import { getCollection } from "astro:content";
+import buyingGuideThumbnail from "../../assets/procurement/guides/how-to-buy-from-china-thumbnail.webp";
+import Header from "../../components/site/Header.astro";
+import Footer from "../../components/site/Footer.astro";
+import Container from "../../components/primitives/Container.astro";
+import Section from "../../components/primitives/Section.astro";
+import { sortProcurementGuides } from "../../lib/procurement/guides";
+import "../../styles/luxury.css";
+
+const guides = sortProcurementGuides(await getCollection("procurementGuides"));
+const title = "Procurement guides";
+const description = "Practical China sourcing guides for architects and interior designers: supplier checks, order costs, quality inspections, payments, and shipping.";
+const homeUrl = new URL("/", Astro.site).href;
+const pageUrl = new URL("/procurement/guides", Astro.site).href;
+const structuredData = [{
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: homeUrl },
+    { "@type": "ListItem", position: 2, name: title, item: pageUrl },
+  ],
+}];
+---
+
+<Layout title={`${title} | Harpa Pro`} description={description} pageType="CollectionPage" structuredData={structuredData}>
+  <div class="luxury-site procurement-guides min-h-screen bg-background text-ink">
+    <Header />
+    <main id="main-content">
+      <Section>
+        <Container>
+          <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
+            <a href="/">Home</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{title}</span>
+          </nav>
+          <header class="guides-intro">
+            <h1>{title}</h1>
+            <p>Plan your order from China, check the supplier, and prepare for delivery.
+              These guides focus on furniture, finishes, lighting, and joinery for
+              architecture and interior projects.</p>
+          </header>
+          <p class="image-disclosure">Thumbnails are generated illustrations.</p>
+          <section aria-labelledby="buying-guide" class="guides-start">
+            <figure class="guide-thumbnail">
+              <Image src={buyingGuideThumbnail}
+                alt="Generated illustration of packed walnut cabinet doors beside a finished walnut kitchen and stone island"
+                width={320} height={320} widths={[80, 96, 160, 192, 320]} sizes="(min-width: 768px) 160px, (min-width: 400px) 96px, 80px"
+                format="webp" quality={84} priority />
+            </figure>
+            <div>
+              <h2 id="buying-guide"><a href="/procurement/how-to-buy-from-china" class="ring-focus">How to buy from China</a></h2>
+              <p>Start with the complete buying process, including import requirements
+                for Ghana, Kenya, Nigeria, and Tanzania.</p>
+              <a href="/procurement/how-to-buy-from-china" class="guide-link ring-focus">Read the buying guide</a>
+            </div>
+          </section>
+          {guides.length > 0 && <section aria-labelledby="specific-guides">
+            <h2 id="specific-guides">Guides for your next decision</h2>
+            <ul class="guide-list">
+              {guides.map((guide) => {
+                const thumbnail = guide.data.thumbnail ?? guide.data.hero;
+                return <li>
+                <a href={`/procurement/${guide.id}`}
+                  aria-labelledby={`guide-${guide.id}`}
+                  class:list={["guide-entry ring-focus", { "guide-entry-with-image": Boolean(thumbnail) }]}>
+                  {thumbnail && <figure class="guide-thumbnail">
+                    <Image src={thumbnail.image} alt={thumbnail.alt}
+                      width={320} height={320} widths={[80, 96, 160, 192, 320]} sizes="(min-width: 768px) 160px, (min-width: 400px) 96px, 80px"
+                      format="webp" quality={84} loading="lazy" />
+                  </figure>}
+                  <div class="guide-entry-copy">
+                    <h3 id={`guide-${guide.id}`}>{guide.data.title}</h3>
+                    <p>{guide.data.description}</p>
+                  </div>
+                </a>
+              </li>;
+              })}
+            </ul>
+          </section>}
+        </Container>
+      </Section>
+    </main>
+    <Footer />
+  </div>
+</Layout>
+
+<style>
+  .procurement-guides { color: var(--luxury-walnut); }
+  .docs-breadcrumbs { color: var(--luxury-muted); }
+  .guides-intro { margin: 2.5rem 0 3rem; max-width: 44rem; }
+  h1, h2, h3 { text-wrap: balance; }
+  h1 { font-family: var(--luxury-serif); font-weight: 500; font-size: clamp(3rem, 6vw, 5rem); letter-spacing: -0.035em; line-height: 1.05; }
+  .procurement-guides h2, .procurement-guides h3 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.02em; }
+  .procurement-guides h2 { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.3; }
+  p { font-size: 1.0625rem; line-height: 1.75; margin-top: 1rem; max-width: 44rem; }
+  .image-disclosure { color: var(--luxury-muted); font-size: 0.8125rem; margin-bottom: 1rem; }
+  .guides-start { align-items: start; background: var(--luxury-porcelain); display: grid; gap: 1rem; grid-template-columns: 5rem minmax(0, 1fr); margin-bottom: 3rem; padding: 1.25rem; }
+  .guide-link { align-items: center; display: inline-flex; min-height: 2.75rem; margin-top: 1rem; text-decoration: underline; text-underline-offset: 0.2em; }
+  .guide-list { border-top: 1px solid var(--border); display: grid; margin-top: 2rem; }
+  .guide-list > li { border-bottom: 1px solid var(--border); padding-block: 1.5rem; }
+  .procurement-guides .guide-entry { align-items: start; display: grid; gap: 1rem; min-width: 0; text-decoration: none; }
+  .guide-entry-with-image { grid-template-columns: 5rem minmax(0, 1fr); }
+  .guide-entry-copy { min-width: 0; }
+  .guide-entry h3 { font-size: clamp(1.125rem, 1.6vw, 1.375rem); line-height: 1.35; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+  .guide-entry:hover h3, .guides-start a:hover { color: var(--accent-ink); }
+  .guide-list p { margin-top: 0.5rem; }
+  .guide-thumbnail { margin: 0; min-width: 0; }
+  .guide-thumbnail img { aspect-ratio: 1; display: block; height: auto; object-fit: cover; width: 100%; }
+  @media (min-width: 25rem) {
+    .guides-start, .guide-entry-with-image { grid-template-columns: 6rem minmax(0, 1fr); }
+  }
+  @media (min-width: 48rem) {
+    .guides-start, .guide-entry-with-image { grid-template-columns: 10rem minmax(0, 1fr); }
+    .guides-start { padding: 2rem; }
+    .procurement-guides .guide-entry, .guides-start { gap: 1.5rem; }
+    .guide-list > li { padding-block: 2rem; }
+  }
+</style>

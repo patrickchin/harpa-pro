@@ -18,6 +18,7 @@ export interface UseAutoRegenerateInput {
   isGenerating: boolean;
   generationError: string | null;
   onRegenerate: () => void;
+  enabled?: boolean;
 }
 
 export function useAutoRegenerate({
@@ -26,12 +27,13 @@ export function useAutoRegenerate({
   isGenerating,
   generationError,
   onRegenerate,
+  enabled = true,
 }: UseAutoRegenerateInput): void {
   useEffect(() => {
-    if (!needsRegeneration) return;
+    if (!enabled || !needsRegeneration) return;
     if (status !== 'draft') return;
     if (isGenerating) return;
     if (generationError !== null) return;
     onRegenerate();
-  }, [needsRegeneration, status, isGenerating, generationError, onRegenerate]);
+  }, [needsRegeneration, status, isGenerating, generationError, onRegenerate, enabled]);
 }

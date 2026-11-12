@@ -25,7 +25,7 @@ concurrency:
 jobs:
   journeys:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 180 # site-preview includes a 150-minute deployment window
     permissions:
       actions: read
       contents: read
@@ -53,7 +53,8 @@ jobs:
           if [[ "$HEAD_REF" == "dev" ]]; then
             echo "kind=api" >> "$GITHUB_OUTPUT"
           else
-            kind=$(node scripts/ci/main-gate-scope.cjs "$BASE_SHA" "$HEAD_SHA")
+            git show "$BASE_SHA:scripts/ci/main-gate-scope.cjs" > "$RUNNER_TEMP/main-gate-scope.cjs"
+            kind=$(node "$RUNNER_TEMP/main-gate-scope.cjs" "$BASE_SHA" "$HEAD_SHA")
             echo "kind=$kind" >> "$GITHUB_OUTPUT"
           fi
 
@@ -66,7 +67,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PREVIEW_WORKFLOW_FILE: site-preview.yml
           PREVIEW_JOB_NAME: deployment
-          PREVIEW_RUN_ATTEMPTS: 180
+          PREVIEW_RUN_ATTEMPTS: 990
         run: bash scripts/ci/wait-for-pr-preview.sh
 
       - name: Verify exact-SHA website preview

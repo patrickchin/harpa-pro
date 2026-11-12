@@ -22,6 +22,13 @@ configuration, and workflow changes retain the existing API gate. Promotions
 from `dev` always retain API journeys, even when their content is site-only.
 Dependabot's existing direct-production rejection remains in place.
 
+Load the classifier from the PR base commit into the runner's temporary
+directory. A PR must not replace the code that selects its own gate. Treat
+classifier changes as protected preview-gate wiring in the shared path
+detector. Dev promotions keep their API path without requiring a classifier
+to exist on an older main base. The website wait budget covers the existing
+150-minute site deployment window plus its preceding verification job.
+
 Reuse the existing preview-provenance helper with a configurable job name;
 its default remains `fly-preview`. Failed, skipped, absent, or stale-head
 site deployment jobs must fail the gate. The Pages identity check independently

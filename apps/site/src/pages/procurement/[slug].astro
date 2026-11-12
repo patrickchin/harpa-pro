@@ -1,0 +1,28 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getCollection, render } from "astro:content";
+import ProcurementGuide from "../../layouts/ProcurementGuide.astro";
+import ProcurementTable from "../../components/procurement/ProcurementTable.astro";
+import { sortProcurementGuides } from "../../lib/procurement/guides";
+
+export async function getStaticPaths() {
+  const guides = sortProcurementGuides(await getCollection("procurementGuides"));
+  return guides.map((guide) => ({ params: { slug: guide.id }, props: { guide } }));
+}
+
+interface Props {
+  guide: CollectionEntry<"procurementGuides">;
+}
+
+const { guide } = Astro.props;
+const { Content, headings } = await render(guide);
+---
+
+<ProcurementGuide
+  headline={guide.data.title}
+  description={guide.data.description}
+  hero={guide.data.hero}
+  headings={headings.filter(({ depth }) => depth === 2)}
+>
+  <Content components={{ table: ProcurementTable }} />
+</ProcurementGuide>

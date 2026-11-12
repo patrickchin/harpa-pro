@@ -24,18 +24,18 @@ describe('site smoke', () => {
     expect(pkg.dependencies).toMatchObject({
       '@astrojs/mdx': '^7.0.8',
       '@astrojs/react': '^6.0.6',
-      '@tailwindcss/vite': '^4.3.3',
-      astro: '^7.3.6',
+      '@tailwindcss/vite': '^4.3.4',
+      astro: '^7.4.7',
       react: '19.2.0',
       'react-dom': '19.2.0',
       tailwindcss: '^4.3.3',
     });
     expect(pkg.devDependencies).toMatchObject({
-      '@astrojs/check': '^0.9.10',
+      '@astrojs/check': '^0.9.12',
       '@types/react': '^19.2.18',
       '@types/react-dom': '~19.2.4',
       cookie: '2.0.1',
-      vite: '8.3.3',
+      vite: '8.3.6',
     });
     expect(pkg.engines.node).toBe('>=22.12.0');
   });

@@ -30,6 +30,8 @@ test('the real PR diff includes renamed backend files and all commits', () => {
     mkdirSync(join(dir, 'packages/api'), { recursive: true });
     mkdirSync(join(dir, 'apps/site'), { recursive: true });
     writeFileSync(join(dir, 'packages/api/data.txt'), 'original backend file\n');
+    mkdirSync(join(dir, 'scripts/ci'), { recursive: true });
+    writeFileSync(join(dir, 'scripts/ci/main-gate-scope.cjs'), readFileSync(script));
     git('add', '.'); git('commit', '-qm', 'base');
     const base = git('rev-parse', 'HEAD');
     writeFileSync(join(dir, 'apps/site/page.astro'), '<h1>Site</h1>');
@@ -40,6 +42,12 @@ test('the real PR diff includes renamed backend files and all commits', () => {
     writeFileSync(join(dir, 'apps/site/page.astro'), '<h1>Changed again</h1>');
     git('add', '.'); git('commit', '-qm', 'later site-only commit');
     assert.equal(scope(base, git('rev-parse', 'HEAD')), 'api');
+    writeFileSync(join(dir, 'scripts/ci/main-gate-scope.cjs'), 'process.stdout.write("site")');
+    git('add', '.'); git('commit', '-qm', 'attempt to replace classifier');
+    const head = git('rev-parse', 'HEAD');
+    const trustedScript = join(dir, 'trusted-scope.cjs');
+    writeFileSync(trustedScript, git('show', `${base}:scripts/ci/main-gate-scope.cjs`));
+    assert.equal(execFileSync(process.execPath, [trustedScript, base, head], { cwd: dir, encoding: 'utf8' }), 'api');
     assert.notEqual(spawnSync(process.execPath, [script, base, 'f'.repeat(40)], { cwd: dir }).status, 0);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -47,6 +55,11 @@ test('the real PR diff includes renamed backend files and all commits', () => {
 test('dev promotions retain API journeys and the site gate verifies provenance and identity', () => {
   const workflow = readFileSync(resolve(__dirname, '../../../.github/workflows/main-gate.yml'), 'utf8');
   assert.match(workflow, /if \[\[ "\$HEAD_REF" == "dev" \]\]; then\n\s+echo "kind=api"/);
+  assert(workflow.includes('git show "$BASE_SHA:scripts/ci/main-gate-scope.cjs"'));
+  assert(workflow.includes('node "$RUNNER_TEMP/main-gate-scope.cjs" "$BASE_SHA" "$HEAD_SHA"'));
+  const paths = readFileSync(resolve(__dirname, '../../../.github/actions/changed-paths/action.yml'), 'utf8');
+  const protectedPaths = paths.split('          api-migrations:')[1].split('          mobile:')[0];
+  assert(protectedPaths.includes("'scripts/ci/main-gate-scope.cjs'"));
   assert.match(workflow, /PREVIEW_WORKFLOW_FILE: site-preview\.yml\n\s+PREVIEW_JOB_NAME: deployment/);
   assert.match(workflow, /bash scripts\/ci\/verify-pages-deployment\.sh/);
   assert.match(workflow, /--commit "\$PR_HEAD_SHA"/);

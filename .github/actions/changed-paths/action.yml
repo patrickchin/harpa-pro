@@ -101,6 +101,7 @@ runs:
             - 'infra/neon/branch.ts'
             - 'package.json'
             - 'pnpm-lock.yaml'
+            - 'scripts/ci/main-gate-scope.cjs'
             - 'scripts/ci/wait-for-pr-preview.sh'
             - 'scripts/ci/verify-deployed-sha.sh'
             - 'scripts/ci/verify-readyz.sh'

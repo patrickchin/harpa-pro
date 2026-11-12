@@ -1,0 +1,21 @@
+{
+  "name": "@harpa/ifc-viewer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:viewer": "node scripts/build.mjs",
+    "build:viewer": "node scripts/build.mjs",
+    "preview:viewer": "node scripts/serve.mjs",
+    "test": "node scripts/build.mjs && node --test tests/*.test.mjs",
+    "test:viewer": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.mjs"
+  },
+  "dependencies": {
+    "three": "0.180.0",
+    "web-ifc": "0.0.78"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.63.0"
+  }
+}

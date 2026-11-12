@@ -45,7 +45,9 @@ test("keeps procurement and reporting destinations usable without JavaScript", a
         : page.locator('[data-mega-menu="procurement"]');
       await menu.locator("summary").click();
       const procurement = mobile ? menu.locator("[data-mobile-procurement]") : menu;
-      await expect(procurement.getByRole("link")).toHaveCount(4);
+      await expect(procurement.getByRole("link")).toHaveCount(5);
+      await expect(procurement.getByRole("link", { name: "Procurement guides", exact: true }))
+        .toHaveAttribute("href", "/procurement/guides");
       await expect(procurement.getByRole("link", { name: "Procurement Overview", exact: true }))
         .toHaveAttribute("href", "/");
       await expect(procurement.getByRole("link", { name: "Products and factories", exact: true }))

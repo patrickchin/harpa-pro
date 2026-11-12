@@ -1058,8 +1058,20 @@ require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generat
   "expectedUpdatedAtRef.current = response.report.updatedAt;" \
   "placement response advances the finalize body version synchronously"
 require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
-  "const placementWriteBlocked = placePhotoGroupMutation.isPending || placementWriteError !== null;" \
-  "placement settlement and failure block report actions"
+  "placePhotoGroupMutation.isPending ||" \
+  "pending placement participates in report write admission"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "placementFailed: placementWriteError !== null," \
+  "placement failure participates in report command admission"
+require_fixed "apps/mobile/lib/reports/command-admission.ts" \
+  "if (state.writePending) blockers.push('write-pending');" \
+  "pending writes block report commands"
+require_fixed "apps/mobile/lib/reports/command-admission.ts" \
+  "if (state.placementFailed) blockers.push('placement-failed');" \
+  "failed placement blocks report commands"
+require_fixed "apps/mobile/app/(app)/projects/[project]/reports/[number]/generate.tsx" \
+  "isReportWriteBlocked={admission.blockers.length > 0}" \
+  "report controls observe shared command admission"
 require_fixed "apps/mobile/components/reports/generate/GenerateReportActionRow.tsx" \
   "isReportWriteBlocked: draft.isReportWriteBlocked" \
   "report action row observes unresolved placement writes"

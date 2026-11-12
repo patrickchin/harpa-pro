@@ -44,4 +44,25 @@ const reportsDocs = defineCollection({
   }),
 });
 
-export const collections = { reportsFaq, reportsFeatures, reportsRoadmap, reportsDocs };
+const procurementGuides = defineCollection({
+  loader: glob({
+    pattern: "**/*.mdx",
+    base: "./src/content/procurement/guides",
+  }),
+  schema: ({ image }) => {
+    const illustration = z.object({
+      image: image(),
+      alt: z.string().startsWith("Generated illustration of ").min(36),
+      caption: z.string().startsWith("Generated illustration · ").min(28),
+    });
+    return z.object({
+      title: z.string().min(1),
+      description: z.string().min(20),
+      order: z.number().int().positive(),
+      hero: illustration.optional(),
+      thumbnail: illustration.optional(),
+    });
+  },
+});
+
+export const collections = { reportsFaq, reportsFeatures, reportsRoadmap, reportsDocs, procurementGuides };

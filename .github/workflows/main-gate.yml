@@ -6,6 +6,7 @@ name: main-gate
 # contract still works end-to-end before changing `main`. Normal `dev → main`
 # promotions use the live dev deployment. Focused API/admin main hotfixes use
 # the isolated Fly + Neon environment created by `pr-preview.yml` for that PR.
+# Website-only focused PRs verify their exact-SHA Pages preview instead.
 # Required check on `main`'s branch protection — see
 # docs/v4/arch-cicd-and-migrations.md.
 #
@@ -40,10 +41,55 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           lfs: true # voice samples for core/extended journeys
+          fetch-depth: 0
+
+      - name: Resolve production gate scope
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [[ "$HEAD_REF" == "dev" ]]; then
+            echo "kind=api" >> "$GITHUB_OUTPUT"
+          else
+            kind=$(node scripts/ci/main-gate-scope.cjs "$BASE_SHA" "$HEAD_SHA")
+            echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for exact-SHA site validation and deployment
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          steps.scope.outputs.kind == 'site'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_WORKFLOW_FILE: site-preview.yml
+          PREVIEW_JOB_NAME: deployment
+          PREVIEW_RUN_ATTEMPTS: 180
+        run: bash scripts/ci/wait-for-pr-preview.sh
+
+      - name: Verify exact-SHA website preview
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          steps.scope.outputs.kind == 'site'
+        env:
+          SITE_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro.pages.dev
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BRANCH: pr-${{ github.event.pull_request.number }}
+        run: >-
+          bash scripts/ci/verify-pages-deployment.sh
+          --origin "$SITE_PREVIEW_ORIGIN"
+          --commit "$PR_HEAD_SHA"
+          --branch "$PR_BRANCH"
+          --redirect-path /guides/getting-started
+          --redirect-suffix /reports/docs/guides/getting-started
 
       - name: Resolve exact-SHA journey target
         id: target
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          steps.scope.outputs.kind == 'api'
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           DEV_HEALTH_URL: ${{ vars.API_HEALTH_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/healthz' }}
@@ -60,21 +106,26 @@ jobs:
       - name: Wait for exact-SHA preview provenance
         if: >-
           github.event.pull_request.user.login != 'dependabot[bot]' &&
-          github.event.pull_request.head.ref != 'dev'
+          github.event.pull_request.head.ref != 'dev' &&
+          steps.scope.outputs.kind == 'api'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/ci/wait-for-pr-preview.sh
 
       - name: Verify deployed SHA
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          steps.scope.outputs.kind == 'api'
         env:
           HEALTH_URL: ${{ steps.target.outputs.base_url }}/healthz
           EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/ci/verify-deployed-sha.sh
 
       - name: Run journeys against verified target
-        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        if: >-
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          steps.scope.outputs.kind == 'api'
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # The target was SHA-bound above, whether it is shared dev or an
         # isolated focused-hotfix preview.

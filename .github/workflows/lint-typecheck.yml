@@ -62,6 +62,7 @@ jobs:
           bash scripts/ci/__tests__/repair-storage-worker-topology.test.sh
           bash scripts/ci/__tests__/verify-storage-worker-started.test.sh
           bash scripts/ci/__tests__/verify-deployed-sha.test.sh
+          node --test scripts/ci/__tests__/main-gate-scope.test.cjs
           bash scripts/ci/__tests__/wait-for-pr-preview.test.sh
           bash scripts/ci/__tests__/release-confidence-gates.test.sh
           bash scripts/ci/__tests__/admin-site-separation.test.sh

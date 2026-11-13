@@ -107,8 +107,8 @@ test('every sitemap page has unique metadata and an accurate production identity
         bodyColor: getComputedStyle(document.querySelector('.article-copy')!).color,
         walnut: getComputedStyle(document.querySelector('[data-site-header]')!).backgroundColor,
       }));
-      expect(fonts.title).toContain('Cormorant Garamond');
-      expect(fonts.step).toContain('Cormorant Garamond');
+      expect(fonts.title).toContain('Inter');
+      expect(fonts.step).toContain('Inter');
       expect(fonts.body).toContain('Inter');
       expect(fonts.wordmark).toContain('Inter');
       expect(fonts.titleColor).toBe(fonts.walnut);

@@ -180,7 +180,7 @@ environment and only surfaces when the deploy fires.
 | `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin checks plus exact-SHA native Pages preview verification                                  |
 | `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public checks plus exact-SHA native Pages preview verification                                 |
 | `dashboard-preview.yml`       | ✓ (→dev/main) | (PR-only)             | Exact head-SHA Git preview plus fast and deployed live browser checks on the stable alias                      |
-| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target before journeys: shared dev for promotions, isolated preview for focused hotfixes |
+| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target: website preview for site-only fixes; API journeys for dev promotions and other hotfixes |
 | `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                        |
 | `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                           |
 | `site-dev.yml`                |       ✗       | dev                   | Verify the exact SHA served by the native Pages `dev` deployment                                               |
@@ -221,6 +221,12 @@ privileged context crosses the trust boundary. Direct Dependabot security PRs
 to `main` fail `main-gate` with instructions to port the coordinated update
 through a human-owned `dev` PR; live journeys never receive the test-account
 password on that bot path.
+
+Website-only focused main PRs use the successful exact-head `site-preview`
+deployment and verify its Pages branch/commit marker and guide redirect.
+The complete PR diff must contain site changes and optional documentation
+only; shared inputs, unknown paths, and all `dev` promotions retain the API
+journey gate. See the [gate design](design-site-only-main-gate.md).
 
 ### Closing post-merge blind spots
 

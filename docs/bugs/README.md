@@ -447,6 +447,10 @@ as a product regression.
 
 ## Bugs
 
+- **2026-11-13** — Website-only main PRs waited for an intentionally skipped
+  API preview. Fix: require the validated exact-SHA site deployment for
+  site-only changes. [detail](2026-11-13-site-only-main-gate.md)
+
 - **2026-11-12** — Exact thumbnail-dimension equality rejected Firefox's
   fractional DOM measurements. Fix: retain size and square-shape checks at
   two-decimal precision. [detail](2026-11-12-thumbnail-subpixel-measurements.md)

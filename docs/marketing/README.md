@@ -13,7 +13,9 @@ app in one static Astro application at `harpapro.com`.
 App components, content, helpers, screenshots, and fixtures live beneath
 `reports/` directories in `apps/site/src`. Procurement has its own
 `procurement/` directories. Shared header, footer, and wordmark live in
-`src/components/site`. Current guides live in
+`src/components/site`. Footer link labels match the header labels for the
+same destinations, and the footer includes the external App Store link.
+Current guides live in
 `apps/site/src/content/reports/docs`.
 
 The reporting page includes a browser demo using

@@ -283,7 +283,9 @@ test('uses the branded not-found page for an unknown guide', async ({ page }) =>
   await expect(
     page.getByRole('heading', { level: 1, name: 'That Page Is Not Here.' }),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Procurement Overview' })).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Procurement Overview' }),
+  ).toBeVisible();
   await expect(
     page.getByRole('main').getByRole('link', { name: 'Site Reporting Guides' }),
   ).toBeVisible();

@@ -1,40 +1,97 @@
 ---
+import { APP_STORE_URL } from "../../lib/reports/links";
+import Icon from "../Icon.astro";
 import Wordmark from "./Wordmark.astro";
 
 const year = new Date().getFullYear();
+
+interface FooterLink {
+  label: string;
+  href: string;
+  external?: boolean;
+}
+
+// Labels mirror Header.astro so the same destination has the same name.
+const columns: { title: string; links: FooterLink[] }[] = [
+  {
+    title: "Procurement",
+    links: [
+      { label: "Procurement Overview", href: "/" },
+      { label: "Products and factories", href: "/#factory-partners" },
+      { label: "Our process", href: "/#considerations" },
+      { label: "How to Buy from China", href: "/procurement/how-to-buy-from-china" },
+      { label: "Procurement guides", href: "/procurement/guides" },
+    ],
+  },
+  {
+    title: "Site Reporting",
+    links: [
+      { label: "Harpa Pro App", href: "/reports" },
+      { label: "Guides", href: "/reports/docs" },
+      { label: "Roadmap", href: "/reports/roadmap" },
+      { label: "Get the App", href: APP_STORE_URL, external: true },
+      { label: "Account Deletion", href: "/reports/account-deletion" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "Contact Us", href: "/#contact" },
+      { label: "Privacy", href: "/privacy" },
+    ],
+  },
+];
+
+const linkClass =
+  "inline-flex min-h-11 items-center gap-1.5 rounded-sm py-1 text-sm text-ink-soft transition-colors hover:text-ink ring-focus md:min-h-9";
 ---
 
-<footer class="border-t border-hairline">
+<footer class="border-t border-hairline" data-site-footer>
   <div
-    class="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(8rem,1fr))]"
+    class="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-3 md:gap-x-10 lg:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(9rem,1fr))]"
   >
-    <div class="flex flex-col gap-2">
+    <div class="col-span-2 flex flex-col gap-3 md:col-span-3 lg:col-span-1">
       <Wordmark />
-      <p class="text-xs text-ink-soft">
+      <p class="max-w-xs text-sm leading-relaxed text-ink-soft">
         Technical procurement and factory records in China.
       </p>
     </div>
-    <nav aria-label="Procurement" class="grid content-start gap-2 text-xs text-ink-soft">
-      <h2 class="font-semibold uppercase tracking-wider text-ink">Procurement</h2>
-      <a href="/" class="rounded-sm hover:text-ink ring-focus">Overview</a>
-      <a href="/#factory-partners" class="rounded-sm hover:text-ink ring-focus">Products and factories</a>
-      <a href="/#considerations" class="rounded-sm hover:text-ink ring-focus">Our process</a>
-      <a href="/procurement/how-to-buy-from-china" class="rounded-sm hover:text-ink ring-focus">How to Buy from China</a>
-      <a href="/procurement/guides" class="rounded-sm hover:text-ink ring-focus">Procurement guides</a>
-      <a href="/#contact" class="rounded-sm hover:text-ink ring-focus">Contact Us</a>
-    </nav>
-    <nav aria-label="Site Reporting" class="grid content-start gap-2 text-xs text-ink-soft">
-      <h2 class="font-semibold uppercase tracking-wider text-ink">Site Reporting</h2>
-      <a href="/reports" class="rounded-sm hover:text-ink ring-focus">Harpa Pro App</a>
-      <a href="/reports/docs" class="rounded-sm hover:text-ink ring-focus">Guides</a>
-      <a href="/reports/roadmap" class="rounded-sm hover:text-ink ring-focus">Roadmap</a>
-      <a href="/reports/account-deletion" class="rounded-sm hover:text-ink ring-focus">Account Deletion</a>
-    </nav>
-    <nav aria-label="Company" class="grid content-start gap-2 text-xs text-ink-soft">
-      <h2 class="font-semibold uppercase tracking-wider text-ink">Company</h2>
-      <a href="/privacy" class="rounded-sm hover:text-ink ring-focus">Privacy</a>
-      <a href="/#contact" class="rounded-sm hover:text-ink ring-focus">Contact</a>
-      <span>© {year} Harpa Pro</span>
-    </nav>
+    {
+      columns.map((column) => (
+        <nav aria-label={column.title} class="min-w-0">
+          <h2 class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink">
+            {column.title}
+          </h2>
+          <ul class="grid">
+            {column.links.map((link) => (
+              <li>
+                {link.external ? (
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class={linkClass}
+                  >
+                    {link.label}
+                    <Icon name="arrow-up-right" class="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                ) : (
+                  <a href={link.href} class={linkClass}>
+                    {link.label}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ))
+    }
+  </div>
+  <div class="border-t border-hairline">
+    <div class="mx-auto max-w-6xl px-4 py-5 sm:px-6">
+      <p class="text-sm text-ink-soft" data-footer-copyright>
+        <small class="text-sm">© {year} Harpa Pro</small>
+      </p>
+    </div>
   </div>
 </footer>

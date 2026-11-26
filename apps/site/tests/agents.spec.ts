@@ -793,14 +793,20 @@ test('uses accessible mega navigation and closes it after outside interaction', 
     page
       .locator('footer')
       .getByRole('link', {
-        name: 'Overview',
+        name: 'Procurement Overview',
         exact: true,
-      })
-      .first(),
+      }),
   ).toHaveAttribute('href', '/');
   await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
   await expect(page.locator('footer nav[aria-label="Site Reporting"]').getByRole('link'))
-    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Account Deletion']);
+    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Get the App', 'Account Deletion']);
+  const footerAppLink = page.locator('footer').getByRole('link', { name: 'Get the App', exact: true });
+  await expect(footerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
+  await expect(footerAppLink).toHaveAttribute('target', '_blank');
+  await expect(footerAppLink).toHaveAttribute('rel', /noopener/);
+  await expect(page.locator('footer').getByRole('link', { name: /^Contact/ })).toHaveCount(1);
+  await expect(page.locator('footer nav').getByText(/©/)).toHaveCount(0);
+  await expect(page.locator('footer [data-footer-copyright]')).toContainText('Harpa Pro');
   await expect(page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }))
     .toHaveAttribute('href', '/privacy');
   await expect(

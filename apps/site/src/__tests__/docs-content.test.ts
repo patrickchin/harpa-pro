@@ -166,7 +166,11 @@ describe('docs content model', () => {
 
     const sidebar = readFileSync(resolve(srcRoot, 'components/reports/docs/DocsSidebar.astro'), 'utf8');
     expect(sidebar).toContain('DOCS_TIERS');
-    expect(sidebar).toContain('aria-label="Guide sections"');
+    expect(sidebar).toContain('aria-label={label}');
+    const layout = readFileSync(resolve(srcRoot, 'layouts/reports/DocsLayout.astro'), 'utf8');
+    expect(layout).toContain('label="Guide menu"');
+    expect(layout).toContain('label="Guide sections"');
+    expect(guideStep).toContain('<span class="sr-only">Step {number}: </span>');
   });
 
   it('ships nine concise task-first guides without stale v3 claims', () => {

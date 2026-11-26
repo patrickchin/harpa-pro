@@ -1006,6 +1006,12 @@
     padding: 0.75rem;
   }
 
+  /*
+   * No CSS width: the dialog script copies the full image's width/height
+   * attributes onto the <img>, so the box is sized from them (capped by
+   * max-width/max-height, letterboxed by object-fit) rather than from the
+   * smaller cached preview. This stops the jump when the full image swaps in.
+   */
   .evidence-image-dialog-region img {
     display: block;
     filter: none;
@@ -1018,7 +1024,6 @@
     transition:
       filter 160ms ease,
       opacity 160ms ease;
-    width: auto;
   }
 
   .evidence-image-dialog-region img[data-evidence-image-state='preview'] {

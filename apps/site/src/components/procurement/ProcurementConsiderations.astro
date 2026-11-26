@@ -61,11 +61,17 @@ const considerations = [
 ];
 ---
 
-<div data-considerations class="mt-8">
+<!--
+  Below lg the tablist and panel wrappers use display: contents so the open
+  panel is ordered directly under its tab (accordion layout) while the DOM
+  keeps valid tab/tabpanel ownership. At lg the tabs share row 1 and the
+  selected panel spans row 2.
+-->
+<div data-considerations class="mt-8 grid gap-3 lg:grid-cols-5">
   <div
     role="tablist"
     aria-label="Procurement considerations"
-    class="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5"
+    class="contents"
   >
     {
       considerations.map((consideration, index) => (
@@ -78,7 +84,8 @@ const considerations = [
           aria-controls={`consideration-panel-${index + 1}`}
           tabindex={index === 0 ? 0 : -1}
           data-consideration-tab
-          class="group flex h-full min-h-[5.5rem] w-full cursor-pointer flex-row items-center gap-4 rounded-xl border-2 border-border bg-card p-4 text-left text-ink shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/50 hover:shadow-md aria-selected:border-primary aria-selected:bg-secondary aria-selected:shadow-md ring-focus lg:min-h-[10.5rem] lg:flex-col lg:items-start lg:gap-0 lg:p-5"
+          style={`--consideration-order: ${index * 2}`}
+          class="group order-(--consideration-order) flex h-full min-h-[5.5rem] scroll-mt-24 w-full cursor-pointer flex-row items-center gap-4 rounded-xl border-2 border-border bg-card p-4 text-left text-ink shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/50 hover:shadow-md aria-selected:border-primary aria-selected:bg-secondary aria-selected:shadow-md ring-focus lg:order-none lg:row-start-1 lg:min-h-[10.5rem] lg:flex-col lg:items-start lg:gap-0 lg:p-5"
         >
           <span
             data-consideration-icon
@@ -108,7 +115,7 @@ const considerations = [
     }
   </div>
 
-  <div class="mt-6 min-w-0">
+  <div class="contents">
     {
       considerations.map((consideration, index) => (
         <div
@@ -118,7 +125,8 @@ const considerations = [
           tabindex="0"
           hidden={index !== 0}
           data-consideration-panel
-          class="overflow-hidden rounded-2xl border border-border bg-card shadow-md ring-focus lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]"
+          style={`--consideration-order: ${index * 2 + 1}`}
+          class="order-(--consideration-order) min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-md ring-focus lg:order-none lg:col-span-full lg:row-start-2 lg:mt-3 lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]"
         >
           <div
             data-consideration-image-frame
@@ -161,6 +169,11 @@ const considerations = [
     );
 
     function activate(index: number, moveFocus = false) {
+      // In the stacked (accordion) layout, closing a panel above the chosen
+      // tab would shift it upward; keep the tab where the user left it.
+      const nextTab = tabs[index];
+      const topBefore = nextTab?.getBoundingClientRect().top;
+
       tabs.forEach((tab, tabIndex) => {
         const isSelected = tabIndex === index;
         tab.setAttribute("aria-selected", String(isSelected));
@@ -169,7 +182,10 @@ const considerations = [
         if (panel) panel.hidden = !isSelected;
       });
 
-      const nextTab = tabs[index];
+      if (nextTab && topBefore !== undefined) {
+        const shift = nextTab.getBoundingClientRect().top - topBefore;
+        if (Math.abs(shift) > 1) window.scrollBy({ top: shift, behavior: "instant" });
+      }
       if (moveFocus && nextTab) nextTab.focus();
     }
 

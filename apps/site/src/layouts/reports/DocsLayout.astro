@@ -5,6 +5,7 @@ import DocsSidebar from "../../components/reports/docs/DocsSidebar.astro";
 import Footer from "../../components/site/Footer.astro";
 import Header from "../../components/site/Header.astro";
 import Layout from "../Layout.astro";
+import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 import { canonicalPathname } from "../../lib/urls";
 
 interface Props {
@@ -40,6 +41,8 @@ const structuredData = [{
 <Layout
   title={`${title} | Harpa Pro`}
   description={description}
+  image={REPORTS_SOCIAL_IMAGE.src}
+  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
   pageType={currentSlug ? "TechArticle" : "CollectionPage"}
   structuredData={structuredData}
 >

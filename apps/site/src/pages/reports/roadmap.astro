@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
+import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
 import Section from "../../components/primitives/Section.astro";
@@ -50,6 +51,8 @@ const groups: {
 <Layout
   title="Site Reporting Roadmap | Harpa Pro"
   description="See the current Harpa Pro reporting workflow and the capabilities planned for future releases."
+  image={REPORTS_SOCIAL_IMAGE.src}
+  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
 >
   <div class="min-h-screen bg-background text-ink">
     <Header />

@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
 import { getPublicEnv } from "../../lib/env";
@@ -12,6 +13,8 @@ const supportEmail = "patrick@harpapro.com";
 <Layout
   title="Confirming your updates — Harpa Pro"
   description="Confirming your Harpa Pro product updates signup."
+  image={REPORTS_SOCIAL_IMAGE.src}
+  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
   noindex
 >
   <div class="min-h-dvh bg-background text-ink flex flex-col">

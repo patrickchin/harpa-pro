@@ -75,6 +75,13 @@ Copy `.env.example` to `.env` before local development.
 `PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
 the current shared header does not expose the dashboard.
 
+The shared header (`src/components/site/Header.astro`) uses `<details>` menus
+that work without JavaScript. With JavaScript, desktop mega menus open on hover
+for fine pointers and stay open when the hovered summary is clicked; Enter and
+Space still toggle them. The mobile menu closes on Escape (focus returns to the
+toggle), an outside tap, or a link tap, and it locks page scroll while open. It
+has the same Contact Us and Get the App actions as desktop.
+
 ## Stack
 
 - Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)
@@ -149,6 +156,21 @@ copied from `apps/mobile/fastlane/screenshots/en-US/` into
 `src/assets/reports/docs/`, then Astro emits responsive WebP variants during the static
 build. `docs-content.test.ts` requires those checked-in copies to match the
 release captures exactly.
+
+## Images
+
+- Give every `<Image>` `widths`/`sizes` that match its rendered box; don't
+  oversize `sizes` to cover a CSS zoom. If only part of a source is shown,
+  commit a pre-cropped derivative (Astro's sharp service cannot extract a
+  region). The SW-011 product example is cropped from
+  `rongshuo-shower-p02.webp`; the extract parameters are in
+  `ProcurementEvidence.astro`.
+- Lightboxes (docs screenshots and evidence documents) never link the original
+  source file. `src/lib/lightbox-image.ts` emits a WebP derivative capped at
+  1800px. Dialogs first show the loaded thumbnail, then swap in the full view
+  after it decodes.
+- Only above-the-fold media (page heroes and the first index or montage
+  image) use `priority` or `loading="eager"`; everything else is lazy.
 
 Legacy `/guides/*` URLs and slugs from the first unified-site revision are
 preserved in `public/_redirects`. `test:redirects` checks every exact mapping,

@@ -5,7 +5,7 @@ import Wordmark from "./Wordmark.astro";
 ---
 
 <header
-  class="relative sticky top-0 z-40 border-b border-border bg-paper-2 shadow-sm"
+  class="sticky top-0 z-40 border-b border-border bg-paper-2 shadow-sm"
   data-site-header
 >
   <div
@@ -43,7 +43,6 @@ import Wordmark from "./Wordmark.astro";
             <div class="grid gap-2 sm:grid-cols-2">
               <a
                 href="/"
-                aria-label="Procurement Overview"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
               >
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
@@ -54,7 +53,7 @@ import Wordmark from "./Wordmark.astro";
                   <span class="mt-1 block leading-relaxed text-ink-soft">Our procurement service</span>
                 </span>
               </a>
-              <a href="/#factory-partners" aria-label="Products and factories"
+              <a href="/#factory-partners"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
                   <Icon name="armchair" class="h-4 w-4" />
@@ -64,7 +63,7 @@ import Wordmark from "./Wordmark.astro";
                   <span class="mt-1 block leading-relaxed text-ink-soft">Joinery, furniture, bathrooms, and source records</span>
                 </span>
               </a>
-              <a href="/#considerations" aria-label="Our process"
+              <a href="/#considerations"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
                   <Icon name="list-checks" class="h-4 w-4" />
@@ -76,7 +75,6 @@ import Wordmark from "./Wordmark.astro";
               </a>
               <a
                 href="/procurement/how-to-buy-from-china"
-                aria-label="How to Buy from China"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
               >
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
@@ -87,7 +85,7 @@ import Wordmark from "./Wordmark.astro";
                   <span class="mt-1 block leading-relaxed text-ink-soft">A guide for architects and designers</span>
                 </span>
               </a>
-              <a href="/procurement/guides" aria-label="Procurement guides"
+              <a href="/procurement/guides"
                 class="flex min-h-11 items-center rounded-lg p-3 text-sm font-semibold text-ink underline underline-offset-4 hover:bg-secondary ring-focus">
                 Procurement guides
               </a>
@@ -126,7 +124,6 @@ import Wordmark from "./Wordmark.astro";
             <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <a
                 href="/reports"
-                aria-label="Harpa Pro App"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
               >
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
@@ -139,7 +136,6 @@ import Wordmark from "./Wordmark.astro";
               </a>
               <a
                 href="/reports/docs"
-                aria-label="Guides"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
               >
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
@@ -152,7 +148,6 @@ import Wordmark from "./Wordmark.astro";
               </a>
               <a
                 href="/reports/roadmap"
-                aria-label="Roadmap"
                 class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
               >
                 <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
@@ -165,7 +160,6 @@ import Wordmark from "./Wordmark.astro";
               </a>
               <a
                 href={APP_STORE_URL}
-                aria-label="Get the App"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="flex items-start gap-3 rounded-lg bg-primary p-3 text-sm text-primary-foreground ring-focus"
@@ -197,13 +191,20 @@ import Wordmark from "./Wordmark.astro";
     <details class="site-menu group md:hidden" data-mobile-menu>
       <summary
         aria-label="Toggle menu"
-        class="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-md border border-hairline text-ink [&::-webkit-details-marker]:hidden"
+        class="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-md border border-hairline text-ink ring-focus [&::-webkit-details-marker]:hidden"
       >
         <Icon name="menu" class="h-4 w-4 group-open:hidden" />
         <Icon name="x" class="hidden h-4 w-4 group-open:block" />
       </summary>
       <div
-        class="absolute inset-x-0 top-16 max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-hairline bg-background shadow-lg"
+        class="fixed inset-x-0 bottom-0 top-16 bg-foreground/20"
+        aria-hidden="true"
+        data-mobile-backdrop
+      >
+      </div>
+      <div
+        class="absolute inset-x-0 top-16 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-hairline bg-background shadow-lg"
+        data-mobile-panel
       >
         <div class="mx-auto grid max-w-6xl gap-4 p-4">
           <div class="grid gap-1" data-mobile-procurement>
@@ -267,6 +268,24 @@ import Wordmark from "./Wordmark.astro";
               Roadmap
             </a>
           </div>
+          <div class="grid gap-2 border-t border-hairline pt-4" data-mobile-actions>
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus"
+            >
+              <Icon name="download" class="h-4 w-4" />
+              Get the App
+            </a>
+            <a
+              href="/#contact"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
+            >
+              <Icon name="message-circle" class="h-4 w-4" />
+              Contact Us
+            </a>
+          </div>
         </div>
       </div>
     </details>
@@ -281,6 +300,7 @@ import Wordmark from "./Wordmark.astro";
       siteHeader.querySelectorAll<HTMLDetailsElement>("[data-mega-menu]"),
     );
     const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const hoverOpened = new WeakSet<HTMLDetailsElement>();
     let closeTimer: number | undefined;
 
     const closeMenus = (except?: HTMLDetailsElement) => {
@@ -301,7 +321,10 @@ import Wordmark from "./Wordmark.astro";
         if (!finePointer.matches) return;
         cancelClose();
         closeMenus(menu);
-        menu.open = true;
+        if (!menu.open) {
+          menu.open = true;
+          hoverOpened.add(menu);
+        }
       });
 
       menu.addEventListener("pointerenter", cancelClose);
@@ -313,7 +336,18 @@ import Wordmark from "./Wordmark.astro";
         }, 120);
       });
 
-      summary?.addEventListener("click", () => closeMenus(menu));
+      summary?.addEventListener("click", (event) => {
+        closeMenus(menu);
+        // A pointer click right after hover-open would natively toggle the
+        // menu shut. Keyboard activation (detail === 0) still toggles.
+        if (event.detail > 0 && menu.open && hoverOpened.has(menu)) {
+          event.preventDefault();
+          hoverOpened.delete(menu);
+        }
+      });
+      menu.addEventListener("toggle", () => {
+        if (!menu.open) hoverOpened.delete(menu);
+      });
       menu.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => {
           menu.open = false;
@@ -338,10 +372,48 @@ import Wordmark from "./Wordmark.astro";
     const mobileMenu = siteHeader.querySelector<HTMLDetailsElement>(
       "[data-mobile-menu]",
     );
-    mobileMenu?.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => {
-        mobileMenu.open = false;
+    if (mobileMenu) {
+      const mobileSummary = mobileMenu.querySelector<HTMLElement>("summary");
+      const desktopViewport = window.matchMedia("(min-width: 768px)");
+
+      const syncScrollLock = () => {
+        document.documentElement.style.overflow =
+          mobileMenu.open && !desktopViewport.matches ? "hidden" : "";
+      };
+
+      mobileMenu.addEventListener("toggle", syncScrollLock);
+      desktopViewport.addEventListener("change", () => {
+        if (desktopViewport.matches) mobileMenu.open = false;
+        syncScrollLock();
       });
-    });
+
+      mobileMenu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          mobileMenu.open = false;
+        });
+      });
+
+      mobileMenu
+        .querySelector("[data-mobile-backdrop]")
+        ?.addEventListener("click", () => {
+          mobileMenu.open = false;
+        });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (
+          mobileMenu.open &&
+          event.target instanceof Node &&
+          !mobileMenu.contains(event.target)
+        ) {
+          mobileMenu.open = false;
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !mobileMenu.open) return;
+        mobileMenu.open = false;
+        mobileSummary?.focus();
+      });
+    }
   }
 </script>

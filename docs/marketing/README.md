@@ -21,6 +21,8 @@ The reporting page includes a browser demo using
 calls no API or AI provider. The legacy waitlist form remains in source but
 is not mounted on the public pages. Existing email confirmation links still
 work through permanent redirects, and new emails use `/reports/confirm`.
+Because no page offers signup, failed or expired confirmation links direct
+people to `/reports`, the App Store, or support email.
 
 The M0–M4 plans below preserve the original app-only launch history. Use the
 [site README](../../apps/site/README.md) and

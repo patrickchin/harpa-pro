@@ -1,5 +1,11 @@
 # Public site mega navigation and evidence disclosure
 
+> **Superseded in part** by
+> [audience-scoped chrome](design-public-site-audience-chrome.md): each
+> section now has its own header menu, CTA, footer, and wordmark target, with
+> one cross-link to the other section. Statements here about both menus in
+> shared navigation no longer apply. The interaction requirements still do.
+
 Status: accepted for implementation. The homepage document disclosure is
 superseded by the
 [procurement homepage narrative](design-site-procurement-home-narrative.md),

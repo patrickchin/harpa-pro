@@ -3,15 +3,48 @@ import Footer from "../components/site/Footer.astro";
 import Header from "../components/site/Header.astro";
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/primitives/Button.astro";
+import Card from "../components/primitives/Card.astro";
+
+// Both offers carry equal weight; the inline script may highlight one.
+const offers = [
+  {
+    section: "procurement",
+    title: "Interior procurement",
+    body: "Furniture, finishes, lighting, and joinery from factories in China.",
+    primary: { label: "Procurement Overview", href: "/" },
+    links: [
+      { label: "Procurement guides", href: "/procurement/guides" },
+      { label: "Contact Us", href: "/#contact" },
+    ],
+  },
+  {
+    section: "reports",
+    title: "Site reporting app",
+    body: "Daily site reports from voice notes, photos, and text.",
+    primary: { label: "Harpa Pro App", href: "/reports" },
+    links: [
+      { label: "Site Reporting Guides", href: "/reports/docs" },
+      { label: "Roadmap", href: "/reports/roadmap" },
+    ],
+  },
+] as const;
+
+const switchAttrs = (to: string) => ({
+  "data-audience-switch": true,
+  "data-audience-from": "shared",
+  "data-audience-to": to,
+  "data-audience-location": "not_found",
+});
 ---
 
 <Layout
+  section="shared"
   title="Page Not Found | Harpa Pro"
   description="The requested Harpa Pro page could not be found."
   noindex
 >
   <div class="flex min-h-dvh flex-col bg-background text-ink">
-    <Header />
+    <Header section="shared" />
     <main id="main-content" class="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-20 sm:px-6 sm:py-28">
       <p class="text-xs font-bold uppercase tracking-wider text-accent-ink">
         Error 404
@@ -22,28 +55,63 @@ import Button from "../components/primitives/Button.astro";
       <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft">
         The link may be old, or the page may have moved.
       </p>
-      <div class="mt-8 flex flex-wrap gap-3">
-        <Button href="/" variant="primary" size="touch" weight="semibold">
-          Procurement Overview
-        </Button>
-        <Button
-          href="/reports/docs"
-          variant="outline-strong"
-          size="touch"
-          weight="semibold"
-        >
-          Site Reporting Guides
-        </Button>
-        <Button
-          href="/#contact"
-          variant="outline-strong"
-          size="touch"
-          weight="semibold"
-        >
-          Contact Us
-        </Button>
+      <div class="mt-10 grid gap-4 sm:grid-cols-2" data-not-found-offers>
+        {
+          offers.map((offer) => (
+            <Card
+              as="section"
+              padding="lg"
+              class="group flex flex-col data-suggested:border-accent-ink"
+              aria-labelledby={`offer-${offer.section}`}
+              data-offer={offer.section}
+            >
+              <p class="mb-2 hidden text-xs font-bold uppercase tracking-wider text-accent-ink group-data-suggested:block">
+                Looking for this?
+              </p>
+              <h2 id={`offer-${offer.section}`} class="text-xl font-semibold tracking-tight">
+                {offer.title}
+              </h2>
+              <p class="mt-2 text-sm leading-relaxed text-ink-soft">{offer.body}</p>
+              <div class="mt-5 flex flex-1 flex-col items-start gap-1">
+                <Button
+                  href={offer.primary.href}
+                  variant="primary"
+                  size="touch"
+                  weight="semibold"
+                  class="mb-2"
+                  {...switchAttrs(offer.section)}
+                >
+                  {offer.primary.label}
+                </Button>
+                {offer.links.map((link) => (
+                  <a
+                    href={link.href}
+                    class="inline-flex min-h-11 items-center rounded-sm text-sm font-medium text-ink underline underline-offset-4 hover:text-accent-ink ring-focus"
+                    {...switchAttrs(offer.section)}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </Card>
+          ))
+        }
       </div>
     </main>
-    <Footer />
+    <Footer section="shared" />
   </div>
 </Layout>
+
+<script>
+  import { sectionForPath } from "../lib/site/sections";
+
+  // Cloudflare Pages serves this static page for every miss, so the hint
+  // can only come from the requested path in the browser.
+  const suggested = sectionForPath(window.location.pathname);
+  const offers = document.querySelector("[data-not-found-offers]");
+  const card = offers?.querySelector<HTMLElement>(`[data-offer="${suggested}"]`);
+  if (offers && card) {
+    card.dataset.suggested = "";
+    offers.prepend(card);
+  }
+</script>

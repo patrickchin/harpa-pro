@@ -82,8 +82,11 @@ The document data lives in `src/lib/procurement/factory-documents.ts`.
 `/documents/factories/*` redirect now points to this page instead of
 `/#evidence`.
 
-The header and footer navigation are hard-coded, so this change leaves them
-alone. A separate navigation change can add a link to the new page.
+The page passes `section="procurement"` to `Layout`, `Header`, and `Footer`.
+Its breadcrumb starts at the procurement root. In
+`src/lib/site/sections.ts`, the procurement footer column, which the shared
+footer also uses, lists **Factory documents** after the header links. The
+header menu keeps its five main entry points.
 
 ### Pre-cropped imagery
 

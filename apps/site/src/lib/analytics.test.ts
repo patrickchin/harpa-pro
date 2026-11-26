@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getAnalyticsEnv } from './env';
-import { getCampaignParams, sanitizeAnalyticsEvent } from './analytics';
+import { audienceSwitchPayload, getCampaignParams, sanitizeAnalyticsEvent } from './analytics';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -60,4 +60,29 @@ it('allows bounded campaign labels and rejects free text, duplicates and identif
     $current_url: 'https://harpapro.com/?token=secret&utm_source=LinkedIn',
   } }, campaign);
   expect(event?.properties).toEqual({ $current_url: 'https://harpapro.com/', ...campaign });
+});
+
+it('adds only a known site section to every event', () => {
+  const event = () => ({ uuid: 'test', event: '$pageview', properties: { site_section: 'spoofed' } });
+  expect(sanitizeAnalyticsEvent(event(), {}, 'reports')?.properties).toEqual({ site_section: 'reports' });
+  expect(sanitizeAnalyticsEvent(event(), {}, 'admin')?.properties).toEqual({});
+  expect(sanitizeAnalyticsEvent(event())?.properties).toEqual({});
+});
+
+it('sends only fixed audience-switch properties and drops unknown values', () => {
+  expect(audienceSwitchPayload('/', {
+    audienceSwitch: '', audienceFrom: 'procurement', audienceTo: 'reports', audienceLocation: 'header',
+    extra: 'private',
+  })).toEqual({ page_path: '/', from: 'procurement', to: 'reports', location: 'header' });
+  expect(audienceSwitchPayload('/nope', {
+    audienceFrom: 'shared', audienceTo: 'procurement', audienceLocation: 'not_found',
+  })).toEqual({ page_path: '/nope', from: 'shared', to: 'procurement', location: 'not_found' });
+  for (const data of [
+    { audienceFrom: 'procurement', audienceTo: 'shared', audienceLocation: 'header' },
+    { audienceFrom: 'admin', audienceTo: 'reports', audienceLocation: 'header' },
+    { audienceFrom: 'procurement', audienceTo: 'reports', audienceLocation: 'sidebar' },
+    {},
+  ]) {
+    expect(audienceSwitchPayload('/', data)).toBeNull();
+  }
 });

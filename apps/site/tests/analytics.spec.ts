@@ -107,6 +107,35 @@ test('contact actions still work when analytics requests are blocked', async ({ 
   await expect(page.getByRole('link', { name: 'Message on WhatsApp', exact: true })).toHaveAttribute('href', /^https:\/\/wa\.me\//);
 });
 
+test('measures section switches with fixed properties and the page section', async ({ page }) => {
+  const events = await observeAnalytics(page);
+  await page.goto('/');
+  await expect.poll(() => events.filter((event) => event.event === '$pageview').length, { timeout: 12_000 }).toBe(1);
+  expect(events.find((event) => event.event === '$pageview')?.properties.site_section).toBe('procurement');
+
+  await page.locator('header nav[aria-label="Primary"] [data-audience-switch]').click();
+  await expect(page).toHaveURL(/\/reports$/);
+  await expect.poll(() => events.filter((event) => event.event === 'audience_switch_clicked').length).toBe(1);
+  const switchEvent = events.find((event) => event.event === 'audience_switch_clicked')!;
+  expect(switchEvent.properties).toMatchObject({
+    page_path: '/', from: 'procurement', to: 'reports', location: 'header', site_section: 'procurement',
+  });
+  await expect.poll(() => events.filter((event) => event.event === '$pageview').length).toBe(2);
+  expect(events.filter((event) => event.event === '$pageview').at(-1)?.properties.site_section).toBe('reports');
+  expect(await page.evaluate(() => ({
+    local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie,
+  }))).toEqual({ local: [], session: [], cookies: '' });
+});
+
+test('section switches still navigate when analytics requests are blocked', async ({ page }) => {
+  await observeAnalytics(page);
+  await page.route('https://eu.i.posthog.com/**', (route) => route.abort());
+  await page.goto('/reports');
+  await page.locator('footer [data-audience-switch]').click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('body')).toHaveAttribute('data-site-section', 'procurement');
+});
+
 test('honours browser privacy signals without disabling contact actions', async ({ page }) => {
   const events = await observeAnalytics(page);
   await page.addInitScript(() => {

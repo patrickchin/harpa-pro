@@ -70,6 +70,26 @@ and known legacy guide URLs redirect permanently to their final destinations.
 Internal links and sitemap entries use canonical URLs. See the
 [URL organization design](../../docs/v4/design-site-product-url-organization.md).
 
+## UI primitives
+
+Shared Astro primitives live in `src/components/primitives/`. Use them
+instead of hand-rolling the same Tailwind classes:
+
+- `Container` and `Section` set page width, padding, tone, and borders.
+- `Button` renders an `<a>` when `href` is set and a `<button>` otherwise.
+  Variants are `accent`, `primary`, `secondary`, `outline`,
+  `outline-strong`, and `outline-tinted`. Sizes are `sm` (`h-9`), `md`
+  (`h-10`), `lg` (`h-11`), and `touch` (`min-h-11`). Set `external` to
+  open a new tab with `rel="noopener noreferrer"` and an external-link
+  icon.
+- `Card` is the rounded, hairline-bordered card surface. It renders an
+  interactive link when `href` is set.
+- `SectionHeader` renders an optional eyebrow, a title, and an optional
+  lede (prop or `lede` slot) at a chosen heading level.
+
+The procurement homepage theme (`luxury.css`, `procurement-hero.css`) and
+the docs styles keep their own classes.
+
 ## Develop
 
 ```bash
@@ -115,6 +135,14 @@ first focusable element, so every page's `<main>` must have
 accent fails WCAG AA with cream text). Give interactive elements the
 `ring-focus` utility, and keep decorative demo controls out of the tab order.
 `tests/a11y.spec.ts` covers these rules.
+
+Layout baseline: short pages wrap `Header`, `main`, and `Footer` in a
+`flex min-h-dvh flex-col` container with `main` set to `flex-1`, so the footer
+stays at the bottom. Keep page content inside `Container` and narrow prose with
+an inner wrapper, not a second `max-w-*` on `Container`. Below `lg`, the
+"What We Consider" tabs stack with the open panel directly under its tab.
+Mono metadata text is at least `text-xs`. `tests/responsive-layout.spec.ts`
+checks these rules at 390, 768, and 1280px.
 
 ## Website analytics
 
@@ -177,7 +205,8 @@ release captures exactly.
 - Lightboxes (docs screenshots and evidence documents) never link the original
   source file. `src/lib/lightbox-image.ts` emits a WebP derivative capped at
   1800px. Dialogs first show the loaded thumbnail, then swap in the full view
-  after it decodes.
+  after it decodes. The evidence dialog sizes the image from the full view's
+  `width`/`height` attributes, so the swap does not resize the box.
 - Only above-the-fold media (page heroes and the first index or montage
   image) use `priority` or `loading="eager"`; everything else is lazy.
 
@@ -190,9 +219,14 @@ local Cloudflare Pages runtime; Astro preview does not apply `_redirects`.
 
 Pages ship complete HTML, production canonicals, search/social metadata, and
 JSON-LD. The homepage identifies the interior procurement service in China;
-`/reports` identifies the iOS construction reporting app. Guides include article
-and breadcrumb data. `robots.txt` allows search crawlers, including AI search,
-and the sitemap lists public pages. Confirmation and error pages use
+`/reports` identifies the iOS construction reporting app (`MobileApplication`)
+and mirrors its visible FAQ as `FAQPage` data from the `reportsFaq` collection.
+Guides include article and breadcrumb data. Every page must pass its own title
+and description to `Layout`. Reporting pages use the app card
+(`public/og-image.png`, see `src/lib/social-images.ts`); procurement pages
+generate a 1200×630 card from interior imagery. `robots.txt` allows search
+crawlers, including AI search, and the sitemap lists every indexable public
+page. Confirmation and error pages use
 `noindex`; the production Pages alias has a hostname-specific `noindex`
 header. Cloudflare supplies `noindex` for dev/preview deployments.
 

@@ -1,11 +1,15 @@
 ---
 import { getCollection, render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
+import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
 import Section from "../../components/primitives/Section.astro";
 import Container from "../../components/primitives/Container.astro";
 import Icon from "../../components/Icon.astro";
+import Button from "../../components/primitives/Button.astro";
+import Card from "../../components/primitives/Card.astro";
+import SectionHeader from "../../components/primitives/SectionHeader.astro";
 import { APP_STORE_URL } from "../../lib/reports/links";
 import {
   FEATURE_SUGGESTION_MAILTO,
@@ -51,11 +55,12 @@ const pillCls: Record<RoadmapStatus, string> = {
   planned: "border-primary/40 bg-card text-primary",
   exploring: "border-dashed border-muted-foreground/70 bg-transparent text-ink-soft",
 };
+// Extras layered on Card's hairline border and card fill.
 const cardCls: Record<RoadmapStatus, string> = {
-  available: "border-hairline bg-card",
-  "in-progress": "border-hairline border-l-4 border-l-accent! bg-card shadow-sm",
-  planned: "border-hairline bg-card",
-  exploring: "border-dashed border-muted-foreground/50 bg-transparent",
+  available: "",
+  "in-progress": "border-l-4 border-l-accent! shadow-sm",
+  planned: "",
+  exploring: "border-dashed border-muted-foreground/50! bg-transparent!",
 };
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const stageCount = (id: RoadmapStatus, n: number) =>
@@ -71,30 +76,21 @@ const stageCols: Record<number, string> = {
 <Layout
   title="Site Reporting Roadmap | Harpa Pro"
   description="See what Harpa Pro does today, what is in progress, and the reporting capabilities planned for future releases."
+  image={REPORTS_SOCIAL_IMAGE.src}
+  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
 >
   <div class="min-h-screen bg-background text-ink">
     <Header />
     <main id="main-content">
       <Section bordered="top">
         <Container padding="lg">
-          <div class="max-w-2xl">
-            <span
-              class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
-            >
-              Site Reporting Roadmap
-            </span>
-            <h1
-              class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-            >
-              What Ships Today and What Comes Next
-            </h1>
-            <p class="mt-4 text-base leading-relaxed text-ink-soft">
-              Harpa Pro turns site updates into daily reports. Planned work
-              will use the same captures for materials, equipment, people,
-              costs, and cross-project insights. Priorities may change as we
-              learn from project teams.
-            </p>
-          </div>
+          <SectionHeader
+            as="h1"
+            eyebrow="Site Reporting Roadmap"
+            title="What Ships Today and What Comes Next"
+            ledeSize="base"
+            lede="Harpa Pro turns site updates into daily reports. Planned work will use the same captures for materials, equipment, people, costs, and cross-project insights. Priorities may change as we learn from project teams."
+          />
 
           <nav aria-label="Roadmap stages" class="mt-8">
             <ol
@@ -104,9 +100,10 @@ const stageCols: Record<number, string> = {
               {
                 stages.map((stage, index) => (
                   <li>
-                    <a
+                    <Card
                       href={`#${stage.id}`}
-                      class="flex h-full items-start gap-3 rounded-xl border border-hairline bg-card p-4 transition-colors hover:bg-secondary ring-focus"
+                      padding="none"
+                      class="flex h-full items-start gap-3 p-4 transition-colors"
                     >
                       <span
                         class={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${pillCls[stage.id]}`}
@@ -122,7 +119,7 @@ const stageCols: Record<number, string> = {
                           {stageCount(stage.id, stage.items.length)} · {stage.summary}
                         </span>
                       </span>
-                    </a>
+                    </Card>
                   </li>
                 ))
               }
@@ -150,12 +147,13 @@ const stageCols: Record<number, string> = {
                     <Icon name="circle-check" class="h-3.5 w-3.5" />
                     Available
                   </span>
-                  <h2
-                    id="available-heading"
-                    class="mt-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl"
-                  >
-                    Available Now
-                  </h2>
+                  <SectionHeader
+                    size="md"
+                    width="xl"
+                    titleId="available-heading"
+                    title="Available Now"
+                    class="mt-3"
+                  />
                   {available.items.map(({ title, Content }) => (
                     <div class="mt-3">
                       <h3 class="text-base font-semibold text-ink">{title}</h3>
@@ -164,14 +162,15 @@ const stageCols: Record<number, string> = {
                       </div>
                     </div>
                   ))}
-                  <a
+                  <Button
                     href={APP_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="mt-6 inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 ring-focus"
+                    external
+                    externalIcon={false}
+                    variant="primary"
+                    class="mt-6 transition-opacity hover:opacity-90"
                   >
                     Get the app
-                  </a>
+                  </Button>
                 </div>
                 <div>
                   <h3 class="text-sm font-semibold text-ink">
@@ -220,20 +219,20 @@ const stageCols: Record<number, string> = {
                     <Icon name={stage.icon} class="h-3.5 w-3.5" />
                     {stage.label}
                   </span>
-                  <h2
-                    id={`${stage.id}-heading`}
-                    class="mt-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl"
-                  >
-                    {stage.label}
-                  </h2>
-                  <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                    {stage.summary}
-                  </p>
+                  <SectionHeader
+                    size="md"
+                    width="xl"
+                    titleId={`${stage.id}-heading`}
+                    title={stage.label}
+                    lede={stage.summary}
+                    class="mt-3"
+                  />
                 </div>
                 <ul class="grid gap-4 sm:grid-cols-2">
                   {stage.items.map(({ title, icon, timing, Content }) => (
-                    <li
-                      class={`flex flex-col rounded-xl border p-5 ${cardCls[stage.id]}`}
+                    <Card
+                      as="li"
+                      class={`flex flex-col ${cardCls[stage.id]}`}
                       data-roadmap-item
                     >
                       <div class="flex items-start gap-3">
@@ -263,7 +262,7 @@ const stageCols: Record<number, string> = {
                           </span>
                         )}
                       </p>
-                    </li>
+                    </Card>
                   ))}
                 </ul>
               </div>
@@ -278,40 +277,40 @@ const stageCols: Record<number, string> = {
             class="flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between"
           >
             <div class="max-w-xl">
-              <h2
-                id="roadmap-cta-heading"
-                class="text-xl font-semibold tracking-tight text-ink sm:text-2xl"
-              >
-                Help Shape the Roadmap
-              </h2>
-              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                Harpa Pro is available on the App Store. The guides explain the
-                current site reporting workflow. Tell us what your crews need
-                next.
-              </p>
+              <SectionHeader
+                size="md"
+                width="none"
+                titleId="roadmap-cta-heading"
+                title="Help Shape the Roadmap"
+                lede="Harpa Pro is available on the App Store. The guides explain the current site reporting workflow. Tell us what your crews need next."
+              />
             </div>
             <div class="flex flex-wrap gap-3">
-              <a
+              <Button
                 href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 ring-focus"
+                external
+                externalIcon={false}
+                variant="primary"
+                class="transition-opacity hover:opacity-90"
               >
                 Get the app
-              </a>
-              <a
+              </Button>
+              <Button
                 href="/reports/docs"
-                class="inline-flex h-10 items-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-primary transition-colors hover:bg-secondary ring-focus"
+                variant="secondary"
+                elevated={false}
+                class="transition-colors"
               >
                 View guides
-              </a>
-              <a
+              </Button>
+              <Button
                 href={FEATURE_SUGGESTION_MAILTO}
-                class="inline-flex h-10 items-center gap-2 rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+                variant="outline-tinted"
+                icon="mail"
+                class="transition-colors"
               >
-                <Icon name="mail" class="h-4 w-4" />
                 Suggest a feature
-              </a>
+              </Button>
             </div>
           </div>
         </Container>

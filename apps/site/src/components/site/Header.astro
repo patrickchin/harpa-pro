@@ -2,6 +2,7 @@
 import { APP_STORE_URL } from "../../lib/reports/links";
 import Icon from "../Icon.astro";
 import Wordmark from "./Wordmark.astro";
+import Button from "../primitives/Button.astro";
 ---
 
 <header
@@ -177,15 +178,12 @@ import Wordmark from "./Wordmark.astro";
         </div>
       </details>
 
-      <a
-        href="/#contact"
-        class="ml-2 inline-flex h-9 items-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
-      >
+      <Button href="/#contact" size="sm" class="ml-2 transition-[filter]">
         <span data-nav-icon>
           <Icon name="message-circle" class="h-4 w-4" />
         </span>
         Contact Us
-      </a>
+      </Button>
     </nav>
 
     <details class="site-menu group md:hidden" data-mobile-menu>
@@ -269,22 +267,25 @@ import Wordmark from "./Wordmark.astro";
             </a>
           </div>
           <div class="grid gap-2 border-t border-hairline pt-4" data-mobile-actions>
-            <a
+            <Button
               href={APP_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus"
+              external
+              externalIcon={false}
+              variant="outline"
+              size="touch"
+              icon="download"
+              class="justify-center"
             >
-              <Icon name="download" class="h-4 w-4" />
               Get the App
-            </a>
-            <a
+            </Button>
+            <Button
               href="/#contact"
-              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm transition-[filter] hover:brightness-95 ring-focus"
+              size="touch"
+              icon="message-circle"
+              class="justify-center transition-[filter]"
             >
-              <Icon name="message-circle" class="h-4 w-4" />
               Contact Us
-            </a>
+            </Button>
           </div>
         </div>
       </div>

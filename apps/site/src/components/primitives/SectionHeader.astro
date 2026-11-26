@@ -1,0 +1,91 @@
+---
+/**
+ * Section heading block: optional eyebrow, title, optional lede.
+ *
+ * The lede comes from the `lede` prop or a `lede` slot (for inline
+ * links). `width="none"` renders the heading without a wrapper so it
+ * can sit directly in an existing layout.
+ */
+interface Props {
+  title: string;
+  eyebrow?: string;
+  lede?: string;
+  as?: "h1" | "h2" | "h3";
+  titleId?: string;
+  /** `lg` text-3xl/4xl (default), `md` text-2xl/3xl. */
+  size?: "lg" | "md";
+  /** `responsive` text-sm → sm:text-base (default), `base` text-base. */
+  ledeSize?: "responsive" | "base";
+  /** Max width of the wrapper; `none` omits the wrapper element. */
+  width?: "md" | "xl" | "2xl" | "3xl" | "none";
+  class?: string;
+}
+
+const {
+  title,
+  eyebrow,
+  lede,
+  as: Heading = "h2",
+  titleId,
+  size = "lg",
+  ledeSize = "responsive",
+  width = "2xl",
+  class: extra = "",
+} = Astro.props;
+
+const titleCls = [
+  eyebrow ? "mt-2" : "",
+  size === "md" ? "text-2xl" : "text-3xl",
+  "font-semibold tracking-tight text-ink",
+  size === "md" ? "sm:text-3xl" : "sm:text-4xl",
+]
+  .filter(Boolean)
+  .join(" ");
+
+const ledeCls = [
+  size === "md" ? "mt-3" : "mt-4",
+  ledeSize === "base" ? "text-base" : "text-sm",
+  "leading-relaxed text-ink-soft",
+  ledeSize === "base" ? "" : "sm:text-base",
+]
+  .filter(Boolean)
+  .join(" ");
+
+const widthCls = {
+  md: "max-w-md",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+  none: "",
+}[width];
+const wrapperCls = [widthCls, extra].filter(Boolean).join(" ");
+const hasLede = Boolean(lede) || Astro.slots.has("lede");
+---
+
+{
+  width === "none" ? (
+    <Fragment>
+      {eyebrow && (
+        <span class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+          {eyebrow}
+        </span>
+      )}
+      <Heading id={titleId} class={titleCls}>{title}</Heading>
+      {hasLede && (
+        <p class={ledeCls}>{lede ?? <slot name="lede" />}</p>
+      )}
+    </Fragment>
+  ) : (
+    <div class={wrapperCls}>
+      {eyebrow && (
+        <span class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+          {eyebrow}
+        </span>
+      )}
+      <Heading id={titleId} class={titleCls}>{title}</Heading>
+      {hasLede && (
+        <p class={ledeCls}>{lede ?? <slot name="lede" />}</p>
+      )}
+    </div>
+  )
+}

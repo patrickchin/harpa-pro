@@ -1,0 +1,126 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import Icon from "../Icon.astro";
+
+/**
+ * Shared button / link-as-button primitive.
+ *
+ * Renders an `<a>` when `href` is set, otherwise a `<button>`
+ * (defaulting to `type="button"`). Extra classes (margins, layout,
+ * transitions) pass through via `class`; extra attributes (`data-*`,
+ * `aria-*`) pass through to the element.
+ */
+type Variant =
+  | "accent"
+  | "primary"
+  | "secondary"
+  | "outline"
+  | "outline-strong"
+  | "outline-tinted";
+type Size = "sm" | "md" | "lg" | "touch";
+
+interface Props extends Omit<HTMLAttributes<"a"> & HTMLAttributes<"button">, "type"> {
+  href?: string;
+  type?: "button" | "submit" | "reset";
+  /**
+   * - `accent`: filled brand orange (primary CTA).
+   * - `primary`: filled navy ink.
+   * - `secondary`: card fill, hairline border, and `shadow-sm`.
+   * - `outline`: hairline border, transparent fill.
+   * - `outline-strong`: full-strength border, no hover fill.
+   * - `outline-tinted`: tinted primary border, fills on hover.
+   */
+  variant?: Variant;
+  /** `sm` h-9, `md` h-10, `lg` h-11, `touch` min-h-11 (wraps). */
+  size?: Size;
+  weight?: "medium" | "semibold";
+  /** Override the variant's default `shadow-sm`. */
+  elevated?: boolean;
+  /** Open in a new tab with `rel="noopener noreferrer"`. */
+  external?: boolean;
+  /** Append the external-link icon when `external` (default true). */
+  externalIcon?: boolean;
+  /** Lucide icon name rendered alongside the label. */
+  icon?: string;
+  iconPosition?: "start" | "end";
+}
+
+const {
+  href,
+  type = "button",
+  variant = "accent",
+  size = "md",
+  weight = "medium",
+  elevated,
+  external = false,
+  externalIcon = true,
+  icon,
+  iconPosition = "start",
+  class: extra = "",
+  ...rest
+} = Astro.props;
+
+const variantCls: Record<Variant, string> = {
+  accent: "bg-accent-ink text-accent-foreground hover:brightness-95",
+  primary: "bg-primary text-primary-foreground",
+  secondary: "border border-hairline bg-card text-ink hover:bg-secondary",
+  outline: "border border-hairline text-ink hover:bg-secondary",
+  "outline-strong": "border border-border text-ink",
+  "outline-tinted":
+    "border border-primary/30 bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
+};
+
+const defaultElevated: Record<Variant, boolean> = {
+  accent: true,
+  primary: false,
+  secondary: true,
+  outline: false,
+  "outline-strong": false,
+  "outline-tinted": false,
+};
+
+const sizeCls: Record<Size, string> = {
+  sm: "h-9 px-4",
+  md: "h-10 px-4",
+  lg: "h-11 px-5",
+  touch: "min-h-11 px-4",
+};
+
+const cls = [
+  "inline-flex items-center gap-2 rounded-md text-sm ring-focus",
+  weight === "semibold" ? "font-semibold" : "font-medium",
+  sizeCls[size],
+  variantCls[variant],
+  (elevated ?? defaultElevated[variant]) ? "shadow-sm" : "",
+  extra,
+]
+  .filter(Boolean)
+  .join(" ");
+
+const linkAttrs = external
+  ? { target: "_blank", rel: "noopener noreferrer" }
+  : {};
+const startIcon = icon && iconPosition === "start" ? icon : undefined;
+const endIcon =
+  icon && iconPosition === "end"
+    ? icon
+    : external && externalIcon
+      ? "external-link"
+      : undefined;
+---
+
+{
+  href ? (
+    <a href={href} class={cls} {...linkAttrs} {...rest}>
+      {startIcon && <Icon name={startIcon} class="h-4 w-4" />}
+      <slot />
+      {endIcon && <Icon name={endIcon} class="h-4 w-4" />}
+    </a>
+  ) : (
+    <button type={type} class={cls} {...rest}>
+      {startIcon && <Icon name={startIcon} class="h-4 w-4" />}
+      <slot />
+      {endIcon && <Icon name={endIcon} class="h-4 w-4" />}
+    </button>
+  )
+}

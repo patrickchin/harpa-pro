@@ -2,11 +2,12 @@
 import "@fontsource-variable/inter";
 import "../styles/globals.css";
 import { getAnalyticsEnv } from "../lib/env";
+import { REPORTS_SOCIAL_IMAGE } from "../lib/social-images";
 import { canonicalPathname } from "../lib/urls";
 
 interface Props {
-  title?: string;
-  description?: string;
+  title: string;
+  description: string;
   image?: string;
   imageAlt?: string;
   noindex?: boolean;
@@ -16,10 +17,10 @@ interface Props {
 }
 
 const {
-  title = "Interior Procurement in China | Harpa Pro",
-  description = "Harpa Pro coordinates interior procurement in China, from design specifications and factory coordination to quality checks, shipping, and project records.",
-  image = "/og-image.png",
-  imageAlt = "Harpa Pro",
+  title,
+  description,
+  image = REPORTS_SOCIAL_IMAGE.src,
+  imageAlt = REPORTS_SOCIAL_IMAGE.alt,
   noindex = false,
   ogType = "website",
   pageType = "WebPage",

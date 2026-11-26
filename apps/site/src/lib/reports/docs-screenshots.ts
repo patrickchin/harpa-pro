@@ -17,15 +17,15 @@ interface DocsScreenshot {
 }
 
 export const DOCS_SCREENSHOTS = {
-  'projects-list': { image: projectsList, focus: '50% 20%' },
-  'reports-list': { image: reportsList, focus: '50% 22%' },
-  'members-team': { image: membersTeam, focus: '50% 27%' },
-  'voice-recording': { image: voiceRecording, focus: '50% 45%' },
-  'final-report-issues': { image: finalReportIssues, focus: '50% 30%' },
-  'final-report-sections': { image: finalReportSections, focus: '50% 38%' },
-  'pdf-preview': { image: pdfPreview, focus: '50% 28%' },
-  'report-review': { image: reportReview, focus: '50% 35%' },
-  usage: { image: usage, focus: '50% 30%' },
+  'projects-list': { image: projectsList, focus: '50% 11%' },
+  'reports-list': { image: reportsList, focus: '50% 11%' },
+  'members-team': { image: membersTeam, focus: '50% 20%' },
+  'voice-recording': { image: voiceRecording, focus: '50% 97%' },
+  'final-report-issues': { image: finalReportIssues, focus: '50% 25%' },
+  'final-report-sections': { image: finalReportSections, focus: '50% 54%' },
+  'pdf-preview': { image: pdfPreview, focus: '50% 20%' },
+  'report-review': { image: reportReview, focus: '50% 39%' },
+  usage: { image: usage, focus: '50% 25%' },
 } satisfies Record<DocsScreenshotId, DocsScreenshot>;
 
 export function docsScreenshot(id: DocsScreenshotId): DocsScreenshot {

@@ -3,6 +3,9 @@ import { Image } from "astro:assets";
 import EvidenceImageDialog from "./EvidenceImageDialog.astro";
 import Container from "../primitives/Container.astro";
 import Section from "../primitives/Section.astro";
+import Button from "../primitives/Button.astro";
+import Card from "../primitives/Card.astro";
+import SectionHeader from "../primitives/SectionHeader.astro";
 import { lightboxImage } from "../../lib/lightbox-image";
 import revitShopDrawingImg from "../../assets/procurement/evidence/revit-a103-shop-drawing.jpg";
 import revitCoordinationImg from "../../assets/procurement/evidence/revit-a104-coordination.jpg";
@@ -231,6 +234,7 @@ const credentials = [
   },
 ];
 
+// Keep a multiple of the 3-column grid so no card is orphaned.
 const initialDocumentCount = 3;
 const additionalDocumentCount = Math.max(
   credentials.length - initialDocumentCount,
@@ -272,18 +276,12 @@ const reviewLightboxes = await Promise.all(
 >
   <Container padding="lg">
     <div id="factory-partners" class="scroll-mt-24">
-      <div class="max-w-3xl">
-        <h2
-          id="factory-partners-heading"
-          class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-        >
-          Selected Factory Partners
-        </h2>
-        <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-          We match each order with the factory that meets the design specifications
-          and the delivery timeline.
-        </p>
-      </div>
+      <SectionHeader
+        width="3xl"
+        titleId="factory-partners-heading"
+        title="Selected Factory Partners"
+        lede="We match each order with the factory that meets the design specifications and the delivery timeline."
+      />
 
       <div class="mt-8 grid gap-5">
     {
@@ -291,18 +289,18 @@ const reviewLightboxes = await Promise.all(
         <article
           data-factory-partner
           data-factory-featured="true"
-          class="grid max-w-2xl overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm sm:grid-cols-[minmax(0,1.2fr)_minmax(14rem,0.8fr)]"
+          class="grid overflow-hidden rounded-2xl border border-hairline bg-card shadow-sm sm:grid-cols-[minmax(0,1.2fr)_minmax(14rem,0.8fr)] lg:grid-cols-2"
         >
           <figure
             data-factory-image-frame
             data-image-crop={factory.imageCrop}
-            class="h-44 overflow-hidden bg-white sm:h-48"
+            class="h-44 overflow-hidden bg-white sm:h-56 lg:h-72"
           >
             <Image
               src={factory.image}
               alt={factory.alt}
               widths={[520, 760, 1040]}
-              sizes="(min-width: 40rem) 26rem, calc(100vw - 3rem)"
+              sizes="(min-width: 64rem) 36rem, (min-width: 40rem) 55vw, calc(100vw - 3rem)"
               format="webp"
               quality={88}
               loading="lazy"
@@ -310,9 +308,9 @@ const reviewLightboxes = await Promise.all(
               class={factory.imageClass}
             />
           </figure>
-          <div class="border-t border-hairline p-5 sm:border-l sm:border-t-0">
+          <div class="flex flex-col justify-center border-t border-hairline p-5 sm:border-l sm:border-t-0 lg:p-10">
             <p class="font-mono text-xs text-ink-soft">{factory.location}</p>
-            <h3 class="mt-3 text-xl font-semibold tracking-tight text-ink">
+            <h3 class="mt-3 text-xl font-semibold tracking-tight text-ink lg:text-2xl">
               {factory.name}
             </h3>
             <p class="mt-3 text-sm leading-relaxed text-ink-soft">{factory.scope}</p>
@@ -323,9 +321,12 @@ const reviewLightboxes = await Promise.all(
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {
         factories.filter((factory) => !factory.featured).map((factory) => (
-          <article
-            data-factory-partner
-            class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+          <Card
+            data-factory-partner=""
+            as="article"
+            padding="none"
+            elevated
+            class="overflow-hidden"
           >
             <figure
               data-factory-image-frame
@@ -345,13 +346,13 @@ const reviewLightboxes = await Promise.all(
               />
             </figure>
             <div class="border-t border-hairline p-4">
-              <p class="font-mono text-[0.68rem] leading-relaxed text-ink-soft">
+              <p class="font-mono text-xs leading-relaxed text-ink-soft">
                 {factory.location}
               </p>
               <h3 class="mt-2 text-base font-semibold text-ink">{factory.name}</h3>
               <p class="mt-2 text-sm leading-relaxed text-ink-soft">{factory.scope}</p>
             </div>
-          </article>
+          </Card>
         ))
       }
     </div>
@@ -369,18 +370,12 @@ const reviewLightboxes = await Promise.all(
 >
   <Container padding="lg">
     <div class="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
-      <div class="max-w-xl">
-        <h2
-          id="product-information-heading"
-          class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-        >
-          What Each Quote Includes
-        </h2>
-        <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-          A catalogue image identifies the product. The quote records the details
-          needed to compare, approve, inspect, pack, and ship it.
-        </p>
-      </div>
+      <SectionHeader
+        width="xl"
+        titleId="product-information-heading"
+        title="What Each Quote Includes"
+        lede="A catalogue image identifies the product. The quote records the details needed to compare, approve, inspect, pack, and ship it."
+      />
       <ol class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
         {
           buyerInformation.map((item, index) => (
@@ -404,25 +399,22 @@ const reviewLightboxes = await Promise.all(
   class="scroll-mt-16 bg-background"
 >
   <Container padding="lg">
-    <div class="max-w-3xl">
-      <h2
-        id="product-briefs-heading"
-        class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-      >
-        Product Examples
-      </h2>
-      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-        These examples show the detail in a buyer brief. They are not a stock
-        list, price list, or full catalogue.
-      </p>
-    </div>
+    <SectionHeader
+      width="3xl"
+      titleId="product-briefs-heading"
+      title="Product Examples"
+      lede="These examples show the detail in a buyer brief. They are not a stock list, price list, or full catalogue."
+    />
 
     <div class="mt-8 grid gap-5 lg:grid-cols-3">
     {
       productBriefs.map((brief) => (
-        <article
-          data-product-brief
-          class="flex h-full flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+        <Card
+          data-product-brief=""
+          as="article"
+          padding="none"
+          elevated
+          class="flex h-full flex-col overflow-hidden"
         >
           <figure
             data-product-image-frame
@@ -442,9 +434,9 @@ const reviewLightboxes = await Promise.all(
             />
           </figure>
           <div class="flex flex-1 flex-col border-t border-hairline p-5">
-            <div class="flex items-center justify-between gap-4">
-              <span class="font-mono text-xs text-accent-ink">Example {brief.index}</span>
-              <span class="text-right font-mono text-[0.68rem] leading-relaxed text-ink-soft">
+            <div class="flex items-baseline justify-between gap-4">
+              <span class="flex-none whitespace-nowrap font-mono text-xs text-accent-ink">Example {brief.index}</span>
+              <span class="min-w-0 text-right font-mono text-xs leading-relaxed text-ink-soft">
                 {brief.source}
               </span>
             </div>
@@ -463,7 +455,7 @@ const reviewLightboxes = await Promise.all(
               ))}
             </dl>
           </div>
-        </article>
+        </Card>
       ))
     }
     </div>
@@ -478,32 +470,29 @@ const reviewLightboxes = await Promise.all(
   class="scroll-mt-16"
 >
   <Container padding="lg">
-    <div class="max-w-3xl">
-      <h2
-        id="factory-documents-heading"
-        class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-      >
-        Factory Documents
-      </h2>
-      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-        Select a document to view its first-page image. Full source files are not
-        published on this website.
-      </p>
-    </div>
+    <SectionHeader
+      width="3xl"
+      titleId="factory-documents-heading"
+      title="Factory Documents"
+      lede="Select a document to view its first-page image. Full source files are not published on this website."
+    />
 
     <div
       id="factory-document-grid"
-      class="mt-8 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3"
+      class="mt-8 grid gap-4 sm:gap-5 md:grid-cols-3"
     >
     {
       credentials.map((document, index) => (
-        <article
-          data-credential-record
+        <Card
+          data-credential-record=""
           data-additional-document={
             index >= initialDocumentCount ? "true" : undefined
           }
           hidden={index >= initialDocumentCount}
-          class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+          as="article"
+          padding="none"
+          elevated
+          class="overflow-hidden"
         >
           <button
             type="button"
@@ -525,7 +514,7 @@ const reviewLightboxes = await Promise.all(
                 src={document.image}
                 alt={document.alt}
                 widths={[320, 480, 640]}
-                sizes="(min-width: 80rem) 22rem, (min-width: 48rem) 44vw, 44vw"
+                sizes="(min-width: 72rem) 23rem, (min-width: 48rem) 31vw, calc(100vw - 2rem)"
                 format="webp"
                 quality={92}
                 loading="lazy"
@@ -534,31 +523,32 @@ const reviewLightboxes = await Promise.all(
               />
             </div>
           </button>
-          <div class="border-t border-hairline p-3 sm:p-5">
+          <div class="border-t border-hairline p-4 sm:p-5">
             <h3 class="text-sm font-semibold leading-snug text-ink sm:text-base">
               {document.title}
             </h3>
             <p class="mt-2 text-xs font-medium text-ink">{document.source}</p>
-            <p class="mt-2 break-words font-mono text-[0.62rem] leading-relaxed text-ink-soft sm:text-[0.68rem]">
+            <p class="mt-2 break-words font-mono text-xs leading-relaxed text-ink-soft">
               {document.meta}
             </p>
           </div>
-        </article>
+        </Card>
       ))
     }
     </div>
     {
       additionalDocumentCount > 0 && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="lg"
           aria-expanded="false"
           aria-controls="factory-document-grid"
-          class="mt-6 inline-flex h-11 items-center rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
-          data-document-disclosure
+          class="mt-6"
+          data-document-disclosure=""
           data-collapsed-label={showMoreDocumentsLabel}
         >
           {showMoreDocumentsLabel}
-        </button>
+        </Button>
       )
     }
   </Container>
@@ -571,21 +561,21 @@ const reviewLightboxes = await Promise.all(
   class="scroll-mt-16 bg-background"
 >
   <Container padding="lg">
-    <div class="max-w-3xl">
-      <h2
-        id="technical-reviews-heading"
-        class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-      >
-        Technical Reviews
-      </h2>
-    </div>
+    <SectionHeader
+      width="3xl"
+      titleId="technical-reviews-heading"
+      title="Technical Reviews"
+    />
 
     <div class="mt-8 grid gap-5 md:grid-cols-2">
     {
       technicalReviews.map((review, index) => (
-        <figure
-          data-technical-review
-          class="overflow-hidden rounded-xl border border-hairline bg-card shadow-sm"
+        <Card
+          data-technical-review=""
+          as="figure"
+          padding="none"
+          elevated
+          class="overflow-hidden"
         >
           <button
             type="button"
@@ -617,7 +607,7 @@ const reviewLightboxes = await Promise.all(
               {review.description}
             </p>
           </figcaption>
-        </figure>
+        </Card>
       ))
     }
     </div>

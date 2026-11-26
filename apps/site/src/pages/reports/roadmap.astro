@@ -1,7 +1,6 @@
 ---
 import { getCollection, render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
-import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
 import Section from "../../components/primitives/Section.astro";
@@ -74,20 +73,19 @@ const stageCols: Record<number, string> = {
 ---
 
 <Layout
-  title="Site Reporting Roadmap | Harpa Pro"
+  section="reports"
+  title="Site reporting roadmap | Harpa Pro"
   description="See what Harpa Pro does today, what is in progress, and the reporting capabilities planned for future releases."
-  image={REPORTS_SOCIAL_IMAGE.src}
-  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
 >
   <div class="min-h-screen bg-background text-ink">
-    <Header />
+    <Header section="reports" />
     <main id="main-content">
       <Section bordered="top">
         <Container padding="lg">
           <SectionHeader
             as="h1"
-            eyebrow="Site Reporting Roadmap"
-            title="What Ships Today and What Comes Next"
+            eyebrow="Site reporting roadmap"
+            title="What ships today and what comes next"
             ledeSize="base"
             lede="Harpa Pro turns site updates into daily reports. Planned work will use the same captures for materials, equipment, people, costs, and cross-project insights. Priorities may change as we learn from project teams."
           />
@@ -151,7 +149,7 @@ const stageCols: Record<number, string> = {
                     size="md"
                     width="xl"
                     titleId="available-heading"
-                    title="Available Now"
+                    title="Available now"
                     class="mt-3"
                   />
                   {available.items.map(({ title, Content }) => (
@@ -281,7 +279,7 @@ const stageCols: Record<number, string> = {
                 size="md"
                 width="none"
                 titleId="roadmap-cta-heading"
-                title="Help Shape the Roadmap"
+                title="Help shape the roadmap"
                 lede="Harpa Pro is available on the App Store. The guides explain the current site reporting workflow. Tell us what your crews need next."
               />
             </div>
@@ -316,6 +314,6 @@ const stageCols: Record<number, string> = {
         </Container>
       </Section>
     </main>
-    <Footer />
+    <Footer section="reports" />
   </div>
 </Layout>

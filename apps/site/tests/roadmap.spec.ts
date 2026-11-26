@@ -5,7 +5,7 @@ test.describe('/reports/roadmap', () => {
     await page.goto('/reports/roadmap');
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'What Ships Today and What Comes Next',
+      'What ships today and what comes next',
     );
 
     const stageNav = page.getByRole('navigation', { name: 'Roadmap stages' });
@@ -16,16 +16,16 @@ test.describe('/reports/roadmap', () => {
     await expect(stageLinks.nth(1)).toContainText('In progress');
     await expect(stageLinks.nth(2)).toContainText('Planned');
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Available Now' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Available now' })).toBeVisible();
     const availableList = page.locator('[data-roadmap-available-list] > li');
-    await expect(availableList).toHaveCount(6);
-    await expect(availableList.first()).toContainText('Voice Note Capture');
+    await expect(availableList).toHaveCount(4);
+    await expect(availableList.first()).toContainText('Talk instead of typing');
 
     const inProgress = page.locator('[data-roadmap-stage="in-progress"]');
     await expect(inProgress.getByRole('heading', { level: 2 })).toHaveText('In progress');
     await expect(inProgress.getByRole('heading', { level: 3 })).toHaveText([
-      'Android Pilot',
-      'Web App for the Office',
+      'Android app',
+      'Web app for the office',
     ]);
     await expect(inProgress.locator('[data-roadmap-item]').first()).toContainText(
       'Status: In progress',
@@ -34,10 +34,10 @@ test.describe('/reports/roadmap', () => {
     const planned = page.locator('[data-roadmap-stage="planned"]');
     await expect(planned.locator('[data-roadmap-item]')).toHaveCount(7);
     await expect(
-      planned.locator('[data-roadmap-item]', { hasText: 'Inventory Management' }),
+      planned.locator('[data-roadmap-item]', { hasText: 'Inventory management' }),
     ).toContainText('Timing: Later');
     await expect(
-      planned.locator('[data-roadmap-item]', { hasText: 'Full Offline Mode' }),
+      planned.locator('[data-roadmap-item]', { hasText: 'Full offline mode' }),
     ).not.toContainText('Timing:');
 
     await expect(page.locator('[data-roadmap-stage="exploring"]')).toHaveCount(0);

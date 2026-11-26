@@ -43,11 +43,18 @@ keep country requirements in the main buying guide. See the
 
 | Scope | Canonical routes | Source ownership beneath `src/` |
 | --- | --- | --- |
-| Procurement | `/`, `/procurement/how-to-buy-from-china` | `components/procurement`, `content/procurement`, `assets/procurement` |
+| Procurement | `/`, `/procurement/how-to-buy-from-china`, `/procurement/factory-documents` | `components/procurement`, `content/procurement`, `assets/procurement`, `lib/procurement` |
 | Site reporting app | `/reports`, `/reports/docs`, `/reports/roadmap`, `/reports/account-deletion` | `pages/reports`, `components/reports`, `content/reports`, `lib/reports`, `layouts/reports`, `assets/reports` |
-| Shared website | `/privacy`, branded 404 | `components/site`, base layout, primitives, analytics, legal helpers |
+| Shared website | `/privacy`, branded 404 | `components/site`, `lib/site`, base layout, primitives, analytics, legal helpers |
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
+It runs hero → process (with the Revit technical reviews) → partners, quote
+contents, and a factory-documents summary → team → questions → contact. The
+full document list lives at `/procurement/factory-documents`; every former
+homepage fragment still resolves. See the
+[homepage narrative design](../../docs/v4/design-site-procurement-home-narrative.md).
+Crop catalogue images into committed derivatives (for example
+`ais-factory-exterior-photo.webp`) instead of scaling them in CSS.
 Privacy covers both the website and app. The app updates confirmation page
 lives at `/reports/confirm` and is excluded from search. Its result is
 announced through a `role="status"` region. Failed or expired links point to
@@ -90,6 +97,14 @@ instead of hand-rolling the same Tailwind classes:
 The procurement homepage theme (`luxury.css`, `procurement-hero.css`) and
 the docs styles keep their own classes.
 
+## Copy style
+
+Use sentence case for headings, eyebrows, buttons, nav labels, and page
+titles. Keep capitals for proper nouns, brand names, product codes, and
+in-app labels that the guides quote. Reports copy targets foremen: state
+the concrete outcome in plain language and avoid claims the app cannot
+back up. `src/__tests__/claim-copy.test.ts` blocks known stale claims.
+
 ## Develop
 
 ```bash
@@ -102,14 +117,23 @@ pnpm --filter @harpa/site test:redirects # build first; Cloudflare Pages rules
 
 Copy `.env.example` to `.env` before local development.
 `PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
-the current shared header does not expose the dashboard.
+the current header does not expose the dashboard.
 
-The shared header (`src/components/site/Header.astro`) uses `<details>` menus
+Site chrome is audience-scoped. Every page passes `section` (`procurement`,
+`reports`, or `shared`) to `Layout`, `Header`, and `Footer`; the section
+config in `src/lib/site/sections.ts` is the single source for menu links,
+the CTA (Contact us or Get the app), the cross-link to the other section,
+footer columns, the wordmark target, the breadcrumb root, and default
+metadata. `Layout` exposes the section as `body[data-site-section]` for
+analytics. Shared pages (privacy, 404) show both offers. See the
+[audience-scoped chrome design](../../docs/v4/design-public-site-audience-chrome.md).
+
+The header (`src/components/site/Header.astro`) uses `<details>` menus
 that work without JavaScript. With JavaScript, desktop mega menus open on hover
 for fine pointers and stay open when the hovered summary is clicked; Enter and
 Space still toggle them. The mobile menu closes on Escape (focus returns to the
 toggle), an outside tap, or a link tap, and it locks page scroll while open. It
-has the same Contact Us and Get the App actions as desktop.
+has the same section CTA as desktop, followed by the cross-link.
 
 ## Stack
 
@@ -140,7 +164,7 @@ Layout baseline: short pages wrap `Header`, `main`, and `Footer` in a
 `flex min-h-dvh flex-col` container with `main` set to `flex-1`, so the footer
 stays at the bottom. Keep page content inside `Container` and narrow prose with
 an inner wrapper, not a second `max-w-*` on `Container`. Below `lg`, the
-"What We Consider" tabs stack with the open panel directly under its tab.
+"What we consider" tabs stack with the open panel directly under its tab.
 Mono metadata text is at least `text-xs`. `tests/responsive-layout.spec.ts`
 checks these rules at 390, 768, and 1280px.
 
@@ -232,7 +256,9 @@ header. Cloudflare supplies `noindex` for dev/preview deployments.
 
 The procurement homepage answers service, product-scope, inspection, and
 project-brief questions in visible HTML. The reporting app's audience,
-workflow, and initial voice demonstration also render before JavaScript.
+workflow, initial voice demonstration, and FAQ answers also render before
+JavaScript. The FAQ is an open definition list, not an accordion, and
+`tests/seo.spec.ts` checks that each `FAQPage` answer matches the visible text.
 
 App documentation is served by this same site at `/reports/docs`. No separate
 documentation hostname or deployment is required.

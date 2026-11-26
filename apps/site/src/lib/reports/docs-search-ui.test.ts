@@ -16,7 +16,7 @@ const entries: DocsSearchEntry[] = [
     title: 'Capture notes, photos, and voice notes',
     description: 'Add text, photos, and voice notes to a draft.',
     tier: 'everyday',
-    tierLabel: 'Everyday Tasks',
+    tierLabel: 'Everyday tasks',
     keywords: ['voice', 'photo'],
   },
   {
@@ -24,7 +24,7 @@ const entries: DocsSearchEntry[] = [
     title: 'Add members to a project',
     description: 'Invite teammates.',
     tier: 'everyday',
-    tierLabel: 'Everyday Tasks',
+    tierLabel: 'Everyday tasks',
     keywords: ['members', 'invite'],
   },
 ];

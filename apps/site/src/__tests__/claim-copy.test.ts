@@ -15,12 +15,15 @@ describe('marketing claim copy', () => {
     const files = [
       'components/procurement/ProcurementEvidence.astro',
       'components/site/Header.astro',
+      'lib/site/sections.ts',
+      'pages/404.astro',
       'components/reports/Features.astro',
+      'components/reports/AppStoreBadge.astro',
+      'components/reports/ClosingCta.astro',
+      'components/reports/SiteReportingHero.astro',
       'components/reports/VoiceDemo.tsx',
       'components/reports/HowItWorks.astro',
       'content/reports/features/04-exports.mdx',
-      'content/reports/features/05-jobsite.mdx',
-      'content/reports/features/06-drafts.mdx',
       'content/reports/faq/02-offline.mdx',
       'content/reports/faq/03-voice-privacy.mdx',
       'content/reports/faq/04-when.mdx',
@@ -75,6 +78,6 @@ describe('marketing claim copy', () => {
     expect(corpus).not.toContain('status: "pilot"');
     expect(corpus).not.toContain('status: "later"');
     expect(corpus).toContain('https://apps.apple.com/us/app/harpa-pro/id6776759817');
-    expect(corpus).toContain('Get the app');
+    expect(corpus).toContain('Download on the App Store');
   });
 });

@@ -4,20 +4,22 @@ const WIDTHS = [390, 768, 1280] as const;
 
 test('places each consideration panel directly under its tab below lg', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/#considerations');
+  // Load without the hash so the smooth fragment scroll cannot race the
+  // centred tab positions below.
+  await page.goto('/');
 
   const tabs = page.getByRole('tablist', { name: 'Procurement considerations' }).getByRole('tab');
   const count = await tabs.count();
   for (let index = 0; index < count; index += 1) {
     const tab = tabs.nth(index);
-    await tab.scrollIntoViewIfNeeded();
+    await tab.evaluate((element) => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
     const topBefore = (await tab.boundingBox())!.y;
     await tab.click();
     await expect(tab).toHaveAttribute('aria-selected', 'true');
 
     const tabBox = (await tab.boundingBox())!;
     // The tapped tab stays put even when an earlier panel collapses.
-    expect(Math.abs(tabBox.y - topBefore)).toBeLessThanOrEqual(2);
+    expect(Math.abs(tabBox.y - topBefore), `tab ${index}`).toBeLessThanOrEqual(2);
 
     const panelBox = (await page.getByRole('tabpanel').boundingBox())!;
     const gap = panelBox.y - (tabBox.y + tabBox.height);
@@ -63,7 +65,7 @@ test('keeps evidence metadata readable and document grids free of orphans', asyn
     await page.goto('/#evidence');
 
     const smallestMono = await page
-      .locator('#evidence, #product-examples, #factory-documents')
+      .locator('#evidence')
       .evaluateAll((sections) =>
         Math.min(
           ...sections.flatMap((section) =>
@@ -83,20 +85,23 @@ test('keeps evidence metadata readable and document grids free of orphans', asyn
       expect(height, `${width}px example label wraps`).toBeLessThanOrEqual(lineHeight + 1);
     }
 
-    for (const expand of [false, true]) {
-      if (expand) await page.locator('[data-document-disclosure]').click();
-      const rows = await page.locator('#factory-document-grid').evaluate((grid) => {
-        const tops = Array.from(grid.children)
-          .filter((card) => card.getClientRects().length > 0)
-          .map((card) => Math.round(card.getBoundingClientRect().top));
-        const perRow = new Map<number, number>();
-        for (const top of tops) perRow.set(top, (perRow.get(top) ?? 0) + 1);
-        return Array.from(perRow.values());
-      });
-      expect(new Set(rows).size, `${width}px document rows: ${rows.join(', ')}`).toBe(1);
-    }
+    await page.goto('/procurement/factory-documents');
+    const rows = await page.locator('#factory-document-grid').evaluate((grid) => {
+      const tops = Array.from(grid.children)
+        .filter((card) => card.getClientRects().length > 0)
+        .map((card) => Math.round(card.getBoundingClientRect().top));
+      const perRow = new Map<number, number>();
+      for (const top of tops) perRow.set(top, (perRow.get(top) ?? 0) + 1);
+      return Array.from(perRow.values());
+    });
+    expect(new Set(rows).size, `${width}px document rows: ${rows.join(', ')}`).toBe(1);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      `${width}px factory documents overflow`,
+    ).toBe(true);
   }
 
+  await page.goto('/#evidence');
   await page.setViewportSize({ width: 1280, height: 900 });
   const [section, featured] = await Promise.all([
     page.locator('#factory-partners').boundingBox(),
@@ -132,7 +137,7 @@ test('aligns account deletion content with the header', async ({ page }) => {
       const box = element.getBoundingClientRect();
       return box.left + Number.parseFloat(getComputedStyle(element).paddingLeft);
     });
-    const headingBox = await page.getByRole('heading', { level: 1, name: 'Account Deletion' }).boundingBox();
+    const headingBox = await page.getByRole('heading', { level: 1, name: 'Account deletion' }).boundingBox();
     expect(Math.abs(headingBox!.x - headerContentLeft), `${width}px`).toBeLessThanOrEqual(1);
     const prose = await page.locator('main section').first().boundingBox();
     expect(prose!.width).toBeLessThanOrEqual(48 * 16 + 1);

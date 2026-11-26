@@ -53,6 +53,19 @@ Do not delay navigation or make contact actions depend on analytics. A click
 measures intent, not a successfully sent message. Failed clipboard writes
 must not produce a successful-copy conversion.
 
+Every event also carries `site_section` (`procurement`, `reports`, or
+`shared`), read from `body[data-site-section]` and validated before sending.
+The [audience-scoped chrome](design-public-site-audience-chrome.md) adds one
+explicit event for clicks on the cross-section links
+(`[data-audience-switch]`):
+
+| Event | Properties | Trigger |
+| --- | --- | --- |
+| `audience_switch_clicked` | `page_path`, `from`, `to`, `location` (`header`, `mobile_menu`, `footer`, or `not_found`) | Header, mobile-menu, footer, or 404 link to the other section |
+
+Unknown property values drop the event. It is sent immediately because the
+click navigates away, and a failed send never blocks navigation.
+
 ## Configuration and disclosure
 
 Set `PUBLIC_POSTHOG_KEY` (public `phc_` project token, never a personal key)

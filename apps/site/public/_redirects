@@ -1,7 +1,7 @@
 /procurement / 301
 /procurement/ / 301
 /downloads/harpa-pro-interior-procurement.pdf /#evidence 301
-/documents/factories/* /#evidence 301
+/documents/factories/* /procurement/factory-documents 301
 /guides/generate-ai-report /reports/docs/guides/generate-ai-report 301
 /guides/generate-ai-report/ /reports/docs/guides/generate-ai-report 301
 /guides/export-share-pdf /reports/docs/guides/export-share-pdf 301

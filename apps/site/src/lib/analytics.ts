@@ -1,4 +1,10 @@
 import type { CaptureResult, PostHog } from 'posthog-js';
+import {
+  isAudienceSwitchLocation,
+  isSiteSection,
+  type AudienceSwitchLocation,
+  type SiteSection,
+} from './site/sections';
 
 let client: PostHog | undefined;
 
@@ -51,8 +57,38 @@ export function captureContact(event: ContactEvent): void {
   }
 }
 
+export interface AudienceSwitch {
+  page_path: string;
+  from: SiteSection;
+  to: Exclude<SiteSection, 'shared'>;
+  location: AudienceSwitchLocation;
+}
+
+/** Builds the fixed `audience_switch_clicked` payload, or null for unknown values. */
+export function audienceSwitchPayload(pagePath: string, data: DOMStringMap): AudienceSwitch | null {
+  const { audienceFrom: from, audienceTo: to, audienceLocation: location } = data;
+  if (!isSiteSection(from) || !isSiteSection(to) || to === 'shared' || !isAudienceSwitchLocation(location)) {
+    return null;
+  }
+  return { page_path: pagePath, from, to, location };
+}
+
+function captureAudienceSwitch(link: HTMLElement): void {
+  try {
+    const payload = audienceSwitchPayload(window.location.pathname, link.dataset);
+    // The click navigates away, so send now (keepalive fetch) instead of batching.
+    if (payload) client?.capture('audience_switch_clicked', { ...payload }, { send_instantly: true });
+  } catch {
+    // Section switches must still navigate if the analytics client fails.
+  }
+}
+
 /** Confirmation tokens and arbitrary query input must never leave the site. */
-export function sanitizeAnalyticsEvent(event: CaptureResult | null, campaign: Campaign = {}): CaptureResult | null {
+export function sanitizeAnalyticsEvent(
+  event: CaptureResult | null,
+  campaign: Campaign = {},
+  section?: string,
+): CaptureResult | null {
   if (!event) return null;
   for (const [key, value] of Object.entries(event.properties)) {
     // Only our validated labels may leave the page, including SDK-prefixed attribution.
@@ -72,6 +108,8 @@ export function sanitizeAnalyticsEvent(event: CaptureResult | null, campaign: Ca
   delete event.$set;
   delete event.$set_once;
   Object.assign(event.properties, campaign);
+  delete event.properties.site_section;
+  if (isSiteSection(section)) event.properties.site_section = section;
   return event;
 }
 
@@ -79,6 +117,7 @@ export async function initAnalytics(config: { key: string; host: string }): Prom
   if (client || navigator.doNotTrack === '1' ||
     ('globalPrivacyControl' in navigator && navigator.globalPrivacyControl === true)) return;
   const campaign = getCampaignParams(new URL(window.location.href));
+  const section = document.body.dataset.siteSection;
   propagateCampaignLinks(campaign);
   const { default: posthog } = await import('posthog-js');
   posthog.init(config.key, {
@@ -110,7 +149,7 @@ export async function initAnalytics(config: { key: string; host: string }): Prom
     advanced_disable_flags: true,
     disable_external_dependency_loading: true,
     respect_dnt: true,
-    before_send: (event) => sanitizeAnalyticsEvent(event, campaign),
+    before_send: (event) => sanitizeAnalyticsEvent(event, campaign, section),
   });
   client = posthog;
   document.addEventListener('click', (event) => {
@@ -121,5 +160,9 @@ export async function initAnalytics(config: { key: string; host: string }): Prom
     if (name === 'contact_whatsapp_clicked' || name === 'contact_email_opened') {
       captureContact(name);
     }
+    const audienceSwitch = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-audience-switch]')
+      : null;
+    if (audienceSwitch) captureAudienceSwitch(audienceSwitch);
   });
 }

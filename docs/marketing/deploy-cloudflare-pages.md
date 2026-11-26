@@ -98,6 +98,8 @@ origin. Production uses the same paths after the normal protected promotion
 to `main`.
 
 Check the sitemap, canonical metadata, an unknown guide's branded 404, and
+that an unknown path shows the neutral 404 with both offers (a `/reports/...`
+miss highlights the app card), and
 the old path redirects listed in `apps/site/public/_redirects`. Redirects
 preserve query strings, including existing confirmation tokens. Roll back a
 site regression through the normal Git deployment process.

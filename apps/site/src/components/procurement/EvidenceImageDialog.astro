@@ -77,7 +77,10 @@
           const request = ++imageRequest;
           const imageTitle = trigger.dataset.evidenceImageTitle ?? "Evidence image";
           const previewImage = trigger.querySelector<HTMLImageElement>("img");
-          const previewSource = previewImage?.currentSrc || previewImage?.src;
+          const previewSource =
+            previewImage?.complete && previewImage.naturalWidth > 0
+              ? previewImage.currentSrc || previewImage.src
+              : "";
           const hasPreview = Boolean(
             previewSource && previewSource !== new URL(source, window.location.href).href,
           );

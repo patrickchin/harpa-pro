@@ -229,7 +229,7 @@ export default function WaitlistFormIsland() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
+          className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent-ink px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
         >
           {submitting ? 'Submitting…' : 'Get updates →'}
         </button>

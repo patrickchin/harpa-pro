@@ -35,7 +35,7 @@ describe('sectionForPath', () => {
 describe('breadcrumbs', () => {
   it('prepends the section root once and never roots reports at the procurement home', () => {
     expect(breadcrumbTrail('reports', [{ name: 'Guides', path: '/reports/docs' }])).toEqual([
-      { name: 'Site Reporting', path: '/reports' },
+      { name: 'Site reporting', path: '/reports' },
       { name: 'Guides', path: '/reports/docs' },
     ]);
     expect(breadcrumbTrail('reports', [{ name: 'App', path: '/reports' }])).toEqual([
@@ -85,11 +85,11 @@ describe('section config', () => {
       '/', '/#factory-partners', '/#considerations', '/procurement/how-to-buy-from-china', '/procurement/guides',
     ]);
     expect(reports.menu?.links.map((link) => link.label)).toEqual([
-      'Harpa Pro App', 'Guides', 'Roadmap', 'Get the App',
+      'Harpa Pro app', 'Guides', 'Roadmap', 'Get the app',
     ]);
     expect(reports.menu?.mobileLinks).toHaveLength(3);
-    expect(procurement.cta).toMatchObject({ label: 'Contact Us', href: '/#contact' });
-    expect(reports.cta).toMatchObject({ label: 'Get the App', external: true });
+    expect(procurement.cta).toMatchObject({ label: 'Contact us', href: '/#contact' });
+    expect(reports.cta).toMatchObject({ label: 'Get the app', external: true });
     expect([procurement.home, reports.home, shared.home]).toEqual(['/', '/reports', '/']);
   });
 

@@ -22,7 +22,7 @@ import modernInteriorImg from "../assets/procurement/finishes/modern.webp";
 import hashyImg from "../assets/team/hashy.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
 
-const title = "Luxury Interior Procurement in China | Harpa Pro";
+const title = "Luxury interior procurement in China | Harpa Pro";
 const description = "Harpa Pro coordinates interior procurement in China: design specifications, factory coordination, quality checks, shipping, and procurement documentation.";
 const homeUrl = new URL("/", Astro.site).href;
 const materialSchemes = await Promise.all([
@@ -34,13 +34,13 @@ const materialSchemes = await Promise.all([
   },
   {
     key: "stone",
-    label: "Stone & Marble",
+    label: "Stone & marble",
     source: stoneInteriorImg,
     alt: "Generated interior concept with stone and marble finishes in the same contemporary living room",
   },
   {
     key: "modern",
-    label: "Glass & Modern",
+    label: "Glass & modern",
     source: modernInteriorImg,
     alt: "Generated interior concept with glass and modern finishes in the same contemporary living room",
   },
@@ -60,7 +60,7 @@ const defaultScheme = materialSchemes[0]!;
 const structuredData = [{
   "@type": "Service",
   "@id": `${homeUrl}#procurement`,
-  name: "Luxury Interior Procurement in China",
+  name: "Luxury interior procurement in China",
   serviceType: "Interior procurement",
   description,
   url: homeUrl,
@@ -203,7 +203,7 @@ const procurementQuestions = [
 
       <Section id="considerations" tone="paper-2" bordered="top" class="scroll-mt-16">
         <Container padding="lg">
-          <SectionHeader title="What We Consider" width="none" />
+          <SectionHeader title="What we consider" width="none" />
 
           <ProcurementConsiderations />
         </Container>
@@ -237,7 +237,7 @@ const procurementQuestions = [
 
               <div data-profile-bio class="min-w-0">
                 <h2 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-                  Procurement Lead
+                  Procurement lead
                 </h2>
                 <p class="mt-2 text-sm leading-relaxed text-ink-soft">
                   Haruna Bayoh is Harpa Pro's procurement lead in China. He receives
@@ -276,19 +276,19 @@ const procurementQuestions = [
 
             <dl class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3">
               <div>
-                <dt class="text-sm font-semibold text-ink">Technical Coordination</dt>
+                <dt class="text-sm font-semibold text-ink">Technical coordination</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Drawings, dimensions, finishes, and approval records.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Order Control</dt>
+                <dt class="text-sm font-semibold text-ink">Order control</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Quantities, approvals, inspections, and order checks.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Document Record</dt>
+                <dt class="text-sm font-semibold text-ink">Document record</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Product data, certificates, approvals, and project files.
                 </dd>
@@ -320,7 +320,7 @@ const procurementQuestions = [
 
               <div data-profile-bio class="min-w-0">
                 <h2 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-                  Procurement Specialist
+                  Procurement specialist
                 </h2>
                 <p class="mt-2 text-sm leading-relaxed text-ink-soft">
                   Hashy is Harpa Pro's procurement specialist for factory coordination
@@ -335,7 +335,7 @@ const procurementQuestions = [
             >
               <div>
                 <dt class="text-ink-soft">Discipline</dt>
-                <dd class="mt-1 font-medium text-ink">Procurement &amp; Logistics</dd>
+                <dd class="mt-1 font-medium text-ink">Procurement &amp; logistics</dd>
               </div>
               <div>
                 <dt class="text-ink-soft">Education</dt>
@@ -349,13 +349,13 @@ const procurementQuestions = [
 
             <dl class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3">
               <div>
-                <dt class="text-sm font-semibold text-ink">Factory Coordination</dt>
+                <dt class="text-sm font-semibold text-ink">Factory coordination</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Capability, samples, quotations, and production questions.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Shipping Logistics</dt>
+                <dt class="text-sm font-semibold text-ink">Shipping logistics</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Packing, freight documents, shipment coordination, and delivery
                   records.
@@ -368,7 +368,7 @@ const procurementQuestions = [
 
       <Section id="procurement-questions" bordered="top">
         <Container padding="lg">
-          <SectionHeader title="Procurement Questions" width="none" />
+          <SectionHeader title="Procurement questions" width="none" />
           <div class="mt-8 grid gap-x-10 gap-y-6 md:grid-cols-2">
             {procurementQuestions.map(({ question, answer, topic }) => (
               <article class="max-w-xl">
@@ -388,7 +388,7 @@ const procurementQuestions = [
           <div class="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(32rem,1.22fr)] lg:gap-16">
             <SectionHeader
               width="xl"
-              title="Contact Us"
+              title="Contact us"
               lede="Email or message us about an interior procurement project in China."
             />
 

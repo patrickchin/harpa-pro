@@ -63,28 +63,28 @@ export interface SectionConfig {
 }
 
 const PROCUREMENT_LINKS: NavLink[] = [
-  { label: "Procurement Overview", href: "/", description: "Our procurement service", icon: "package-search" },
+  { label: "Procurement overview", href: "/", description: "Our procurement service", icon: "package-search" },
   { label: "Products and factories", href: "/#factory-partners", description: "Joinery, furniture, bathrooms, and source records", icon: "armchair" },
   { label: "Our process", href: "/#considerations", description: "Design coordination, quality checks, and delivery", icon: "list-checks" },
-  { label: "How to Buy from China", href: "/procurement/how-to-buy-from-china", description: "A guide for architects and designers", icon: "file-text" },
+  { label: "How to buy from China", href: "/procurement/how-to-buy-from-china", description: "A guide for architects and designers", icon: "file-text" },
   { label: "Procurement guides", href: "/procurement/guides" },
 ];
 
 const REPORTS_LINKS: NavLink[] = [
-  { label: "Harpa Pro App", href: "/reports", description: "See the reporting workflow", icon: "smartphone" },
+  { label: "Harpa Pro app", href: "/reports", description: "See the reporting workflow", icon: "smartphone" },
   { label: "Guides", href: "/reports/docs", description: "Learn each app task", icon: "book-open" },
   { label: "Roadmap", href: "/reports/roadmap", description: "Current and planned work", icon: "map" },
 ];
 
 const GET_THE_APP = {
-  label: "Get the App",
+  label: "Get the app",
   href: APP_STORE_URL,
   description: "Open the App Store",
   icon: "download",
   external: true,
 } as const satisfies NavLink;
 
-const CONTACT = { label: "Contact Us", href: "/#contact", icon: "message-circle" } as const satisfies NavLink;
+const CONTACT = { label: "Contact us", href: "/#contact", icon: "message-circle" } as const satisfies NavLink;
 const PRIVACY: NavLink = { label: "Privacy", href: "/privacy" };
 
 const PROCUREMENT_MENU: SectionMenu = {
@@ -101,10 +101,10 @@ const PROCUREMENT_MENU: SectionMenu = {
 
 const REPORTS_MENU: SectionMenu = {
   id: "site-reporting",
-  summary: "Site Reporting",
+  summary: "Site reporting",
   icon: "clipboard-list",
   intro: {
-    title: "Site Reporting",
+    title: "Site reporting",
     body: "Turn voice notes, photos, and text updates into daily report drafts that you can review and share.",
   },
   links: [...REPORTS_LINKS, GET_THE_APP],
@@ -116,8 +116,8 @@ const REPORTS_MENU: SectionMenu = {
 const FACTORY_DOCUMENTS: NavLink = { label: "Factory documents", href: "/procurement/factory-documents" };
 const PROCUREMENT_COLUMN = { label: "Procurement", links: [...PROCUREMENT_LINKS, FACTORY_DOCUMENTS] };
 const REPORTS_COLUMN = {
-  label: "Site Reporting",
-  links: [...REPORTS_LINKS, GET_THE_APP, { label: "Account Deletion", href: "/reports/account-deletion" }],
+  label: "Site reporting",
+  links: [...REPORTS_LINKS, GET_THE_APP, { label: "Account deletion", href: "/reports/account-deletion" }],
 };
 
 export const ALSO_FROM_LABEL = "Also from Harpa Pro";
@@ -137,7 +137,7 @@ export const SECTIONS: Record<SiteSection, SectionConfig> = {
       columns: [PROCUREMENT_COLUMN, { label: "Company", links: [CONTACT, PRIVACY] }],
     },
     meta: {
-      title: "Interior Procurement in China | Harpa Pro",
+      title: "Interior procurement in China | Harpa Pro",
       description:
         "Harpa Pro coordinates interior procurement in China: design specifications, factory coordination, quality checks, shipping, and procurement documentation.",
       imageAlt:
@@ -147,9 +147,9 @@ export const SECTIONS: Record<SiteSection, SectionConfig> = {
   },
   reports: {
     id: "reports",
-    label: "Site Reporting",
+    label: "Site reporting",
     home: "/reports",
-    breadcrumbRoot: { name: "Site Reporting", path: "/reports" },
+    breadcrumbRoot: { name: "Site reporting", path: "/reports" },
     menu: REPORTS_MENU,
     cta: GET_THE_APP,
     crossLink: { label: "Interior procurement", href: "/", to: "procurement" },
@@ -158,7 +158,7 @@ export const SECTIONS: Record<SiteSection, SectionConfig> = {
       columns: [REPORTS_COLUMN, { label: "Company", links: [PRIVACY] }],
     },
     meta: {
-      title: "Site Reports by Voice | Harpa Pro",
+      title: "Site reports by voice | Harpa Pro",
       description:
         "Turn voice notes, photos, and text into daily site report drafts that you can review and share.",
       image: REPORTS_SOCIAL_IMAGE.src,

@@ -88,6 +88,14 @@ instead of hand-rolling the same Tailwind classes:
 The procurement homepage theme (`luxury.css`, `procurement-hero.css`) and
 the docs styles keep their own classes.
 
+## Copy style
+
+Use sentence case for headings, eyebrows, buttons, nav labels, and page
+titles. Keep capitals for proper nouns, brand names, product codes, and
+in-app labels that the guides quote. Reports copy targets foremen: state
+the concrete outcome in plain language and avoid claims the app cannot
+back up. `src/__tests__/claim-copy.test.ts` blocks known stale claims.
+
 ## Develop
 
 ```bash
@@ -105,7 +113,7 @@ the current header does not expose the dashboard.
 Site chrome is audience-scoped. Every page passes `section` (`procurement`,
 `reports`, or `shared`) to `Layout`, `Header`, and `Footer`; the section
 config in `src/lib/site/sections.ts` is the single source for menu links,
-the CTA (Contact Us or Get the App), the cross-link to the other section,
+the CTA (Contact us or Get the app), the cross-link to the other section,
 footer columns, the wordmark target, the breadcrumb root, and default
 metadata. `Layout` exposes the section as `body[data-site-section]` for
 analytics. Shared pages (privacy, 404) show both offers. See the
@@ -147,7 +155,7 @@ Layout baseline: short pages wrap `Header`, `main`, and `Footer` in a
 `flex min-h-dvh flex-col` container with `main` set to `flex-1`, so the footer
 stays at the bottom. Keep page content inside `Container` and narrow prose with
 an inner wrapper, not a second `max-w-*` on `Container`. Below `lg`, the
-"What We Consider" tabs stack with the open panel directly under its tab.
+"What we consider" tabs stack with the open panel directly under its tab.
 Mono metadata text is at least `text-xs`. `tests/responsive-layout.spec.ts`
 checks these rules at 390, 768, and 1280px.
 

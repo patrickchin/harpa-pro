@@ -81,7 +81,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
     <>
       <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
         <div className="truncate text-sm font-semibold tracking-tight text-foreground">
-          New Report
+          New report
         </div>
         <span
           aria-hidden
@@ -93,7 +93,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
 
       <div className="flex-1 overflow-y-auto px-4 pb-3 pt-3">
         <PreviousNoteCard
-          title="Walk through — North Entrance"
+          title="Walkthrough — north entrance"
           author="Site team"
           recordedAt="Today · 9:42 AM"
           summary="Rebar laid out for Block B footing. Crew noted standing water near gridline 4; pump scheduled for tomorrow."

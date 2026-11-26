@@ -107,7 +107,7 @@ test("every article in the collection renders without scripts and is listed in t
 test("factory documents have their own indexable page linked from the homepage summary", async ({ page, request }) => {
   await page.goto("/");
   const summary = page.locator("#factory-documents");
-  await expect(summary.getByRole("heading", { level: 2, name: "Factory Documents" })).toBeVisible();
+  await expect(summary.getByRole("heading", { level: 2, name: "Factory documents" })).toBeVisible();
   await expect(page.locator("main [data-credential-record]")).toHaveCount(0);
   await summary.getByRole("link", { name: "View all factory documents" }).click();
   await expect(page).toHaveURL(/\/procurement\/factory-documents$/);

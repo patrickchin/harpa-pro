@@ -2,35 +2,35 @@ import { expect, test } from '@playwright/test';
 
 const CONSIDERATIONS = [
   {
-    title: 'Design and Specification',
+    title: 'Design and specification',
     description:
       'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
     image: 'Revit A104 3D coordination review sheet',
     fit: 'contain',
   },
   {
-    title: 'Factory and Product Fit',
+    title: 'Factory and product fit',
     description:
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: 'AIS Smarti headquarters and factory in Foshan, China',
     fit: 'cover',
   },
   {
-    title: 'Materials and Compliance',
+    title: 'Materials and compliance',
     description:
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: 'First page of the AIS marine HDF formaldehyde test report',
     fit: 'contain',
   },
   {
-    title: 'Production Quality',
+    title: 'Production quality',
     description:
       'We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.',
     image: 'AIS Smarti production lines and factory floor',
     fit: 'cover',
   },
   {
-    title: 'Packing and Delivery',
+    title: 'Packing and delivery',
     description:
       'We check packing, labels, collection, freight documents, and delivery records against the order.',
     image: 'AIS Smarti pallet and flat-pack packing examples',
@@ -74,9 +74,9 @@ const BUYER_INFORMATION = [
 ] as const;
 
 const PRODUCT_BRIEFS = [
-  { title: 'AIS Custom Kitchen Joinery', imageMode: 'cover' },
-  { title: 'J2S JSBC Hospitality Seating', imageMode: 'cover' },
-  { title: 'Rong Shuo SW-011 Shower Enclosure', imageMode: 'source-content' },
+  { title: 'AIS custom kitchen joinery', imageMode: 'cover' },
+  { title: 'J2S JSBC hospitality seating', imageMode: 'cover' },
+  { title: 'Rong Shuo SW-011 shower enclosure', imageMode: 'source-content' },
 ] as const;
 
 const CREDENTIALS = [
@@ -173,7 +173,7 @@ test('presents the procurement team and considerations with matching evidence', 
   const hashyProfile = page.locator('[data-procurement-profile="hashy"]');
   await expect(profiles).toHaveCount(2);
   await expect(
-    harunaProfile.getByRole('heading', { level: 2, name: 'Procurement Lead' }),
+    harunaProfile.getByRole('heading', { level: 2, name: 'Procurement lead' }),
   ).toBeVisible();
   await expect(harunaProfile).toContainText('Haruna Bayoh');
   await expect(harunaProfile).toContainText(
@@ -181,11 +181,11 @@ test('presents the procurement team and considerations with matching evidence', 
   );
   await expect(harunaProfile).toContainText("Master's degree");
   await expect(harunaProfile).toContainText('6 years');
-  await expect(harunaProfile).toContainText('Technical Coordination');
-  await expect(harunaProfile).toContainText('Order Control');
-  await expect(harunaProfile).toContainText('Document Record');
-  await expect(harunaProfile).not.toContainText('Factory Coordination');
-  await expect(harunaProfile).not.toContainText('Shipping Logistics');
+  await expect(harunaProfile).toContainText('Technical coordination');
+  await expect(harunaProfile).toContainText('Order control');
+  await expect(harunaProfile).toContainText('Document record');
+  await expect(harunaProfile).not.toContainText('Factory coordination');
+  await expect(harunaProfile).not.toContainText('Shipping logistics');
   await expect(harunaProfile.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
     'href',
     'https://www.linkedin.com/in/harunabayoh/',
@@ -195,17 +195,17 @@ test('presents the procurement team and considerations with matching evidence', 
     '_blank',
   );
   await expect(
-    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement Specialist' }),
+    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement specialist' }),
   ).toBeVisible();
   await expect(hashyProfile).toContainText('Hashy');
   await expect(hashyProfile).toContainText(
     "Hashy is Harpa Pro's procurement specialist for factory coordination and shipping logistics.",
   );
-  await expect(hashyProfile).toContainText('Procurement & Logistics');
+  await expect(hashyProfile).toContainText('Procurement & logistics');
   await expect(hashyProfile).toContainText("Bachelor's degree");
   await expect(hashyProfile).toContainText('4 years');
-  await expect(hashyProfile).toContainText('Factory Coordination');
-  await expect(hashyProfile).toContainText('Shipping Logistics');
+  await expect(hashyProfile).toContainText('Factory coordination');
+  await expect(hashyProfile).toContainText('Shipping logistics');
   await expect(hashyProfile.getByRole('img', { name: 'Hashy' })).toBeVisible();
   await expect(hashyProfile.getByRole('link')).toHaveCount(0);
   await expect(page.locator('[data-agent-card]')).toHaveCount(0);
@@ -213,13 +213,13 @@ test('presents the procurement team and considerations with matching evidence', 
   const main = page.locator('main');
   await expect(main.getByRole('heading', { name: 'Project evidence' })).toHaveCount(0);
   for (const heading of [
-    'Selected Factory Partners',
-    'What Each Quote Includes',
-    'Factory Documents',
+    'Selected factory partners',
+    'What each quote includes',
+    'Factory documents',
   ]) {
     await expect(main.getByRole('heading', { level: 2, name: heading })).toBeVisible();
   }
-  for (const removed of ['Product Examples', 'Technical Reviews']) {
+  for (const removed of ['Product examples', 'Technical reviews']) {
     await expect(main.getByRole('heading', { level: 2, name: removed })).toHaveCount(0);
   }
   await expect(page.locator('main > section')).toHaveCount(6);
@@ -311,9 +311,9 @@ test('uses a pre-cropped AIS photo and fills photographic frames without transfo
   );
   expect(mobileTabBoxes.every(({ width, height }) => width >= 320 && height >= 80)).toBe(true);
 
-  await page.getByRole('tab', { name: 'Factory and Product Fit' }).click();
+  await page.getByRole('tab', { name: 'Factory and product fit' }).click();
   const considerationPanel = page.getByRole('tabpanel', {
-    name: 'Factory and Product Fit',
+    name: 'Factory and product fit',
   });
   const considerationFrame = considerationPanel.locator('[data-consideration-image-frame]');
   const considerationImage = considerationFrame.getByRole('img', {
@@ -366,13 +366,13 @@ test('opens evidence images in an accessible dialog without leaving the page', a
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
-    name: 'Open full view of Revit A104 Coordination Review',
+    name: 'Open full view of Revit A104 coordination review',
   });
   await drawingTrigger.click();
 
   await expect(page).toHaveURL(pageUrl);
   const drawingDialog = page.getByRole('dialog', {
-    name: 'Full view: Revit A104 Coordination Review',
+    name: 'Full view: Revit A104 coordination review',
   });
   await expect(drawingDialog).toBeVisible();
   await expect(
@@ -462,7 +462,7 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   await page.goto('/#considerations');
 
   const trigger = page.getByRole('button', {
-    name: 'Open full view of Revit A104 Coordination Review',
+    name: 'Open full view of Revit A104 coordination review',
   });
   const thumbnail = trigger.getByRole('img');
   await thumbnail.scrollIntoViewIfNeeded();
@@ -486,7 +486,7 @@ test('shows a cached preview while the full evidence image loads', async ({ page
 
   await trigger.click();
   const dialog = page.getByRole('dialog', {
-    name: 'Full view: Revit A104 Coordination Review',
+    name: 'Full view: Revit A104 coordination review',
   });
   const dialogImage = dialog.getByRole('img');
   const imageRegion = dialog.locator('[data-evidence-image-dialog-region]');
@@ -519,7 +519,7 @@ test('merges reviews into the process and summarizes factory evidence on the hom
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/#technical-reviews');
 
-  const designPanel = page.getByRole('tabpanel', { name: 'Design and Specification' });
+  const designPanel = page.getByRole('tabpanel', { name: 'Design and specification' });
   await expect(designPanel).toBeVisible();
   const technicalReviews = designPanel.locator('[data-technical-review]');
   await expect(technicalReviews).toHaveCount(2);
@@ -543,7 +543,7 @@ test('merges reviews into the process and summarizes factory evidence on the hom
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
   await expect(
-    page.getByRole('heading', { level: 2, name: 'Selected Factory Partners' }),
+    page.getByRole('heading', { level: 2, name: 'Selected factory partners' }),
   ).toBeVisible();
   await expect(
     page.getByText(
@@ -570,7 +570,7 @@ test('merges reviews into the process and summarizes factory evidence on the hom
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
 
   const quote = page.locator('#quote-contents');
-  await expect(quote.getByRole('heading', { level: 2, name: 'What Each Quote Includes' }))
+  await expect(quote.getByRole('heading', { level: 2, name: 'What each quote includes' }))
     .toBeVisible();
   for (const label of BUYER_INFORMATION) {
     await expect(quote.getByText(label, { exact: true })).toBeVisible();
@@ -594,7 +594,7 @@ test('merges reviews into the process and summarizes factory evidence on the hom
   expect(Math.max(...briefTops) - Math.min(...briefTops)).toBeLessThanOrEqual(1);
 
   const summary = page.locator('#factory-documents');
-  await expect(summary.getByRole('heading', { level: 2, name: 'Factory Documents' }))
+  await expect(summary.getByRole('heading', { level: 2, name: 'Factory documents' }))
     .toBeVisible();
   await expect(summary).toContainText(`${CREDENTIALS.length} test reports and certificates`);
   await expect(summary).not.toContainText(/expired/i);
@@ -685,7 +685,7 @@ test('makes opening the email app the primary contact action without a form', as
   await page.goto('/#contact');
 
   const contact = page.locator('#contact');
-  await expect(contact.getByRole('heading', { level: 2, name: 'Contact Us' })).toBeVisible();
+  await expect(contact.getByRole('heading', { level: 2, name: 'Contact us' })).toBeVisible();
   await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
   await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
@@ -764,10 +764,10 @@ test('uses accessible procurement navigation and closes it after outside interac
   await expect(procurementMenu.getByRole('link', { name: 'Procurement guides', exact: true }))
     .toHaveAttribute('href', '/procurement/guides');
   await expect(
-    procurementMenu.getByRole('link', { name: /^Procurement Overview/ }),
+    procurementMenu.getByRole('link', { name: /^Procurement overview/ }),
   ).toHaveAttribute('href', '/');
   await expect(
-    procurementMenu.getByRole('link', { name: /^How to Buy from China/ }),
+    procurementMenu.getByRole('link', { name: /^How to buy from China/ }),
   ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
   await page.mouse.click(20, 700);
   await expect(procurementMenu).not.toHaveAttribute('open', '');
@@ -784,20 +784,20 @@ test('uses accessible procurement navigation and closes it after outside interac
   ).toHaveAttribute('href', '/reports');
   await expect(
     desktopNav.getByRole('link', {
-      name: 'Contact Us',
+      name: 'Contact us',
       exact: true,
     }),
   ).toHaveAttribute('href', '/#contact');
-  await expect(desktopNav.getByRole('link', { name: /Get the App/ })).toHaveCount(0);
+  await expect(desktopNav.getByRole('link', { name: /Get the app/ })).toHaveCount(0);
 
   const footer = page.locator('footer');
   await expect(
     footer.getByRole('link', {
-      name: 'Procurement Overview',
+      name: 'Procurement overview',
       exact: true,
     }),
   ).toHaveAttribute('href', '/');
-  await expect(footer.locator('nav[aria-label="Site Reporting"]')).toHaveCount(0);
+  await expect(footer.locator('nav[aria-label="Site reporting"]')).toHaveCount(0);
   await expect(footer.locator('a[href="/reports/roadmap"]')).toHaveCount(0);
   await expect(footer.locator('nav[aria-label="Also from Harpa Pro"]').getByRole('link'))
     .toHaveText(['Site reporting app']);
@@ -807,7 +807,7 @@ test('uses accessible procurement navigation and closes it after outside interac
   await expect(footer.getByRole('link', { name: 'Privacy', exact: true }))
     .toHaveAttribute('href', '/privacy');
   await expect(
-    footer.getByRole('link', { name: 'How to Buy from China', exact: true }),
+    footer.getByRole('link', { name: 'How to buy from China', exact: true }),
   ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -821,14 +821,14 @@ test('uses accessible procurement navigation and closes it after outside interac
     await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
   ).toBe(4);
   await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
-    .toHaveText(['Procurement Overview', 'Products and factories', 'Our process', 'How to Buy from China', 'Procurement guides']);
+    .toHaveText(['Procurement overview', 'Products and factories', 'Our process', 'How to buy from China', 'Procurement guides']);
   await expect(mobileMenu.locator('[data-mobile-site-reporting]')).toHaveCount(0);
   await expect(mobileMenu.locator('[data-mobile-also]').getByRole('link'))
     .toHaveText(['Site reporting app']);
   await expect(
-    mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+    mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
   ).toHaveAttribute('href', '/');
-  await mobileMenu.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
+  await mobileMenu.getByRole('link', { name: 'How to buy from China', exact: true }).click();
   await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
   await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
   await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
@@ -866,7 +866,7 @@ test('uses accessible site-reporting navigation without procurement chrome', asy
   await expect(siteReportingMenu).toHaveAttribute('open', '');
   await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
   await expect(
-    siteReportingMenu.getByRole('link', { name: /^Harpa Pro App/ }),
+    siteReportingMenu.getByRole('link', { name: /^Harpa Pro app/ }),
   ).toHaveAttribute('href', '/reports');
   await expect(
     siteReportingMenu.getByRole('link', { name: /^Guides/ }),
@@ -874,7 +874,7 @@ test('uses accessible site-reporting navigation without procurement chrome', asy
   await expect(
     siteReportingMenu.getByRole('link', { name: /^Roadmap/ }),
   ).toHaveAttribute('href', '/reports/roadmap');
-  await expect(siteReportingMenu.getByRole('link', { name: /^Get the App/ }))
+  await expect(siteReportingMenu.getByRole('link', { name: /^Get the app/ }))
     .toHaveAttribute('target', '_blank');
   await page.mouse.click(20, 700);
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');
@@ -888,15 +888,15 @@ test('uses accessible site-reporting navigation without procurement chrome', asy
 
   await expect(desktopNav.getByRole('link', { name: 'Interior procurement', exact: true }))
     .toHaveAttribute('href', '/');
-  await expect(desktopNav.getByRole('link', { name: 'Contact Us', exact: true })).toHaveCount(0);
-  const headerAppLink = desktopNav.locator(':scope > a', { hasText: 'Get the App' });
+  await expect(desktopNav.getByRole('link', { name: 'Contact us', exact: true })).toHaveCount(0);
+  const headerAppLink = desktopNav.locator(':scope > a', { hasText: 'Get the app' });
   await expect(headerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
   await expect(headerAppLink).toHaveAttribute('target', '_blank');
 
   const footer = page.locator('footer');
-  await expect(footer.locator('nav[aria-label="Site Reporting"]').getByRole('link'))
-    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Get the App', 'Account Deletion']);
-  const footerAppLink = footer.getByRole('link', { name: 'Get the App', exact: true });
+  await expect(footer.locator('nav[aria-label="Site reporting"]').getByRole('link'))
+    .toHaveText(['Harpa Pro app', 'Guides', 'Roadmap', 'Get the app', 'Account deletion']);
+  const footerAppLink = footer.getByRole('link', { name: 'Get the app', exact: true });
   await expect(footerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
   await expect(footerAppLink).toHaveAttribute('target', '_blank');
   await expect(footerAppLink).toHaveAttribute('rel', /noopener/);
@@ -911,10 +911,10 @@ test('uses accessible site-reporting navigation without procurement chrome', asy
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
-  await expect(mobileSiteReporting.getByRole('link')).toHaveText(['Harpa Pro App', 'Guides', 'Roadmap']);
-  await expect(mobileSiteReporting.getByText('Site Reporting', { exact: true })).toBeVisible();
+  await expect(mobileSiteReporting.getByRole('link')).toHaveText(['Harpa Pro app', 'Guides', 'Roadmap']);
+  await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();
   await expect(
-    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro app', exact: true }),
   ).toHaveAttribute('href', '/reports');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),

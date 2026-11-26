@@ -11,18 +11,18 @@ import aisPackingImg from "../../assets/procurement/factories/catalogues/ais-pac
 import aisHdfReportImg from "../../assets/procurement/factories/credentials/ais-hdf-formaldehyde-e0-2026.webp";
 import { lightboxImage } from "../../lib/lightbox-image";
 
-// Technical reviews live inside the Design and Specification panel; each
+// Technical reviews live inside the Design and specification panel; each
 // sheet opens the shared evidence lightbox.
 const technicalReviews = [
   {
-    title: "Revit A104 Coordination Review",
+    title: "Revit A104 coordination review",
     description:
       "We check the layout, finishes, and sizes before we approve the factory information.",
     image: revitCoordinationImg,
     alt: "Revit A104 3D coordination review sheet",
   },
   {
-    title: "Revit A103 Shop-Drawing Review",
+    title: "Revit A103 shop-drawing review",
     description: "We review the drawings before production.",
     image: revitShopDrawingImg,
     alt: "Revit A103 chair shop drawing review sheet",
@@ -34,7 +34,7 @@ const reviewLightboxes = await Promise.all(
 
 const considerations = [
   {
-    title: "Design and Specification",
+    title: "Design and specification",
     description:
       "We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.",
     image: revitCoordinationImg,
@@ -45,7 +45,7 @@ const considerations = [
     reviews: true,
   },
   {
-    title: "Factory and Product Fit",
+    title: "Factory and product fit",
     description:
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: aisFactoryImg,
@@ -55,7 +55,7 @@ const considerations = [
     icon: "factory",
   },
   {
-    title: "Materials and Compliance",
+    title: "Materials and compliance",
     description:
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: aisHdfReportImg,
@@ -65,7 +65,7 @@ const considerations = [
     icon: "shield-check",
   },
   {
-    title: "Production Quality",
+    title: "Production quality",
     description:
       "We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.",
     image: aisProductionImg,
@@ -75,7 +75,7 @@ const considerations = [
     icon: "clipboard-check",
   },
   {
-    title: "Packing and Delivery",
+    title: "Packing and delivery",
     description:
       "We check packing, labels, collection, freight documents, and delivery records against the order.",
     image: aisPackingImg,

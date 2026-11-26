@@ -8,7 +8,7 @@ const entries: DocsSearchEntry[] = [
     title: 'Getting started',
     description: 'Create a project and learn the voice workflow.',
     tier: 'setup',
-    tierLabel: 'Setup & Account',
+    tierLabel: 'Setup & account',
     keywords: ['install', 'email'],
   },
   {
@@ -16,7 +16,7 @@ const entries: DocsSearchEntry[] = [
     title: 'Capture notes, photos, and voice notes',
     description: 'Add focused field updates to a draft report.',
     tier: 'everyday',
-    tierLabel: 'Everyday Tasks',
+    tierLabel: 'Everyday tasks',
     keywords: ['voice', 'photo'],
   },
   {
@@ -24,7 +24,7 @@ const entries: DocsSearchEntry[] = [
     title: 'Voice notes',
     description: 'Record an update from the jobsite.',
     tier: 'everyday',
-    tierLabel: 'Everyday Tasks',
+    tierLabel: 'Everyday tasks',
     keywords: ['recording'],
   },
   {
@@ -32,7 +32,7 @@ const entries: DocsSearchEntry[] = [
     title: 'Export and share a PDF',
     description: 'Create and share a file from your device.',
     tier: 'core',
-    tierLabel: 'Core Workflows',
+    tierLabel: 'Core workflows',
     keywords: ['pdf', 'save'],
   },
 ];

@@ -79,14 +79,14 @@ Show three visually different document previews before the disclosure:
 2. Hot-melt adhesive RoHS test;
 3. J2S sofa E1 certificate.
 
-Place the other seven previews under **Show 7 more documents**. Keep all ten
-records and their source-package labels on the page. The expanded control must
-also offer **Show fewer documents**.
+Place the remaining previews under **Show N more documents**, where N is derived
+from the document data (currently six). Keep every current record and its
+source-package label on the page. Do not publish documents that have expired.
+The expanded control must also offer **Show fewer documents**.
 
 Keep each document card shallow. Show a top-aligned crop of approximately the
 first third of the page rather than the full portrait page. Under the crop,
-show only the title, source-package label, document reference/date, and status
-when applicable. Keep the explanatory description out of the card; it may
+show only the title, source-package label, and document reference/date. Keep the explanatory description out of the card; it may
 remain in the image-dialog caption.
 
 The evidence dialog shows only the selected preview image and its caption.
@@ -113,7 +113,7 @@ Browser coverage must verify:
 - the restored `/app` sections, local demonstration, and resource links;
 - no waitlist, form, Turnstile, or API action on `/app`;
 - compact example-factory presentation and its non-exhaustive wording;
-- three visible document previews before expansion and all ten afterward;
+- three visible document previews before expansion and all of them afterward;
 - top-third document crops with no explanatory paragraph in the cards;
 - image-only evidence dialogs with no original-document link;
 - old factory-document URLs redirect away from the removed files.

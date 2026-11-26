@@ -89,6 +89,15 @@
 .luxury-site [data-site-header] nav[aria-label='Primary'] > a {
   border-radius: 2px;
 }
+.luxury-site [data-site-header] nav[aria-label='Primary'] > [data-audience-switch] {
+  color: color-mix(in oklab, var(--luxury-porcelain) 72%, transparent);
+}
+.luxury-site [data-site-header] nav[aria-label='Primary'] > [data-audience-switch]:hover {
+  color: var(--luxury-porcelain);
+}
+.luxury-site .docs-breadcrumbs {
+  color: var(--luxury-muted);
+}
 
 /* Cinematic hero and its optional material concepts */
 .luxury-hero {

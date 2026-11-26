@@ -1,5 +1,11 @@
 # Public site product navigation
 
+> **Superseded in part** by
+> [audience-scoped chrome](design-public-site-audience-chrome.md): each
+> section now has its own header menu, CTA, footer, and wordmark target, with
+> one cross-link to the other section. Statements here about both menus in
+> shared navigation no longer apply. The interaction requirements still do.
+
 Current URL and source ownership is defined by
 [product URL organization](design-site-product-url-organization.md). That
 later decision supersedes the route and source paths below; the content and

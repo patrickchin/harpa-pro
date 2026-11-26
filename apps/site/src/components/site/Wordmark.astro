@@ -1,4 +1,12 @@
-<a href="/" class="flex items-center gap-2.5 group">
+---
+interface Props {
+  href?: string;
+}
+
+const { href = "/" } = Astro.props;
+---
+
+<a href={href} class="flex items-center gap-2.5 group" data-wordmark>
   <img
     src="/brand-icon.svg"
     alt=""

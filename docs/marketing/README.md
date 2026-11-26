@@ -12,9 +12,16 @@ app in one static Astro application at `harpapro.com`.
 
 App components, content, helpers, screenshots, and fixtures live beneath
 `reports/` directories in `apps/site/src`. Procurement has its own
-`procurement/` directories. Shared header, footer, and wordmark live in
-`src/components/site`. Footer link labels match the header labels for the
-same destinations, and the footer includes the external App Store link.
+`procurement/` directories. The header, footer, wordmark, and breadcrumbs in
+`src/components/site` are audience-scoped: each page passes its section
+(`procurement`, `reports`, or `shared`), and `src/lib/site/sections.ts` holds
+each section's links, CTA, footer, breadcrumb root, and default metadata.
+Procurement and reporting pages show only their own menu plus one cross-link
+to the other offer. Privacy and the 404 page present both offers equally; the
+404 highlights the matching offer for a missed `/reports/` or `/procurement/`
+path. Footer link labels match the header labels for the same destinations.
+See the
+[audience-scoped chrome design](../v4/design-public-site-audience-chrome.md).
 Current guides live in
 `apps/site/src/content/reports/docs`.
 

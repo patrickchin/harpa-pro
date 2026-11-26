@@ -46,14 +46,13 @@ const structuredData = [{
 ---
 
 <Layout
+  section="reports"
   title="AI Construction Daily Report App | Harpa Pro"
   description={description}
-  image={REPORTS_SOCIAL_IMAGE.src}
-  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
   structuredData={structuredData}
 >
   <div class="min-h-screen bg-background text-ink">
-    <Header />
+    <Header section="reports" />
     <main id="main-content">
       <SiteReportingHero />
       <HowItWorks />
@@ -62,6 +61,6 @@ const structuredData = [{
       <FAQ />
       <ClosingCta />
     </main>
-    <Footer />
+    <Footer section="reports" />
   </div>
 </Layout>

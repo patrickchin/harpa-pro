@@ -42,7 +42,9 @@ test('every sitemap page has unique metadata and an accurate production identity
     if (url.pathname === '/reports' || url.pathname.startsWith('/reports/')) {
       expect(new URL(socialImage).pathname, location).toBe('/og-image.png');
     }
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#e55d22');
     if (url.pathname === '/' || url.pathname.startsWith('/procurement/')) {
+      await expect(page.locator('body')).toHaveAttribute('data-site-section', 'procurement');
       expect(new URL(socialImage).pathname, location).not.toBe('/og-image.png');
       expect(socialImageAlt, location).toMatch(/^Generated /);
     }

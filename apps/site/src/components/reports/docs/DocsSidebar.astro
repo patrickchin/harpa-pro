@@ -6,12 +6,14 @@ import { DOCS_TIERS, guideHref, guideSlug } from "../../../lib/reports/docs";
 interface Props {
   guides: CollectionEntry<"reportsDocs">[];
   currentSlug?: string;
+  /** Each rendered copy needs a distinct landmark name. */
+  label: string;
 }
 
-const { guides, currentSlug } = Astro.props;
+const { guides, currentSlug, label } = Astro.props;
 ---
 
-<nav aria-label="Guide sections" class="docs-sidebar-nav">
+<nav aria-label={label} class="docs-sidebar-nav">
   {
     DOCS_TIERS.map((tier) => {
       const tierGuides = guides.filter((guide) => guide.data.tier === tier.id);

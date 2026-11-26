@@ -47,7 +47,14 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
 test('searches guides locally and stays quiet before a query', async ({ page }) => {
   await page.goto('/reports/docs');
 
-  const search = page.getByLabel('Search guides');
+  const searchRoot = page.locator('[data-docs-search]');
+  // Wait for the vanilla script so input events are never dropped under load.
+  await expect(searchRoot).toHaveAttribute('data-docs-search-ready', 'true');
+  const status = searchRoot.locator('[data-docs-search-status]');
+  await expect(status).toHaveAttribute('aria-live', 'polite');
+  await expect(status).toBeEmpty();
+
+  const search = page.getByRole('searchbox', { name: 'Search guides' });
   await search.fill('voice');
   const results = page.locator('.docs-guide-grid');
   await expect(
@@ -56,11 +63,51 @@ test('searches guides locally and stays quiet before a query', async ({ page }) 
     }),
   ).toBeVisible();
   await expect(results.getByRole('link', { name: 'Add members to a project' })).toHaveCount(0);
+  await expect(status).toHaveText(/^\d+ guides?$/);
 
   await search.fill('fax machine');
+  await expect(status).toHaveText('0 guides');
   await expect(page.getByRole('heading', { name: 'No matching guides' })).toBeVisible();
   await page.getByRole('button', { name: 'Clear search' }).click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
   await expect(page.locator('.docs-guide-grid')).toHaveCount(0);
+  await expect(status).toBeEmpty();
+});
+
+test('makes every core and everyday card a clearly labelled link', async ({ page }) => {
+  await page.goto('/reports/docs');
+
+  for (const selector of ['.docs-core-card', '.docs-everyday-card']) {
+    const cards = page.locator(selector);
+    for (let index = 0; index < (await cards.count()); index += 1) {
+      await expect(cards.nth(index).locator('.docs-card-cta')).toBeVisible();
+    }
+  }
+
+  const card = page.locator('.docs-everyday-card').first();
+  const href = await card.getByRole('link').getAttribute('href');
+  await card.scrollIntoViewIfNeeded();
+  const box = await card.boundingBox();
+  expect(box).not.toBeNull();
+  // Click the card's bottom-right corner, away from the heading link text.
+  await page.mouse.click((box?.x ?? 0) + (box?.width ?? 0) - 8, (box?.y ?? 0) + (box?.height ?? 0) - 8);
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+});
+
+test('exposes one distinctly labelled guide navigation at a time', async ({ page }) => {
+  for (const [width, visible, hidden] of [
+    [1280, 'Guide sections', 'Guide menu'],
+    [390, 'Guide menu', 'Guide sections'],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/reports/docs/guides/generate-ai-report');
+    if (width === 390) {
+      await page.locator('.docs-mobile-nav > summary').click();
+    }
+    await expect(page.getByRole('navigation', { name: visible, exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: hidden, exact: true })).toBeHidden();
+  }
 });
 
 test('renders the core workflow with optimized screenshots and pagination', async ({ page }) => {
@@ -69,6 +116,9 @@ test('renders the core workflow with optimized screenshots and pagination', asyn
     page.getByRole('heading', { level: 1, name: 'Generate an AI report' }),
   ).toBeVisible();
   await expect(page.locator('.docs-step')).toHaveCount(5);
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Step 1: Start a report' }),
+  ).toBeVisible();
   await expect(page.locator('.docs-guide-heading img')).toHaveCount(0);
 
   const screenshots = page.locator('.docs-step-media img');

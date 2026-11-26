@@ -107,6 +107,14 @@ accent fails WCAG AA with cream text). Give interactive elements the
 `ring-focus` utility, and keep decorative demo controls out of the tab order.
 `tests/a11y.spec.ts` covers these rules.
 
+Layout baseline: short pages wrap `Header`, `main`, and `Footer` in a
+`flex min-h-dvh flex-col` container with `main` set to `flex-1`, so the footer
+stays at the bottom. Keep page content inside `Container` and narrow prose with
+an inner wrapper, not a second `max-w-*` on `Container`. Below `lg`, the
+"What We Consider" tabs stack with the open panel directly under its tab.
+Mono metadata text is at least `text-xs`. `tests/responsive-layout.spec.ts`
+checks these rules at 390, 768, and 1280px.
+
 ## Website analytics
 
 PostHog measures page visits, link/button clicks, and these contact actions:
@@ -168,7 +176,8 @@ release captures exactly.
 - Lightboxes (docs screenshots and evidence documents) never link the original
   source file. `src/lib/lightbox-image.ts` emits a WebP derivative capped at
   1800px. Dialogs first show the loaded thumbnail, then swap in the full view
-  after it decodes.
+  after it decodes. The evidence dialog sizes the image from the full view's
+  `width`/`height` attributes, so the swap does not resize the box.
 - Only above-the-fold media (page heroes and the first index or montage
   image) use `priority` or `loading="eager"`; everything else is lazy.
 

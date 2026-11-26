@@ -493,10 +493,12 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   const dialogImage = dialog.getByRole('img');
   const imageRegion = dialog.locator('[data-evidence-image-dialog-region]');
 
+  let previewBox: { width: number; height: number } | null;
   try {
     await expect(dialogImage).toHaveJSProperty('currentSrc', previewSource);
     await expect(dialogImage).toHaveAttribute('data-evidence-image-state', 'preview');
     await expect(imageRegion).toHaveAttribute('aria-busy', 'true');
+    previewBox = await dialogImage.boundingBox();
   } finally {
     releaseFullImage();
   }
@@ -504,6 +506,13 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   await expect(dialogImage).toHaveJSProperty('currentSrc', fullSource);
   await expect(dialogImage).toHaveAttribute('data-evidence-image-state', 'full');
   await expect(imageRegion).toHaveAttribute('aria-busy', 'false');
+
+  // The preview reserves the full image's box, so the swap does not resize it.
+  const fullBox = await dialogImage.boundingBox();
+  expect(previewBox).not.toBeNull();
+  expect(fullBox).not.toBeNull();
+  expect(Math.abs(fullBox!.width - previewBox!.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(fullBox!.height - previewBox!.height)).toBeLessThanOrEqual(1);
 });
 
 test('shows compact factory examples and progressively discloses document previews', async ({
@@ -555,7 +564,7 @@ test('shows compact factory examples and progressively discloses document previe
   ]);
   expect(partnerSectionBox).not.toBeNull();
   expect(featuredFactoryBox).not.toBeNull();
-  expect(featuredFactoryBox!.width).toBeLessThanOrEqual(partnerSectionBox!.width * 0.67);
+  expect(featuredFactoryBox!.width).toBeGreaterThanOrEqual(partnerSectionBox!.width - 1);
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);

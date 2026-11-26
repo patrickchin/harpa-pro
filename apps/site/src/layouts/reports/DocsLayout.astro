@@ -2,10 +2,11 @@
 import type { CollectionEntry } from "astro:content";
 
 import DocsSidebar from "../../components/reports/docs/DocsSidebar.astro";
+import Breadcrumbs from "../../components/site/Breadcrumbs.astro";
 import Footer from "../../components/site/Footer.astro";
 import Header from "../../components/site/Header.astro";
 import Layout from "../Layout.astro";
-import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
+import { breadcrumbJsonLd, breadcrumbTrail } from "../../lib/site/sections";
 import { canonicalPathname } from "../../lib/urls";
 
 interface Props {
@@ -17,37 +18,26 @@ interface Props {
 }
 
 const { title, description, guides, currentSlug, currentTitle } = Astro.props;
-const breadcrumbs = [
-  { name: "Home", path: "/" },
-  { name: "Site Reporting", path: "/reports" },
+const breadcrumbs = breadcrumbTrail("reports", [
   { name: "Guides", path: "/reports/docs" },
   ...(currentTitle && currentSlug ? [{
     name: currentTitle,
     path: `/reports/docs/guides/${currentSlug}`,
   }] : []),
-];
-const structuredData = [{
-  "@type": "BreadcrumbList",
-  "@id": `${new URL(canonicalPathname(Astro.url.pathname), Astro.site)}#breadcrumbs`,
-  itemListElement: breadcrumbs.map(({ name, path }, index) => ({
-    "@type": "ListItem",
-    position: index + 1,
-    name,
-    item: new URL(path, Astro.site).href,
-  })),
-}];
+]);
+const pageUrl = new URL(canonicalPathname(Astro.url.pathname), Astro.site).href;
+const structuredData = [breadcrumbJsonLd(Astro.site!, pageUrl, breadcrumbs)];
 ---
 
 <Layout
+  section="reports"
   title={`${title} | Harpa Pro`}
   description={description}
-  image={REPORTS_SOCIAL_IMAGE.src}
-  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
   pageType={currentSlug ? "TechArticle" : "CollectionPage"}
   structuredData={structuredData}
 >
   <div class="min-h-screen bg-background text-ink">
-    <Header />
+    <Header section="reports" />
     <div class="docs-shell">
       <details class="docs-mobile-nav">
         <summary>
@@ -85,27 +75,11 @@ const structuredData = [{
         </aside>
 
         <main class="docs-main" id="main-content">
-          <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
-            <a href="/">Home</a>
-            <span aria-hidden="true">/</span>
-            <a href="/reports">Site Reporting</a>
-            <span aria-hidden="true">/</span>
-            {
-              currentTitle ? (
-                <>
-                  <a href="/reports/docs">Guides</a>
-                  <span aria-hidden="true">/</span>
-                  <span aria-current="page">{currentTitle}</span>
-                </>
-              ) : (
-                <span aria-current="page">Guides</span>
-              )
-            }
-          </nav>
+          <Breadcrumbs items={breadcrumbs} />
           <slot />
         </main>
       </div>
     </div>
-    <Footer />
+    <Footer section="reports" />
   </div>
 </Layout>

@@ -2,12 +2,15 @@
 import "@fontsource-variable/inter";
 import "../styles/globals.css";
 import { getAnalyticsEnv } from "../lib/env";
-import { REPORTS_SOCIAL_IMAGE } from "../lib/social-images";
+import { getProcurementSocialImage } from "../lib/procurement/social-image";
+import { SECTIONS, type SiteSection } from "../lib/site/sections";
 import { canonicalPathname } from "../lib/urls";
 
 interface Props {
-  title: string;
-  description: string;
+  /** Chooses the default metadata; also exposed as `body[data-site-section]`. */
+  section: SiteSection;
+  title?: string;
+  description?: string;
   image?: string;
   imageAlt?: string;
   noindex?: boolean;
@@ -16,16 +19,19 @@ interface Props {
   structuredData?: Record<string, unknown>[];
 }
 
+const { section } = Astro.props;
+const meta = SECTIONS[section].meta;
 const {
-  title,
-  description,
-  image = REPORTS_SOCIAL_IMAGE.src,
-  imageAlt = REPORTS_SOCIAL_IMAGE.alt,
+  title = meta.title,
+  description = meta.description,
+  imageAlt = meta.imageAlt,
   noindex = false,
   ogType = "website",
   pageType = "WebPage",
   structuredData = [],
 } = Astro.props;
+const image =
+  Astro.props.image ?? meta.image ?? (await getProcurementSocialImage()).src;
 
 const canonicalUrl = new URL(canonicalPathname(Astro.url.pathname), Astro.site);
 const ogImageUrl = new URL(image, Astro.site);
@@ -80,7 +86,7 @@ getAnalyticsEnv();
       name="robots"
       content={noindex ? "noindex, follow" : "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"}
     />
-    <meta name="theme-color" content="#e55d22" />
+    <meta name="theme-color" content={meta.themeColor} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -106,7 +112,10 @@ getAnalyticsEnv();
     <meta name="twitter:image" content={ogImageUrl} />
     <meta name="twitter:image:alt" content={imageAlt} />
   </head>
-  <body class="min-h-screen bg-background text-foreground antialiased">
+  <body
+    class="min-h-screen bg-background text-foreground antialiased"
+    data-site-section={section}
+  >
     <a
       href="#main-content"
       class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg ring-focus"

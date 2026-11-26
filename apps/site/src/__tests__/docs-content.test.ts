@@ -143,8 +143,8 @@ describe('docs content model', () => {
     expect(existsSync(resolve(srcRoot, 'pages/reports/docs/guides/[...slug].astro'))).toBe(true);
     expect(existsSync(resolve(srcRoot, 'layouts/reports/DocsLayout.astro'))).toBe(true);
 
-    const header = readFileSync(resolve(srcRoot, 'components/site/Header.astro'), 'utf8');
-    expect(header).toContain('href="/reports/docs"');
+    const chrome = readFileSync(resolve(srcRoot, 'lib/site/sections.ts'), 'utf8');
+    expect(chrome).toContain('href: "/reports/docs"');
 
     const docsIndex = readFileSync(resolve(srcRoot, 'pages/reports/docs/index.astro'), 'utf8');
     expect(docsIndex).toContain('Site Reporting Guides');

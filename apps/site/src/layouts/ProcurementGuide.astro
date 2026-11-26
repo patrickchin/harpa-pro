@@ -1,13 +1,16 @@
 ---
-import { getImage, Image } from "astro:assets";
+import { Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import woodInteriorImg from "../assets/procurement/finishes/wood.webp";
+import Breadcrumbs from "../components/site/Breadcrumbs.astro";
 import Footer from "../components/site/Footer.astro";
 import Header from "../components/site/Header.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
 import Layout from "../layouts/Layout.astro";
 import "../styles/luxury.css";
+import { getProcurementSocialImage } from "../lib/procurement/social-image";
+import { breadcrumbJsonLd, breadcrumbTrail } from "../lib/site/sections";
 import { canonicalPathname } from "../lib/urls";
 
 interface Props {
@@ -34,21 +37,14 @@ const {
   },
 } = Astro.props;
 const homeUrl = new URL("/", Astro.site).href;
-const articleUrl = new URL(canonicalPathname(Astro.url.pathname), Astro.site).href;
+const articlePath = canonicalPathname(Astro.url.pathname);
+const articleUrl = new URL(articlePath, Astro.site).href;
 const imageAlt = hero.alt;
-const socialImage = await getImage({
-  src: hero.image,
-  width: 1200,
-  height: 630,
-  format: "png",
-});
-const breadcrumbs = [
-  { name: "Home", url: homeUrl },
-  ...(showIndexBreadcrumb
-    ? [{ name: "Procurement guides", url: new URL("/procurement/guides", Astro.site).href }]
-    : []),
-  { name: headline, url: articleUrl },
-];
+const socialImage = await getProcurementSocialImage(hero.image);
+const breadcrumbs = breadcrumbTrail("procurement", [
+  ...(showIndexBreadcrumb ? [{ name: "Procurement guides", path: "/procurement/guides" }] : []),
+  { name: headline, path: articlePath },
+]);
 const structuredData = [
   {
     "@type": "Article",
@@ -62,20 +58,12 @@ const structuredData = [
     mainEntityOfPage: { "@id": `${articleUrl}#webpage` },
     image: new URL(socialImage.src, Astro.site).href,
   },
-  {
-    "@type": "BreadcrumbList",
-    "@id": `${articleUrl}#breadcrumbs`,
-    itemListElement: breadcrumbs.map(({ name, url }, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name,
-      item: url,
-    })),
-  },
+  breadcrumbJsonLd(Astro.site!, articleUrl, breadcrumbs),
 ];
 ---
 
 <Layout
+  section="procurement"
   title={seoTitle}
   description={description}
   image={socialImage.src}
@@ -84,19 +72,11 @@ const structuredData = [
   ogType="article"
 >
   <div class="luxury-site procurement-guide min-h-screen bg-background text-ink">
-    <Header />
+    <Header section="procurement" />
     <main id="main-content">
       <Section id="top">
         <Container>
-          <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
-            <a href="/">Home</a>
-            <span aria-hidden="true">/</span>
-            {showIndexBreadcrumb && <>
-              <a href="/procurement/guides">Procurement guides</a>
-              <span aria-hidden="true">/</span>
-            </>}
-            <span aria-current="page">{headline}</span>
-          </nav>
+          <Breadcrumbs items={breadcrumbs} />
           <article>
             <div class="guide-intro">
               <header>
@@ -154,17 +134,13 @@ const structuredData = [
         </Container>
       </Section>
     </main>
-    <Footer />
+    <Footer section="procurement" />
   </div>
 </Layout>
 
 <style>
   .procurement-guide {
     color: var(--luxury-walnut);
-  }
-
-  .docs-breadcrumbs {
-    color: var(--luxury-muted);
   }
 
   .guide-intro {

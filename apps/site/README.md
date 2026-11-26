@@ -45,7 +45,7 @@ keep country requirements in the main buying guide. See the
 | --- | --- | --- |
 | Procurement | `/`, `/procurement/how-to-buy-from-china` | `components/procurement`, `content/procurement`, `assets/procurement` |
 | Site reporting app | `/reports`, `/reports/docs`, `/reports/roadmap`, `/reports/account-deletion` | `pages/reports`, `components/reports`, `content/reports`, `lib/reports`, `layouts/reports`, `assets/reports` |
-| Shared website | `/privacy`, branded 404 | `components/site`, base layout, primitives, analytics, legal helpers |
+| Shared website | `/privacy`, branded 404 | `components/site`, `lib/site`, base layout, primitives, analytics, legal helpers |
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
 Privacy covers both the website and app. The app updates confirmation page
@@ -93,14 +93,23 @@ pnpm --filter @harpa/site test:redirects # build first; Cloudflare Pages rules
 
 Copy `.env.example` to `.env` before local development.
 `PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
-the current shared header does not expose the dashboard.
+the current header does not expose the dashboard.
 
-The shared header (`src/components/site/Header.astro`) uses `<details>` menus
+Site chrome is audience-scoped. Every page passes `section` (`procurement`,
+`reports`, or `shared`) to `Layout`, `Header`, and `Footer`; the section
+config in `src/lib/site/sections.ts` is the single source for menu links,
+the CTA (Contact Us or Get the App), the cross-link to the other section,
+footer columns, the wordmark target, the breadcrumb root, and default
+metadata. `Layout` exposes the section as `body[data-site-section]` for
+analytics. Shared pages (privacy, 404) show both offers. See the
+[audience-scoped chrome design](../../docs/v4/design-public-site-audience-chrome.md).
+
+The header (`src/components/site/Header.astro`) uses `<details>` menus
 that work without JavaScript. With JavaScript, desktop mega menus open on hover
 for fine pointers and stay open when the hovered summary is clicked; Enter and
 Space still toggle them. The mobile menu closes on Escape (focus returns to the
 toggle), an outside tap, or a link tap, and it locks page scroll while open. It
-has the same Contact Us and Get the App actions as desktop.
+has the same section CTA as desktop, followed by the cross-link.
 
 ## Stack
 

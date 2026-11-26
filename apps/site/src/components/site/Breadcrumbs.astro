@@ -1,0 +1,24 @@
+---
+import type { BreadcrumbItem } from "../../lib/site/sections";
+
+interface Props {
+  /** The full trail from `breadcrumbTrail()`, ending with the current page. */
+  items: BreadcrumbItem[];
+}
+
+const { items } = Astro.props;
+const ancestors = items.slice(0, -1);
+const current = items.at(-1);
+---
+
+<nav aria-label="Breadcrumb" class="docs-breadcrumbs">
+  {
+    ancestors.map((item) => (
+      <>
+        <a href={item.path}>{item.name}</a>
+        <span aria-hidden="true">/</span>
+      </>
+    ))
+  }
+  {current && <span aria-current="page">{current.name}</span>}
+</nav>

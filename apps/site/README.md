@@ -106,7 +106,8 @@ has the same Contact Us and Get the App actions as desktop.
 
 - Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)
 - Tailwind v4 via `@tailwindcss/vite`
-- React 19 islands (added in M1/M2)
+- React 19 integration (no islands currently ship; the M2 voice demo was
+  replaced by static screenshots)
 - MDX content collections (added in M0.4)
 - Typed product guides under `/reports/docs`
 - Chromium and Firefox Playwright coverage for docs navigation, search, links,
@@ -124,7 +125,7 @@ Accessibility baseline: `Layout.astro` renders a "Skip to content" link as the
 first focusable element, so every page's `<main>` must have
 `id="main-content"`. Put text on `bg-accent-ink`, not `bg-accent` (the vivid
 accent fails WCAG AA with cream text). Give interactive elements the
-`ring-focus` utility, and keep decorative demo controls out of the tab order.
+`ring-focus` utility, and keep decorative controls out of the tab order.
 `tests/a11y.spec.ts` covers these rules.
 
 Layout baseline: short pages wrap `Header`, `main`, and `Footer` in a
@@ -223,7 +224,9 @@ header. Cloudflare supplies `noindex` for dev/preview deployments.
 
 The procurement homepage answers service, product-scope, inspection, and
 project-brief questions in visible HTML. The reporting app's audience,
-workflow, and initial voice demonstration also render before JavaScript.
+workflow, app screenshots, and FAQ answers also render before JavaScript. The
+FAQ is an open definition list, not an accordion, and `tests/seo.spec.ts`
+checks that each `FAQPage` answer matches the visible text.
 
 App documentation is served by this same site at `/reports/docs`. No separate
 documentation hostname or deployment is required.

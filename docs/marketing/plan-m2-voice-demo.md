@@ -1,5 +1,10 @@
 # M2 voice demo
 
+> **Status: removed.** The `/reports` hero now shows static app
+> screenshots instead of this demo, and the demo components and fixture
+> have been deleted. This plan is kept as history. See
+> [the marketing README](README.md).
+
 The marketing voice demo is a self-contained Astro/React island. It
 uses committed fixtures and web-native markup in
 `apps/site/src/components/VoiceDemo.tsx` and

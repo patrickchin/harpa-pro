@@ -36,25 +36,29 @@ test('skip link is visually hidden until focused', async ({ page }) => {
   expect(box === null || (box.width <= 1 && box.height <= 1)).toBe(true);
 });
 
-test('voice demo decorative controls are not focusable; real controls work', async ({
-  page,
-}) => {
+test('hero shows static app screenshots and an App Store badge link', async ({ page }) => {
   await page.goto('/reports');
-  const demo = page.locator('[data-voice-demo]');
+  const screens = page.locator('[data-hero-screens]');
 
-  await expect(demo.getByRole('button', { name: 'Settings' })).toHaveCount(0);
-  await expect(demo.getByRole('button', { name: 'Play voice note' })).toHaveCount(0);
+  await expect(screens.locator('img')).toHaveCount(3);
+  for (const img of await screens.locator('img').all()) {
+    await expect(img).toHaveAttribute('alt', /\S/);
+    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+  }
+  await expect(screens.getByRole('button')).toHaveCount(0);
+  await expect(page.locator('astro-island')).toHaveCount(0);
 
-  // Wait for the React island to hydrate before driving it via the keyboard.
-  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
-  const generate = demo.getByRole('button', { name: 'Generate report' });
-  await generate.focus();
-  await expect(generate).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(demo.getByRole('button', { name: 'Reports' })).toBeVisible({ timeout: 10_000 });
+  const badges = page.getByRole('link', { name: 'Download on the App Store' });
+  await expect(badges).toHaveCount(2);
+  for (const badge of await badges.all()) {
+    await expect(badge).toHaveAttribute('href', 'https://apps.apple.com/us/app/harpa-pro/id6776759817');
+    const box = (await badge.locator('img').boundingBox())!;
+    // Apple's marketing guidelines: the badge is at least 40px tall.
+    expect(box.height).toBeGreaterThanOrEqual(40);
+  }
 });
 
-test('footer links and FAQ summaries show a focus outline', async ({ page }) => {
+test('footer links show a focus outline', async ({ page }) => {
   await page.goto('/reports');
 
   const footerLink = page.locator('footer').getByRole('link', { name: 'Privacy' });
@@ -64,12 +68,12 @@ test('footer links and FAQ summaries show a focus outline', async ({ page }) => 
   await expect(footerLink).toBeFocused();
   expect(await footerLink.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
 
-  const summary = page.locator('#faq summary').first();
-  await summary.focus();
+  const badge = page.locator('[data-app-store-badge]').first();
+  await badge.focus();
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
-  await expect(summary).toBeFocused();
-  expect(await summary.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
+  await expect(badge).toBeFocused();
+  expect(await badge.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
 });
 
 for (const route of ['/', '/reports'] as const) {

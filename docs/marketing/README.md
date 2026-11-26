@@ -18,14 +18,14 @@ same destinations, and the footer includes the external App Store link.
 Current guides live in
 `apps/site/src/content/reports/docs`.
 
-The reporting page hero shows static, phone-framed app screenshots
-(capture → report → PDF) from `apps/site/src/assets/reports/docs`, optimised
-through `astro:assets` with no JavaScript. The App Store calls to action use
-Apple's unmodified black "Download on the App Store" badge
+The reporting page includes a browser demo using
+`apps/site/src/fixtures/reports/demoReport.ts`. It captures no audio and
+calls no API or AI provider. The App Store calls to action use Apple's
+unmodified black "Download on the App Store" badge
 (`apps/site/src/assets/reports/app-store-badge.svg`) at 40px or taller, in the
-hero and a closing call-to-action section above the footer. The earlier M2
-browser voice demo and its fixture have been removed. The legacy waitlist form has been removed from
-the site source. Existing email confirmation links still
+hero and in a closing call-to-action section above the footer. The FAQ shows
+every answer in an open definition list. The legacy waitlist form has been
+removed from the site source. Existing email confirmation links still
 work through permanent redirects, and new emails use `/reports/confirm`.
 Because no page offers signup, failed or expired confirmation links direct
 people to `/reports`, the App Store, or support email.
@@ -115,7 +115,7 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
 | --------------- | --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | M0              | Foundation            | [`plan-m0-foundation.md`](plan-m0-foundation.md)           | Astro app scaffolded into monorepo; Lovable JSX ported to `.astro`; deploys to Cloudflare Pages preview; Lighthouse performance/accessibility ≥ 90 and best practices/SEO ≥ 95. |
 | M1              | Waitlist              | [`plan-m1-waitlist.md`](plan-m1-waitlist.md)               | `waitlist_signups` table + Hono route + scope test + double-opt-in email + Turnstile + admin CSV export. **Only backend work needed before launch.**                            |
-| M2              | Voice demo (static)   | [`plan-m2-voice-demo.md`](plan-m2-voice-demo.md)           | Shipped, then replaced by static app screenshots on `/reports`. Simulated recording state plus a committed fixture. No audio capture, API, R2, or authentication.             |
+| M2              | Voice demo (static)   | [`plan-m2-voice-demo.md`](plan-m2-voice-demo.md)           | Simulated recording state plus a committed fixture. No audio capture, API, R2, or authentication.                                                                               |
 | M3              | Partial               | [`plan-m3-launch.md`](plan-m3-launch.md)                   | Custom domain, privacy, OG image, sitemap, robots, public guides, and PostHog wiring are present. Terms, public-site Sentry, and analytics activation are not confirmed.                        |
 | M4 _(deferred)_ | Voice demo (live API) | [`plan-m4-voice-demo-live.md`](plan-m4-voice-demo-live.md) | Replace M2's fake pipeline with `POST /demo/session` → R2 → `/voice/transcribe` → `/reports/:id/generate`. Tackled after launch.                                                |
 

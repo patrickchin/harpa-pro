@@ -19,6 +19,7 @@ describe('marketing claim copy', () => {
       'components/reports/AppStoreBadge.astro',
       'components/reports/ClosingCta.astro',
       'components/reports/SiteReportingHero.astro',
+      'components/reports/VoiceDemo.tsx',
       'components/reports/HowItWorks.astro',
       'content/reports/features/04-exports.mdx',
       'content/reports/faq/02-offline.mdx',

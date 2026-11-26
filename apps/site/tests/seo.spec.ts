@@ -111,7 +111,8 @@ test('every sitemap page has unique metadata and an accurate production identity
       await expect(page.locator('main')).toContainText('for foremen and site supervisors');
       await expect(page.locator('#faq details')).toHaveCount(0);
       await expect(page.locator('#faq dd').first()).toBeVisible();
-      await expect(page.locator('[data-hero-screens] img')).toHaveCount(3);
+      await expect(page.locator('[data-voice-demo]')).toContainText('New Report');
+      await expect(page.locator('[data-voice-demo]')).toContainText('Summary:');
       await expect(
         page.locator('[data-closing-cta]').getByRole('link', { name: 'Download on the App Store' }),
       ).toHaveCount(1);

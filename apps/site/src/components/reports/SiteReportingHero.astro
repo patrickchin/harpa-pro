@@ -1,46 +1,12 @@
 ---
-import { Image } from "astro:assets";
-import type { ImageMetadata } from "astro";
+import VoiceDemo from "./VoiceDemo.tsx";
 import AppStoreBadge from "./AppStoreBadge.astro";
 import Button from "../primitives/Button.astro";
-import Container from "../primitives/Container.astro";
-import voiceRecording from "../../assets/reports/docs/04-voice-recording.png";
-import finalReportIssues from "../../assets/reports/docs/05-final-report-issues.png";
-import pdfPreview from "../../assets/reports/docs/07-pdf-preview.png";
-
-interface Screen {
-  label: string;
-  image: ImageMetadata;
-  alt: string;
-  position: "side" | "center";
-}
-
-// Real app screenshots, ordered capture → report → PDF.
-const screens: Screen[] = [
-  {
-    label: "Capture",
-    image: voiceRecording,
-    alt: "Harpa Pro site visit with text, photo, and voice notes and a voice recording in progress",
-    position: "side",
-  },
-  {
-    label: "Review",
-    image: finalReportIssues,
-    alt: "Harpa Pro report draft listing site issues with severity and next actions",
-    position: "center",
-  },
-  {
-    label: "Share PDF",
-    image: pdfPreview,
-    alt: "Harpa Pro PDF preview of a finalized daily site report",
-    position: "side",
-  },
-];
 ---
 
-<section id="top" class="overflow-hidden border-b border-hairline">
-  <Container
-    class="grid gap-12 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-10"
+<section id="top" class="border-b border-hairline">
+  <div
+    class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-12"
   >
     <div class="flex flex-col justify-center">
       <h1
@@ -68,56 +34,8 @@ const screens: Screen[] = [
       </div>
     </div>
 
-    <div data-hero-screens class="mx-auto w-full max-w-[34rem]">
-      <ol
-        class="flex items-end justify-center"
-        aria-label="Harpa Pro screens from capture to PDF"
-      >
-        {
-          screens.map((screen, index) => (
-            <li
-              class:list={[
-                "flex flex-col items-center",
-                screen.position === "center"
-                  ? "relative z-10 w-[38%]"
-                  : "relative z-0 w-[31%]",
-                index === 0 && "-mr-[5%]",
-                index === 2 && "-ml-[5%]",
-              ]}
-            >
-              <div
-                class:list={[
-                  "w-full rounded-[1.4rem] bg-neutral-900 p-[5px] shadow-xl ring-1 ring-black/10 sm:rounded-[1.9rem] sm:p-[7px]",
-                  screen.position === "side" && "opacity-95",
-                ]}
-              >
-                <Image
-                  src={screen.image}
-                  alt={screen.alt}
-                  widths={[160, 240, 320, 480, 640]}
-                  sizes={
-                    screen.position === "center"
-                      ? "(min-width: 1024px) 210px, 38vw"
-                      : "(min-width: 1024px) 170px, 31vw"
-                  }
-                  format="webp"
-                  quality={82}
-                  loading="eager"
-                  fetchpriority={screen.position === "center" ? "high" : "auto"}
-                  decoding="async"
-                  class="block h-auto w-full rounded-[1.1rem] sm:rounded-[1.5rem]"
-                />
-              </div>
-              <span class="mt-3 text-xs font-medium text-ink-soft sm:text-sm">
-                <span aria-hidden="true" class="font-mono">
-                  {String(index + 1).padStart(2, "0")}
-                </span>{" "}
-                {screen.label}
-              </span>
-            </li>
-          ))
-        }
-      </ol>
+    <div class="relative min-h-[640px] lg:pl-6" data-voice-demo>
+      <VoiceDemo client:load />
     </div>
-  </Container>
+  </div>
 </section>

@@ -21,7 +21,7 @@ test('separates procurement from site reporting', async ({ page }) => {
       name: 'Site Reports from Voice, Photos, and Text',
     }),
   ).toBeVisible();
-  await expect(page.locator('[data-hero-screens]')).toBeVisible();
+  await expect(page.locator('[data-voice-demo]')).toBeVisible();
   await expect(
     page.getByRole('heading', { level: 2, name: 'From Site Update to Daily Report' }),
   ).toBeVisible();

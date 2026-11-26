@@ -89,6 +89,8 @@ describe('site smoke', () => {
     );
     const header = readFileSync(resolve(here, '../components/site/Header.astro'), 'utf8');
     const footer = readFileSync(resolve(here, '../components/site/Footer.astro'), 'utf8');
+    // Header and footer render their links from the section config.
+    const chrome = readFileSync(resolve(here, '../lib/site/sections.ts'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
     expect(home).toContain('Luxury Interior Procurement in China');
@@ -155,17 +157,16 @@ describe('site smoke', () => {
     expect(home).not.toContain('This is your agent.');
     expect(home).not.toContain('Send a sourcing brief');
     expect(home).toContain('mailto:haruna@harpapro.com');
-    expect(header).toContain('href="/"');
-    expect(header).toContain('href="/reports"');
-    expect(header).toContain('Site Reporting');
-    expect(header).toContain('href="/#contact"');
-    expect(header).not.toContain('View evidence');
-    expect(footer).toContain('href: "/"');
-    expect(footer).toContain('href: "/reports"');
-    expect(footer).toContain('Site Reporting');
-    expect(footer).toContain('APP_STORE_URL');
+    expect(header).toContain('SECTIONS[section]');
+    expect(footer).toContain('SECTIONS[section]');
+    expect(chrome).toContain('href: "/"');
+    expect(chrome).toContain('href: "/reports"');
+    expect(chrome).toContain('Site Reporting');
+    expect(chrome).toContain('href: "/#contact"');
+    expect(chrome).toContain('APP_STORE_URL');
+    expect(header + chrome).not.toContain('View evidence');
     expect(footer).toContain('rel="noopener noreferrer"');
-    expect(footer.match(/href: "\/#contact"/g)).toHaveLength(1);
+    expect(chrome.match(/href: "\/#contact"/g)).toHaveLength(1);
     expect(footer).not.toContain('text-xs text-ink-soft');
     expect(sitemap).not.toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');

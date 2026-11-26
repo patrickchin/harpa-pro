@@ -15,6 +15,8 @@ describe('marketing claim copy', () => {
     const files = [
       'components/procurement/ProcurementEvidence.astro',
       'components/site/Header.astro',
+      'lib/site/sections.ts',
+      'pages/404.astro',
       'components/reports/Features.astro',
       'components/reports/VoiceDemo.tsx',
       'components/reports/HowItWorks.astro',

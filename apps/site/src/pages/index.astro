@@ -11,6 +11,7 @@ import Button from "../components/primitives/Button.astro";
 import Card from "../components/primitives/Card.astro";
 import SectionHeader from "../components/primitives/SectionHeader.astro";
 import Layout from "../layouts/Layout.astro";
+import { getProcurementSocialImage } from "../lib/procurement/social-image";
 import LuxuryEffects from "../components/procurement/LuxuryEffects.astro";
 import "../styles/luxury.css";
 import "../styles/procurement-hero.css";
@@ -53,12 +54,7 @@ const materialSchemes = await Promise.all([
     quality: 84,
   }),
 })));
-const socialImage = await getImage({
-  src: woodInteriorImg,
-  width: 1200,
-  height: 630,
-  format: "png",
-});
+const socialImage = await getProcurementSocialImage(woodInteriorImg);
 const defaultScheme = materialSchemes[0]!;
 const structuredData = [{
   "@type": "Service",
@@ -120,6 +116,7 @@ const procurementQuestions = [
 ---
 
 <Layout
+  section="procurement"
   title={title}
   description={description}
   image={socialImage.src}
@@ -127,7 +124,7 @@ const procurementQuestions = [
   structuredData={structuredData}
 >
   <div class="luxury-site min-h-screen bg-background text-ink">
-    <Header />
+    <Header section="procurement" />
     <div class="luxury-reading-progress" aria-hidden="true"></div>
     <main id="main-content" class="agents-page">
       <section id="top" class="bg-background">
@@ -517,7 +514,7 @@ const procurementQuestions = [
         </Container>
       </Section>
     </main>
-    <Footer />
+    <Footer section="procurement" />
     <LuxuryEffects />
   </div>
 

@@ -8,11 +8,12 @@ import { PRIVACY_POLICY_URL } from "../lib/legal";
 ---
 
 <Layout
+  section="shared"
   title="Privacy Policy | Harpa Pro"
   description="Harpa Pro privacy policy for the website and mobile application."
 >
   <div class="flex min-h-dvh flex-col bg-background text-ink">
-    <Header />
+    <Header section="shared" />
     <main id="main-content" class="flex-1">
       <Container padding="md" class="space-y-6">
         <div class="space-y-3">
@@ -55,6 +56,6 @@ import { PRIVACY_POLICY_URL } from "../lib/legal";
         ></iframe>
       </Container>
     </main>
-    <Footer />
+    <Footer section="shared" />
   </div>
 </Layout>

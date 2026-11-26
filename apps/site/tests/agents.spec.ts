@@ -730,7 +730,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await expect(contact.locator('form')).toHaveCount(0);
 });
 
-test('uses accessible mega navigation and closes it after outside interaction', async ({
+test('uses accessible procurement navigation and closes it after outside interaction', async ({
   page,
 }) => {
   await page.goto('/');
@@ -738,18 +738,19 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   const desktopNav = page.locator('header nav[aria-label="Primary"]');
   const procurementMenu = desktopNav.locator('[data-mega-menu="procurement"]');
   const procurementSummary = procurementMenu.locator('summary');
-  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
-  const siteReportingSummary = siteReportingMenu.locator('summary');
 
-  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(3);
+  // Procurement pages show only their own menu, plus one quiet cross-link.
+  await expect(desktopNav.locator('[data-mega-menu]')).toHaveCount(1);
+  await expect(desktopNav.locator('[data-mega-menu="site-reporting"]')).toHaveCount(0);
+  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(2);
   const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
-  await expect(desktopItemIcons).toHaveCount(8);
-  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(8);
+  await expect(desktopItemIcons).toHaveCount(4);
+  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(4);
   expect(
     await desktopItemIcons.evaluateAll(
       (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
     ),
-  ).toBe(8);
+  ).toBe(4);
   expect(
     await page
       .locator('[data-site-header]')
@@ -767,10 +768,101 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(
     procurementMenu.getByRole('link', { name: /^How to Buy from China/ }),
   ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
+  await page.mouse.click(20, 700);
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
+
+  await procurementSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(procurementMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
+  await expect(procurementSummary).toBeFocused();
+
+  await expect(
+    desktopNav.getByRole('link', { name: 'Site reporting app', exact: true }),
+  ).toHaveAttribute('href', '/reports');
+  await expect(
+    desktopNav.getByRole('link', {
+      name: 'Contact Us',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/#contact');
+  await expect(desktopNav.getByRole('link', { name: /Get the App/ })).toHaveCount(0);
+
+  const footer = page.locator('footer');
+  await expect(
+    footer.getByRole('link', {
+      name: 'Procurement Overview',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/');
+  await expect(footer.locator('nav[aria-label="Site Reporting"]')).toHaveCount(0);
+  await expect(footer.locator('a[href="/reports/roadmap"]')).toHaveCount(0);
+  await expect(footer.locator('nav[aria-label="Also from Harpa Pro"]').getByRole('link'))
+    .toHaveText(['Site reporting app']);
+  await expect(footer.getByRole('link', { name: /^Contact/ })).toHaveCount(1);
+  await expect(page.locator('footer nav').getByText(/©/)).toHaveCount(0);
+  await expect(page.locator('footer [data-footer-copyright]')).toContainText('Harpa Pro');
+  await expect(footer.getByRole('link', { name: 'Privacy', exact: true }))
+    .toHaveAttribute('href', '/privacy');
+  await expect(
+    footer.getByRole('link', { name: 'How to Buy from China', exact: true }),
+  ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileMenu = page.locator('details.site-menu');
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
+  await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(1);
+  const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
+  await expect(mobileItemIcons).toHaveCount(4);
+  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(4);
+  expect(
+    await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
+  ).toBe(4);
+  await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
+    .toHaveText(['Procurement Overview', 'Products and factories', 'Our process', 'How to Buy from China', 'Procurement guides']);
+  await expect(mobileMenu.locator('[data-mobile-site-reporting]')).toHaveCount(0);
+  await expect(mobileMenu.locator('[data-mobile-also]').getByRole('link'))
+    .toHaveText(['Site reporting app']);
+  await expect(
+    mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+  ).toHaveAttribute('href', '/');
+  await mobileMenu.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
+  await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
+  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
+
+  await expect(page.getByRole('navigation', { name: 'On this page' }).getByRole('link'))
+    .toHaveCount(6);
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('uses accessible site-reporting navigation without procurement chrome', async ({ page }) => {
+  await page.goto('/reports');
+
+  const desktopNav = page.locator('header nav[aria-label="Primary"]');
+  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
+  const siteReportingSummary = siteReportingMenu.locator('summary');
+
+  await expect(desktopNav.locator('[data-mega-menu]')).toHaveCount(1);
+  await expect(desktopNav.locator('[data-mega-menu="procurement"]')).toHaveCount(0);
+  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(2);
+  const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
+  await expect(desktopItemIcons).toHaveCount(4);
+  expect(
+    await desktopItemIcons.evaluateAll(
+      (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
+    ),
+  ).toBe(4);
+  await expect(page.locator('[data-site-header] [data-wordmark]')).toHaveAttribute('href', '/reports');
 
   await siteReportingSummary.hover();
   await expect(siteReportingMenu).toHaveAttribute('open', '');
-  await expect(procurementMenu).not.toHaveAttribute('open', '');
   await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
   await expect(
     siteReportingMenu.getByRole('link', { name: /^Harpa Pro App/ }),
@@ -793,54 +885,29 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');
   await expect(siteReportingSummary).toBeFocused();
 
-  await expect(
-    desktopNav.getByRole('link', {
-      name: 'Contact Us',
-      exact: true,
-    }),
-  ).toHaveAttribute('href', '/#contact');
-  await expect(
-    page
-      .locator('footer')
-      .getByRole('link', {
-        name: 'Procurement Overview',
-        exact: true,
-      }),
-  ).toHaveAttribute('href', '/');
-  await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
-  await expect(page.locator('footer nav[aria-label="Site Reporting"]').getByRole('link'))
+  await expect(desktopNav.getByRole('link', { name: 'Interior procurement', exact: true }))
+    .toHaveAttribute('href', '/');
+  await expect(desktopNav.getByRole('link', { name: 'Contact Us', exact: true })).toHaveCount(0);
+  const headerAppLink = desktopNav.locator(':scope > a', { hasText: 'Get the App' });
+  await expect(headerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
+  await expect(headerAppLink).toHaveAttribute('target', '_blank');
+
+  const footer = page.locator('footer');
+  await expect(footer.locator('nav[aria-label="Site Reporting"]').getByRole('link'))
     .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Get the App', 'Account Deletion']);
-  const footerAppLink = page.locator('footer').getByRole('link', { name: 'Get the App', exact: true });
+  const footerAppLink = footer.getByRole('link', { name: 'Get the App', exact: true });
   await expect(footerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
   await expect(footerAppLink).toHaveAttribute('target', '_blank');
   await expect(footerAppLink).toHaveAttribute('rel', /noopener/);
-  await expect(page.locator('footer').getByRole('link', { name: /^Contact/ })).toHaveCount(1);
-  await expect(page.locator('footer nav').getByText(/©/)).toHaveCount(0);
-  await expect(page.locator('footer [data-footer-copyright]')).toContainText('Harpa Pro');
-  await expect(page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }))
+  await expect(footer.locator('nav[aria-label="Procurement"]')).toHaveCount(0);
+  await expect(footer.locator('a[href="/#contact"]')).toHaveCount(0);
+  await expect(footer.locator('nav[aria-label="Also from Harpa Pro"]').getByRole('link'))
+    .toHaveText(['Interior procurement']);
+  await expect(footer.getByRole('link', { name: 'Privacy', exact: true }))
     .toHaveAttribute('href', '/privacy');
-  await expect(
-    page.locator('footer').getByRole('link', { name: 'How to Buy from China', exact: true }),
-  ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
-  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
-  await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(2);
-  const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
-  await expect(mobileItemIcons).toHaveCount(7);
-  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(7);
-  expect(
-    await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
-  ).toBe(7);
-  await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
-    .toHaveText(['Procurement Overview', 'Products and factories', 'Our process', 'How to Buy from China', 'Procurement guides']);
-  await expect(
-    mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
-  ).toHaveAttribute('href', '/');
-  await mobileMenu.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
-  await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
   await expect(mobileSiteReporting.getByRole('link')).toHaveText(['Harpa Pro App', 'Guides', 'Roadmap']);
@@ -854,11 +921,9 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/reports/roadmap');
-  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
-  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
-
-  await expect(page.getByRole('navigation', { name: 'On this page' }).getByRole('link'))
-    .toHaveCount(6);
+  await expect(mobileMenu.locator('[data-mobile-procurement]')).toHaveCount(0);
+  await expect(mobileMenu.locator('[data-mobile-also]').getByRole('link'))
+    .toHaveText(['Interior procurement']);
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

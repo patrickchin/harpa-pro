@@ -27,6 +27,9 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
       exact: true,
     }),
   ).toHaveAttribute('href', '/reports');
+  // App guides stay inside site reporting instead of the procurement home.
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('a[href="/"]'))
+    .toHaveCount(0);
   await expect(page.locator('#core-workflows-heading')).toBeVisible();
   await expect(page.locator('.docs-core-grid > *')).toHaveCount(2);
   await expect(page.locator('.docs-everyday-grid > *')).toHaveCount(5);
@@ -384,4 +387,27 @@ test('uses the branded not-found page for an unknown guide', async ({ page }) =>
   await expect(
     page.getByRole('main').getByRole('link', { name: 'Site Reporting Guides' }),
   ).toBeVisible();
+  const offers = page.locator('[data-not-found-offers] > [data-offer]');
+  await expect(offers).toHaveCount(2);
+  await expect(page.getByRole('heading', { level: 2, name: 'Interior procurement' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Site reporting app' })).toBeVisible();
+  // A missed app URL suggests the app card first.
+  await expect(offers.first()).toHaveAttribute('data-offer', 'reports');
+  await expect(offers.first()).toHaveAttribute('data-suggested', '');
+  await expect(offers.first().getByText('Looking for this?')).toBeVisible();
+  await expect(page.locator('[data-offer="procurement"]')).not.toHaveAttribute('data-suggested', /.*/);
+});
+
+test('keeps both not-found offers neutral for an unknown shared path', async ({ page }) => {
+  const response = await page.goto('/not-a-real-page');
+  expect(response?.status()).toBe(404);
+  await expect(page.locator('body')).toHaveAttribute('data-site-section', 'shared');
+  const offers = page.locator('[data-not-found-offers] > [data-offer]');
+  await expect(offers.nth(0)).toHaveAttribute('data-offer', 'procurement');
+  await expect(offers.nth(1)).toHaveAttribute('data-offer', 'reports');
+  await expect(page.locator('[data-offer][data-suggested]')).toHaveCount(0);
+  for (const label of await page.getByText('Looking for this?').all()) await expect(label).toBeHidden();
+  for (const link of await page.locator('[data-not-found-offers] a').all()) {
+    await expect(link).toHaveAttribute('data-audience-location', 'not_found');
+  }
 });

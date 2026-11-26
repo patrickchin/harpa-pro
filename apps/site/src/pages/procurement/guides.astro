@@ -1,7 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { Image } from "astro:assets";
+import { getImage, Image } from "astro:assets";
 import { getCollection } from "astro:content";
+import woodInteriorImg from "../../assets/procurement/finishes/wood.webp";
 import buyingGuideThumbnail from "../../assets/procurement/guides/how-to-buy-from-china-thumbnail.webp";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
@@ -15,6 +16,13 @@ const title = "Procurement guides";
 const description = "Practical China sourcing guides for architects and interior designers: supplier checks, order costs, quality inspections, payments, and shipping.";
 const homeUrl = new URL("/", Astro.site).href;
 const pageUrl = new URL("/procurement/guides", Astro.site).href;
+const socialImage = await getImage({
+  src: woodInteriorImg,
+  width: 1200,
+  height: 630,
+  format: "png",
+});
+const socialImageAlt = "Generated living-room material concept with walnut joinery, pale stone, and linen upholstery";
 const structuredData = [{
   "@type": "BreadcrumbList",
   itemListElement: [
@@ -24,7 +32,14 @@ const structuredData = [{
 }];
 ---
 
-<Layout title={`${title} | Harpa Pro`} description={description} pageType="CollectionPage" structuredData={structuredData}>
+<Layout
+  title={`${title} | Harpa Pro`}
+  description={description}
+  image={socialImage.src}
+  imageAlt={socialImageAlt}
+  pageType="CollectionPage"
+  structuredData={structuredData}
+>
   <div class="luxury-site procurement-guides min-h-screen bg-background text-ink">
     <Header />
     <main id="main-content">

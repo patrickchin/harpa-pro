@@ -190,9 +190,14 @@ local Cloudflare Pages runtime; Astro preview does not apply `_redirects`.
 
 Pages ship complete HTML, production canonicals, search/social metadata, and
 JSON-LD. The homepage identifies the interior procurement service in China;
-`/reports` identifies the iOS construction reporting app. Guides include article
-and breadcrumb data. `robots.txt` allows search crawlers, including AI search,
-and the sitemap lists public pages. Confirmation and error pages use
+`/reports` identifies the iOS construction reporting app (`MobileApplication`)
+and mirrors its visible FAQ as `FAQPage` data from the `reportsFaq` collection.
+Guides include article and breadcrumb data. Every page must pass its own title
+and description to `Layout`. Reporting pages use the app card
+(`public/og-image.png`, see `src/lib/social-images.ts`); procurement pages
+generate a 1200×630 card from interior imagery. `robots.txt` allows search
+crawlers, including AI search, and the sitemap lists every indexable public
+page. Confirmation and error pages use
 `noindex`; the production Pages alias has a hostname-specific `noindex`
 header. Cloudflare supplies `noindex` for dev/preview deployments.
 

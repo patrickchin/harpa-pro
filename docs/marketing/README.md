@@ -27,8 +27,12 @@ Current guides live in
 
 The reporting page includes a browser demo using
 `apps/site/src/fixtures/reports/demoReport.ts`. It captures no audio and
-calls no API or AI provider. The legacy waitlist form has been removed from
-the site source. Existing email confirmation links still
+calls no API or AI provider. The App Store calls to action use Apple's
+unmodified black "Download on the App Store" badge
+(`apps/site/src/assets/reports/app-store-badge.svg`) at 40px or taller, in the
+hero and in a closing call-to-action section above the footer. The FAQ shows
+every answer in an open definition list. The legacy waitlist form has been
+removed from the site source. Existing email confirmation links still
 work through permanent redirects, and new emails use `/reports/confirm`.
 Because no page offers signup, failed or expired confirmation links direct
 people to `/reports`, the App Store, or support email.

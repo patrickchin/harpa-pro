@@ -100,19 +100,24 @@ test('every sitemap page has unique metadata and an accurate production identity
       });
       const faq = graph.find((node) => node['@type'] === 'FAQPage');
       const questions = faq?.mainEntity as { name: string; acceptedAnswer: { text: string } }[];
-      const visibleQuestions = await page.locator('#faq summary').allTextContents();
+      const visibleQuestions = await page.locator('#faq dt').allTextContents();
       expect(questions.map((question) => question.name)).toEqual(
         visibleQuestions.map((question) => question.trim()),
       );
       for (const [index, question] of questions.entries()) {
-        const answer = (await page.locator('#faq details').nth(index).locator('div').textContent())!;
+        const answer = (await page.locator('#faq dd').nth(index).textContent())!;
         expect(question.acceptedAnswer.text).toBe(answer.replace(/\s+/g, ' ').trim());
       }
       await expect(page.locator('main')).toContainText('Android support is planned');
       await expect(page.locator('main')).toContainText('review, edit, and share');
       await expect(page.locator('main')).toContainText('for foremen and site supervisors');
+      await expect(page.locator('#faq details')).toHaveCount(0);
+      await expect(page.locator('#faq dd').first()).toBeVisible();
       await expect(page.locator('[data-voice-demo]')).toContainText('New Report');
       await expect(page.locator('[data-voice-demo]')).toContainText('Summary:');
+      await expect(
+        page.locator('[data-closing-cta]').getByRole('link', { name: 'Download on the App Store' }),
+      ).toHaveCount(1);
     }
 
     if (url.pathname === '/procurement/how-to-buy-from-china') {

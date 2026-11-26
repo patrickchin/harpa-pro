@@ -1,0 +1,42 @@
+---
+import { Image } from "astro:assets";
+import appStoreBadge from "../../assets/reports/app-store-badge.svg";
+import { APP_STORE_URL } from "../../lib/reports/links";
+
+/**
+ * Apple's official black "Download on the App Store" badge (US-UK
+ * artwork from developer.apple.com, unmodified). Apple's marketing
+ * guidelines require at least 40px height and clear space of one
+ * quarter of the badge height on every side.
+ */
+interface Props {
+  /** `md` 40px (Apple's minimum), `lg` 48px. */
+  size?: "md" | "lg";
+  /** Load eagerly when the badge is above the fold. */
+  eager?: boolean;
+  class?: string;
+}
+
+const { size = "lg", eager = false, class: extra = "" } = Astro.props;
+const height = size === "lg" ? 48 : 40;
+const width = Math.round((height * 119.66407) / 40);
+---
+
+<a
+  href={APP_STORE_URL}
+  target="_blank"
+  rel="noopener noreferrer"
+  class:list={["inline-block rounded-[9px] ring-focus", extra]}
+  data-app-store-badge
+>
+  <Image
+    src={appStoreBadge}
+    alt="Download on the App Store"
+    width={width}
+    height={height}
+    loading={eager ? "eager" : "lazy"}
+    decoding="async"
+    class="block"
+    style={`height:${height}px;width:${width}px`}
+  />
+</a>

@@ -1,9 +1,13 @@
 # M2 voice demo
 
+> **Status: current.** The demo is the `/reports` hero visual. A
+> static-screenshot replacement was tried in PR #547 and reverted at the
+> owner's request; the demo stays.
+
 The marketing voice demo is a self-contained Astro/React island. It
 uses committed fixtures and web-native markup in
-`apps/site/src/components/VoiceDemo.tsx` and
-`apps/site/src/components/VoiceReportPreview.tsx`.
+`apps/site/src/components/reports/VoiceDemo.tsx` and
+`apps/site/src/components/reports/VoiceReportPreview.tsx`.
 
 Mobile report and voice UI stays inside `apps/mobile`. There is no
 shared voice UI workspace package because mobile and web UI parity is

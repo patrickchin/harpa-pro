@@ -18,16 +18,16 @@ test('separates procurement from site reporting', async ({ page }) => {
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Site Reports from Voice, Photos, and Text',
+      name: 'Daily site reports from voice notes, photos, and text',
     }),
   ).toBeVisible();
   await expect(page.locator('[data-voice-demo]')).toBeVisible();
   await expect(
-    page.getByRole('heading', { level: 2, name: 'From Site Update to Daily Report' }),
+    page.getByRole('heading', { level: 2, name: 'From site update to daily report' }),
   ).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Reporting Tools' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Reporting tools' })).toBeVisible();
   await expect(
-    page.getByRole('heading', { level: 2, name: 'The Team Behind Harpa Pro' }),
+    page.getByRole('heading', { level: 2, name: 'The team behind Harpa Pro' }),
   ).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Questions' })).toBeVisible();
   await expect(
@@ -43,7 +43,7 @@ test('separates procurement from site reporting', async ({ page }) => {
   await expect(page.locator('main a[href*="/api/"]')).toHaveCount(0);
 
   await page.goto('/reports/roadmap');
-  await expect(page.getByText('Site Reporting Roadmap', { exact: true })).toBeVisible();
+  await expect(page.getByText('Site reporting roadmap', { exact: true })).toBeVisible();
 });
 
 test('all sitemap pages, internal links, assets, and fragments resolve', async ({

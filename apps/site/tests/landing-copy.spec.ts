@@ -25,7 +25,7 @@ test('uses the complete procurement page as home without a reporting promotion',
   await expect(
     page.locator('[data-procurement-profile="haruna"]').getByRole('heading', {
       level: 2,
-      name: 'Procurement Lead',
+      name: 'Procurement lead',
     }),
   ).toBeVisible();
   await expect(page.locator('[data-procurement-profile="haruna"]')).toContainText(
@@ -33,13 +33,13 @@ test('uses the complete procurement page as home without a reporting promotion',
   );
   const hashyProfile = page.locator('[data-procurement-profile="hashy"]');
   await expect(
-    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement Specialist' }),
+    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement specialist' }),
   ).toBeVisible();
-  await expect(hashyProfile).toContainText('Procurement & Logistics');
+  await expect(hashyProfile).toContainText('Procurement & logistics');
   await expect(hashyProfile).toContainText("Bachelor's degree");
   await expect(hashyProfile).toContainText('4 years');
-  await expect(hashyProfile).toContainText('Factory Coordination');
-  await expect(hashyProfile).toContainText('Shipping Logistics');
+  await expect(hashyProfile).toContainText('Factory coordination');
+  await expect(hashyProfile).toContainText('Shipping logistics');
   await expect(page.getByText('Construction site reporting', { exact: true })).toHaveCount(0);
   await expect(page.locator('#app')).toHaveCount(0);
   await expect(page.locator(`main a[href="${APP_STORE_URL}"]`)).toHaveCount(0);
@@ -176,8 +176,8 @@ test('swaps complete material concepts with pointer and keyboard controls', asyn
   const imageSources = new Set<string>();
 
   for (const [view, label] of [
-    ['stone', 'Stone & Marble'],
-    ['modern', 'Glass & Modern'],
+    ['stone', 'Stone & marble'],
+    ['modern', 'Glass & modern'],
     ['wood', 'Wood'],
   ] as const) {
     const choice = hero.getByRole('button', { name: label, exact: true });
@@ -215,7 +215,7 @@ test('crossfades complete material images and queues the latest choice during a 
   const outgoing = hero.locator('[data-material-outgoing]');
   const initialSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
 
-  await hero.getByRole('button', { name: 'Stone & Marble', exact: true }).click();
+  await hero.getByRole('button', { name: 'Stone & marble', exact: true }).click();
   await expect(hero).toHaveAttribute('data-material-view', 'stone');
   const midpoint = await outgoing.evaluate((element: HTMLImageElement) => {
     const fade = element.getAnimations()[0]!;
@@ -229,15 +229,15 @@ test('crossfades complete material images and queues the latest choice during a 
   expect(await image.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
   await expect(outgoing).toHaveAttribute('aria-hidden', 'true');
 
-  await hero.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
-  await expect(hero.locator('[data-material-caption]')).toHaveText('Loading Glass & Modern concept…');
+  await hero.getByRole('button', { name: 'Glass & modern', exact: true }).click();
+  await expect(hero.locator('[data-material-caption]')).toHaveText('Loading Glass & modern concept…');
   await expect(hero).toHaveAttribute('data-material-view', 'stone');
   await hero.getByRole('button', { name: 'Wood', exact: true }).click();
   await expect(hero.locator('[data-material-caption]')).toHaveText('Loading Wood concept…');
   await outgoing.evaluate((element) => element.getAnimations()[0]!.finish());
   await expect(hero).toHaveAttribute('data-material-view', 'wood');
   await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Wood');
-  await expect(hero.getByRole('button', { name: 'Glass & Modern', exact: true }))
+  await expect(hero.getByRole('button', { name: 'Glass & modern', exact: true }))
     .toHaveAttribute('aria-pressed', 'false');
   await expect(outgoing).toHaveCount(0);
   await expect(image).toHaveJSProperty('currentSrc', initialSource);
@@ -248,7 +248,7 @@ test('retains the loaded image while fetching and keeps the latest material choi
   const hero = page.locator('[data-hero-visual]');
   const image = hero.locator('[data-material-image]');
   const caption = hero.locator('[data-material-caption]');
-  const stone = hero.getByRole('button', { name: 'Stone & Marble', exact: true });
+  const stone = hero.getByRole('button', { name: 'Stone & marble', exact: true });
   const stoneSources = await stone.evaluate((button: HTMLButtonElement) =>
     `${button.dataset.materialSrc},${button.dataset.materialSrcset}`.split(',').map((source) =>
       new URL(source.trim().split(/\s+/)[0]!, window.location.href).href,
@@ -266,7 +266,7 @@ test('retains the loaded image while fetching and keeps the latest material choi
   try {
     await stone.click();
     await expect(image).toHaveAttribute('aria-busy', 'true');
-    await expect(caption).toHaveText('Loading Stone & Marble concept…');
+    await expect(caption).toHaveText('Loading Stone & marble concept…');
     await expect(hero).toHaveAttribute('data-material-view', 'wood');
     await expect(hero.getByRole('button', { name: 'Wood', exact: true }))
       .toHaveAttribute('aria-pressed', 'true');
@@ -274,7 +274,7 @@ test('retains the loaded image while fetching and keeps the latest material choi
     expect(await image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
     expect(await image.boundingBox()).toEqual(initialBox);
 
-    await hero.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
+    await hero.getByRole('button', { name: 'Glass & modern', exact: true }).click();
     await expect(hero).toHaveAttribute('data-material-view', 'modern');
     const modernSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
     expect(modernSource).not.toBe(initialSource);
@@ -288,7 +288,7 @@ test('retains the loaded image while fetching and keeps the latest material choi
       await pendingImage.decode();
     }, (await stoneResponse).url());
     await expect(hero).toHaveAttribute('data-material-view', 'modern');
-    await expect(caption).toHaveText('Material concept · Glass & Modern');
+    await expect(caption).toHaveText('Material concept · Glass & modern');
     await expect(image).toHaveJSProperty('currentSrc', modernSource);
     await expect(image).toHaveAttribute('aria-busy', 'false');
   } finally {
@@ -300,7 +300,7 @@ test('preserves a material concept after loading fails and allows a retry', asyn
   await page.goto('/');
   const hero = page.locator('[data-hero-visual]');
   const image = hero.locator('[data-material-image]');
-  const modern = hero.getByRole('button', { name: 'Glass & Modern', exact: true });
+  const modern = hero.getByRole('button', { name: 'Glass & modern', exact: true });
   const modernSources = await modern.evaluate((button: HTMLButtonElement) =>
     `${button.dataset.materialSrc},${button.dataset.materialSrcset}`.split(',').map((source) =>
       new URL(source.trim().split(/\s+/)[0]!, window.location.href).href,
@@ -312,7 +312,7 @@ test('preserves a material concept after loading fails and allows a retry', asyn
   await page.route(matchesModern, (route) => route.abort());
   await modern.click();
   await expect(hero.locator('[data-material-caption]'))
-    .toHaveText('Glass & Modern concept could not load. Try again.');
+    .toHaveText('Glass & modern concept could not load. Try again.');
   await expect(image).toHaveAttribute('aria-busy', 'false');
   await expect(image).toHaveJSProperty('currentSrc', initialSource);
   await expect(image).toHaveAttribute('alt', initialAlt!);
@@ -324,7 +324,7 @@ test('preserves a material concept after loading fails and allows a retry', asyn
   await modern.click();
   await expect(hero).toHaveAttribute('data-material-view', 'modern');
   await expect(modern).toHaveAttribute('aria-pressed', 'true');
-  await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Glass & Modern');
+  await expect(hero.locator('[data-material-caption]')).toHaveText('Material concept · Glass & modern');
   expect(await image.evaluate(async (element: HTMLImageElement) => {
     await element.decode();
     return element.currentSrc;
@@ -364,7 +364,7 @@ test('honors reduced motion at load and when the preference changes', async ({ p
     .toBe('auto');
   expect(await image.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s');
   const initialSource = await image.evaluate((element: HTMLImageElement) => element.currentSrc);
-  await page.getByRole('button', { name: 'Stone & Marble', exact: true }).click();
+  await page.getByRole('button', { name: 'Stone & marble', exact: true }).click();
   await expect(page.locator('[data-hero-visual]')).toHaveAttribute('data-material-view', 'stone');
   expect(await image.evaluate((element: HTMLImageElement) => element.currentSrc)).not.toBe(initialSource);
   expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
@@ -376,7 +376,7 @@ test('honors reduced motion at load and when the preference changes', async ({ p
 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Glass & Modern', exact: true }).click();
+  await page.getByRole('button', { name: 'Glass & modern', exact: true }).click();
   await expect(page.locator('[data-hero-visual]')).toHaveAttribute('data-material-view', 'modern');
   expect(await outgoing.evaluate((element) =>
     element.getAnimations().some((animation) => animation.playState === 'running'),
@@ -426,7 +426,7 @@ test('keeps the hero and contact routes useful without JavaScript', async ({ bro
     await expect(page).toHaveURL(/\/#considerations$/);
     await expect(page.locator('#considerations').getByRole('heading', {
       level: 2,
-      name: 'What We Consider',
+      name: 'What we consider',
     })).toBeVisible();
     await page.goto('/');
     await hero.getByRole('link', { name: 'Send your project brief' }).click();
@@ -524,7 +524,7 @@ test('uses collective service copy and keeps team names in profiles', async ({ p
 
   expect(nonProfileText).not.toMatch(/\b(?:haruna(?: bayoh)?|hashy)\b/i);
   await expect(page.getByRole('link', { name: /haruna/i })).toHaveCount(0);
-  await expect(page.getByRole('heading', { level: 2, name: 'Contact Us' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Contact us' })).toBeVisible();
 
   await page.goto('/reports');
   await expect(page.getByText('Haruna Bayoh', { exact: true })).toHaveCount(1);
@@ -532,6 +532,6 @@ test('uses collective service copy and keeps team names in profiles', async ({ p
   await page.goto('/not-a-real-page');
   await expect(page.getByRole('link', { name: /haruna/i })).toHaveCount(0);
   await expect(
-    page.getByRole('main').getByRole('link', { name: 'Contact Us', exact: true }),
+    page.getByRole('main').getByRole('link', { name: 'Contact us', exact: true }),
   ).toBeVisible();
 });

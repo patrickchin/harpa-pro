@@ -91,7 +91,7 @@ describe('site smoke', () => {
     const footer = readFileSync(resolve(here, '../components/site/Footer.astro'), 'utf8');
     const sitemap = readFileSync(resolve(here, '../pages/sitemap.xml.ts'), 'utf8');
 
-    expect(home).toContain('Luxury Interior Procurement in China');
+    expect(home).toContain('Luxury interior procurement in China');
     expect(home).toMatch(
       /We coordinate interior procurement in China, from design\s+specifications and factory checks to shipping and project records\./,
     );
@@ -108,32 +108,32 @@ describe('site smoke', () => {
     expect(app).not.toContain('WaitlistForm');
     expect(app).not.toContain('Current guidance and planned work.');
     expect(home).not.toContain('Harpa Pro procurement');
-    expect(considerations).toContain('Design and Specification');
-    expect(considerations).toContain('Packing and Delivery');
+    expect(considerations).toContain('Design and specification');
+    expect(considerations).toContain('Packing and delivery');
     expect(considerations).not.toContain('Stage ');
-    expect(home).toContain('Contact Us');
+    expect(home).toContain('Contact us');
     expect(home).toContain('haruna@harpapro.com');
     expect(home).toContain('href="https://wa.me/8619372837269"');
     expect(home).toContain('data-procurement-profiles');
     expect(home).toContain('data-procurement-profile="hashy"');
-    expect(home).toContain('Procurement Specialist');
-    expect(home).toContain('Procurement &amp; Logistics');
+    expect(home).toContain('Procurement specialist');
+    expect(home).toContain('Procurement &amp; logistics');
     expect(home).toContain("Bachelor's degree");
     expect(home).toContain('4 years');
     expect(home).toContain('assets/team/hashy.jpg');
     expect(home).toMatch(
       /coordinates technical approvals, records quality\s+standards and inspections, controls the order, and keeps the project\s+files complete\./,
     );
-    expect(home.match(/Factory Coordination/g)).toHaveLength(1);
-    expect(home.match(/Shipping Logistics/g)).toHaveLength(1);
-    expect(evidence).toContain('Technical Reviews');
+    expect(home.match(/Factory coordination/g)).toHaveLength(1);
+    expect(home.match(/Shipping logistics/g)).toHaveLength(1);
+    expect(evidence).toContain('Technical reviews');
     expect(evidence).toContain('AIS Smarti');
     expect(evidence).toContain('J2S');
     expect(evidence).toContain('Kenuo');
     expect(evidence).toContain('Masyounger');
     expect(evidence).toContain('Rong Shuo');
-    expect(evidence).toContain('Product Examples');
-    expect(evidence).toContain('Factory Documents');
+    expect(evidence).toContain('Product examples');
+    expect(evidence).toContain('Factory documents');
     expect(evidence).not.toContain('Project evidence');
     expect(evidence).not.toContain('Factory source library');
     expect(evidence).not.toContain('Open original PDF');
@@ -142,7 +142,7 @@ describe('site smoke', () => {
     expect(evidence).not.toContain('European representative appointment');
     expect(evidence).not.toContain('j2s-eu-representative-appointment');
     expect(evidence).not.toMatch(/Expired \d/);
-    expect(evidence).toContain('Selected Factory Partners');
+    expect(evidence).toContain('Selected factory partners');
     expect(evidence).toContain(
       'We match each order with the factory that meets the design specifications',
     );
@@ -157,12 +157,12 @@ describe('site smoke', () => {
     expect(home).toContain('mailto:haruna@harpapro.com');
     expect(header).toContain('href="/"');
     expect(header).toContain('href="/reports"');
-    expect(header).toContain('Site Reporting');
+    expect(header).toContain('Site reporting');
     expect(header).toContain('href="/#contact"');
     expect(header).not.toContain('View evidence');
     expect(footer).toContain('href: "/"');
     expect(footer).toContain('href: "/reports"');
-    expect(footer).toContain('Site Reporting');
+    expect(footer).toContain('Site reporting');
     expect(footer).toContain('APP_STORE_URL');
     expect(footer).toContain('rel="noopener noreferrer"');
     expect(footer.match(/href: "\/#contact"/g)).toHaveLength(1);

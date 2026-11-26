@@ -48,7 +48,7 @@ test("keeps procurement and reporting destinations usable without JavaScript", a
       await expect(procurement.getByRole("link")).toHaveCount(5);
       await expect(procurement.getByRole("link", { name: "Procurement guides", exact: true }))
         .toHaveAttribute("href", "/procurement/guides");
-      await expect(procurement.getByRole("link", { name: /^Procurement Overview/ }))
+      await expect(procurement.getByRole("link", { name: /^Procurement overview/ }))
         .toHaveAttribute("href", "/");
       await expect(procurement.getByRole("link", { name: /^Products and factories/ }))
         .toHaveAttribute("href", "/#factory-partners");
@@ -59,7 +59,7 @@ test("keeps procurement and reporting destinations usable without JavaScript", a
       );
       expect(overflow).toBeLessThanOrEqual(1);
       expect((await page.locator("[data-site-header] > div").boundingBox())!.height).toBe(64);
-      await procurement.getByRole("link", { name: /^How to Buy from China/ }).click();
+      await procurement.getByRole("link", { name: /^How to buy from China/ }).click();
       await expect(page.getByRole("heading", { level: 1, name: "How to buy from China" }))
         .toBeVisible();
       const reporting = mobile
@@ -120,9 +120,9 @@ test("closes the mobile menu with Escape or an outside tap and locks page scroll
   await expect(menu).toHaveAttribute("open", "");
   await expect.poll(rootOverflow).toBe("hidden");
   const actions = menu.locator("[data-mobile-actions]");
-  await expect(actions.getByRole("link", { name: "Contact Us", exact: true }))
+  await expect(actions.getByRole("link", { name: "Contact us", exact: true }))
     .toHaveAttribute("href", "/#contact");
-  await expect(actions.getByRole("link", { name: "Get the App", exact: true }))
+  await expect(actions.getByRole("link", { name: "Get the app", exact: true }))
     .toHaveAttribute("target", "_blank");
 
   await page.keyboard.press("Escape");

@@ -132,7 +132,7 @@ test('aligns account deletion content with the header', async ({ page }) => {
       const box = element.getBoundingClientRect();
       return box.left + Number.parseFloat(getComputedStyle(element).paddingLeft);
     });
-    const headingBox = await page.getByRole('heading', { level: 1, name: 'Account Deletion' }).boundingBox();
+    const headingBox = await page.getByRole('heading', { level: 1, name: 'Account deletion' }).boundingBox();
     expect(Math.abs(headingBox!.x - headerContentLeft), `${width}px`).toBeLessThanOrEqual(1);
     const prose = await page.locator('main section').first().boundingBox();
     expect(prose!.width).toBeLessThanOrEqual(48 * 16 + 1);

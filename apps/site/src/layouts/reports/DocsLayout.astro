@@ -19,7 +19,7 @@ interface Props {
 const { title, description, guides, currentSlug, currentTitle } = Astro.props;
 const breadcrumbs = [
   { name: "Home", path: "/" },
-  { name: "Site Reporting", path: "/reports" },
+  { name: "Site reporting", path: "/reports" },
   { name: "Guides", path: "/reports/docs" },
   ...(currentTitle && currentSlug ? [{
     name: currentTitle,
@@ -51,7 +51,7 @@ const structuredData = [{
     <div class="docs-shell">
       <details class="docs-mobile-nav">
         <summary>
-          <span>Browse Site Reporting Guides</span>
+          <span>Browse site reporting guides</span>
           <svg
             class="docs-mobile-nav-chevron"
             aria-hidden="true"
@@ -76,7 +76,7 @@ const structuredData = [{
 
       <div class="docs-columns">
         <aside class="docs-desktop-nav">
-          <a class="docs-home-link" href="/reports/docs">Site Reporting Guides</a>
+          <a class="docs-home-link" href="/reports/docs">Site reporting guides</a>
           <DocsSidebar
             guides={guides}
             currentSlug={currentSlug}
@@ -88,7 +88,7 @@ const structuredData = [{
           <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
             <a href="/">Home</a>
             <span aria-hidden="true">/</span>
-            <a href="/reports">Site Reporting</a>
+            <a href="/reports">Site reporting</a>
             <span aria-hidden="true">/</span>
             {
               currentTitle ? (

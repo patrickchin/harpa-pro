@@ -473,6 +473,7 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   const previewSource = await thumbnail.evaluate((image) => (image as HTMLImageElement).currentSrc);
   const source = await trigger.getAttribute('data-evidence-image-src');
   expect(source).not.toBeNull();
+  expect(source).toMatch(/^\/_astro\/revit-a104-coordination\.[^/]+_[^/]+\.webp$/);
   const fullSource = new URL(source!, page.url()).href;
   expect(previewSource).not.toBe(fullSource);
 

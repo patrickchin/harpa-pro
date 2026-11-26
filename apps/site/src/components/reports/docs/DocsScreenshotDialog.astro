@@ -18,13 +18,28 @@
       </button>
     </header>
     <figure>
-      <div class="docs-screenshot-dialog-image">
+      <div
+        class="docs-screenshot-dialog-image"
+        aria-busy="false"
+        data-docs-screenshot-dialog-region
+      >
         <img data-docs-screenshot-dialog-image alt="" decoding="async" />
       </div>
       <figcaption data-docs-screenshot-dialog-caption></figcaption>
     </figure>
   </div>
 </dialog>
+
+<style>
+  /* The thumbnail preview is smaller than the full derivative; fill the same
+     box the full screenshot will occupy so the swap does not resize. */
+  .docs-screenshot-dialog-image img[data-docs-screenshot-state="preview"] {
+    filter: blur(6px);
+    height: 100%;
+    object-fit: contain;
+    opacity: 0.88;
+  }
+</style>
 
 <script>
   const dialog = document.querySelector<HTMLDialogElement>(
@@ -44,7 +59,11 @@
     const closeButton = dialog.querySelector<HTMLButtonElement>(
       "[data-docs-screenshot-dialog-close]",
     );
+    const imageRegion = dialog.querySelector<HTMLElement>(
+      "[data-docs-screenshot-dialog-region]",
+    );
     let activeTrigger: HTMLAnchorElement | null = null;
+    let imageRequest = 0;
 
     document
       .querySelectorAll<HTMLAnchorElement>("[data-docs-screenshot-trigger]")
@@ -68,9 +87,24 @@
 
           event.preventDefault();
           activeTrigger = trigger;
+          const request = ++imageRequest;
+
+          // Show the already-loaded thumbnail (same screenshot, smaller
+          // derivative) while the full-view derivative downloads.
+          const previewImage = trigger.querySelector<HTMLImageElement>("img");
+          const previewSource =
+            previewImage?.complete && previewImage.naturalWidth > 0
+              ? previewImage.currentSrc || previewImage.src
+              : "";
+          const hasPreview = Boolean(
+            previewSource &&
+              previewSource !== new URL(source, window.location.href).href,
+          );
 
           const stepTitle = trigger.dataset.docsScreenshotTitle ?? "guide step";
-          image.setAttribute("src", source);
+          image.setAttribute("src", hasPreview ? previewSource : source);
+          image.dataset.docsScreenshotState = hasPreview ? "preview" : "full";
+          imageRegion?.setAttribute("aria-busy", String(hasPreview));
           image.alt = trigger.dataset.docsScreenshotAlt ?? "";
           if (trigger.dataset.docsScreenshotWidth) {
             image.setAttribute("width", trigger.dataset.docsScreenshotWidth);
@@ -81,6 +115,44 @@
           title.textContent = `Full screenshot for ${stepTitle}`;
           caption.textContent = stepTitle;
           dialog.showModal();
+
+          if (!hasPreview) return;
+
+          const fullImage = new Image();
+          fullImage.decoding = "async";
+          fullImage.fetchPriority = "high";
+          fullImage.addEventListener(
+            "load",
+            () => {
+              void fullImage
+                .decode()
+                .catch(() => undefined)
+                .then(() => {
+                  if (
+                    request !== imageRequest ||
+                    activeTrigger !== trigger ||
+                    !dialog.open
+                  ) {
+                    return;
+                  }
+
+                  image.setAttribute("src", source);
+                  image.dataset.docsScreenshotState = "full";
+                  imageRegion?.setAttribute("aria-busy", "false");
+                });
+            },
+            { once: true },
+          );
+          fullImage.addEventListener(
+            "error",
+            () => {
+              if (request !== imageRequest || activeTrigger !== trigger) return;
+              image.dataset.docsScreenshotState = "fallback";
+              imageRegion?.setAttribute("aria-busy", "false");
+            },
+            { once: true },
+          );
+          fullImage.src = source;
         });
       });
 
@@ -89,7 +161,10 @@
       if (event.target === dialog) dialog.close();
     });
     dialog.addEventListener("close", () => {
+      imageRequest += 1;
       image?.removeAttribute("src");
+      image?.removeAttribute("data-docs-screenshot-state");
+      imageRegion?.setAttribute("aria-busy", "false");
       activeTrigger?.focus();
       activeTrigger = null;
     });

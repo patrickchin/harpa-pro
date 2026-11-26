@@ -49,7 +49,10 @@ keep country requirements in the main buying guide. See the
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
 Privacy covers both the website and app. The app updates confirmation page
-lives at `/reports/confirm` and is excluded from search. App content
+lives at `/reports/confirm` and is excluded from search. Its result is
+announced through a `role="status"` region. Failed or expired links point to
+`/reports`, the App Store, and support email because no page has a signup form.
+App content
 collections are `reportsDocs`, `reportsFeatures`, `reportsFaq`, and
 `reportsRoadmap`. Mobile, API, and dashboard workspace names are unchanged.
 
@@ -72,6 +75,13 @@ Copy `.env.example` to `.env` before local development.
 `PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
 the current shared header does not expose the dashboard.
 
+The shared header (`src/components/site/Header.astro`) uses `<details>` menus
+that work without JavaScript. With JavaScript, desktop mega menus open on hover
+for fine pointers and stay open when the hovered summary is clicked; Enter and
+Space still toggle them. The mobile menu closes on Escape (focus returns to the
+toggle), an outside tap, or a link tap, and it locks page scroll while open. It
+has the same Contact Us and Get the App actions as desktop.
+
 ## Stack
 
 - Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)
@@ -89,6 +99,13 @@ the current shared header does not expose the dashboard.
 Hard rules: JS only for interactions and configured analytics; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
 practices/SEO ≥ 95.
+
+Accessibility baseline: `Layout.astro` renders a "Skip to content" link as the
+first focusable element, so every page's `<main>` must have
+`id="main-content"`. Put text on `bg-accent-ink`, not `bg-accent` (the vivid
+accent fails WCAG AA with cream text). Give interactive elements the
+`ring-focus` utility, and keep decorative demo controls out of the tab order.
+`tests/a11y.spec.ts` covers these rules.
 
 ## Website analytics
 

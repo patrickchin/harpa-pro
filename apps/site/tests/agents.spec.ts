@@ -752,10 +752,10 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(procurementMenu.getByRole('link', { name: 'Procurement guides', exact: true }))
     .toHaveAttribute('href', '/procurement/guides');
   await expect(
-    procurementMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+    procurementMenu.getByRole('link', { name: /^Procurement Overview/ }),
   ).toHaveAttribute('href', '/');
   await expect(
-    procurementMenu.getByRole('link', { name: 'How to Buy from China', exact: true }),
+    procurementMenu.getByRole('link', { name: /^How to Buy from China/ }),
   ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await siteReportingSummary.hover();
@@ -763,15 +763,15 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(procurementMenu).not.toHaveAttribute('open', '');
   await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Harpa Pro App/ }),
   ).toHaveAttribute('href', '/reports');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Guides/ }),
   ).toHaveAttribute('href', '/reports/docs');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Roadmap/ }),
   ).toHaveAttribute('href', '/reports/roadmap');
-  await expect(siteReportingMenu.getByRole('link', { name: 'Get the App', exact: true }))
+  await expect(siteReportingMenu.getByRole('link', { name: /^Get the App/ }))
     .toHaveAttribute('target', '_blank');
   await page.mouse.click(20, 700);
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');

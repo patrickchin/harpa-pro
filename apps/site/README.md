@@ -93,6 +93,13 @@ Hard rules: JS only for interactions and configured analytics; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
 practices/SEO ≥ 95.
 
+Accessibility baseline: `Layout.astro` renders a "Skip to content" link as the
+first focusable element, so every page's `<main>` must have
+`id="main-content"`. Put text on `bg-accent-ink`, not `bg-accent` (the vivid
+accent fails WCAG AA with cream text). Give interactive elements the
+`ring-focus` utility, and keep decorative demo controls out of the tab order.
+`tests/a11y.spec.ts` covers these rules.
+
 ## Website analytics
 
 PostHog measures page visits, link/button clicks, and these contact actions:

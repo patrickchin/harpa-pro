@@ -7,6 +7,9 @@ import Footer from "../../components/site/Footer.astro";
 import Section from "../../components/primitives/Section.astro";
 import Container from "../../components/primitives/Container.astro";
 import Icon from "../../components/Icon.astro";
+import Button from "../../components/primitives/Button.astro";
+import Card from "../../components/primitives/Card.astro";
+import SectionHeader from "../../components/primitives/SectionHeader.astro";
 import { APP_STORE_URL } from "../../lib/reports/links";
 
 const entries = (await getCollection("reportsRoadmap")).sort(
@@ -59,24 +62,13 @@ const groups: {
     <main id="main-content">
       <Section bordered="top">
         <Container padding="lg">
-          <div class="max-w-2xl">
-            <span
-              class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
-            >
-              Site Reporting Roadmap
-            </span>
-            <h1
-              class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
-            >
-              Current and Planned Capabilities
-            </h1>
-            <p class="mt-4 text-base leading-relaxed text-ink-soft">
-              Harpa Pro turns site updates into daily reports. Planned work
-              will use the same captures for materials, equipment, people,
-              costs, and cross-project insights. Priorities may change as we
-              learn from project teams.
-            </p>
-          </div>
+          <SectionHeader
+            as="h1"
+            eyebrow="Site Reporting Roadmap"
+            title="Current and Planned Capabilities"
+            ledeSize="base"
+            lede="Harpa Pro turns site updates into daily reports. Planned work will use the same captures for materials, equipment, people, costs, and cross-project insights. Priorities may change as we learn from project teams."
+          />
         </Container>
       </Section>
 
@@ -90,20 +82,15 @@ const groups: {
               bordered="top"
             >
               <Container padding="lg">
-                <div class="max-w-2xl">
-                  <span class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
-                    {group.label}
-                  </span>
-                  <h2 class="mt-2 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-                    {group.heading}
-                  </h2>
-                  <p class="mt-3 text-sm leading-relaxed text-ink-soft sm:text-base">
-                    {group.blurb}
-                  </p>
-                </div>
+                <SectionHeader
+                  size="md"
+                  eyebrow={group.label}
+                  title={group.heading}
+                  lede={group.blurb}
+                />
                 <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {groupItems.map(({ title, icon, Content }) => (
-                    <div class="rounded-xl border border-hairline bg-card p-5">
+                    <Card>
                       <span class="grid h-9 w-9 place-items-center rounded-md border border-hairline bg-paper-2 text-ink">
                         <Icon name={icon} class="h-4 w-4" />
                       </span>
@@ -113,7 +100,7 @@ const groups: {
                       <div class="mt-1.5 text-sm leading-relaxed text-ink-soft">
                         <Content />
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </Container>
@@ -132,20 +119,23 @@ const groups: {
               current site reporting workflow.
             </p>
             <div class="flex flex-wrap gap-3">
-              <a
+              <Button
                 href="/reports/docs"
-                class="inline-flex h-10 items-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-primary transition-colors hover:bg-secondary ring-focus"
+                variant="secondary"
+                elevated={false}
+                class="transition-colors"
               >
                 View guides
-              </a>
-              <a
+              </Button>
+              <Button
                 href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex h-10 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+                external
+                externalIcon={false}
+                variant="outline-tinted"
+                class="transition-colors"
               >
                 Get the app
-              </a>
+              </Button>
             </div>
           </div>
         </Container>

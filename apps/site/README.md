@@ -61,6 +61,26 @@ and known legacy guide URLs redirect permanently to their final destinations.
 Internal links and sitemap entries use canonical URLs. See the
 [URL organization design](../../docs/v4/design-site-product-url-organization.md).
 
+## UI primitives
+
+Shared Astro primitives live in `src/components/primitives/`. Use them
+instead of hand-rolling the same Tailwind classes:
+
+- `Container` and `Section` set page width, padding, tone, and borders.
+- `Button` renders an `<a>` when `href` is set and a `<button>` otherwise.
+  Variants are `accent`, `primary`, `secondary`, `outline`,
+  `outline-strong`, and `outline-tinted`. Sizes are `sm` (`h-9`), `md`
+  (`h-10`), `lg` (`h-11`), and `touch` (`min-h-11`). Set `external` to
+  open a new tab with `rel="noopener noreferrer"` and an external-link
+  icon.
+- `Card` is the rounded, hairline-bordered card surface. It renders an
+  interactive link when `href` is set.
+- `SectionHeader` renders an optional eyebrow, a title, and an optional
+  lede (prop or `lede` slot) at a chosen heading level.
+
+The procurement homepage theme (`luxury.css`, `procurement-hero.css`) and
+the docs styles keep their own classes.
+
 ## Develop
 
 ```bash

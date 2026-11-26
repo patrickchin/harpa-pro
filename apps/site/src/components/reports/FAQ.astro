@@ -3,6 +3,8 @@ import { getCollection, render } from "astro:content";
 import Section from "../primitives/Section.astro";
 import Container from "../primitives/Container.astro";
 import Icon from "../Icon.astro";
+import Card from "../primitives/Card.astro";
+import SectionHeader from "../primitives/SectionHeader.astro";
 
 const entries = (await getCollection("reportsFaq")).sort(
   (a, b) => a.data.order - b.data.order,
@@ -19,14 +21,11 @@ const items = await Promise.all(
 
 <Section id="faq" tone="paper-2" bordered="top">
   <Container padding="lg">
-    <div class="max-w-2xl">
-      <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        Questions
-      </h2>
-    </div>
+    <SectionHeader title="Questions" />
 
-    <div
-      class="mt-10 grid overflow-hidden rounded-xl border border-hairline bg-card divide-y divide-[color:var(--color-border)]"
+    <Card
+      padding="none"
+      class="mt-10 grid overflow-hidden divide-y divide-[color:var(--color-border)]"
     >
       {
         items.map(({ question, Content }) => (
@@ -48,6 +47,6 @@ const items = await Promise.all(
           </details>
         ))
       }
-    </div>
+    </Card>
   </Container>
 </Section>

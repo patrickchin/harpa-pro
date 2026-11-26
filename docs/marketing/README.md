@@ -24,6 +24,11 @@ See the
 [audience-scoped chrome design](../v4/design-public-site-audience-chrome.md).
 Current guides live in
 `apps/site/src/content/reports/docs`.
+The roadmap shows status stages (Available, In progress, Planned, Exploring)
+and optional coarse timing from `apps/site/src/content/reports/roadmap`. It
+ends with App Store, guides, and feature-suggestion email links. See the
+[site README](../../apps/site/README.md#product-organization) for the
+content fields.
 
 The reporting page includes a browser demo using
 `apps/site/src/fixtures/reports/demoReport.ts`. It captures no audio and

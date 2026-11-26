@@ -2,6 +2,8 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+import { ROADMAP_STATUSES } from "./lib/reports/roadmap";
+
 const DOCS_TIERS = ["core", "everyday", "setup"] as const;
 
 const reportsFaq = defineCollection({
@@ -26,7 +28,11 @@ const reportsRoadmap = defineCollection({
   schema: z.object({
     title: z.string(),
     icon: z.string(),
-    status: z.enum(["available", "planned"]),
+    status: z.enum(ROADMAP_STATUSES),
+    // Coarse timing only. Leave unset unless the owner has confirmed it.
+    timing: z
+      .union([z.enum(["Next", "Later"]), z.string().regex(/^Q[1-4] \d{4}$/)])
+      .optional(),
     order: z.number().default(0),
   }),
 });

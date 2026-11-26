@@ -63,6 +63,15 @@ App content
 collections are `reportsDocs`, `reportsFeatures`, `reportsFaq`, and
 `reportsRoadmap`. Mobile, API, and dashboard workspace names are unchanged.
 
+`/reports/roadmap` groups `reportsRoadmap` entries by `status`: `available`,
+`in-progress`, `planned`, or `exploring`. Stage labels, icons, and the
+feature-suggestion mailto live in `src/lib/reports/roadmap.ts`; empty stages
+are hidden. Each stage shows a visible text label, so status never relies on
+colour alone. The optional `timing` field accepts `Next`, `Later`, or a
+quarter such as `Q3 2027`. Leave it unset until the owner confirms the
+timing. The Available section lists the `reportsFeatures` entries, so it
+stays in step with `/reports`.
+
 Old `/app`, `/docs`, `/roadmap`, `/account-deletion`, `/confirm`, buying-guide,
 and known legacy guide URLs redirect permanently to their final destinations.
 Internal links and sitemap entries use canonical URLs. See the

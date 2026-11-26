@@ -1,8 +1,38 @@
 ---
-import { APP_STORE_URL } from "../../lib/reports/links";
 import Icon from "../Icon.astro";
 import Wordmark from "./Wordmark.astro";
 import Button from "../primitives/Button.astro";
+import {
+  ALSO_FROM_LABEL,
+  SECTIONS,
+  SHARED_OFFERS,
+  type SectionMenu,
+  type SiteSection,
+} from "../../lib/site/sections";
+
+interface Props {
+  section: SiteSection;
+}
+
+const { section } = Astro.props;
+const config = SECTIONS[section];
+const { menu, cta, crossLink } = config;
+// Shared pages (privacy, 404) present both offers equally.
+const mobileMenus: SectionMenu[] = menu
+  ? [menu]
+  : [SECTIONS.procurement.menu!, SECTIONS.reports.menu!];
+const mobileGroupAttr = (id: SectionMenu["id"]) =>
+  id === "procurement"
+    ? { "data-mobile-procurement": true }
+    : { "data-mobile-site-reporting": true };
+const switchAttrs = (to: string, location: "header" | "mobile_menu") => ({
+  "data-audience-switch": true,
+  "data-audience-from": section,
+  "data-audience-to": to,
+  "data-audience-location": location,
+});
+const mobileLinkClass =
+  "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus";
 ---
 
 <header
@@ -12,178 +42,123 @@ import Button from "../primitives/Button.astro";
   <div
     class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6"
   >
-    <Wordmark />
+    <Wordmark href={config.home} />
     <nav aria-label="Primary" class="hidden items-center gap-2 md:flex">
-      <details class="group static" data-mega-menu="procurement">
-        <summary
-          class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden"
-        >
-          <span class="text-accent-ink" data-nav-icon>
-            <Icon name="package-search" class="h-4 w-4" />
-          </span>
-          Procurement
-          <Icon
-            name="chevron-down"
-            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
-          />
-        </summary>
-        <div
-          class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
-          data-mega-panel
-        >
-          <div
-            class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]"
+      {
+        menu && (
+          <details class="group static" data-mega-menu={menu.id}>
+            <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden">
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name={menu.icon} class="h-4 w-4" />
+              </span>
+              {menu.summary}
+              <Icon
+                name="chevron-down"
+                class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+              />
+            </summary>
+            <div
+              class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
+              data-mega-panel
+            >
+              <div class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]">
+                <div class="max-w-sm">
+                  <p class="text-lg font-semibold text-ink">{menu.intro.title}</p>
+                  <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                    {menu.intro.body}
+                  </p>
+                </div>
+                <div
+                  class:list={[
+                    "grid gap-2 sm:grid-cols-2",
+                    { "lg:grid-cols-4": menu.links.length === 4 },
+                  ]}
+                >
+                  {menu.links.map((link) =>
+                    !link.icon ? (
+                      <a
+                        href={link.href}
+                        class="flex min-h-11 items-center rounded-lg p-3 text-sm font-semibold text-ink underline underline-offset-4 hover:bg-secondary ring-focus"
+                      >
+                        {link.label}
+                      </a>
+                    ) : link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-start gap-3 rounded-lg bg-primary p-3 text-sm text-primary-foreground ring-focus"
+                      >
+                        <span class="mt-0.5 shrink-0 text-primary-foreground/80" data-nav-item-icon>
+                          <Icon name={link.icon} class="h-4 w-4" />
+                        </span>
+                        <span class="min-w-0">
+                          <span class="block font-semibold">{link.label}</span>
+                          <span class="mt-1 block leading-relaxed opacity-80">{link.description}</span>
+                        </span>
+                      </a>
+                    ) : (
+                      <a
+                        href={link.href}
+                        class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+                      >
+                        <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                          <Icon name={link.icon} class="h-4 w-4" />
+                        </span>
+                        <span class="min-w-0">
+                          <span class="block font-semibold text-ink">{link.label}</span>
+                          <span class="mt-1 block leading-relaxed text-ink-soft">{link.description}</span>
+                        </span>
+                      </a>
+                    ),
+                  )}
+                </div>
+              </div>
+            </div>
+          </details>
+        )
+      }
+      {
+        !menu &&
+          SHARED_OFFERS.map((offer) => (
+            <a
+              href={offer.href}
+              class="flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus"
+              {...switchAttrs(offer.to, "header")}
+            >
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name={offer.icon} class="h-4 w-4" />
+              </span>
+              {offer.label}
+            </a>
+          ))
+      }
+      {
+        crossLink && (
+          <a
+            href={crossLink.href}
+            class="inline-flex h-10 items-center rounded-md px-3 text-sm text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline ring-focus"
+            {...switchAttrs(crossLink.to, "header")}
           >
-            <div class="max-w-sm">
-              <p class="text-lg font-semibold text-ink">Procurement in China</p>
-              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                We coordinate factory information, product specifications,
-                quality checks, and shipping records.
-              </p>
-            </div>
-            <div class="grid gap-2 sm:grid-cols-2">
-              <a
-                href="/"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
-              >
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="package-search" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">Procurement overview</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">Our procurement service</span>
-                </span>
-              </a>
-              <a href="/#factory-partners"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="armchair" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">Products and factories</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">Joinery, furniture, bathrooms, and source records</span>
-                </span>
-              </a>
-              <a href="/#considerations"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus">
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="list-checks" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">Our process</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">Design coordination, quality checks, and delivery</span>
-                </span>
-              </a>
-              <a
-                href="/procurement/how-to-buy-from-china"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
-              >
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="file-text" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">How to buy from China</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">A guide for architects and designers</span>
-                </span>
-              </a>
-              <a href="/procurement/guides"
-                class="flex min-h-11 items-center rounded-lg p-3 text-sm font-semibold text-ink underline underline-offset-4 hover:bg-secondary ring-focus">
-                Procurement guides
-              </a>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <details class="group static" data-mega-menu="site-reporting">
-        <summary
-          class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden"
-        >
-          <span class="text-accent-ink" data-nav-icon>
-            <Icon name="clipboard-list" class="h-4 w-4" />
-          </span>
-          Site reporting
-          <Icon
-            name="chevron-down"
-            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
-          />
-        </summary>
-        <div
-          class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
-          data-mega-panel
-        >
-          <div
-            class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]"
+            {crossLink.label}
+          </a>
+        )
+      }
+      {
+        cta && (
+          <Button
+            href={cta.href}
+            size="sm"
+            external={cta.external}
+            class="ml-2 transition-[filter]"
           >
-            <div class="max-w-sm">
-              <p class="text-lg font-semibold text-ink">Site reporting</p>
-              <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-                Turn voice notes, photos, and text updates into daily report
-                drafts that you can review and share.
-              </p>
-            </div>
-            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <a
-                href="/reports"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
-              >
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="smartphone" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">Harpa Pro app</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">See the reporting workflow</span>
-                </span>
-              </a>
-              <a
-                href="/reports/docs"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
-              >
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="book-open" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">Guides</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">Learn each app task</span>
-                </span>
-              </a>
-              <a
-                href="/reports/roadmap"
-                class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
-              >
-                <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
-                  <Icon name="map" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold text-ink">Roadmap</span>
-                  <span class="mt-1 block leading-relaxed text-ink-soft">Current and planned work</span>
-                </span>
-              </a>
-              <a
-                href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex items-start gap-3 rounded-lg bg-primary p-3 text-sm text-primary-foreground ring-focus"
-              >
-                <span class="mt-0.5 shrink-0 text-primary-foreground/80" data-nav-item-icon>
-                  <Icon name="download" class="h-4 w-4" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block font-semibold">Get the app</span>
-                  <span class="mt-1 block leading-relaxed opacity-80">Open the App Store</span>
-                </span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <Button href="/#contact" size="sm" class="ml-2 transition-[filter]">
-        <span data-nav-icon>
-          <Icon name="message-circle" class="h-4 w-4" />
-        </span>
-        Contact us
-      </Button>
+            <span data-nav-icon>
+              <Icon name={cta.icon} class="h-4 w-4" />
+            </span>
+            {cta.label}
+          </Button>
+        )
+      }
     </nav>
 
     <details class="site-menu group md:hidden" data-mobile-menu>
@@ -205,88 +180,68 @@ import Button from "../primitives/Button.astro";
         data-mobile-panel
       >
         <div class="mx-auto grid max-w-6xl gap-4 p-4">
-          <div class="grid gap-1" data-mobile-procurement>
-            <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
-              <span class="text-accent-ink" data-nav-icon>
-                <Icon name="package-search" class="h-4 w-4" />
-              </span>
-              Procurement
-            </p>
-            <a href="/" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="package-search" class="h-4 w-4" />
-              </span>
-              Procurement overview
-            </a>
-            <a href="/#factory-partners" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="armchair" class="h-4 w-4" />
-              </span>
-              Products and factories
-            </a>
-            <a href="/#considerations" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="list-checks" class="h-4 w-4" />
-              </span>
-              Our process
-            </a>
-            <a href="/procurement/how-to-buy-from-china" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="file-text" class="h-4 w-4" />
-              </span>
-              How to buy from China
-            </a>
-            <a href="/procurement/guides" class="flex min-h-11 items-center rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus">
-              Procurement guides
-            </a>
-          </div>
-          <div class="grid gap-1 border-t border-hairline pt-4" data-mobile-site-reporting>
-            <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
-              <span class="text-accent-ink" data-nav-icon>
-                <Icon name="clipboard-list" class="h-4 w-4" />
-              </span>
-              Site reporting
-            </p>
-            <a href="/reports" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="smartphone" class="h-4 w-4" />
-              </span>
-              Harpa Pro app
-            </a>
-            <a href="/reports/docs" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="book-open" class="h-4 w-4" />
-              </span>
-              Guides
-            </a>
-            <a href="/reports/roadmap" class="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary">
-              <span class="shrink-0 text-accent-ink" data-nav-item-icon>
-                <Icon name="map" class="h-4 w-4" />
-              </span>
-              Roadmap
-            </a>
-          </div>
-          <div class="grid gap-2 border-t border-hairline pt-4" data-mobile-actions>
-            <Button
-              href={APP_STORE_URL}
-              external
-              externalIcon={false}
-              variant="outline"
-              size="touch"
-              icon="download"
-              class="justify-center"
-            >
-              Get the app
-            </Button>
-            <Button
-              href="/#contact"
-              size="touch"
-              icon="message-circle"
-              class="justify-center transition-[filter]"
-            >
-              Contact us
-            </Button>
-          </div>
+          {
+            mobileMenus.map((group, index) => (
+              <div
+                class:list={["grid gap-1", { "border-t border-hairline pt-4": index > 0 }]}
+                {...mobileGroupAttr(group.id)}
+              >
+                <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                  <span class="text-accent-ink" data-nav-icon>
+                    <Icon name={group.icon} class="h-4 w-4" />
+                  </span>
+                  {group.summary}
+                </p>
+                {group.mobileLinks.map((link) =>
+                  link.icon ? (
+                    <a href={link.href} class={mobileLinkClass}>
+                      <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                        <Icon name={link.icon} class="h-4 w-4" />
+                      </span>
+                      {link.label}
+                    </a>
+                  ) : (
+                    <a href={link.href} class={`min-h-11 ${mobileLinkClass}`}>
+                      {link.label}
+                    </a>
+                  ),
+                )}
+              </div>
+            ))
+          }
+          {
+            cta && (
+              <div class="grid gap-2 border-t border-hairline pt-4" data-mobile-actions>
+                <Button
+                  href={cta.href}
+                  external={cta.external}
+                  externalIcon={false}
+                  size="touch"
+                  icon={cta.icon}
+                  class="justify-center transition-[filter]"
+                >
+                  {cta.label}
+                </Button>
+              </div>
+            )
+          }
+          {
+            crossLink && (
+              <div class="grid gap-1 border-t border-hairline pt-4" data-mobile-also>
+                <p class="px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                  {ALSO_FROM_LABEL}
+                </p>
+                <a
+                  href={crossLink.href}
+                  class={`min-h-11 ${mobileLinkClass}`}
+                  {...switchAttrs(crossLink.to, "mobile_menu")}
+                >
+                  {crossLink.label}
+                  <Icon name="arrow-right" class="h-4 w-4 shrink-0 text-ink-soft" />
+                </a>
+              </div>
+            )
+          }
         </div>
       </div>
     </details>

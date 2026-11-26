@@ -1,15 +1,17 @@
 ---
 import { Image } from "astro:assets";
-import EvidenceImageDialog from "./EvidenceImageDialog.astro";
 import Container from "../primitives/Container.astro";
 import Section from "../primitives/Section.astro";
 import Button from "../primitives/Button.astro";
 import Card from "../primitives/Card.astro";
 import SectionHeader from "../primitives/SectionHeader.astro";
-import { lightboxImage } from "../../lib/lightbox-image";
-import revitShopDrawingImg from "../../assets/procurement/evidence/revit-a103-shop-drawing.jpg";
-import revitCoordinationImg from "../../assets/procurement/evidence/revit-a104-coordination.jpg";
-import aisFactoryImg from "../../assets/procurement/factories/ais-factory-exterior.webp";
+import {
+  FACTORY_DOCUMENTS_PATH,
+  factoryDocuments,
+} from "../../lib/procurement/factory-documents";
+// Pre-cropped from ais-factory-exterior.webp (sharp extract left 5, top 5,
+// 871x478) to drop the catalogue's embedded caption and white border.
+import aisFactoryImg from "../../assets/procurement/factories/ais-factory-exterior-photo.webp";
 import aisStyleImg from "../../assets/procurement/factories/catalogues/ais-style-selection-p04.webp";
 import j2sProjectImg from "../../assets/procurement/factories/catalogues/j2s-project-p05.webp";
 import j2sBarChairsImg from "../../assets/procurement/factories/catalogues/j2s-bar-chairs-p12.webp";
@@ -19,15 +21,6 @@ import rongshuoBathroomImg from "../../assets/procurement/factories/catalogues/r
 // Pre-cropped from rongshuo-shower-p02.webp (sharp extract left 60, top 85,
 // 754x471) so mobile does not download the whole catalogue page for a crop.
 import rongshuoShowerImg from "../../assets/procurement/factories/catalogues/rongshuo-shower-p02-sw011.webp";
-import aisHdfReportImg from "../../assets/procurement/factories/credentials/ais-hdf-formaldehyde-e0-2026.webp";
-import aisHmrReportImg from "../../assets/procurement/factories/credentials/ais-hmr-particleboard-formaldehyde-e0-2026.webp";
-import aisOsbReportImg from "../../assets/procurement/factories/credentials/ais-osb-formaldehyde-enf-2026.webp";
-import aisPurVocReportImg from "../../assets/procurement/factories/credentials/ais-pur-adhesive-voc-2024.webp";
-import aisRohsReportImg from "../../assets/procurement/factories/credentials/ais-hot-melt-adhesive-rohs-2024.webp";
-import aisBoardE1ReportImg from "../../assets/procurement/factories/credentials/ais-board-e1-2020.webp";
-import aisWanhuaCertificateImg from "../../assets/procurement/factories/credentials/ais-wanhua-production-control-2015.webp";
-import j2sFormaldehydeReportImg from "../../assets/procurement/factories/credentials/j2s-sofa-formaldehyde-e1-test-2021.webp";
-import j2sE1CertificateImg from "../../assets/procurement/factories/credentials/j2s-sofa-e1-certificate-2020.webp";
 
 const factories = [
   {
@@ -37,9 +30,8 @@ const factories = [
       "Custom cabinetry, wardrobes, bathroom cabinets, doors, wall panels, and project joinery.",
     image: aisFactoryImg,
     alt: "AIS Smarti headquarters and factory in Foshan, China",
-    imageCrop: "embedded-caption",
-    imageClass:
-      "h-full w-full origin-top scale-[1.18] object-cover object-top",
+    imageCrop: "cover",
+    imageClass: "h-full w-full object-cover",
     featured: true,
   },
   {
@@ -106,12 +98,6 @@ const productBriefs = [
     alt: "AIS Smarti modern kitchen style selection page",
     imageMode: "cover",
     imageClass: "h-full w-full object-cover",
-    details: [
-      ["Reference", "Project-specific joinery package"],
-      ["Application", "Custom kitchen cabinetry"],
-      ["Selection", "Layout, door style, finish, worktop interface, and hardware"],
-      ["Confirmation", "Approved drawings, dimensions, quantities, and packing"],
-    ],
   },
   {
     index: "02",
@@ -123,12 +109,6 @@ const productBriefs = [
     alt: "J2S JSBC bar-chair series catalogue spread",
     imageMode: "cover",
     imageClass: "h-full w-full object-cover",
-    details: [
-      ["Reference", "JSBC hospitality seating series"],
-      ["Application", "Bar and lounge seating"],
-      ["Selection", "Model, frame, upholstery, color, and finish"],
-      ["Confirmation", "Dimensions, quantity, packing, and dispatch lead time"],
-    ],
   },
   {
     index: "03",
@@ -140,132 +120,15 @@ const productBriefs = [
     alt: "Rong Shuo SW-011 shower enclosure catalogue page",
     imageMode: "source-content",
     imageClass: "h-full w-full object-cover",
-    details: [
-      ["Reference", "SW-011"],
-      ["Size", "(800-900) x (800-1200) x 2000 mm"],
-      ["Construction", "Chromed aluminium frame and 8 mm clear glass"],
-      ["Hardware", "SUS sliding bar, stopper, and handle with brass roller"],
-      ["Adjustment", "20 mm"],
-    ],
   },
 ];
 
-const credentials = [
-  {
-    source: "AIS Smarti source package",
-    title: "Marine HDF formaldehyde test",
-    meta: "SGS SDHL260400719601HI | 15 June 2026 | 3 pages",
-    description:
-      "The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.",
-    image: aisHdfReportImg,
-    alt: "First page of the AIS marine HDF formaldehyde test report",
-  },
-  {
-    source: "AIS Smarti source package",
-    title: "Hot-melt adhesive RoHS test",
-    meta: "NPS2024030040 | 1 April 2024 | 6 pages",
-    description:
-      "This supplier report covers Foshan Yuetai hot-melt adhesive and records compliance with the stated EU RoHS limits.",
-    image: aisRohsReportImg,
-    alt: "Cover of the hot-melt adhesive RoHS test report",
-  },
-  {
-    source: "J2S source package",
-    title: "Sofa E1 certificate",
-    meta: "ENC2012255GZ25 | 29 December 2020 | 1 page",
-    description:
-      "The certificate covers J2S JS and YX sofa series. It links its approval to test report ENC2012255GZ25E1.",
-    image: j2sE1CertificateImg,
-    alt: "J2S sofa E1 certification of conformity",
-  },
-  {
-    source: "AIS Smarti source package",
-    title: "HMR particleboard formaldehyde test",
-    meta: "SGS SDHL260400719501HI | 15 June 2026 | 3 pages",
-    description:
-      "The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for HMR particleboard.",
-    image: aisHmrReportImg,
-    alt: "First page of the AIS HMR particleboard formaldehyde test report",
-  },
-  {
-    source: "AIS Smarti source package",
-    title: "OSB formaldehyde test",
-    meta: "SGS SDHL260400719701HI | 15 June 2026 | 3 pages",
-    description:
-      "The report names AIS JOINERY PTY LTD as the applicant. It records a GB/T 39600-2021 ENF pass result for oriented strand board.",
-    image: aisOsbReportImg,
-    alt: "First page of the AIS oriented strand board formaldehyde test report",
-  },
-  {
-    source: "AIS Smarti source package",
-    title: "PUR adhesive VOC test",
-    meta: "SGS CANEC24022609601 | 21 October 2024 | 3 pages",
-    description:
-      "This supplier report covers polyurethane adhesive and records compliance with the GB 33372-2020 VOC limit.",
-    image: aisPurVocReportImg,
-    alt: "First page of the polyurethane adhesive VOC test report",
-  },
-  {
-    source: "AIS Smarti source package",
-    title: "E1 board formaldehyde report",
-    meta: "Chinese-language supplier report | 18 April 2020 | 3 pages",
-    description:
-      "The AIS package included this Chinese-language board report. Review the source before you apply it to an order.",
-    image: aisBoardE1ReportImg,
-    alt: "Cover of the Chinese-language E1 board formaldehyde report",
-  },
-  {
-    source: "AIS Smarti source package",
-    title: "Wanhua Ecoboard production-control certificate",
-    meta: "EPH 0766-CPR-338 | 4 June 2015 | image",
-    description:
-      "The certificate names Wanhua Ecoboard and particle board. It does not certify the AIS factory.",
-    image: aisWanhuaCertificateImg,
-    alt: "Wanhua Ecoboard factory production-control certificate",
-  },
-  {
-    source: "J2S source package",
-    title: "Sofa formaldehyde test",
-    meta: "ENC2012255GZ25E1 | 4 January 2021 | 5 pages",
-    description:
-      "The report covers J2S JS and YX sofa series and tests formaldehyde emissions to EN 717-1:2004.",
-    image: j2sFormaldehydeReportImg,
-    alt: "Cover of the J2S sofa formaldehyde test report",
-  },
+const documentSources = [
+  ...new Set(
+    factoryDocuments.map((document) => document.source.replace(/ source package$/, "")),
+  ),
 ];
-
-// Keep a multiple of the 3-column grid so no card is orphaned.
-const initialDocumentCount = 3;
-const additionalDocumentCount = Math.max(
-  credentials.length - initialDocumentCount,
-  0,
-);
-const showMoreDocumentsLabel = `Show ${additionalDocumentCount} more ${
-  additionalDocumentCount === 1 ? "document" : "documents"
-}`;
-
-const technicalReviews = [
-  {
-    title: "Revit A104 coordination review",
-    description:
-      "We check the layout, finishes, and sizes before we approve the factory information.",
-    image: revitCoordinationImg,
-    alt: "Revit A104 3D coordination review sheet",
-  },
-  {
-    title: "Revit A103 shop-drawing review",
-    description: "We review the drawings before production.",
-    image: revitShopDrawingImg,
-    alt: "Revit A103 chair shop drawing review sheet",
-  },
-];
-
-const credentialLightboxes = await Promise.all(
-  credentials.map((document) => lightboxImage(document.image)),
-);
-const reviewLightboxes = await Promise.all(
-  technicalReviews.map((review) => lightboxImage(review.image)),
-);
+const documentPreviews = factoryDocuments.slice(0, 3);
 ---
 
 <Section
@@ -294,7 +157,7 @@ const reviewLightboxes = await Promise.all(
           <figure
             data-factory-image-frame
             data-image-crop={factory.imageCrop}
-            class="h-44 overflow-hidden bg-white sm:h-56 lg:h-72"
+            class="aspect-[16/9] overflow-hidden bg-white sm:aspect-auto sm:h-56 lg:h-64"
           >
             <Image
               src={factory.image}
@@ -326,18 +189,18 @@ const reviewLightboxes = await Promise.all(
             as="article"
             padding="none"
             elevated
-            class="overflow-hidden"
+            class="grid grid-cols-[7.5rem_minmax(0,1fr)] overflow-hidden sm:block"
           >
             <figure
               data-factory-image-frame
               data-image-crop={factory.imageCrop}
-              class="aspect-[16/9] w-full overflow-hidden bg-white"
+              class="h-full min-h-28 w-full overflow-hidden bg-white sm:aspect-[16/9] sm:h-auto sm:min-h-0"
             >
               <Image
                 src={factory.image}
                 alt={factory.alt}
                 widths={[360, 520, 720]}
-                sizes="(min-width: 64rem) 17rem, (min-width: 40rem) 45vw, calc(100vw - 3rem)"
+                sizes="(min-width: 64rem) 17rem, (min-width: 40rem) 45vw, 7.5rem"
                 format="webp"
                 quality={86}
                 loading="lazy"
@@ -345,7 +208,7 @@ const reviewLightboxes = await Promise.all(
                 class={factory.imageClass}
               />
             </figure>
-            <div class="border-t border-hairline p-4">
+            <div class="border-l border-hairline p-4 sm:border-l-0 sm:border-t">
               <p class="font-mono text-xs leading-relaxed text-ink-soft">
                 {factory.location}
               </p>
@@ -358,280 +221,148 @@ const reviewLightboxes = await Promise.all(
     </div>
       </div>
     </div>
-  </Container>
-</Section>
-
-<Section
-  id="quote-contents"
-  aria-labelledby="product-information-heading"
-  tone="paper-2"
-  bordered="top"
-  class="scroll-mt-16"
->
-  <Container padding="lg">
-    <div class="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
-      <SectionHeader
-        width="xl"
-        titleId="product-information-heading"
-        title="What each quote includes"
-        lede="A catalogue image identifies the product. The quote records the details needed to compare, approve, inspect, pack, and ship it."
-      />
-      <ol class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-        {
-          buyerInformation.map((item, index) => (
-            <li class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 border-t border-hairline pt-3 text-sm leading-relaxed text-ink">
-              <span class="font-mono text-xs text-accent-ink">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span>{item}</span>
-            </li>
-          ))
-        }
-      </ol>
-    </div>
-  </Container>
-</Section>
-
-<Section
-  id="product-examples"
-  aria-labelledby="product-briefs-heading"
-  bordered="top"
-  class="scroll-mt-16 bg-background"
->
-  <Container padding="lg">
-    <SectionHeader
-      width="3xl"
-      titleId="product-briefs-heading"
-      title="Product examples"
-      lede="These examples show the detail in a buyer brief. They are not a stock list, price list, or full catalogue."
-    />
-
-    <div class="mt-8 grid gap-5 lg:grid-cols-3">
-    {
-      productBriefs.map((brief) => (
-        <Card
-          data-product-brief=""
-          as="article"
-          padding="none"
-          elevated
-          class="flex h-full flex-col overflow-hidden"
-        >
-          <figure
-            data-product-image-frame
-            data-product-image-mode={brief.imageMode}
-            class="relative aspect-[16/10] w-full overflow-hidden bg-white"
-          >
-            <Image
-              src={brief.image}
-              alt={brief.alt}
-              widths={[520, 760, 1040]}
-              sizes="(min-width: 64rem) 24rem, calc(100vw - 3rem)"
-              format="webp"
-              quality={90}
-              loading="lazy"
-              decoding="async"
-              class={brief.imageClass}
-            />
-          </figure>
-          <div class="flex flex-1 flex-col border-t border-hairline p-5">
-            <div class="flex items-baseline justify-between gap-4">
-              <span class="flex-none whitespace-nowrap font-mono text-xs text-accent-ink">Example {brief.index}</span>
-              <span class="min-w-0 text-right font-mono text-xs leading-relaxed text-ink-soft">
-                {brief.source}
-              </span>
-            </div>
-            <h3 class="mt-4 text-xl font-semibold tracking-tight text-ink">
-              {brief.title}
-            </h3>
-            <p class="mt-3 text-sm leading-relaxed text-ink-soft">
-              {brief.description}
-            </p>
-            <dl class="mt-5 grid gap-3 border-t border-hairline pt-4 text-sm">
-              {brief.details.map(([term, value]) => (
-                <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
-                  <dt class="text-ink-soft">{term}</dt>
-                  <dd class="font-medium leading-relaxed text-ink">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </Card>
-      ))
-    }
-    </div>
-  </Container>
-</Section>
-
-<Section
-  id="factory-documents"
-  aria-labelledby="factory-documents-heading"
-  tone="paper-2"
-  bordered="top"
-  class="scroll-mt-16"
->
-  <Container padding="lg">
-    <SectionHeader
-      width="3xl"
-      titleId="factory-documents-heading"
-      title="Factory documents"
-      lede="Select a document to view its first-page image. Full source files are not published on this website."
-    />
 
     <div
-      id="factory-document-grid"
-      class="mt-8 grid gap-4 sm:gap-5 md:grid-cols-3"
+      id="quote-contents"
+      class="mt-14 scroll-mt-24 border-t border-hairline pt-12 sm:mt-16"
     >
-    {
-      credentials.map((document, index) => (
-        <Card
-          data-credential-record=""
-          data-additional-document={
-            index >= initialDocumentCount ? "true" : undefined
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start lg:gap-10">
+        <SectionHeader
+          width="xl"
+          titleId="product-information-heading"
+          title="What each quote includes"
+          lede="A catalogue image identifies the product. The quote records the details needed to compare, approve, inspect, pack, and ship it."
+        />
+        <ol class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          {
+            buyerInformation.map((item, index) => (
+              <li class="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 border-t border-hairline pt-3 text-sm leading-relaxed text-ink">
+                <span class="font-mono text-xs text-accent-ink">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span>{item}</span>
+              </li>
+            ))
           }
-          hidden={index >= initialDocumentCount}
-          as="article"
-          padding="none"
-          elevated
-          class="overflow-hidden"
+        </ol>
+      </div>
+
+      <div id="product-examples" class="mt-10 scroll-mt-24">
+        <h3 class="text-sm font-semibold text-ink">
+          From catalogue reference to quote
+        </h3>
+        <p class="mt-1 text-sm leading-relaxed text-ink-soft">
+          These examples are not a stock list, price list, or full catalogue.
+        </p>
+        <!-- Below lg the examples scroll sideways so three tall cards do not stack. -->
+        <div
+          role="region"
+          aria-label="Product examples"
+          tabindex="0"
+          data-product-examples-scroller
+          class="-mx-4 mt-5 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 ring-focus sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0"
         >
-          <button
-            type="button"
-            aria-label={`Open full view of ${document.title}`}
-            class="evidence-image-trigger block w-full border-0 bg-white p-0 ring-focus"
-            data-evidence-image-trigger
-            data-evidence-image-src={credentialLightboxes[index]!.src}
-            data-evidence-image-alt={document.alt}
-            data-evidence-image-title={document.title}
-            data-evidence-image-caption={`${document.meta}. ${document.description}`}
-            data-evidence-image-width={credentialLightboxes[index]!.width}
-            data-evidence-image-height={credentialLightboxes[index]!.height}
-          >
-            <div
-              data-document-preview-crop
-              class="aspect-[21/10] w-full overflow-hidden"
-            >
+          {
+            productBriefs.map((brief) => (
+              <Card
+                data-product-brief=""
+                as="article"
+                padding="none"
+                elevated
+                class="flex w-[82%] max-w-sm flex-none snap-start flex-col overflow-hidden lg:w-auto lg:max-w-none"
+              >
+                <figure
+                  data-product-image-frame
+                  data-product-image-mode={brief.imageMode}
+                  class="relative aspect-[16/9] w-full overflow-hidden bg-white"
+                >
+                  <Image
+                    src={brief.image}
+                    alt={brief.alt}
+                    widths={[360, 520, 760]}
+                    sizes="(min-width: 64rem) 24rem, (min-width: 30rem) 24rem, 82vw"
+                    format="webp"
+                    quality={90}
+                    loading="lazy"
+                    decoding="async"
+                    class={brief.imageClass}
+                  />
+                </figure>
+                <div class="flex flex-1 flex-col border-t border-hairline p-4 md:p-5">
+                  <p class="font-mono text-xs leading-relaxed text-ink-soft">
+                    <span class="whitespace-nowrap text-accent-ink">Example {brief.index}</span>
+                    <span aria-hidden="true"> · </span>
+                    {brief.source}
+                  </p>
+                  <h4 class="mt-2 text-base font-semibold tracking-tight text-ink">
+                    {brief.title}
+                  </h4>
+                  <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                    {brief.description}
+                  </p>
+                </div>
+              </Card>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+
+    <Card
+      id="factory-documents"
+      as="section"
+      aria-labelledby="factory-documents-heading"
+      padding="none"
+      elevated
+      class="mt-14 grid scroll-mt-24 overflow-hidden sm:mt-16 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+    >
+      <div class="flex flex-col justify-center p-6 sm:p-8">
+        <h2
+          id="factory-documents-heading"
+          class="text-2xl font-semibold tracking-tight text-ink"
+        >
+          Factory documents
+        </h2>
+        <p class="mt-3 text-sm leading-relaxed text-ink-soft sm:text-base">
+          {factoryDocuments.length} test reports and certificates from
+          {" "}{documentSources.join(" and ")}, with first-page previews and the
+          limits of each record. Full source files are not published on this
+          website.
+        </p>
+        <Button
+          href={FACTORY_DOCUMENTS_PATH}
+          variant="primary"
+          size="lg"
+          icon="arrow-right"
+          iconPosition="end"
+          class="mt-6 self-start"
+          data-factory-documents-link=""
+        >
+          View all factory documents
+        </Button>
+      </div>
+      <div
+        aria-hidden="true"
+        class="hidden grid-cols-3 gap-px border-l border-hairline bg-hairline md:grid"
+      >
+        {
+          documentPreviews.map((document) => (
+            <div class="overflow-hidden bg-white">
               <Image
                 src={document.image}
-                alt={document.alt}
-                widths={[320, 480, 640]}
-                sizes="(min-width: 72rem) 23rem, (min-width: 48rem) 31vw, calc(100vw - 2rem)"
+                alt=""
+                widths={[200, 320]}
+                sizes="12rem"
                 format="webp"
-                quality={92}
+                quality={86}
                 loading="lazy"
                 decoding="async"
                 class="h-full w-full object-cover object-top"
               />
             </div>
-          </button>
-          <div class="border-t border-hairline p-4 sm:p-5">
-            <h3 class="text-sm font-semibold leading-snug text-ink sm:text-base">
-              {document.title}
-            </h3>
-            <p class="mt-2 text-xs font-medium text-ink">{document.source}</p>
-            <p class="mt-2 break-words font-mono text-xs leading-relaxed text-ink-soft">
-              {document.meta}
-            </p>
-          </div>
-        </Card>
-      ))
-    }
-    </div>
-    {
-      additionalDocumentCount > 0 && (
-        <Button
-          variant="secondary"
-          size="lg"
-          aria-expanded="false"
-          aria-controls="factory-document-grid"
-          class="mt-6"
-          data-document-disclosure=""
-          data-collapsed-label={showMoreDocumentsLabel}
-        >
-          {showMoreDocumentsLabel}
-        </Button>
-      )
-    }
+          ))
+        }
+      </div>
+    </Card>
   </Container>
 </Section>
-
-<Section
-  id="technical-reviews"
-  aria-labelledby="technical-reviews-heading"
-  bordered="top"
-  class="scroll-mt-16 bg-background"
->
-  <Container padding="lg">
-    <SectionHeader
-      width="3xl"
-      titleId="technical-reviews-heading"
-      title="Technical reviews"
-    />
-
-    <div class="mt-8 grid gap-5 md:grid-cols-2">
-    {
-      technicalReviews.map((review, index) => (
-        <Card
-          data-technical-review=""
-          as="figure"
-          padding="none"
-          elevated
-          class="overflow-hidden"
-        >
-          <button
-            type="button"
-            aria-label={`Open full view of ${review.title}`}
-            class="evidence-image-trigger block w-full border-0 bg-white p-0 ring-focus"
-            data-evidence-image-trigger
-            data-evidence-image-src={reviewLightboxes[index]!.src}
-            data-evidence-image-alt={review.alt}
-            data-evidence-image-title={review.title}
-            data-evidence-image-caption={review.description}
-            data-evidence-image-width={reviewLightboxes[index]!.width}
-            data-evidence-image-height={reviewLightboxes[index]!.height}
-          >
-            <Image
-              src={review.image}
-              alt={review.alt}
-              widths={[480, 720, 960, 1200]}
-              sizes="(min-width: 48rem) 36rem, calc(100vw - 3rem)"
-              format="webp"
-              quality={86}
-              loading="lazy"
-              decoding="async"
-              class="aspect-[4/3] w-full object-contain"
-            />
-          </button>
-          <figcaption class="border-t border-hairline p-5">
-            <h3 class="font-semibold text-ink">{review.title}</h3>
-            <p class="mt-2 text-sm leading-relaxed text-ink-soft">
-              {review.description}
-            </p>
-          </figcaption>
-        </Card>
-      ))
-    }
-    </div>
-  </Container>
-</Section>
-
-<EvidenceImageDialog />
-
-<script>
-  const documentDisclosure = document.querySelector<HTMLButtonElement>(
-    "[data-document-disclosure]",
-  );
-  const additionalDocuments = document.querySelectorAll<HTMLElement>(
-    "[data-additional-document]",
-  );
-
-  documentDisclosure?.addEventListener("click", () => {
-    const expanded = documentDisclosure.getAttribute("aria-expanded") === "true";
-    additionalDocuments.forEach((documentCard) => {
-      documentCard.hidden = expanded;
-    });
-    documentDisclosure.setAttribute("aria-expanded", String(!expanded));
-    documentDisclosure.textContent = expanded
-      ? (documentDisclosure.dataset.collapsedLabel ?? "Show more documents")
-      : "Show fewer documents";
-  });
-</script>

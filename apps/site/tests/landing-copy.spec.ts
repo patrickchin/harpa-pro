@@ -125,10 +125,6 @@ test('uses the complete procurement page as home without a reporting promotion',
     'top',
     'considerations',
     'evidence',
-    'quote-contents',
-    'product-examples',
-    'factory-documents',
-    'technical-reviews',
     'agent',
     'procurement-questions',
     'contact',
@@ -474,15 +470,11 @@ test('keeps the procurement profiles compact and responsive', async ({ page }) =
       expect(heroBox!.width * heroBox!.height).toBeGreaterThan(
         portraitBox!.width * portraitBox!.height,
       );
-      const expectedPortraitSize = width >= 640 ? 208 : 160;
+      const expectedPortraitSize = width >= 640 ? 160 : 88;
       expect(Math.abs(portraitBox!.height - expectedPortraitSize)).toBeLessThanOrEqual(1);
       expect(Math.abs(portraitBox!.width - portraitBox!.height)).toBeLessThanOrEqual(1);
-      if (width >= 640) {
-        expect(portraitBox!.x).toBeLessThan(bioBox!.x);
-        expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
-      } else {
-        expect(portraitBox!.y).toBeLessThan(bioBox!.y);
-      }
+      expect(portraitBox!.x).toBeLessThan(bioBox!.x);
+      expect(Math.abs(portraitBox!.y - bioBox!.y)).toBeLessThanOrEqual(1);
     }
 
     if (width >= 1280) {

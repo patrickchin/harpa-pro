@@ -1,19 +1,17 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 import Header from "../../components/site/Header.astro";
 import Footer from "../../components/site/Footer.astro";
 import Container from "../../components/primitives/Container.astro";
 ---
 
 <Layout
+  section="reports"
   title="Account deletion | Harpa Pro"
   description="How to request deletion of a Harpa Pro account and associated app data."
-  image={REPORTS_SOCIAL_IMAGE.src}
-  imageAlt={REPORTS_SOCIAL_IMAGE.alt}
 >
   <div class="flex min-h-dvh flex-col bg-background text-ink">
-    <Header />
+    <Header section="reports" />
     <main id="main-content" class="flex-1">
       <Container padding="md">
         <div class="max-w-3xl space-y-8">
@@ -82,6 +80,6 @@ import Container from "../../components/primitives/Container.astro";
         </div>
       </Container>
     </main>
-    <Footer />
+    <Footer section="reports" />
   </div>
 </Layout>

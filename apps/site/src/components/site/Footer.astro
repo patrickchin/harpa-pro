@@ -1,46 +1,16 @@
 ---
-import { APP_STORE_URL } from "../../lib/reports/links";
 import Icon from "../Icon.astro";
 import Wordmark from "./Wordmark.astro";
+import { ALSO_FROM_LABEL, SECTIONS, type SiteSection } from "../../lib/site/sections";
 
-const year = new Date().getFullYear();
-
-interface FooterLink {
-  label: string;
-  href: string;
-  external?: boolean;
+interface Props {
+  section: SiteSection;
 }
 
-// Labels mirror Header.astro so the same destination has the same name.
-const columns: { title: string; links: FooterLink[] }[] = [
-  {
-    title: "Procurement",
-    links: [
-      { label: "Procurement overview", href: "/" },
-      { label: "Products and factories", href: "/#factory-partners" },
-      { label: "Our process", href: "/#considerations" },
-      { label: "How to buy from China", href: "/procurement/how-to-buy-from-china" },
-      { label: "Procurement guides", href: "/procurement/guides" },
-    ],
-  },
-  {
-    title: "Site reporting",
-    links: [
-      { label: "Harpa Pro app", href: "/reports" },
-      { label: "Guides", href: "/reports/docs" },
-      { label: "Roadmap", href: "/reports/roadmap" },
-      { label: "Get the app", href: APP_STORE_URL, external: true },
-      { label: "Account deletion", href: "/reports/account-deletion" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { label: "Contact us", href: "/#contact" },
-      { label: "Privacy", href: "/privacy" },
-    ],
-  },
-];
+const { section } = Astro.props;
+const config = SECTIONS[section];
+const { crossLink } = config;
+const year = new Date().getFullYear();
 
 const linkClass =
   "inline-flex min-h-11 items-center gap-1.5 rounded-sm py-1 text-sm text-ink-soft transition-colors hover:text-ink ring-focus md:min-h-9";
@@ -51,16 +21,16 @@ const linkClass =
     class="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-3 md:gap-x-10 lg:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(9rem,1fr))]"
   >
     <div class="col-span-2 flex flex-col gap-3 md:col-span-3 lg:col-span-1">
-      <Wordmark />
+      <Wordmark href={config.home} />
       <p class="max-w-xs text-sm leading-relaxed text-ink-soft">
-        Technical procurement and factory records in China.
+        {config.footer.tagline}
       </p>
     </div>
     {
-      columns.map((column) => (
-        <nav aria-label={column.title} class="min-w-0">
+      config.footer.columns.map((column) => (
+        <nav aria-label={column.label} class="min-w-0">
           <h2 class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink">
-            {column.title}
+            {column.label}
           </h2>
           <ul class="grid">
             {column.links.map((link) => (
@@ -85,6 +55,29 @@ const linkClass =
           </ul>
         </nav>
       ))
+    }
+    {
+      crossLink && (
+        <nav aria-label={ALSO_FROM_LABEL} class="min-w-0">
+          <h2 class="mb-1 text-xs font-semibold uppercase tracking-wider text-ink">
+            {ALSO_FROM_LABEL}
+          </h2>
+          <ul class="grid">
+            <li>
+              <a
+                href={crossLink.href}
+                class={linkClass}
+                data-audience-switch
+                data-audience-from={section}
+                data-audience-to={crossLink.to}
+                data-audience-location="footer"
+              >
+                {crossLink.label}
+              </a>
+            </li>
+          </ul>
+        </nav>
+      )
     }
   </div>
   <div class="border-t border-hairline">

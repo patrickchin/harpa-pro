@@ -20,16 +20,11 @@ const feats = await Promise.all(
 
 <Section tone="paper-2" bordered="top">
   <Container padding="lg">
-    <SectionHeader title="Reporting tools">
-      <Fragment slot="lede">
-        Your notes, photos, and report drafts stay together in one project, so
-        you can find them when someone asks. See what is planned on the <a
-          href="/reports/roadmap"
-          class="font-medium text-primary underline-offset-4 hover:underline"
-          >roadmap</a>.
-      </Fragment>
-    </SectionHeader>
-    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <SectionHeader
+      title="Reporting tools"
+      lede="Each project keeps its voice notes, photos, reports, and PDFs together, so you can find them when someone asks."
+    />
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {
         feats.map(({ title, icon, Content }) => (
           <Card>

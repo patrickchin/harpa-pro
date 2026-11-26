@@ -6,7 +6,7 @@
   <div class="evidence-image-dialog-panel">
     <header>
       <h2 id="evidence-image-dialog-title" data-evidence-image-dialog-title>
-        Evidence Image
+        Evidence image
       </h2>
       <button
         type="button"
@@ -77,7 +77,10 @@
           const request = ++imageRequest;
           const imageTitle = trigger.dataset.evidenceImageTitle ?? "Evidence image";
           const previewImage = trigger.querySelector<HTMLImageElement>("img");
-          const previewSource = previewImage?.currentSrc || previewImage?.src;
+          const previewSource =
+            previewImage?.complete && previewImage.naturalWidth > 0
+              ? previewImage.currentSrc || previewImage.src
+              : "";
           const hasPreview = Boolean(
             previewSource && previewSource !== new URL(source, window.location.href).href,
           );

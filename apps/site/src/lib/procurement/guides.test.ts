@@ -15,7 +15,7 @@ describe("procurement guide routing", () => {
     expect(sortProcurementGuides([])).toEqual([]);
   });
 
-  it.each(["guides", "how-to-buy-from-china", "nested/guide", "Not-a-slug", "../other", ""])(
+  it.each(["guides", "how-to-buy-from-china", "factory-documents", "nested/guide", "Not-a-slug", "../other", ""])(
     "rejects route collisions and invalid slugs: %s",
     (id) => {
       expect(() => sortProcurementGuides([{ id, data: { order: 1 } }])).toThrow(

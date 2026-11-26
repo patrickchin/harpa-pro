@@ -15,20 +15,22 @@ describe('marketing claim copy', () => {
     const files = [
       'components/procurement/ProcurementEvidence.astro',
       'components/site/Header.astro',
+      'lib/site/sections.ts',
+      'pages/404.astro',
       'components/reports/Features.astro',
-      'components/reports/WaitlistForm.astro',
-      'components/reports/WaitlistFormIsland.tsx',
+      'components/reports/AppStoreBadge.astro',
+      'components/reports/ClosingCta.astro',
+      'components/reports/SiteReportingHero.astro',
       'components/reports/VoiceDemo.tsx',
       'components/reports/HowItWorks.astro',
       'content/reports/features/04-exports.mdx',
-      'content/reports/features/05-jobsite.mdx',
-      'content/reports/features/06-drafts.mdx',
       'content/reports/faq/02-offline.mdx',
       'content/reports/faq/03-voice-privacy.mdx',
       'content/reports/faq/04-when.mdx',
       'content/reports/faq/05-cost.mdx',
       'content/reports/roadmap/00-ai-reports.mdx',
       'content/reports/roadmap/01-android-pilot.mdx',
+      'content/reports/roadmap/15-web.mdx',
       'content.config.ts',
       'layouts/Layout.astro',
       'pages/index.astro',
@@ -36,6 +38,7 @@ describe('marketing claim copy', () => {
       'pages/reports/confirm.astro',
       'pages/reports/roadmap.astro',
       'lib/reports/links.ts',
+      'lib/reports/roadmap.ts',
     ];
 
     const corpus = files.map((file) => readSource(file)).join('\n');
@@ -75,7 +78,6 @@ describe('marketing claim copy', () => {
     expect(corpus).not.toContain('status: "pilot"');
     expect(corpus).not.toContain('status: "later"');
     expect(corpus).toContain('https://apps.apple.com/us/app/harpa-pro/id6776759817');
-    expect(corpus).toContain('Get the app');
-    expect(corpus).toContain('Product updates');
+    expect(corpus).toContain('Download on the App Store');
   });
 });

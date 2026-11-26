@@ -12,15 +12,35 @@ app in one static Astro application at `harpapro.com`.
 
 App components, content, helpers, screenshots, and fixtures live beneath
 `reports/` directories in `apps/site/src`. Procurement has its own
-`procurement/` directories. Shared header, footer, and wordmark live in
-`src/components/site`. Current guides live in
+`procurement/` directories. The header, footer, wordmark, and breadcrumbs in
+`src/components/site` are audience-scoped: each page passes its section
+(`procurement`, `reports`, or `shared`), and `src/lib/site/sections.ts` holds
+each section's links, CTA, footer, breadcrumb root, and default metadata.
+Procurement and reporting pages show only their own menu plus one cross-link
+to the other offer. Privacy and the 404 page present both offers equally; the
+404 highlights the matching offer for a missed `/reports/` or `/procurement/`
+path. Footer link labels match the header labels for the same destinations.
+See the
+[audience-scoped chrome design](../v4/design-public-site-audience-chrome.md).
+Current guides live in
 `apps/site/src/content/reports/docs`.
+The roadmap shows status stages (Available, In progress, Planned, Exploring)
+and optional coarse timing from `apps/site/src/content/reports/roadmap`. It
+ends with App Store, guides, and feature-suggestion email links. See the
+[site README](../../apps/site/README.md#product-organization) for the
+content fields.
 
 The reporting page includes a browser demo using
 `apps/site/src/fixtures/reports/demoReport.ts`. It captures no audio and
-calls no API or AI provider. The legacy waitlist form remains in source but
-is not mounted on the public pages. Existing email confirmation links still
+calls no API or AI provider. The App Store calls to action use Apple's
+unmodified black "Download on the App Store" badge
+(`apps/site/src/assets/reports/app-store-badge.svg`) at 40px or taller, in the
+hero and in a closing call-to-action section above the footer. The FAQ shows
+every answer in an open definition list. The legacy waitlist form has been
+removed from the site source. Existing email confirmation links still
 work through permanent redirects, and new emails use `/reports/confirm`.
+Because no page offers signup, failed or expired confirmation links direct
+people to `/reports`, the App Store, or support email.
 
 The M0–M4 plans below preserve the original app-only launch history. Use the
 [site README](../../apps/site/README.md) and
@@ -39,7 +59,7 @@ is active. Treat provider-console state as `UNKNOWN` until checked.
 | Framework          | **Astro 7**                                      | Mostly-static content; ships zero JS by default; React islands for interactivity. |
 | Build runtime      | Node 22.12+ and Vite 8                           | Supported runtime and bundler line for Astro 7.                                   |
 | Styling            | Tailwind v4                                      | Same as Lovable scaffold; copy classes across.                                    |
-| Interactive bits   | React 19 inside Astro islands (`client:visible`) | Voice demo + waitlist form.                                                       |
+| Interactive bits   | React 19 inside Astro islands (`client:visible`) | Voice demo.                                                                       |
 | UI primitives      | Local Astro and React components                 | The site has no shadcn/ui dependency.                                             |
 | Content (FAQ etc.) | MDX via Astro content collections                | Easy edits without code changes.                                                  |
 | Forms              | React state plus the shared API contract         | The site has no react-hook-form dependency.                                       |
@@ -85,9 +105,10 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
    to a single R2 prefix and a single report. No `user_id`, no
    access to real user tables. UI-only swap if we later pivot to
    email-first or waitlist-only gating.
-3. **Waitlist form posts to**: Directly to `api.harpapro.com` with
-   CORS. Simpler than proxying; rate-limiting and Turnstile live at
-   the API boundary.
+3. **Waitlist form posted to** (form since removed; `/reports/confirm`
+   still calls the API): Directly to `api.harpapro.com` with CORS.
+   Simpler than proxying; rate-limiting and Turnstile live at the API
+   boundary.
 4. **Email provider**: Resend. Generous free tier, React Email
    support, good deliverability.
 5. **Analytics**: PostHog is selected for page visits, clicks, and WhatsApp /

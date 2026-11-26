@@ -2,35 +2,35 @@ import { expect, test } from '@playwright/test';
 
 const CONSIDERATIONS = [
   {
-    title: 'Design and Specification',
+    title: 'Design and specification',
     description:
       'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
-    image: 'Revit A104 coordination sheet with 3D interior views',
+    image: 'Revit A104 3D coordination review sheet',
     fit: 'contain',
   },
   {
-    title: 'Factory and Product Fit',
+    title: 'Factory and product fit',
     description:
       "We compare the factory's capability, product range, production capacity, and records with the project brief.",
     image: 'AIS Smarti headquarters and factory in Foshan, China',
     fit: 'cover',
   },
   {
-    title: 'Materials and Compliance',
+    title: 'Materials and compliance',
     description:
       "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements.",
     image: 'First page of the AIS marine HDF formaldehyde test report',
     fit: 'contain',
   },
   {
-    title: 'Production Quality',
+    title: 'Production quality',
     description:
       'We inspect materials, workmanship, dimensions, finishes, and finished goods at agreed points during production.',
     image: 'AIS Smarti production lines and factory floor',
     fit: 'cover',
   },
   {
-    title: 'Packing and Delivery',
+    title: 'Packing and delivery',
     description:
       'We check packing, labels, collection, freight documents, and delivery records against the order.',
     image: 'AIS Smarti pallet and flat-pack packing examples',
@@ -74,9 +74,9 @@ const BUYER_INFORMATION = [
 ] as const;
 
 const PRODUCT_BRIEFS = [
-  { title: 'AIS Custom Kitchen Joinery', imageMode: 'cover' },
-  { title: 'J2S JSBC Hospitality Seating', imageMode: 'cover' },
-  { title: 'Rong Shuo SW-011 Shower Enclosure', imageMode: 'source-content' },
+  { title: 'AIS custom kitchen joinery', imageMode: 'cover' },
+  { title: 'J2S JSBC hospitality seating', imageMode: 'cover' },
+  { title: 'Rong Shuo SW-011 shower enclosure', imageMode: 'source-content' },
 ] as const;
 
 const CREDENTIALS = [
@@ -89,10 +89,7 @@ const CREDENTIALS = [
   'E1 board formaldehyde report',
   'Wanhua Ecoboard production-control certificate',
   'Sofa formaldehyde test',
-  'European representative appointment',
 ] as const;
-
-const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
 
 const FIRST_CREDENTIAL_DESCRIPTION =
   'The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.';
@@ -176,7 +173,7 @@ test('presents the procurement team and considerations with matching evidence', 
   const hashyProfile = page.locator('[data-procurement-profile="hashy"]');
   await expect(profiles).toHaveCount(2);
   await expect(
-    harunaProfile.getByRole('heading', { level: 2, name: 'Procurement Lead' }),
+    harunaProfile.getByRole('heading', { level: 2, name: 'Procurement lead' }),
   ).toBeVisible();
   await expect(harunaProfile).toContainText('Haruna Bayoh');
   await expect(harunaProfile).toContainText(
@@ -184,11 +181,11 @@ test('presents the procurement team and considerations with matching evidence', 
   );
   await expect(harunaProfile).toContainText("Master's degree");
   await expect(harunaProfile).toContainText('6 years');
-  await expect(harunaProfile).toContainText('Technical Coordination');
-  await expect(harunaProfile).toContainText('Order Control');
-  await expect(harunaProfile).toContainText('Document Record');
-  await expect(harunaProfile).not.toContainText('Factory Coordination');
-  await expect(harunaProfile).not.toContainText('Shipping Logistics');
+  await expect(harunaProfile).toContainText('Technical coordination');
+  await expect(harunaProfile).toContainText('Order control');
+  await expect(harunaProfile).toContainText('Document record');
+  await expect(harunaProfile).not.toContainText('Factory coordination');
+  await expect(harunaProfile).not.toContainText('Shipping logistics');
   await expect(harunaProfile.getByRole('link', { name: 'LinkedIn profile' })).toHaveAttribute(
     'href',
     'https://www.linkedin.com/in/harunabayoh/',
@@ -198,17 +195,17 @@ test('presents the procurement team and considerations with matching evidence', 
     '_blank',
   );
   await expect(
-    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement Specialist' }),
+    hashyProfile.getByRole('heading', { level: 2, name: 'Procurement specialist' }),
   ).toBeVisible();
   await expect(hashyProfile).toContainText('Hashy');
   await expect(hashyProfile).toContainText(
     "Hashy is Harpa Pro's procurement specialist for factory coordination and shipping logistics.",
   );
-  await expect(hashyProfile).toContainText('Procurement & Logistics');
+  await expect(hashyProfile).toContainText('Procurement & logistics');
   await expect(hashyProfile).toContainText("Bachelor's degree");
   await expect(hashyProfile).toContainText('4 years');
-  await expect(hashyProfile).toContainText('Factory Coordination');
-  await expect(hashyProfile).toContainText('Shipping Logistics');
+  await expect(hashyProfile).toContainText('Factory coordination');
+  await expect(hashyProfile).toContainText('Shipping logistics');
   await expect(hashyProfile.getByRole('img', { name: 'Hashy' })).toBeVisible();
   await expect(hashyProfile.getByRole('link')).toHaveCount(0);
   await expect(page.locator('[data-agent-card]')).toHaveCount(0);
@@ -216,14 +213,16 @@ test('presents the procurement team and considerations with matching evidence', 
   const main = page.locator('main');
   await expect(main.getByRole('heading', { name: 'Project evidence' })).toHaveCount(0);
   for (const heading of [
-    'Selected Factory Partners',
-    'What Each Quote Includes',
-    'Product Examples',
-    'Factory Documents',
-    'Technical Reviews',
+    'Selected factory partners',
+    'What each quote includes',
+    'Factory documents',
   ]) {
     await expect(main.getByRole('heading', { level: 2, name: heading })).toBeVisible();
   }
+  for (const removed of ['Product examples', 'Technical reviews']) {
+    await expect(main.getByRole('heading', { level: 2, name: removed })).toHaveCount(0);
+  }
+  await expect(page.locator('main > section')).toHaveCount(6);
   await expect(main.getByText('Harpa Pro procurement', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Service scope', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Procurement review', { exact: true })).toHaveCount(0);
@@ -293,7 +292,9 @@ test('keeps consideration choices and selected details stable at common widths',
   }
 });
 
-test('crops embedded source captions and fills photographic frames', async ({ page }) => {
+test('uses a pre-cropped AIS photo and fills photographic frames without transforms', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#considerations');
 
@@ -310,47 +311,45 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   );
   expect(mobileTabBoxes.every(({ width, height }) => width >= 320 && height >= 80)).toBe(true);
 
-  await page.getByRole('tab', { name: 'Factory and Product Fit' }).click();
+  await page.getByRole('tab', { name: 'Factory and product fit' }).click();
   const considerationPanel = page.getByRole('tabpanel', {
-    name: 'Factory and Product Fit',
+    name: 'Factory and product fit',
   });
   const considerationFrame = considerationPanel.locator('[data-consideration-image-frame]');
   const considerationImage = considerationFrame.getByRole('img', {
     name: 'AIS Smarti headquarters and factory in Foshan, China',
   });
-
-  await expect(considerationFrame).toHaveAttribute('data-image-crop', 'embedded-caption');
+  await expect(considerationFrame).toHaveAttribute('data-image-crop', 'cover');
   await expect(considerationImage).toBeVisible();
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories.locator('[data-factory-image-frame]')).toHaveCount(
     FACTORY_PARTNERS.length,
   );
-
   const aisFactory = factories.filter({ hasText: 'AIS Smarti' });
   const aisFactoryFrame = aisFactory.locator('[data-factory-image-frame]');
   const aisFactoryImage = aisFactoryFrame.getByRole('img');
-  await expect(aisFactoryFrame).toHaveAttribute('data-image-crop', 'embedded-caption');
+  await expect(aisFactoryFrame).toHaveAttribute('data-image-crop', 'cover');
   await expect(aisFactoryImage).toBeVisible();
 
-  for (const [frame, image] of [
-    [considerationFrame, considerationImage],
-    [aisFactoryFrame, aisFactoryImage],
-  ] as const) {
-    const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
-    expect(frameBox).not.toBeNull();
-    expect(imageBox).not.toBeNull();
-    expect(imageBox!.width).toBeGreaterThan(frameBox!.width * 1.15);
-    expect(imageBox!.height).toBeGreaterThan(frameBox!.height * 1.15);
+  for (const image of [considerationImage, aisFactoryImage]) {
+    await expect(image).toHaveAttribute('src', /ais-factory-exterior-photo\./);
+    expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
   }
 
-  for (const frame of await factories.locator('[data-factory-image-frame]').all()) {
+  for (const frame of [
+    considerationFrame,
+    ...(await factories.locator('[data-factory-image-frame]').all()),
+  ]) {
     const image = frame.getByRole('img');
+    await image.scrollIntoViewIfNeeded();
     const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
     expect(frameBox).not.toBeNull();
     expect(imageBox).not.toBeNull();
     expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
     expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
+    expect(imageBox!.width).toBeLessThanOrEqual(frameBox!.width + 1);
+    expect(imageBox!.height).toBeLessThanOrEqual(frameBox!.height + 1);
   }
 
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -359,25 +358,21 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   expect(featuredCardBox).not.toBeNull();
   expect(featuredFrameBox).not.toBeNull();
   expect(featuredFrameBox!.height).toBeGreaterThanOrEqual(featuredCardBox!.height - 2);
-
-  const featuredImageBox = await aisFactoryImage.boundingBox();
-  expect(featuredImageBox).not.toBeNull();
-  expect(featuredImageBox!.height).toBeGreaterThan(featuredFrameBox!.height * 1.15);
 });
 
 test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/#evidence');
+  await page.goto('/#considerations');
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
-    name: 'Open full view of Revit A104 Coordination Review',
+    name: 'Open full view of Revit A104 coordination review',
   });
   await drawingTrigger.click();
 
   await expect(page).toHaveURL(pageUrl);
   const drawingDialog = page.getByRole('dialog', {
-    name: 'Full view: Revit A104 Coordination Review',
+    name: 'Full view: Revit A104 coordination review',
   });
   await expect(drawingDialog).toBeVisible();
   await expect(
@@ -416,6 +411,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(drawingDialog).not.toBeVisible();
   await expect(drawingTrigger).toBeFocused();
 
+  await page.goto('/procurement/factory-documents');
   await page.setViewportSize({ width: 390, height: 844 });
   const recordTrigger = page.getByRole('button', {
     name: 'Open full view of Marine HDF formaldehyde test',
@@ -449,23 +445,24 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(recordDialog).not.toBeVisible();
   await expect(recordTrigger).toBeFocused();
 
-  await drawingTrigger.click();
-  await drawingDialog.evaluate((dialog) => {
+  await recordTrigger.click();
+  await recordDialog.evaluate((dialog) => {
     dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
-  await expect(drawingDialog).not.toBeVisible();
-  await expect(drawingTrigger).toBeFocused();
+  await expect(recordDialog).not.toBeVisible();
+  await expect(recordTrigger).toBeFocused();
 
-  await expect(page.locator('[data-technical-review] > a')).toHaveCount(0);
+  await page.goto('/#considerations');
+  await expect(page.locator('[data-technical-review] a')).toHaveCount(0);
   await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
 });
 
 test('shows a cached preview while the full evidence image loads', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/#evidence');
+  await page.goto('/#considerations');
 
   const trigger = page.getByRole('button', {
-    name: 'Open full view of Revit A104 Coordination Review',
+    name: 'Open full view of Revit A104 coordination review',
   });
   const thumbnail = trigger.getByRole('img');
   await thumbnail.scrollIntoViewIfNeeded();
@@ -474,6 +471,7 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   const previewSource = await thumbnail.evaluate((image) => (image as HTMLImageElement).currentSrc);
   const source = await trigger.getAttribute('data-evidence-image-src');
   expect(source).not.toBeNull();
+  expect(source).toMatch(/^\/_astro\/revit-a104-coordination\.[^/]+_[^/]+\.webp$/);
   const fullSource = new URL(source!, page.url()).href;
   expect(previewSource).not.toBe(fullSource);
 
@@ -488,15 +486,17 @@ test('shows a cached preview while the full evidence image loads', async ({ page
 
   await trigger.click();
   const dialog = page.getByRole('dialog', {
-    name: 'Full view: Revit A104 Coordination Review',
+    name: 'Full view: Revit A104 coordination review',
   });
   const dialogImage = dialog.getByRole('img');
   const imageRegion = dialog.locator('[data-evidence-image-dialog-region]');
 
+  let previewBox: { width: number; height: number } | null;
   try {
     await expect(dialogImage).toHaveJSProperty('currentSrc', previewSource);
     await expect(dialogImage).toHaveAttribute('data-evidence-image-state', 'preview');
     await expect(imageRegion).toHaveAttribute('aria-busy', 'true');
+    previewBox = await dialogImage.boundingBox();
   } finally {
     releaseFullImage();
   }
@@ -504,40 +504,51 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   await expect(dialogImage).toHaveJSProperty('currentSrc', fullSource);
   await expect(dialogImage).toHaveAttribute('data-evidence-image-state', 'full');
   await expect(imageRegion).toHaveAttribute('aria-busy', 'false');
+
+  // The preview reserves the full image's box, so the swap does not resize it.
+  const fullBox = await dialogImage.boundingBox();
+  expect(previewBox).not.toBeNull();
+  expect(fullBox).not.toBeNull();
+  expect(Math.abs(fullBox!.width - previewBox!.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(fullBox!.height - previewBox!.height)).toBeLessThanOrEqual(1);
 });
 
-test('shows compact factory examples and progressively discloses document previews', async ({
+test('merges reviews into the process and summarizes factory evidence on the homepage', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/#evidence');
+  await page.goto('/#technical-reviews');
 
-  await expect(page.getByRole('heading', { name: 'Technical Reviews' })).toBeVisible();
-  await expect(
-    page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('img', { name: 'Revit A103 chair shop drawing review sheet' }),
-  ).toBeVisible();
-  const technicalReviews = page.locator('[data-technical-review]');
+  const designPanel = page.getByRole('tabpanel', { name: 'Design and specification' });
+  await expect(designPanel).toBeVisible();
+  const technicalReviews = designPanel.locator('[data-technical-review]');
   await expect(technicalReviews).toHaveCount(2);
-  await expect(technicalReviews.nth(0)).toContainText(
+  await expect(page.locator('#technical-reviews')).toBeVisible();
+  for (const name of [
+    'Revit A104 3D coordination review sheet',
+    'Revit A103 chair shop drawing review sheet',
+  ]) {
+    await expect(designPanel.getByRole('img', { name })).toBeVisible();
+  }
+  await expect(technicalReviews.nth(0)).toHaveAttribute(
+    'data-evidence-image-caption',
     'We check the layout, finishes, and sizes before we approve the factory information.',
   );
-  await expect(technicalReviews.nth(1)).toContainText('We review the drawings before production.');
-  await expect(page.getByText(/These sheets record design coordination/)).toHaveCount(0);
+  await expect(technicalReviews.nth(1)).toHaveAttribute(
+    'data-evidence-image-caption',
+    'We review the drawings before production.',
+  );
 
+  await page.goto('/#evidence');
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
   await expect(
-    page.getByRole('heading', { level: 2, name: 'Selected Factory Partners' }),
+    page.getByRole('heading', { level: 2, name: 'Selected factory partners' }),
   ).toBeVisible();
   await expect(
     page.getByText(
       'We match each order with the factory that meets the design specifications and the delivery timeline.',
-      {
-        exact: false,
-      },
+      { exact: false },
     ),
   ).toBeVisible();
   for (const [index, factory] of FACTORY_PARTNERS.entries()) {
@@ -553,18 +564,18 @@ test('shows compact factory examples and progressively discloses document previe
     page.locator('#factory-partners').boundingBox(),
     factories.first().boundingBox(),
   ]);
-  expect(partnerSectionBox).not.toBeNull();
-  expect(featuredFactoryBox).not.toBeNull();
-  expect(featuredFactoryBox!.width).toBeLessThanOrEqual(partnerSectionBox!.width * 0.67);
+  expect(featuredFactoryBox!.width).toBeGreaterThanOrEqual(partnerSectionBox!.width - 1);
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
 
-  await expect(page.getByRole('heading', { name: 'Product Examples' })).toBeVisible();
+  const quote = page.locator('#quote-contents');
+  await expect(quote.getByRole('heading', { level: 2, name: 'What each quote includes' }))
+    .toBeVisible();
   for (const label of BUYER_INFORMATION) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
+    await expect(quote.getByText(label, { exact: true })).toBeVisible();
   }
-  const briefs = page.locator('[data-product-brief]');
+  const briefs = quote.locator('#product-examples [data-product-brief]');
   await expect(briefs).toHaveCount(PRODUCT_BRIEFS.length);
   for (const [index, brief] of PRODUCT_BRIEFS.entries()) {
     const card = briefs.nth(index);
@@ -573,45 +584,51 @@ test('shows compact factory examples and progressively discloses document previe
     const image = frame.getByRole('img');
     await expect(frame).toHaveAttribute('data-product-image-mode', brief.imageMode);
     await expect(image).toBeVisible();
-
     const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
-    expect(frameBox).not.toBeNull();
-    expect(imageBox).not.toBeNull();
     expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
     expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
   }
-  const briefBoxes = await briefs.evaluateAll((cards) =>
-    cards.map((card) => {
-      const box = card.getBoundingClientRect();
-      return { width: box.width, y: box.y };
-    }),
+  const briefTops = await briefs.evaluateAll((cards) =>
+    cards.map((card) => card.getBoundingClientRect().y),
   );
-  expect(briefBoxes).toHaveLength(PRODUCT_BRIEFS.length);
-  expect(
-    Math.max(...briefBoxes.map(({ y }) => y)) - Math.min(...briefBoxes.map(({ y }) => y)),
-  ).toBeLessThanOrEqual(1);
+  expect(Math.max(...briefTops) - Math.min(...briefTops)).toBeLessThanOrEqual(1);
 
-  const [productSectionBox, factoryDocumentsBox, technicalReviewsBox] = await Promise.all([
-    page.locator('#product-examples').boundingBox(),
-    page.locator('#factory-documents').boundingBox(),
-    page.locator('#technical-reviews').boundingBox(),
-  ]);
-  expect(productSectionBox).not.toBeNull();
-  expect(factoryDocumentsBox).not.toBeNull();
-  expect(technicalReviewsBox).not.toBeNull();
-  expect(productSectionBox!.height).toBeLessThanOrEqual(
-    Math.max(factoryDocumentsBox!.height, technicalReviewsBox!.height) * 1.4,
-  );
+  const summary = page.locator('#factory-documents');
+  await expect(summary.getByRole('heading', { level: 2, name: 'Factory documents' }))
+    .toBeVisible();
+  await expect(summary).toContainText(`${CREDENTIALS.length} test reports and certificates`);
+  await expect(summary).not.toContainText(/expired/i);
+  await expect(page.locator('main [data-credential-record]')).toHaveCount(0);
+  await expect(page.locator('[data-document-disclosure]')).toHaveCount(0);
+  await expect(page.locator('a[href^="/documents/factories/"]')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /download procurement pdf/i })).toHaveCount(0);
+  await expect(page.locator('a[href*="/catalogues/"]')).toHaveCount(0);
 
-  await expect(page.getByRole('heading', { name: 'Factory Documents' })).toBeVisible();
-  const suppliedRecords = page.locator('[data-credential-record]');
-  await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
-  for (const title of INITIAL_CREDENTIALS) {
-    const record = suppliedRecords.filter({ hasText: title });
-    await expect(record).toContainText(title);
-    await expect(record.getByRole('img')).toBeVisible();
+  await summary.getByRole('link', { name: 'View all factory documents' }).click();
+  await expect(page).toHaveURL(/\/procurement\/factory-documents$/);
+});
+
+test('lists every factory document with a preview on its own page', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/procurement/factory-documents');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Factory documents' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link', { name: 'Procurement' }))
+    .toHaveAttribute('href', '/');
+  await expect(page.locator('body')).toHaveAttribute('data-site-section', 'procurement');
+  await expect(page.locator('footer').getByRole('link', { name: 'Factory documents', exact: true }))
+    .toHaveAttribute('href', '/procurement/factory-documents');
+  const records = page.locator('[data-credential-record]');
+  await expect(records).toHaveCount(CREDENTIALS.length);
+  for (const title of CREDENTIALS) {
+    const record = records.filter({ hasText: title });
+    await expect(record).toBeVisible();
+    await expect(record.getByRole('heading', { level: 2, name: title })).toBeVisible();
     await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+  }
+  await expect(records.first()).toContainText(FIRST_CREDENTIAL_DESCRIPTION);
 
+  for (const record of (await records.all()).slice(0, 3)) {
     const preview = record.locator('[data-document-preview-crop]');
     await expect(preview).toBeVisible();
     const previewStyle = await preview.evaluate((region) => {
@@ -629,33 +646,10 @@ test('shows compact factory examples and progressively discloses document previe
     expect(previewStyle.objectPosition).toMatch(/50% 0%/);
   }
 
-  await expect(suppliedRecords.first()).not.toContainText(FIRST_CREDENTIAL_DESCRIPTION);
-
-  for (const title of CREDENTIALS.slice(3)) {
-    await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();
-  }
-
-  const moreDocuments = page.locator('[data-document-disclosure]');
-  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
-  await moreDocuments.click();
-  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'true');
-  await expect(moreDocuments).toHaveText('Show fewer documents');
-
-  for (const title of CREDENTIALS) {
-    const record = suppliedRecords.filter({ hasText: title });
-    await expect(record).toBeVisible();
-    await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
-  }
-
+  await expect(records.filter({ hasText: 'European representative appointment' })).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText(/expired/i);
   await expect(page.locator('[data-evidence-document-href]')).toHaveCount(0);
   await expect(page.locator('a[href^="/documents/factories/"]')).toHaveCount(0);
-
-  const oldDocument = await page.request.get(
-    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
-  );
-  expect(oldDocument.status()).not.toBe(200);
-  expect(oldDocument.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/);
-
   await expect(
     page.getByText(
       'Factory-supplied document. Harpa Pro has not independently verified its current status or scope.',
@@ -663,18 +657,21 @@ test('shows compact factory examples and progressively discloses document previe
     ),
   ).toHaveCount(0);
 
-  const expiredRecord = page.locator('[data-credential-status="expired"]');
-  await expect(expiredRecord).toHaveCount(1);
-  await expect(expiredRecord).toContainText('Expired 15 July 2026');
-
-  await expect(page.getByRole('link', { name: /download procurement pdf/i })).toHaveCount(0);
-  await expect(page.locator('a[href*="/catalogues/"]')).toHaveCount(0);
-
+  const oldDocument = await page.request.get(
+    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
+  );
+  expect(oldDocument.status()).not.toBe(200);
+  expect(oldDocument.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/);
   const pdfResponse = await page.request.get('/downloads/harpa-pro-interior-procurement.pdf');
   expect(pdfResponse.status()).toBe(404);
+
+  await expect(page.getByRole('link', { name: 'Send your project brief' })).toHaveAttribute(
+    'href',
+    '/#contact',
+  );
 });
 
-test('offers copy-first email and WhatsApp contact actions without a form', async ({ page }) => {
+test('makes opening the email app the primary contact action without a form', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -688,13 +685,34 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await page.goto('/#contact');
 
   const contact = page.locator('#contact');
-  await expect(contact.getByRole('heading', { level: 2, name: 'Contact Us' })).toBeVisible();
+  await expect(contact.getByRole('heading', { level: 2, name: 'Contact us' })).toBeVisible();
   await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
   await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
+  for (const width of [390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const gaps = await contact.locator('dl > *').evaluateAll((cards) =>
+      cards.map((card) => {
+        const cardBox = card.getBoundingClientRect();
+        const contentBottom = Math.max(
+          ...Array.from(card.querySelectorAll('a, button, p'))
+            .filter((element) => element.getClientRects().length > 0 && element.closest('dialog') === null)
+            .map((element) => element.getBoundingClientRect().bottom),
+        );
+        return cardBox.bottom - contentBottom;
+      }),
+    );
+    for (const gap of gaps) expect(gap, `${width}px contact card bottom space`).toBeLessThanOrEqual(36);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   const emailActions = contact.locator('[data-contact-email-actions]');
+  const openEmail = emailActions.locator('button, a').first();
+  await expect(openEmail).toHaveAccessibleName('Open email app');
+  await expect(openEmail).toHaveClass(/\bbg-accent-ink\b/);
   const copyEmail = emailActions.getByRole('button', { name: 'Copy email' });
-  await expect(emailActions.locator('button, a').first()).toHaveAttribute('data-copy-email', '');
+  await expect(copyEmail).not.toHaveClass(/\bbg-accent-ink\b/);
+  await expect(contact.getByRole('status')).toHaveText('');
   await copyEmail.click();
   await expect(contact.getByRole('status')).toHaveText('Email copied');
   expect(await page.evaluate(() => window.localStorage.getItem('copied-email'))).toBe(
@@ -713,7 +731,7 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await expect(contact.locator('form')).toHaveCount(0);
 });
 
-test('uses accessible mega navigation and closes it after outside interaction', async ({
+test('uses accessible procurement navigation and closes it after outside interaction', async ({
   page,
 }) => {
   await page.goto('/');
@@ -721,18 +739,19 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   const desktopNav = page.locator('header nav[aria-label="Primary"]');
   const procurementMenu = desktopNav.locator('[data-mega-menu="procurement"]');
   const procurementSummary = procurementMenu.locator('summary');
-  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
-  const siteReportingSummary = siteReportingMenu.locator('summary');
 
-  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(3);
+  // Procurement pages show only their own menu, plus one quiet cross-link.
+  await expect(desktopNav.locator('[data-mega-menu]')).toHaveCount(1);
+  await expect(desktopNav.locator('[data-mega-menu="site-reporting"]')).toHaveCount(0);
+  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(2);
   const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
-  await expect(desktopItemIcons).toHaveCount(8);
-  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(8);
+  await expect(desktopItemIcons).toHaveCount(4);
+  await expect(desktopItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(4);
   expect(
     await desktopItemIcons.evaluateAll(
       (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
     ),
-  ).toBe(8);
+  ).toBe(4);
   expect(
     await page
       .locator('[data-site-header]')
@@ -745,26 +764,117 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(procurementMenu.getByRole('link', { name: 'Procurement guides', exact: true }))
     .toHaveAttribute('href', '/procurement/guides');
   await expect(
-    procurementMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+    procurementMenu.getByRole('link', { name: /^Procurement overview/ }),
   ).toHaveAttribute('href', '/');
   await expect(
-    procurementMenu.getByRole('link', { name: 'How to Buy from China', exact: true }),
+    procurementMenu.getByRole('link', { name: /^How to buy from China/ }),
   ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
+  await page.mouse.click(20, 700);
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
+
+  await procurementSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(procurementMenu).toHaveAttribute('open', '');
+  await page.keyboard.press('Escape');
+  await expect(procurementMenu).not.toHaveAttribute('open', '');
+  await expect(procurementSummary).toBeFocused();
+
+  await expect(
+    desktopNav.getByRole('link', { name: 'Site reporting app', exact: true }),
+  ).toHaveAttribute('href', '/reports');
+  await expect(
+    desktopNav.getByRole('link', {
+      name: 'Contact us',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/#contact');
+  await expect(desktopNav.getByRole('link', { name: /Get the app/ })).toHaveCount(0);
+
+  const footer = page.locator('footer');
+  await expect(
+    footer.getByRole('link', {
+      name: 'Procurement overview',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/');
+  await expect(footer.locator('nav[aria-label="Site reporting"]')).toHaveCount(0);
+  await expect(footer.locator('a[href="/reports/roadmap"]')).toHaveCount(0);
+  await expect(footer.locator('nav[aria-label="Also from Harpa Pro"]').getByRole('link'))
+    .toHaveText(['Site reporting app']);
+  await expect(footer.getByRole('link', { name: /^Contact/ })).toHaveCount(1);
+  await expect(page.locator('footer nav').getByText(/©/)).toHaveCount(0);
+  await expect(page.locator('footer [data-footer-copyright]')).toContainText('Harpa Pro');
+  await expect(footer.getByRole('link', { name: 'Privacy', exact: true }))
+    .toHaveAttribute('href', '/privacy');
+  await expect(
+    footer.getByRole('link', { name: 'How to buy from China', exact: true }),
+  ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileMenu = page.locator('details.site-menu');
+  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
+  await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(1);
+  const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
+  await expect(mobileItemIcons).toHaveCount(4);
+  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(4);
+  expect(
+    await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
+  ).toBe(4);
+  await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
+    .toHaveText(['Procurement overview', 'Products and factories', 'Our process', 'How to buy from China', 'Procurement guides']);
+  await expect(mobileMenu.locator('[data-mobile-site-reporting]')).toHaveCount(0);
+  await expect(mobileMenu.locator('[data-mobile-also]').getByRole('link'))
+    .toHaveText(['Site reporting app']);
+  await expect(
+    mobileMenu.getByRole('link', { name: 'Procurement overview', exact: true }),
+  ).toHaveAttribute('href', '/');
+  await mobileMenu.getByRole('link', { name: 'How to buy from China', exact: true }).click();
+  await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
+  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
+  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
+
+  await expect(page.getByRole('navigation', { name: 'On this page' }).getByRole('link'))
+    .toHaveCount(6);
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('uses accessible site-reporting navigation without procurement chrome', async ({ page }) => {
+  await page.goto('/reports');
+
+  const desktopNav = page.locator('header nav[aria-label="Primary"]');
+  const siteReportingMenu = desktopNav.locator('[data-mega-menu="site-reporting"]');
+  const siteReportingSummary = siteReportingMenu.locator('summary');
+
+  await expect(desktopNav.locator('[data-mega-menu]')).toHaveCount(1);
+  await expect(desktopNav.locator('[data-mega-menu="procurement"]')).toHaveCount(0);
+  await expect(desktopNav.locator('[data-nav-icon]')).toHaveCount(2);
+  const desktopItemIcons = desktopNav.locator('[data-nav-item-icon]');
+  await expect(desktopItemIcons).toHaveCount(4);
+  expect(
+    await desktopItemIcons.evaluateAll(
+      (icons) => new Set(icons.map((icon) => icon.innerHTML)).size,
+    ),
+  ).toBe(4);
+  await expect(page.locator('[data-site-header] [data-wordmark]')).toHaveAttribute('href', '/reports');
 
   await siteReportingSummary.hover();
   await expect(siteReportingMenu).toHaveAttribute('open', '');
-  await expect(procurementMenu).not.toHaveAttribute('open', '');
   await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Harpa Pro app/ }),
   ).toHaveAttribute('href', '/reports');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Guides/ }),
   ).toHaveAttribute('href', '/reports/docs');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Roadmap/ }),
   ).toHaveAttribute('href', '/reports/roadmap');
-  await expect(siteReportingMenu.getByRole('link', { name: 'Get the App', exact: true }))
+  await expect(siteReportingMenu.getByRole('link', { name: /^Get the app/ }))
     .toHaveAttribute('target', '_blank');
   await page.mouse.click(20, 700);
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');
@@ -776,54 +886,35 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');
   await expect(siteReportingSummary).toBeFocused();
 
-  await expect(
-    desktopNav.getByRole('link', {
-      name: 'Contact Us',
-      exact: true,
-    }),
-  ).toHaveAttribute('href', '/#contact');
-  await expect(
-    page
-      .locator('footer')
-      .getByRole('link', {
-        name: 'Overview',
-        exact: true,
-      })
-      .first(),
-  ).toHaveAttribute('href', '/');
-  await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
-  await expect(page.locator('footer nav[aria-label="Site Reporting"]').getByRole('link'))
-    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Account Deletion']);
-  await expect(page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }))
+  await expect(desktopNav.getByRole('link', { name: 'Interior procurement', exact: true }))
+    .toHaveAttribute('href', '/');
+  await expect(desktopNav.getByRole('link', { name: 'Contact us', exact: true })).toHaveCount(0);
+  const headerAppLink = desktopNav.locator(':scope > a', { hasText: 'Get the app' });
+  await expect(headerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
+  await expect(headerAppLink).toHaveAttribute('target', '_blank');
+
+  const footer = page.locator('footer');
+  await expect(footer.locator('nav[aria-label="Site reporting"]').getByRole('link'))
+    .toHaveText(['Harpa Pro app', 'Guides', 'Roadmap', 'Get the app', 'Account deletion']);
+  const footerAppLink = footer.getByRole('link', { name: 'Get the app', exact: true });
+  await expect(footerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
+  await expect(footerAppLink).toHaveAttribute('target', '_blank');
+  await expect(footerAppLink).toHaveAttribute('rel', /noopener/);
+  await expect(footer.locator('nav[aria-label="Procurement"]')).toHaveCount(0);
+  await expect(footer.locator('a[href="/#contact"]')).toHaveCount(0);
+  await expect(footer.locator('nav[aria-label="Also from Harpa Pro"]').getByRole('link'))
+    .toHaveText(['Interior procurement']);
+  await expect(footer.getByRole('link', { name: 'Privacy', exact: true }))
     .toHaveAttribute('href', '/privacy');
-  await expect(
-    page.locator('footer').getByRole('link', { name: 'How to Buy from China', exact: true }),
-  ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileMenu = page.locator('details.site-menu');
   await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
-  await expect(mobileMenu.locator('[data-nav-icon]')).toHaveCount(2);
-  const mobileItemIcons = mobileMenu.locator('[data-nav-item-icon]');
-  await expect(mobileItemIcons).toHaveCount(7);
-  await expect(mobileItemIcons.locator('svg[aria-hidden="true"]')).toHaveCount(7);
-  expect(
-    await mobileItemIcons.evaluateAll((icons) => new Set(icons.map((icon) => icon.innerHTML)).size),
-  ).toBe(7);
-  await expect(mobileMenu.locator('[data-mobile-procurement]').getByRole('link'))
-    .toHaveText(['Procurement Overview', 'Products and factories', 'Our process', 'How to Buy from China', 'Procurement guides']);
-  await expect(
-    mobileMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
-  ).toHaveAttribute('href', '/');
-  await mobileMenu.getByRole('link', { name: 'How to Buy from China', exact: true }).click();
-  await expect(page).toHaveURL(/\/how-to-buy-from-china$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'How to buy from China' })).toBeVisible();
-  await mobileMenu.locator('summary[aria-label="Toggle menu"]').click();
   const mobileSiteReporting = mobileMenu.locator('[data-mobile-site-reporting]');
-  await expect(mobileSiteReporting.getByRole('link')).toHaveText(['Harpa Pro App', 'Guides', 'Roadmap']);
-  await expect(mobileSiteReporting.getByText('Site Reporting', { exact: true })).toBeVisible();
+  await expect(mobileSiteReporting.getByRole('link')).toHaveText(['Harpa Pro app', 'Guides', 'Roadmap']);
+  await expect(mobileSiteReporting.getByText('Site reporting', { exact: true })).toBeVisible();
   await expect(
-    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+    mobileSiteReporting.getByRole('link', { name: 'Harpa Pro app', exact: true }),
   ).toHaveAttribute('href', '/reports');
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Guides', exact: true }),
@@ -831,11 +922,9 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(
     mobileSiteReporting.getByRole('link', { name: 'Roadmap', exact: true }),
   ).toHaveAttribute('href', '/reports/roadmap');
-  await expect(mobileMenu.getByRole('link', { name: 'App', exact: true })).toHaveCount(0);
-  await expect(mobileMenu.getByRole('link', { name: 'View evidence', exact: true })).toHaveCount(0);
-
-  await expect(page.getByRole('navigation', { name: 'On this page' }).getByRole('link'))
-    .toHaveCount(6);
+  await expect(mobileMenu.locator('[data-mobile-procurement]')).toHaveCount(0);
+  await expect(mobileMenu.locator('[data-mobile-also]').getByRole('link'))
+    .toHaveText(['Interior procurement']);
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -860,7 +949,7 @@ test('uses valid tab semantics and accessible contrast for procurement actions',
   await expect(panel).toHaveJSProperty('tagName', 'DIV');
 
   const procurementActions = page.locator(
-    'nav[aria-label="Primary"] > a[href="/#contact"], button[data-copy-email]',
+    'nav[aria-label="Primary"] > a[href="/#contact"], a[data-contact-event="contact_email_opened"]',
   );
   await expect(procurementActions).toHaveCount(2);
   for (let index = 0; index < 2; index += 1) {

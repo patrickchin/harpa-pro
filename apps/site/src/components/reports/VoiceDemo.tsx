@@ -81,20 +81,19 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
     <>
       <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
         <div className="truncate text-sm font-semibold tracking-tight text-foreground">
-          New Report
+          New report
         </div>
-        <button
-          type="button"
+        <span
+          aria-hidden
           className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground"
-          aria-label="Settings"
         >
           <DotsIcon className="h-4 w-4" />
-        </button>
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-3 pt-3">
         <PreviousNoteCard
-          title="Walk through — North Entrance"
+          title="Walkthrough — north entrance"
           author="Site team"
           recordedAt="Today · 9:42 AM"
           summary="Rebar laid out for Block B footing. Crew noted standing water near gridline 4; pump scheduled for tomorrow."
@@ -107,7 +106,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
           type="button"
           onClick={onGenerate}
           disabled={generating}
-          className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-default disabled:opacity-80"
+          className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-accent-ink px-3 text-sm font-semibold text-accent-foreground transition hover:opacity-90 ring-focus disabled:cursor-default disabled:opacity-80"
         >
           {generating ? (
             <>
@@ -174,13 +173,12 @@ function PreviousNoteCard({
   return (
     <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label="Play voice note"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:opacity-90"
+        <span
+          aria-hidden
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
         >
           <PlayIcon className="h-4 w-4" />
-        </button>
+        </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">
             {title}
@@ -266,7 +264,7 @@ function ReportScreen({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10 ring-focus"
         >
           <ChevronLeftIcon className="h-3.5 w-3.5" />
           Reports

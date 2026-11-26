@@ -1,7 +1,7 @@
 ---
 import VoiceDemo from "./VoiceDemo.tsx";
-import Icon from "../Icon.astro";
-import { APP_STORE_URL } from "../../lib/reports/links";
+import AppStoreBadge from "./AppStoreBadge.astro";
+import Button from "../primitives/Button.astro";
 ---
 
 <section id="top" class="border-b border-hairline">
@@ -12,44 +12,26 @@ import { APP_STORE_URL } from "../../lib/reports/links";
       <h1
         class="text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
       >
-        Site Reports from Voice, Photos, and Text
+        Daily site reports from voice notes, photos, and text
       </h1>
       <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
         Harpa Pro is an AI construction daily report app for foremen and site
-        supervisors. Record voice notes, photos, and text as work happens.
-        Harpa Pro organizes your site updates into a structured daily report
-        draft that you can review, edit, and share as a PDF.
+        supervisors. Talk, take photos, and add notes as work happens. Harpa
+        Pro turns those updates into a structured daily report draft that you
+        check, edit, and share as a PDF.
       </p>
-      <div class="mt-8 flex flex-wrap items-center gap-3">
-        <a
-          href={APP_STORE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
-        >
-          Get the app <Icon name="external-link" class="h-4 w-4" />
-        </a>
-        <a
+      <div class="mt-8 flex flex-wrap items-center gap-4">
+        <AppStoreBadge eager />
+        <Button
           href="#how"
-          class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
+          variant="secondary"
+          size="lg"
+          icon="arrow-right"
+          iconPosition="end"
         >
-          See the workflow <Icon name="arrow-right" class="h-4 w-4" />
-        </a>
+          See the workflow
+        </Button>
       </div>
-      <ul class="mt-8 grid gap-2 text-sm text-ink-soft">
-        <li class="inline-flex items-center gap-2">
-          <Icon name="circle-check" class="h-4 w-4 text-ink" />
-          Capture a voice note, photo, or text note
-        </li>
-        <li class="inline-flex items-center gap-2">
-          <Icon name="circle-check" class="h-4 w-4 text-ink" />
-          Create a structured report draft
-        </li>
-        <li class="inline-flex items-center gap-2">
-          <Icon name="circle-check" class="h-4 w-4 text-ink" />
-          Review the report before you share it
-        </li>
-      </ul>
     </div>
 
     <div class="relative min-h-[640px] lg:pl-6" data-voice-demo>

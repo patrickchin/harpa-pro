@@ -16,6 +16,7 @@ const STATIC_PATHS = [
   "/reports/docs",
   "/procurement/how-to-buy-from-china",
   "/procurement/guides",
+  "/procurement/factory-documents",
 ];
 
 export const GET: APIRoute = async ({ site }) => {

@@ -114,17 +114,23 @@ conventions. The index restores the original task-first presentation:
   sharing;
 - two large core-workflow cards;
 - smaller everyday-task cards;
+- core and everyday cards that are fully clickable through a stretched heading
+  link, each with a visible "Read the steps →" or "Read the guide →" cue;
 - de-emphasized setup and account links;
 - local search as a supporting control rather than the primary hierarchy.
 
 The documentation layout adds:
 
-- tiered navigation on desktop;
-- accessible mobile navigation;
+- tiered navigation on desktop, labelled **Guide sections**;
+- a collapsible mobile menu with a chevron, labelled **Guide menu**. CSS shows
+  only one of the two navigation copies at each breakpoint, so assistive
+  technology encounters one landmark at a time;
 - breadcrumbs;
 - previous and next guide links;
 - related guides;
-- numbered step cards and contextual screenshot crops.
+- numbered step cards and contextual screenshot crops. The visible number is
+  decorative; each step heading includes visually hidden "Step N:" text so
+  screen readers announce the order.
 
 Guide headings are text-only at every breakpoint. They do not reserve a
 second column for a full-height phone screenshot, so the first task starts
@@ -145,7 +151,9 @@ the complete capture opens in the accessible dialog defined by
 reader keeps their place in the guide. The docs do not add a carousel.
 
 The core content and navigation work without JavaScript. Search is a small
-client-side enhancement over a static build-time index. Search terms stay in
+client-side enhancement over a static build-time index. It is a plain Astro
+component with a vanilla script, not a hydrated React island. A persistent
+polite live region announces the result count. Search terms stay in
 the browser and are not sent to analytics. No-results states suggest browsing
 categories or contacting support.
 
@@ -153,7 +161,10 @@ Only reviewed screenshots from the current v4 app may ship. The initial
 revision reuses the checked-in App Store screenshots and copies them into the
 site's asset graph so the public-site build does not depend on another
 workspace at deploy time. A central screenshot registry owns the focal point
-used for each crop so MDX guides do not carry layout coordinates. New
+used for each crop so MDX guides do not carry layout coordinates. Every crop
+uses the same 16:10 frame, including the compact montage cards on narrow
+screens. Each focal point is chosen so the crop starts at a clean boundary,
+such as a gap between cards, and does not slice through app headers. New
 task-specific captures are deferred until an important screen or crop is
 missing. Old H3/v3 screenshots and generated mockups are excluded.
 

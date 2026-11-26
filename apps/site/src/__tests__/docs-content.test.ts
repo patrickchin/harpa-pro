@@ -88,9 +88,9 @@ describe('docs content model', () => {
     const ids = DOCS_TIERS.map(({ id }) => id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(DOCS_TIERS).toEqual([
-      { id: 'core', label: 'Core Workflows' },
-      { id: 'everyday', label: 'Everyday Tasks' },
-      { id: 'setup', label: 'Setup & Account' },
+      { id: 'core', label: 'Core workflows' },
+      { id: 'everyday', label: 'Everyday tasks' },
+      { id: 'setup', label: 'Setup & account' },
     ]);
   });
 
@@ -102,7 +102,7 @@ describe('docs content model', () => {
     ];
 
     expect(sortGuides(guides).map(({ id }) => id)).toEqual(['first', 'second', 'setup']);
-    expect(docsTierLabel('everyday')).toBe('Everyday Tasks');
+    expect(docsTierLabel('everyday')).toBe('Everyday tasks');
     expect(guideHref('01-getting-started.mdx')).toBe('/reports/docs/guides/getting-started');
   });
 
@@ -143,12 +143,12 @@ describe('docs content model', () => {
     expect(existsSync(resolve(srcRoot, 'pages/reports/docs/guides/[...slug].astro'))).toBe(true);
     expect(existsSync(resolve(srcRoot, 'layouts/reports/DocsLayout.astro'))).toBe(true);
 
-    const header = readFileSync(resolve(srcRoot, 'components/site/Header.astro'), 'utf8');
-    expect(header).toContain('href="/reports/docs"');
+    const chrome = readFileSync(resolve(srcRoot, 'lib/site/sections.ts'), 'utf8');
+    expect(chrome).toContain('href: "/reports/docs"');
 
     const docsIndex = readFileSync(resolve(srcRoot, 'pages/reports/docs/index.astro'), 'utf8');
-    expect(docsIndex).toContain('Site Reporting Guides');
-    expect(docsIndex).toContain('Guides and Workflows');
+    expect(docsIndex).toContain('Site reporting guides');
+    expect(docsIndex).toContain('Guides and workflows');
     expect(docsIndex).toContain('docs-core-grid');
     expect(docsIndex).toContain('docs-everyday-grid');
     expect(docsIndex).toContain('docs-setup-links');
@@ -166,7 +166,11 @@ describe('docs content model', () => {
 
     const sidebar = readFileSync(resolve(srcRoot, 'components/reports/docs/DocsSidebar.astro'), 'utf8');
     expect(sidebar).toContain('DOCS_TIERS');
-    expect(sidebar).toContain('aria-label="Guide sections"');
+    expect(sidebar).toContain('aria-label={label}');
+    const layout = readFileSync(resolve(srcRoot, 'layouts/reports/DocsLayout.astro'), 'utf8');
+    expect(layout).toContain('label="Guide menu"');
+    expect(layout).toContain('label="Guide sections"');
+    expect(guideStep).toContain('<span class="sr-only">Step {number}: </span>');
   });
 
   it('ships nine concise task-first guides without stale v3 claims', () => {

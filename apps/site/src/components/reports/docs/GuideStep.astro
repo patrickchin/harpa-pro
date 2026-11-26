@@ -25,7 +25,7 @@ const hasMedia = Boolean(screenshot && screenshotAlt);
   <div class="docs-step-copy">
     <header>
       <span aria-hidden="true">{number}</span>
-      <h2>{title}</h2>
+      <h2><span class="sr-only">Step {number}: </span>{title}</h2>
     </header>
     <div class="docs-step-body"><slot /></div>
   </div>

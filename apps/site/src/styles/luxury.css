@@ -89,6 +89,15 @@
 .luxury-site [data-site-header] nav[aria-label='Primary'] > a {
   border-radius: 2px;
 }
+.luxury-site [data-site-header] nav[aria-label='Primary'] > [data-audience-switch] {
+  color: color-mix(in oklab, var(--luxury-porcelain) 72%, transparent);
+}
+.luxury-site [data-site-header] nav[aria-label='Primary'] > [data-audience-switch]:hover {
+  color: var(--luxury-porcelain);
+}
+.luxury-site .docs-breadcrumbs {
+  color: var(--luxury-muted);
+}
 
 /* Cinematic hero and its optional material concepts */
 .luxury-hero {
@@ -342,8 +351,14 @@
   border-radius: 2px;
   box-shadow: none;
 }
+/* Tall enough for the longest description so switching tabs never shifts the page. */
 .luxury-site [data-consideration-panel] > div:last-child {
-  min-height: 18rem;
+  min-height: 15rem;
+}
+@media (min-width: 40rem) {
+  .luxury-site [data-consideration-panel] > div:last-child {
+    min-height: 13.5rem;
+  }
 }
 .luxury-site [data-consideration-panel] h3 {
   font-family: var(--font-sans);
@@ -583,7 +598,7 @@ body:has(.whatsapp-dialog[open]) {
 }
 .luxury-site #contact [data-copy-email],
 .luxury-site #contact [data-whatsapp-open],
-.luxury-site #contact dd > a,
+.luxury-site #contact [data-contact-whatsapp-actions] a,
 .luxury-site #contact [data-contact-email-actions] a {
   border-radius: 2px;
   min-height: 2.75rem;
@@ -622,22 +637,13 @@ body:has(.whatsapp-dialog[open]) {
   border-radius: 2px;
   box-shadow: none;
 }
-.luxury-site :is([data-factory-partner], [data-product-brief]) h3 {
+.luxury-site [data-factory-partner] h3,
+.luxury-site [data-product-brief] h4 {
   font-family: var(--font-sans);
   font-size: 1.25rem;
   font-weight: 500;
   letter-spacing: -0.02em;
   line-height: 1.25;
-}
-.luxury-site [data-product-brief] h3 {
-  font-size: 1.5rem;
-}
-.luxury-site [data-product-brief] > div > div:first-child {
-  align-items: flex-start;
-  min-height: 2rem;
-}
-.luxury-site [data-product-brief] > div > div:first-child > span:first-child {
-  white-space: nowrap;
 }
 .luxury-site [data-profile-portrait] {
   border-radius: 2px;

@@ -29,11 +29,12 @@ test('docs wildcard preserves the guide path and unknown guides finish at 404', 
   }
 });
 
-test('removed factory documents return to procurement evidence', async ({ request }) => {
+test('removed factory documents return to the factory documents page', async ({ request }) => {
   const response = await request.get('/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf', { maxRedirects: 0 });
   expect(response.status()).toBe(301);
-  expect(new URL(response.headers().location!, 'http://127.0.0.1:3005').pathname).toBe('/');
-  expect(new URL(response.headers().location!, 'http://127.0.0.1:3005').hash).toBe('#evidence');
+  const target = new URL(response.headers().location!, 'http://127.0.0.1:3005');
+  expect(target.pathname).toBe('/procurement/factory-documents');
+  expect((await request.get(target.pathname, { maxRedirects: 0 })).status()).toBe(200);
 });
 
 test('Pages normalizes canonical trailing slashes and keeps query strings', async ({ request }) => {

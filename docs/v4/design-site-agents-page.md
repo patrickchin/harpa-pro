@@ -179,7 +179,8 @@ Browser coverage verifies:
 - all five considerations have a short description and a matching image;
 - all five consideration selectors expose a visible detail action and a clear
   selected state;
-- photographic frames cover their containers without embedded caption bands;
+- photographic frames cover their containers without embedded caption bands
+  (crop the source file rather than scaling it in CSS);
 - mouse and keyboard input change the selected consideration;
 - the interface contains no numbered stage or step language;
 - the page contains one Haruna profile and no agent-choice language;

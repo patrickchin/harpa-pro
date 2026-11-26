@@ -43,20 +43,67 @@ keep country requirements in the main buying guide. See the
 
 | Scope | Canonical routes | Source ownership beneath `src/` |
 | --- | --- | --- |
-| Procurement | `/`, `/procurement/how-to-buy-from-china` | `components/procurement`, `content/procurement`, `assets/procurement` |
+| Procurement | `/`, `/procurement/how-to-buy-from-china`, `/procurement/factory-documents` | `components/procurement`, `content/procurement`, `assets/procurement`, `lib/procurement` |
 | Site reporting app | `/reports`, `/reports/docs`, `/reports/roadmap`, `/reports/account-deletion` | `pages/reports`, `components/reports`, `content/reports`, `lib/reports`, `layouts/reports`, `assets/reports` |
-| Shared website | `/privacy`, branded 404 | `components/site`, base layout, primitives, analytics, legal helpers |
+| Shared website | `/privacy`, branded 404 | `components/site`, `lib/site`, base layout, primitives, analytics, legal helpers |
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
+It runs hero → process (with the Revit technical reviews) → partners, quote
+contents, and a factory-documents summary → team → questions → contact. The
+full document list lives at `/procurement/factory-documents`; every former
+homepage fragment still resolves. See the
+[homepage narrative design](../../docs/v4/design-site-procurement-home-narrative.md).
+Crop catalogue images into committed derivatives (for example
+`ais-factory-exterior-photo.webp`) instead of scaling them in CSS.
 Privacy covers both the website and app. The app updates confirmation page
-lives at `/reports/confirm` and is excluded from search. App content
+lives at `/reports/confirm` and is excluded from search. Its result is
+announced through a `role="status"` region. Failed or expired links point to
+`/reports`, the App Store, and support email because no page has a signup form.
+App content
 collections are `reportsDocs`, `reportsFeatures`, `reportsFaq`, and
 `reportsRoadmap`. Mobile, API, and dashboard workspace names are unchanged.
+
+`/reports/roadmap` groups `reportsRoadmap` entries by `status`: `available`,
+`in-progress`, `planned`, or `exploring`. Stage labels, icons, and the
+feature-suggestion mailto live in `src/lib/reports/roadmap.ts`; empty stages
+are hidden. Each stage shows a visible text label, so status never relies on
+colour alone. The optional `timing` field accepts `Next`, `Later`, or a
+quarter such as `Q3 2027`. Leave it unset until the owner confirms the
+timing. The Available section lists the `reportsFeatures` entries, so it
+stays in step with `/reports`.
 
 Old `/app`, `/docs`, `/roadmap`, `/account-deletion`, `/confirm`, buying-guide,
 and known legacy guide URLs redirect permanently to their final destinations.
 Internal links and sitemap entries use canonical URLs. See the
 [URL organization design](../../docs/v4/design-site-product-url-organization.md).
+
+## UI primitives
+
+Shared Astro primitives live in `src/components/primitives/`. Use them
+instead of hand-rolling the same Tailwind classes:
+
+- `Container` and `Section` set page width, padding, tone, and borders.
+- `Button` renders an `<a>` when `href` is set and a `<button>` otherwise.
+  Variants are `accent`, `primary`, `secondary`, `outline`,
+  `outline-strong`, and `outline-tinted`. Sizes are `sm` (`h-9`), `md`
+  (`h-10`), `lg` (`h-11`), and `touch` (`min-h-11`). Set `external` to
+  open a new tab with `rel="noopener noreferrer"` and an external-link
+  icon.
+- `Card` is the rounded, hairline-bordered card surface. It renders an
+  interactive link when `href` is set.
+- `SectionHeader` renders an optional eyebrow, a title, and an optional
+  lede (prop or `lede` slot) at a chosen heading level.
+
+The procurement homepage theme (`luxury.css`, `procurement-hero.css`) and
+the docs styles keep their own classes.
+
+## Copy style
+
+Use sentence case for headings, eyebrows, buttons, nav labels, and page
+titles. Keep capitals for proper nouns, brand names, product codes, and
+in-app labels that the guides quote. Reports copy targets foremen: state
+the concrete outcome in plain language and avoid claims the app cannot
+back up. `src/__tests__/claim-copy.test.ts` blocks known stale claims.
 
 ## Develop
 
@@ -70,7 +117,23 @@ pnpm --filter @harpa/site test:redirects # build first; Cloudflare Pages rules
 
 Copy `.env.example` to `.env` before local development.
 `PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
-the current shared header does not expose the dashboard.
+the current header does not expose the dashboard.
+
+Site chrome is audience-scoped. Every page passes `section` (`procurement`,
+`reports`, or `shared`) to `Layout`, `Header`, and `Footer`; the section
+config in `src/lib/site/sections.ts` is the single source for menu links,
+the CTA (Contact us or Get the app), the cross-link to the other section,
+footer columns, the wordmark target, the breadcrumb root, and default
+metadata. `Layout` exposes the section as `body[data-site-section]` for
+analytics. Shared pages (privacy, 404) show both offers. See the
+[audience-scoped chrome design](../../docs/v4/design-public-site-audience-chrome.md).
+
+The header (`src/components/site/Header.astro`) uses `<details>` menus
+that work without JavaScript. With JavaScript, desktop mega menus open on hover
+for fine pointers and stay open when the hovered summary is clicked; Enter and
+Space still toggle them. The mobile menu closes on Escape (focus returns to the
+toggle), an outside tap, or a link tap, and it locks page scroll while open. It
+has the same section CTA as desktop, followed by the cross-link.
 
 ## Stack
 
@@ -89,6 +152,21 @@ the current shared header does not expose the dashboard.
 Hard rules: JS only for interactions and configured analytics; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
 practices/SEO ≥ 95.
+
+Accessibility baseline: `Layout.astro` renders a "Skip to content" link as the
+first focusable element, so every page's `<main>` must have
+`id="main-content"`. Put text on `bg-accent-ink`, not `bg-accent` (the vivid
+accent fails WCAG AA with cream text). Give interactive elements the
+`ring-focus` utility, and keep decorative demo controls out of the tab order.
+`tests/a11y.spec.ts` covers these rules.
+
+Layout baseline: short pages wrap `Header`, `main`, and `Footer` in a
+`flex min-h-dvh flex-col` container with `main` set to `flex-1`, so the footer
+stays at the bottom. Keep page content inside `Container` and narrow prose with
+an inner wrapper, not a second `max-w-*` on `Container`. Below `lg`, the
+"What we consider" tabs stack with the open panel directly under its tab.
+Mono metadata text is at least `text-xs`. `tests/responsive-layout.spec.ts`
+checks these rules at 390, 768, and 1280px.
 
 ## Website analytics
 
@@ -140,6 +218,22 @@ copied from `apps/mobile/fastlane/screenshots/en-US/` into
 build. `docs-content.test.ts` requires those checked-in copies to match the
 release captures exactly.
 
+## Images
+
+- Give every `<Image>` `widths`/`sizes` that match its rendered box; don't
+  oversize `sizes` to cover a CSS zoom. If only part of a source is shown,
+  commit a pre-cropped derivative (Astro's sharp service cannot extract a
+  region). The SW-011 product example is cropped from
+  `rongshuo-shower-p02.webp`; the extract parameters are in
+  `ProcurementEvidence.astro`.
+- Lightboxes (docs screenshots and evidence documents) never link the original
+  source file. `src/lib/lightbox-image.ts` emits a WebP derivative capped at
+  1800px. Dialogs first show the loaded thumbnail, then swap in the full view
+  after it decodes. The evidence dialog sizes the image from the full view's
+  `width`/`height` attributes, so the swap does not resize the box.
+- Only above-the-fold media (page heroes and the first index or montage
+  image) use `priority` or `loading="eager"`; everything else is lazy.
+
 Legacy `/guides/*` URLs and slugs from the first unified-site revision are
 preserved in `public/_redirects`. `test:redirects` checks every exact mapping,
 trailing slashes, query preservation, and wildcard guide routes through the
@@ -149,15 +243,22 @@ local Cloudflare Pages runtime; Astro preview does not apply `_redirects`.
 
 Pages ship complete HTML, production canonicals, search/social metadata, and
 JSON-LD. The homepage identifies the interior procurement service in China;
-`/reports` identifies the iOS construction reporting app. Guides include article
-and breadcrumb data. `robots.txt` allows search crawlers, including AI search,
-and the sitemap lists public pages. Confirmation and error pages use
+`/reports` identifies the iOS construction reporting app (`MobileApplication`)
+and mirrors its visible FAQ as `FAQPage` data from the `reportsFaq` collection.
+Guides include article and breadcrumb data. Every page must pass its own title
+and description to `Layout`. Reporting pages use the app card
+(`public/og-image.png`, see `src/lib/social-images.ts`); procurement pages
+generate a 1200×630 card from interior imagery. `robots.txt` allows search
+crawlers, including AI search, and the sitemap lists every indexable public
+page. Confirmation and error pages use
 `noindex`; the production Pages alias has a hostname-specific `noindex`
 header. Cloudflare supplies `noindex` for dev/preview deployments.
 
 The procurement homepage answers service, product-scope, inspection, and
 project-brief questions in visible HTML. The reporting app's audience,
-workflow, and initial voice demonstration also render before JavaScript.
+workflow, initial voice demonstration, and FAQ answers also render before
+JavaScript. The FAQ is an open definition list, not an accordion, and
+`tests/seo.spec.ts` checks that each `FAQPage` answer matches the visible text.
 
 App documentation is served by this same site at `/reports/docs`. No separate
 documentation hostname or deployment is required.

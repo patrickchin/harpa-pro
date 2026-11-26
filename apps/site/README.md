@@ -43,11 +43,18 @@ keep country requirements in the main buying guide. See the
 
 | Scope | Canonical routes | Source ownership beneath `src/` |
 | --- | --- | --- |
-| Procurement | `/`, `/procurement/how-to-buy-from-china` | `components/procurement`, `content/procurement`, `assets/procurement` |
+| Procurement | `/`, `/procurement/how-to-buy-from-china`, `/procurement/factory-documents` | `components/procurement`, `content/procurement`, `assets/procurement`, `lib/procurement` |
 | Site reporting app | `/reports`, `/reports/docs`, `/reports/roadmap`, `/reports/account-deletion` | `pages/reports`, `components/reports`, `content/reports`, `lib/reports`, `layouts/reports`, `assets/reports` |
 | Shared website | `/privacy`, branded 404 | `components/site`, base layout, primitives, analytics, legal helpers |
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
+It runs hero → process (with the Revit technical reviews) → partners, quote
+contents, and a factory-documents summary → team → questions → contact. The
+full document list lives at `/procurement/factory-documents`; every former
+homepage fragment still resolves. See the
+[homepage narrative design](../../docs/v4/design-site-procurement-home-narrative.md).
+Crop catalogue images into committed derivatives (for example
+`ais-factory-exterior-photo.webp`) instead of scaling them in CSS.
 Privacy covers both the website and app. The app updates confirmation page
 lives at `/reports/confirm` and is excluded from search. Its result is
 announced through a `role="status"` region. Failed or expired links point to

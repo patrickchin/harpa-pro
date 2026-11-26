@@ -5,7 +5,7 @@ const CONSIDERATIONS = [
     title: 'Design and Specification',
     description:
       'We check the drawings, dimensions, finishes, quantities, and approval requirements before the factory starts production.',
-    image: 'Revit A104 coordination sheet with 3D interior views',
+    image: 'Revit A104 3D coordination review sheet',
     fit: 'contain',
   },
   {
@@ -90,8 +90,6 @@ const CREDENTIALS = [
   'Wanhua Ecoboard production-control certificate',
   'Sofa formaldehyde test',
 ] as const;
-
-const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
 
 const FIRST_CREDENTIAL_DESCRIPTION =
   'The report names AIS JOINERY PTY LTD as the applicant. It records a GB 18580-2025 E0 pass result for marine HDF.';
@@ -217,12 +215,14 @@ test('presents the procurement team and considerations with matching evidence', 
   for (const heading of [
     'Selected Factory Partners',
     'What Each Quote Includes',
-    'Product Examples',
     'Factory Documents',
-    'Technical Reviews',
   ]) {
     await expect(main.getByRole('heading', { level: 2, name: heading })).toBeVisible();
   }
+  for (const removed of ['Product Examples', 'Technical Reviews']) {
+    await expect(main.getByRole('heading', { level: 2, name: removed })).toHaveCount(0);
+  }
+  await expect(page.locator('main > section')).toHaveCount(6);
   await expect(main.getByText('Harpa Pro procurement', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Service scope', { exact: true })).toHaveCount(0);
   await expect(main.getByText('Procurement review', { exact: true })).toHaveCount(0);
@@ -292,7 +292,9 @@ test('keeps consideration choices and selected details stable at common widths',
   }
 });
 
-test('crops embedded source captions and fills photographic frames', async ({ page }) => {
+test('uses a pre-cropped AIS photo and fills photographic frames without transforms', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#considerations');
 
@@ -317,39 +319,37 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   const considerationImage = considerationFrame.getByRole('img', {
     name: 'AIS Smarti headquarters and factory in Foshan, China',
   });
-
-  await expect(considerationFrame).toHaveAttribute('data-image-crop', 'embedded-caption');
+  await expect(considerationFrame).toHaveAttribute('data-image-crop', 'cover');
   await expect(considerationImage).toBeVisible();
 
   const factories = page.locator('[data-factory-partner]');
   await expect(factories.locator('[data-factory-image-frame]')).toHaveCount(
     FACTORY_PARTNERS.length,
   );
-
   const aisFactory = factories.filter({ hasText: 'AIS Smarti' });
   const aisFactoryFrame = aisFactory.locator('[data-factory-image-frame]');
   const aisFactoryImage = aisFactoryFrame.getByRole('img');
-  await expect(aisFactoryFrame).toHaveAttribute('data-image-crop', 'embedded-caption');
+  await expect(aisFactoryFrame).toHaveAttribute('data-image-crop', 'cover');
   await expect(aisFactoryImage).toBeVisible();
 
-  for (const [frame, image] of [
-    [considerationFrame, considerationImage],
-    [aisFactoryFrame, aisFactoryImage],
-  ] as const) {
-    const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
-    expect(frameBox).not.toBeNull();
-    expect(imageBox).not.toBeNull();
-    expect(imageBox!.width).toBeGreaterThan(frameBox!.width * 1.15);
-    expect(imageBox!.height).toBeGreaterThan(frameBox!.height * 1.15);
+  for (const image of [considerationImage, aisFactoryImage]) {
+    await expect(image).toHaveAttribute('src', /ais-factory-exterior-photo\./);
+    expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
   }
 
-  for (const frame of await factories.locator('[data-factory-image-frame]').all()) {
+  for (const frame of [
+    considerationFrame,
+    ...(await factories.locator('[data-factory-image-frame]').all()),
+  ]) {
     const image = frame.getByRole('img');
+    await image.scrollIntoViewIfNeeded();
     const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
     expect(frameBox).not.toBeNull();
     expect(imageBox).not.toBeNull();
     expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
     expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
+    expect(imageBox!.width).toBeLessThanOrEqual(frameBox!.width + 1);
+    expect(imageBox!.height).toBeLessThanOrEqual(frameBox!.height + 1);
   }
 
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -358,15 +358,11 @@ test('crops embedded source captions and fills photographic frames', async ({ pa
   expect(featuredCardBox).not.toBeNull();
   expect(featuredFrameBox).not.toBeNull();
   expect(featuredFrameBox!.height).toBeGreaterThanOrEqual(featuredCardBox!.height - 2);
-
-  const featuredImageBox = await aisFactoryImage.boundingBox();
-  expect(featuredImageBox).not.toBeNull();
-  expect(featuredImageBox!.height).toBeGreaterThan(featuredFrameBox!.height * 1.15);
 });
 
 test('opens evidence images in an accessible dialog without leaving the page', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/#evidence');
+  await page.goto('/#considerations');
 
   const pageUrl = page.url();
   const drawingTrigger = page.getByRole('button', {
@@ -415,6 +411,7 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(drawingDialog).not.toBeVisible();
   await expect(drawingTrigger).toBeFocused();
 
+  await page.goto('/procurement/factory-documents');
   await page.setViewportSize({ width: 390, height: 844 });
   const recordTrigger = page.getByRole('button', {
     name: 'Open full view of Marine HDF formaldehyde test',
@@ -448,20 +445,21 @@ test('opens evidence images in an accessible dialog without leaving the page', a
   await expect(recordDialog).not.toBeVisible();
   await expect(recordTrigger).toBeFocused();
 
-  await drawingTrigger.click();
-  await drawingDialog.evaluate((dialog) => {
+  await recordTrigger.click();
+  await recordDialog.evaluate((dialog) => {
     dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
-  await expect(drawingDialog).not.toBeVisible();
-  await expect(drawingTrigger).toBeFocused();
+  await expect(recordDialog).not.toBeVisible();
+  await expect(recordTrigger).toBeFocused();
 
-  await expect(page.locator('[data-technical-review] > a')).toHaveCount(0);
+  await page.goto('/#considerations');
+  await expect(page.locator('[data-technical-review] a')).toHaveCount(0);
   await expect(page.locator('[data-document-scan] > a')).toHaveCount(0);
 });
 
 test('shows a cached preview while the full evidence image loads', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/#evidence');
+  await page.goto('/#considerations');
 
   const trigger = page.getByRole('button', {
     name: 'Open full view of Revit A104 Coordination Review',
@@ -515,27 +513,33 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   expect(Math.abs(fullBox!.height - previewBox!.height)).toBeLessThanOrEqual(1);
 });
 
-test('shows compact factory examples and progressively discloses document previews', async ({
+test('merges reviews into the process and summarizes factory evidence on the homepage', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/#evidence');
+  await page.goto('/#technical-reviews');
 
-  await expect(page.getByRole('heading', { name: 'Technical Reviews' })).toBeVisible();
-  await expect(
-    page.getByRole('img', { name: 'Revit A104 3D coordination review sheet' }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('img', { name: 'Revit A103 chair shop drawing review sheet' }),
-  ).toBeVisible();
-  const technicalReviews = page.locator('[data-technical-review]');
+  const designPanel = page.getByRole('tabpanel', { name: 'Design and Specification' });
+  await expect(designPanel).toBeVisible();
+  const technicalReviews = designPanel.locator('[data-technical-review]');
   await expect(technicalReviews).toHaveCount(2);
-  await expect(technicalReviews.nth(0)).toContainText(
+  await expect(page.locator('#technical-reviews')).toBeVisible();
+  for (const name of [
+    'Revit A104 3D coordination review sheet',
+    'Revit A103 chair shop drawing review sheet',
+  ]) {
+    await expect(designPanel.getByRole('img', { name })).toBeVisible();
+  }
+  await expect(technicalReviews.nth(0)).toHaveAttribute(
+    'data-evidence-image-caption',
     'We check the layout, finishes, and sizes before we approve the factory information.',
   );
-  await expect(technicalReviews.nth(1)).toContainText('We review the drawings before production.');
-  await expect(page.getByText(/These sheets record design coordination/)).toHaveCount(0);
+  await expect(technicalReviews.nth(1)).toHaveAttribute(
+    'data-evidence-image-caption',
+    'We review the drawings before production.',
+  );
 
+  await page.goto('/#evidence');
   const factories = page.locator('[data-factory-partner]');
   await expect(factories).toHaveCount(FACTORY_PARTNERS.length);
   await expect(
@@ -544,9 +548,7 @@ test('shows compact factory examples and progressively discloses document previe
   await expect(
     page.getByText(
       'We match each order with the factory that meets the design specifications and the delivery timeline.',
-      {
-        exact: false,
-      },
+      { exact: false },
     ),
   ).toBeVisible();
   for (const [index, factory] of FACTORY_PARTNERS.entries()) {
@@ -562,18 +564,18 @@ test('shows compact factory examples and progressively discloses document previe
     page.locator('#factory-partners').boundingBox(),
     factories.first().boundingBox(),
   ]);
-  expect(partnerSectionBox).not.toBeNull();
-  expect(featuredFactoryBox).not.toBeNull();
   expect(featuredFactoryBox!.width).toBeGreaterThanOrEqual(partnerSectionBox!.width - 1);
   await expect(page.getByText('Ningbo Langyao Lighting', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Haining Mingyuan', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Foshan Zhenglian / JLA', { exact: true })).toHaveCount(0);
 
-  await expect(page.getByRole('heading', { name: 'Product Examples' })).toBeVisible();
+  const quote = page.locator('#quote-contents');
+  await expect(quote.getByRole('heading', { level: 2, name: 'What Each Quote Includes' }))
+    .toBeVisible();
   for (const label of BUYER_INFORMATION) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
+    await expect(quote.getByText(label, { exact: true })).toBeVisible();
   }
-  const briefs = page.locator('[data-product-brief]');
+  const briefs = quote.locator('#product-examples [data-product-brief]');
   await expect(briefs).toHaveCount(PRODUCT_BRIEFS.length);
   for (const [index, brief] of PRODUCT_BRIEFS.entries()) {
     const card = briefs.nth(index);
@@ -582,45 +584,48 @@ test('shows compact factory examples and progressively discloses document previe
     const image = frame.getByRole('img');
     await expect(frame).toHaveAttribute('data-product-image-mode', brief.imageMode);
     await expect(image).toBeVisible();
-
     const [frameBox, imageBox] = await Promise.all([frame.boundingBox(), image.boundingBox()]);
-    expect(frameBox).not.toBeNull();
-    expect(imageBox).not.toBeNull();
     expect(imageBox!.width).toBeGreaterThanOrEqual(frameBox!.width - 1);
     expect(imageBox!.height).toBeGreaterThanOrEqual(frameBox!.height - 1);
   }
-  const briefBoxes = await briefs.evaluateAll((cards) =>
-    cards.map((card) => {
-      const box = card.getBoundingClientRect();
-      return { width: box.width, y: box.y };
-    }),
+  const briefTops = await briefs.evaluateAll((cards) =>
+    cards.map((card) => card.getBoundingClientRect().y),
   );
-  expect(briefBoxes).toHaveLength(PRODUCT_BRIEFS.length);
-  expect(
-    Math.max(...briefBoxes.map(({ y }) => y)) - Math.min(...briefBoxes.map(({ y }) => y)),
-  ).toBeLessThanOrEqual(1);
+  expect(Math.max(...briefTops) - Math.min(...briefTops)).toBeLessThanOrEqual(1);
 
-  const [productSectionBox, factoryDocumentsBox, technicalReviewsBox] = await Promise.all([
-    page.locator('#product-examples').boundingBox(),
-    page.locator('#factory-documents').boundingBox(),
-    page.locator('#technical-reviews').boundingBox(),
-  ]);
-  expect(productSectionBox).not.toBeNull();
-  expect(factoryDocumentsBox).not.toBeNull();
-  expect(technicalReviewsBox).not.toBeNull();
-  expect(productSectionBox!.height).toBeLessThanOrEqual(
-    Math.max(factoryDocumentsBox!.height, technicalReviewsBox!.height) * 1.4,
-  );
+  const summary = page.locator('#factory-documents');
+  await expect(summary.getByRole('heading', { level: 2, name: 'Factory Documents' }))
+    .toBeVisible();
+  await expect(summary).toContainText(`${CREDENTIALS.length} test reports and certificates`);
+  await expect(summary).not.toContainText(/expired/i);
+  await expect(page.locator('main [data-credential-record]')).toHaveCount(0);
+  await expect(page.locator('[data-document-disclosure]')).toHaveCount(0);
+  await expect(page.locator('a[href^="/documents/factories/"]')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /download procurement pdf/i })).toHaveCount(0);
+  await expect(page.locator('a[href*="/catalogues/"]')).toHaveCount(0);
 
-  await expect(page.getByRole('heading', { name: 'Factory Documents' })).toBeVisible();
-  const suppliedRecords = page.locator('[data-credential-record]');
-  await expect(suppliedRecords).toHaveCount(CREDENTIALS.length);
-  for (const title of INITIAL_CREDENTIALS) {
-    const record = suppliedRecords.filter({ hasText: title });
-    await expect(record).toContainText(title);
-    await expect(record.getByRole('img')).toBeVisible();
+  await summary.getByRole('link', { name: 'View all factory documents' }).click();
+  await expect(page).toHaveURL(/\/procurement\/factory-documents$/);
+});
+
+test('lists every factory document with a preview on its own page', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/procurement/factory-documents');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Factory documents' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link', { name: 'Home' }))
+    .toHaveAttribute('href', '/');
+  const records = page.locator('[data-credential-record]');
+  await expect(records).toHaveCount(CREDENTIALS.length);
+  for (const title of CREDENTIALS) {
+    const record = records.filter({ hasText: title });
+    await expect(record).toBeVisible();
+    await expect(record.getByRole('heading', { level: 2, name: title })).toBeVisible();
     await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
+  }
+  await expect(records.first()).toContainText(FIRST_CREDENTIAL_DESCRIPTION);
 
+  for (const record of (await records.all()).slice(0, 3)) {
     const preview = record.locator('[data-document-preview-crop]');
     await expect(preview).toBeVisible();
     const previewStyle = await preview.evaluate((region) => {
@@ -638,35 +643,10 @@ test('shows compact factory examples and progressively discloses document previe
     expect(previewStyle.objectPosition).toMatch(/50% 0%/);
   }
 
-  await expect(suppliedRecords.first()).not.toContainText(FIRST_CREDENTIAL_DESCRIPTION);
-
-  for (const title of CREDENTIALS.slice(3)) {
-    await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();
-  }
-
-  const moreDocuments = page.locator('[data-document-disclosure]');
-  const collapsedLabel = `Show ${CREDENTIALS.length - INITIAL_CREDENTIALS.length} more documents`;
-  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
-  await expect(moreDocuments).toHaveText(collapsedLabel);
-  await moreDocuments.click();
-  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'true');
-  await expect(moreDocuments).toHaveText('Show fewer documents');
-
-  for (const title of CREDENTIALS) {
-    const record = suppliedRecords.filter({ hasText: title });
-    await expect(record).toBeVisible();
-    await expect(record.getByRole('button', { name: `Open full view of ${title}` })).toBeVisible();
-  }
-
+  await expect(records.filter({ hasText: 'European representative appointment' })).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText(/expired/i);
   await expect(page.locator('[data-evidence-document-href]')).toHaveCount(0);
   await expect(page.locator('a[href^="/documents/factories/"]')).toHaveCount(0);
-
-  const oldDocument = await page.request.get(
-    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
-  );
-  expect(oldDocument.status()).not.toBe(200);
-  expect(oldDocument.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/);
-
   await expect(
     page.getByText(
       'Factory-supplied document. Harpa Pro has not independently verified its current status or scope.',
@@ -674,24 +654,21 @@ test('shows compact factory examples and progressively discloses document previe
     ),
   ).toHaveCount(0);
 
-  await expect(suppliedRecords.filter({ hasText: 'European representative appointment' })).toHaveCount(0);
-  await expect(page.locator('#factory-documents')).not.toContainText(/expired/i);
-
-  await moreDocuments.click();
-  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
-  await expect(moreDocuments).toHaveText(collapsedLabel);
-  for (const title of CREDENTIALS.slice(3)) {
-    await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();
-  }
-
-  await expect(page.getByRole('link', { name: /download procurement pdf/i })).toHaveCount(0);
-  await expect(page.locator('a[href*="/catalogues/"]')).toHaveCount(0);
-
+  const oldDocument = await page.request.get(
+    '/documents/factories/ais/ais-hdf-formaldehyde-e0-2026.pdf',
+  );
+  expect(oldDocument.status()).not.toBe(200);
+  expect(oldDocument.headers()['content-type'] ?? '').not.toMatch(/application\/pdf/);
   const pdfResponse = await page.request.get('/downloads/harpa-pro-interior-procurement.pdf');
   expect(pdfResponse.status()).toBe(404);
+
+  await expect(page.getByRole('link', { name: 'Send your project brief' })).toHaveAttribute(
+    'href',
+    '/#contact',
+  );
 });
 
-test('offers copy-first email and WhatsApp contact actions without a form', async ({ page }) => {
+test('makes opening the email app the primary contact action without a form', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -709,9 +686,30 @@ test('offers copy-first email and WhatsApp contact actions without a form', asyn
   await expect(contact.getByText('haruna@harpapro.com', { exact: true })).toBeVisible();
   await expect(contact.getByText('+86 193 7283 7269', { exact: true })).toBeVisible();
 
+  for (const width of [390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const gaps = await contact.locator('dl > *').evaluateAll((cards) =>
+      cards.map((card) => {
+        const cardBox = card.getBoundingClientRect();
+        const contentBottom = Math.max(
+          ...Array.from(card.querySelectorAll('a, button, p'))
+            .filter((element) => element.getClientRects().length > 0 && element.closest('dialog') === null)
+            .map((element) => element.getBoundingClientRect().bottom),
+        );
+        return cardBox.bottom - contentBottom;
+      }),
+    );
+    for (const gap of gaps) expect(gap, `${width}px contact card bottom space`).toBeLessThanOrEqual(36);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   const emailActions = contact.locator('[data-contact-email-actions]');
+  const openEmail = emailActions.locator('button, a').first();
+  await expect(openEmail).toHaveAccessibleName('Open email app');
+  await expect(openEmail).toHaveClass(/\bbg-accent-ink\b/);
   const copyEmail = emailActions.getByRole('button', { name: 'Copy email' });
-  await expect(emailActions.locator('button, a').first()).toHaveAttribute('data-copy-email', '');
+  await expect(copyEmail).not.toHaveClass(/\bbg-accent-ink\b/);
+  await expect(contact.getByRole('status')).toHaveText('');
   await copyEmail.click();
   await expect(contact.getByRole('status')).toHaveText('Email copied');
   expect(await page.evaluate(() => window.localStorage.getItem('copied-email'))).toBe(
@@ -883,7 +881,7 @@ test('uses valid tab semantics and accessible contrast for procurement actions',
   await expect(panel).toHaveJSProperty('tagName', 'DIV');
 
   const procurementActions = page.locator(
-    'nav[aria-label="Primary"] > a[href="/#contact"], button[data-copy-email]',
+    'nav[aria-label="Primary"] > a[href="/#contact"], a[data-contact-event="contact_email_opened"]',
   );
   await expect(procurementActions).toHaveCount(2);
   for (let index = 0; index < 2; index += 1) {

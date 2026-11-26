@@ -1,6 +1,9 @@
 # Public site mega navigation and evidence disclosure
 
-Status: accepted for implementation.
+Status: accepted for implementation. The homepage document disclosure is
+superseded by the
+[procurement homepage narrative](design-site-procurement-home-narrative.md),
+which moves the full list to `/procurement/factory-documents`.
 
 ## Context
 
@@ -92,7 +95,8 @@ remain in the image-dialog caption.
 The evidence dialog shows only the selected preview image and its caption.
 Remove links and data attributes for original documents. Remove the original
 files from the public site. Redirect old `/documents/factories/*` requests to
-`/#evidence`; do not return a document body.
+`/procurement/factory-documents` (originally `/#evidence`); do not return a
+document body.
 
 A visitor can still save an image that the browser displays. This design stops
 the site from publishing the full source files; it does not claim to prevent

@@ -1,6 +1,7 @@
 # Public site procurement polish
 
-Status: implemented.
+Status: implemented. Section order and evidence layout superseded by the
+[procurement homepage narrative](design-site-procurement-home-narrative.md).
 
 ## Context
 

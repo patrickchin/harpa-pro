@@ -1,6 +1,7 @@
 # Procurement team profiles
 
-Status: implemented.
+Status: implemented. Portrait sizes updated by the
+[procurement homepage narrative](design-site-procurement-home-narrative.md).
 
 ## Context
 

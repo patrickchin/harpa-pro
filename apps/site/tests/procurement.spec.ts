@@ -103,3 +103,34 @@ test("every article in the collection renders without scripts and is listed in t
     }
   }
 });
+
+test("factory documents have their own indexable page linked from the homepage summary", async ({ page, request }) => {
+  await page.goto("/");
+  const summary = page.locator("#factory-documents");
+  await expect(summary.getByRole("heading", { level: 2, name: "Factory Documents" })).toBeVisible();
+  await expect(page.locator("main [data-credential-record]")).toHaveCount(0);
+  await summary.getByRole("link", { name: "View all factory documents" }).click();
+  await expect(page).toHaveURL(/\/procurement\/factory-documents$/);
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Factory documents");
+  await expect(page.locator("[data-credential-record]")).toHaveCount(9);
+  for (const image of await page.locator("[data-credential-record] img").all()) {
+    expect((await request.get((await image.getAttribute("src"))!)).status()).toBe(200);
+  }
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://harpapro.com/procurement/factory-documents");
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain("https://harpapro.com/procurement/factory-documents");
+
+  for (const width of [1280, 768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+  }
+});
+
+test("legacy homepage evidence anchors still resolve", async ({ page }) => {
+  await page.goto("/");
+  for (const id of ["considerations", "technical-reviews", "evidence", "factory-partners", "quote-contents", "product-examples", "factory-documents", "agent", "procurement-questions", "contact"]) {
+    await expect(page.locator(`#${id}`), id).toHaveCount(1);
+    await expect(page.locator(`#${id}`), id).toBeVisible();
+  }
+});

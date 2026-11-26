@@ -1,0 +1,93 @@
+---
+import { getImage } from "astro:assets";
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/site/Header.astro";
+import Footer from "../../components/site/Footer.astro";
+import Container from "../../components/primitives/Container.astro";
+import Section from "../../components/primitives/Section.astro";
+import Button from "../../components/primitives/Button.astro";
+import EvidenceImageDialog from "../../components/procurement/EvidenceImageDialog.astro";
+import FactoryDocumentGrid from "../../components/procurement/FactoryDocumentGrid.astro";
+import { FACTORY_DOCUMENTS_PATH, factoryDocuments } from "../../lib/procurement/factory-documents";
+import woodInteriorImg from "../../assets/procurement/finishes/wood.webp";
+import "../../styles/luxury.css";
+
+const title = "Factory documents";
+const description = "First-page previews of the test reports and certificates supplied by Harpa Pro's selected factory partners in China, with their scope and limits.";
+const homeUrl = new URL("/", Astro.site).href;
+const pageUrl = new URL(FACTORY_DOCUMENTS_PATH, Astro.site).href;
+const socialImage = await getImage({
+  src: woodInteriorImg,
+  width: 1200,
+  height: 630,
+  format: "png",
+});
+const socialImageAlt = "Generated living-room material concept with walnut joinery, pale stone, and linen upholstery";
+const structuredData = [{
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: homeUrl },
+    { "@type": "ListItem", position: 2, name: title, item: pageUrl },
+  ],
+}];
+---
+
+<Layout
+  title={`${title} | Harpa Pro`}
+  description={description}
+  image={socialImage.src}
+  imageAlt={socialImageAlt}
+  pageType="CollectionPage"
+  structuredData={structuredData}
+>
+  <div class="luxury-site factory-documents-page min-h-screen bg-background text-ink">
+    <Header />
+    <!-- The wrapper keeps the homepage's large `main > section h2` styling off the card titles. -->
+    <main id="main-content">
+      <div id="factory-documents">
+      <Section>
+        <Container>
+          <nav aria-label="Breadcrumb" class="docs-breadcrumbs">
+            <a href="/">Home</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{title}</span>
+          </nav>
+          <header class="factory-documents-intro">
+            <h1>{title}</h1>
+            <p>
+              {factoryDocuments.length} test reports and certificates supplied by our
+              factory partners. Select a document to view its first-page image. Full
+              source files are not published on this website.
+            </p>
+            <p class="factory-documents-note">
+              These are factory-supplied records. We check each one against the
+              project's requirements before we rely on it for an order.
+            </p>
+          </header>
+          <FactoryDocumentGrid />
+          <div class="mt-10 flex flex-wrap gap-3">
+            <Button href="/#contact" icon="arrow-up-right" iconPosition="end">
+              Send your project brief
+            </Button>
+            <Button href="/#evidence" variant="outline">
+              Back to factory partners
+            </Button>
+          </div>
+        </Container>
+      </Section>
+      </div>
+    </main>
+    <Footer />
+  </div>
+  <EvidenceImageDialog />
+</Layout>
+
+<style>
+  .factory-documents-page { color: var(--luxury-walnut); }
+  .docs-breadcrumbs { color: var(--luxury-muted); display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.875rem; }
+  .docs-breadcrumbs a { text-decoration: underline; text-underline-offset: 0.2em; }
+  .factory-documents-intro { margin: 2rem 0 2.5rem; max-width: 44rem; }
+  h1 { font-family: var(--font-sans); font-weight: 500; font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -0.035em; line-height: 1.1; text-wrap: balance; }
+  .factory-documents-intro p { font-size: 1.0625rem; line-height: 1.75; margin-top: 1rem; }
+  .factory-documents-intro .factory-documents-note { color: var(--luxury-muted); font-size: 0.9375rem; }
+</style>

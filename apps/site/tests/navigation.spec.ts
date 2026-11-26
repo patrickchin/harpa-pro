@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { APP_STORE_URL } from '../src/lib/reports/links';
 
 const REQUIRED_ROUTES = [
   '/',
@@ -115,5 +116,27 @@ test('app update confirmation uses the existing API and returns to site reportin
   await expect(page.locator('#confirm-title')).toHaveText('You’re confirmed. 🎉');
   expect(submittedToken).toBe('existing-email-token');
   await expect(page.locator('#confirm-home')).toHaveAttribute('href', '/reports');
+  await expect(page.locator('#confirm-home')).toHaveText('← Back to the Harpa Pro app page');
+  await expect(page.locator('#confirm-next-steps')).toBeHidden();
+  await expect(page.locator('main#main-content')).toHaveCount(1);
+  const result = page.getByRole('status');
+  await expect(result).toHaveAttribute('aria-live', 'polite');
+  await expect(result).toHaveAttribute('aria-busy', 'false');
+  await expect(result).toContainText('You’re confirmed.');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
+});
+
+test('expired app update confirmation offers real next steps instead of a missing signup', async ({ page }) => {
+  await page.route('**/waitlist/confirm', (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: '{}' }),
+  );
+  await page.goto('/reports/confirm?token=expired-token');
+  const result = page.getByRole('status');
+  await expect(result.locator('#confirm-title')).toHaveText('Invalid or expired link');
+  await expect(result).not.toContainText('sign up again');
+  await expect(result).not.toContainText('home page');
+  await expect(page.locator('#confirm-app-store')).toHaveAttribute('href', APP_STORE_URL);
+  await expect(page.locator('#confirm-support')).toHaveAttribute('href', /^mailto:patrick@harpapro\.com/);
+  await expect(page.locator('#confirm-home')).toHaveAttribute('href', '/reports');
+  await expect(page.locator('#confirm-home')).toBeVisible();
 });

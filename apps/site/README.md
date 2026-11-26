@@ -49,7 +49,10 @@ keep country requirements in the main buying guide. See the
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
 Privacy covers both the website and app. The app updates confirmation page
-lives at `/reports/confirm` and is excluded from search. App content
+lives at `/reports/confirm` and is excluded from search. Its result is
+announced through a `role="status"` region. Failed or expired links point to
+`/reports`, the App Store, and support email because no page has a signup form.
+App content
 collections are `reportsDocs`, `reportsFeatures`, `reportsFaq`, and
 `reportsRoadmap`. Mobile, API, and dashboard workspace names are unchanged.
 
@@ -96,6 +99,13 @@ has the same Contact Us and Get the App actions as desktop.
 Hard rules: JS only for interactions and configured analytics; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
 practices/SEO ≥ 95.
+
+Accessibility baseline: `Layout.astro` renders a "Skip to content" link as the
+first focusable element, so every page's `<main>` must have
+`id="main-content"`. Put text on `bg-accent-ink`, not `bg-accent` (the vivid
+accent fails WCAG AA with cream text). Give interactive elements the
+`ring-focus` utility, and keep decorative demo controls out of the tab order.
+`tests/a11y.spec.ts` covers these rules.
 
 ## Website analytics
 

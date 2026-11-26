@@ -82,8 +82,9 @@
   /* Accent stays vivid (#e55d22) for visual identity. Two paired tokens:
      - --accent-foreground = cream, used as text on top of the vivid
        --accent fill. NOTE: only 3.45:1 contrast — fails WCAG AA 4.5:1
-       for body text but passes AA Large (3:1). Chosen for brand look
-       over a strict a11y pass. Lighthouse will flag this.
+       for body text but passes AA Large (3:1). Do not put text on the
+       vivid --accent fill; filled buttons/badges use `bg-accent-ink`
+       with `text-accent-foreground` instead (AA pass).
      - --accent-ink = darker orange, used wherever the brand colour is
        applied as text on light backgrounds via `.text-accent-ink`
        (5.2:1 on paper — passes AA). */
@@ -511,7 +512,7 @@
 
   .docs-core-card > span {
     align-items: center;
-    background: var(--color-accent);
+    background: var(--color-accent-ink);
     border-radius: 999px;
     color: var(--color-accent-foreground);
     display: flex;

@@ -32,7 +32,7 @@ const items = await Promise.all(
         items.map(({ question, Content }) => (
           <details class="group p-5">
             <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-6 text-base font-semibold leading-snug text-ink [&::-webkit-details-marker]:hidden"
+              class="flex cursor-pointer list-none items-center justify-between gap-6 text-base font-semibold leading-snug text-ink ring-focus rounded-sm [&::-webkit-details-marker]:hidden"
             >
               <span class="leading-snug">{question}</span>
               <span

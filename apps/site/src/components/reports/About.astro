@@ -34,9 +34,11 @@ const team = [
             <Image
               src={member.avatar}
               alt={member.name}
-              width={320}
-              height={320}
-              densities={[1, 2]}
+              width={144}
+              height={144}
+              densities={[1, 2, 3]}
+              loading="lazy"
+              decoding="async"
               class="h-32 w-32 flex-none rounded-full object-cover sm:h-36 sm:w-36"
             />
             <div class="flex flex-col gap-2">

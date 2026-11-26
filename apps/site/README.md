@@ -157,6 +157,21 @@ copied from `apps/mobile/fastlane/screenshots/en-US/` into
 build. `docs-content.test.ts` requires those checked-in copies to match the
 release captures exactly.
 
+## Images
+
+- Give every `<Image>` `widths`/`sizes` that match its rendered box; don't
+  oversize `sizes` to cover a CSS zoom. If only part of a source is shown,
+  commit a pre-cropped derivative (Astro's sharp service cannot extract a
+  region). The SW-011 product example is cropped from
+  `rongshuo-shower-p02.webp`; the extract parameters are in
+  `ProcurementEvidence.astro`.
+- Lightboxes (docs screenshots and evidence documents) never link the original
+  source file. `src/lib/lightbox-image.ts` emits a WebP derivative capped at
+  1800px. Dialogs first show the loaded thumbnail, then swap in the full view
+  after it decodes.
+- Only above-the-fold media (page heroes and the first index or montage
+  image) use `priority` or `loading="eager"`; everything else is lazy.
+
 Legacy `/guides/*` URLs and slugs from the first unified-site revision are
 preserved in `public/_redirects`. `test:redirects` checks every exact mapping,
 trailing slashes, query preservation, and wildcard guide routes through the

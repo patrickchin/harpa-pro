@@ -71,3 +71,24 @@ test('footer links and FAQ summaries show a focus outline', async ({ page }) => 
   await expect(summary).toBeFocused();
   expect(await summary.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
 });
+
+for (const route of ['/', '/reports'] as const) {
+  test(`footer links are readable with mobile-sized tap targets on ${route}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(route);
+
+    const links = page.locator('[data-site-footer] nav a');
+    expect(await links.count()).toBeGreaterThan(0);
+    const metrics = await links.evaluateAll((els) =>
+      els.map((el) => ({
+        text: el.textContent?.trim(),
+        fontSize: parseFloat(getComputedStyle(el).fontSize),
+        height: el.getBoundingClientRect().height,
+      })),
+    );
+    for (const m of metrics) {
+      expect(m.fontSize, `${m.text} font size`).toBeGreaterThanOrEqual(14);
+      expect(m.height, `${m.text} tap target height`).toBeGreaterThanOrEqual(44);
+    }
+  });
+}

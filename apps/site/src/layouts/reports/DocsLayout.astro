@@ -47,14 +47,38 @@ const structuredData = [{
     <Header />
     <div class="docs-shell">
       <details class="docs-mobile-nav">
-        <summary>Browse Site Reporting Guides</summary>
-        <DocsSidebar guides={guides} currentSlug={currentSlug} />
+        <summary>
+          <span>Browse Site Reporting Guides</span>
+          <svg
+            class="docs-mobile-nav-chevron"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </summary>
+        <DocsSidebar
+          guides={guides}
+          currentSlug={currentSlug}
+          label="Guide menu"
+        />
       </details>
 
       <div class="docs-columns">
         <aside class="docs-desktop-nav">
           <a class="docs-home-link" href="/reports/docs">Site Reporting Guides</a>
-          <DocsSidebar guides={guides} currentSlug={currentSlug} />
+          <DocsSidebar
+            guides={guides}
+            currentSlug={currentSlug}
+            label="Guide sections"
+          />
         </aside>
 
         <main class="docs-main" id="main-content">

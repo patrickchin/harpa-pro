@@ -160,9 +160,13 @@ describe('site smoke', () => {
     expect(header).toContain('Site Reporting');
     expect(header).toContain('href="/#contact"');
     expect(header).not.toContain('View evidence');
-    expect(footer).toContain('href="/"');
-    expect(footer).toContain('href="/reports"');
+    expect(footer).toContain('href: "/"');
+    expect(footer).toContain('href: "/reports"');
     expect(footer).toContain('Site Reporting');
+    expect(footer).toContain('APP_STORE_URL');
+    expect(footer).toContain('rel="noopener noreferrer"');
+    expect(footer.match(/href: "\/#contact"/g)).toHaveLength(1);
+    expect(footer).not.toContain('text-xs text-ink-soft');
     expect(sitemap).not.toContain('"/procurement"');
     expect(sitemap).not.toContain('"/agents"');
     expect(sitemap).toContain('"/reports"');

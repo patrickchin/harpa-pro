@@ -540,9 +540,6 @@ importers:
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
-      '@marsidev/react-turnstile':
-        specifier: ^1.6.1
-        version: 1.6.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@tailwindcss/vite':
         specifier: ^4.3.4
         version: 4.3.4(vite@8.3.6(@types/node@24.13.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
@@ -3733,12 +3730,6 @@ packages:
 
   '@lhci/utils@0.15.1':
     resolution: {integrity: sha512-WclJnUQJeOMY271JSuaOjCv/aA0pgvuHZS29NFNdIeI14id8eiFsjith85EGKYhljgoQhJ2SiW4PsVfFiakNNw==}
-
-  '@marsidev/react-turnstile@1.6.1':
-    resolution: {integrity: sha512-ojI9NLYv821IRKi7KraTkxTto6KC/m58hNNyKxvYxm/cQBu5MI5eMkaiJs2JSQBFiXE3LPQI3seJVjv/2lgALA==}
-    peerDependencies:
-      react: 19.2.0
-      react-dom: 19.2.0
 
   '@mdx-js/mdx@3.1.1':
     resolution: {integrity: sha512-f6ZO2ifpwAQIpzGWaBQT2TXxPv6z3RBzQKpVftEWN78Vl/YweF1uwussDx8ECAXVtr3Rs89fKyG9YlzUs9DyGQ==}
@@ -14738,11 +14729,6 @@ snapshots:
       - supports-color
       - utf-8-validate
       - yauzl
-
-  '@marsidev/react-turnstile@1.6.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
-    dependencies:
-      react: 19.2.0
-      react-dom: 19.2.0(react@19.2.0)
 
   '@mdx-js/mdx@3.1.1':
     dependencies:

@@ -72,6 +72,13 @@ Copy `.env.example` to `.env` before local development.
 `PUBLIC_DASHBOARD_URL` remains reserved for a later public-dashboard launch;
 the current shared header does not expose the dashboard.
 
+The shared header (`src/components/site/Header.astro`) uses `<details>` menus
+that work without JavaScript. With JavaScript, desktop mega menus open on hover
+for fine pointers and stay open when the hovered summary is clicked; Enter and
+Space still toggle them. The mobile menu closes on Escape (focus returns to the
+toggle), an outside tap, or a link tap, and it locks page scroll while open. It
+has the same Contact Us and Get the App actions as desktop.
+
 ## Stack
 
 - Astro 7 with Vite 8 (static output, no SSR adapter; Node 22.12+)

@@ -27,6 +27,7 @@ describe('marketing claim copy', () => {
       'content/reports/faq/05-cost.mdx',
       'content/reports/roadmap/00-ai-reports.mdx',
       'content/reports/roadmap/01-android-pilot.mdx',
+      'content/reports/roadmap/15-web.mdx',
       'content.config.ts',
       'layouts/Layout.astro',
       'pages/index.astro',
@@ -34,6 +35,7 @@ describe('marketing claim copy', () => {
       'pages/reports/confirm.astro',
       'pages/reports/roadmap.astro',
       'lib/reports/links.ts',
+      'lib/reports/roadmap.ts',
     ];
 
     const corpus = files.map((file) => readSource(file)).join('\n');

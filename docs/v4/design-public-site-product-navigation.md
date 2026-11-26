@@ -75,9 +75,9 @@ links.
 Add a static contact section at `/#contact`. The section identifies
 Haruna as the procurement contact and gives four actions:
 
-1. **Copy email** copies `haruna@harpapro.com` and confirms the action on the
-   page.
-2. **Open email app** uses `mailto:haruna@harpapro.com` as a secondary action.
+1. **Open email app** uses `mailto:haruna@harpapro.com` as the primary action.
+2. **Copy email** copies `haruna@harpapro.com` as a secondary action and
+   confirms the action on the page.
 3. **Message on WhatsApp** opens `https://wa.me/8619372837269` in a new tab and
    displays `+86 193 7283 7269` beside the action.
 4. **Help me write a message** opens a compact guided brief.

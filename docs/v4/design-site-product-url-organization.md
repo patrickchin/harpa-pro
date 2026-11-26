@@ -142,7 +142,8 @@ working without rendering duplicate HTML pages:
 | First-revision docs slugs | Their final `/reports/docs/guides/<slug>` |
 
 Retain `/procurement` and `/procurement/` → `/`, and the existing removed
-procurement document redirects to `/#evidence`. Explicit mappings for
+procurement PDF redirect to `/#evidence`. Removed factory documents
+(`/documents/factories/*`) redirect to `/procurement/factory-documents`. Explicit mappings for
 renamed first-revision slugs precede broad docs compatibility mappings.
 Legacy mappings should point directly to final destinations, with no
 redirect through `/docs`. Ensure trailing-slash forms also resolve and

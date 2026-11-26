@@ -111,7 +111,10 @@ const REPORTS_MENU: SectionMenu = {
   mobileLinks: REPORTS_LINKS,
 };
 
-const PROCUREMENT_COLUMN = { label: "Procurement", links: PROCUREMENT_LINKS };
+// Reference page reached from the homepage evidence summary; footer only, so
+// the header menu stays focused on the main procurement entry points.
+const FACTORY_DOCUMENTS: NavLink = { label: "Factory documents", href: "/procurement/factory-documents" };
+const PROCUREMENT_COLUMN = { label: "Procurement", links: [...PROCUREMENT_LINKS, FACTORY_DOCUMENTS] };
 const REPORTS_COLUMN = {
   label: "Site Reporting",
   links: [...REPORTS_LINKS, GET_THE_APP, { label: "Account Deletion", href: "/reports/account-deletion" }],

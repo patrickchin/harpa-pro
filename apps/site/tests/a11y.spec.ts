@@ -9,6 +9,7 @@ const SKIP_LINK_ROUTES = [
   '/reports/account-deletion',
   '/procurement/how-to-buy-from-china',
   '/procurement/guides',
+  '/procurement/factory-documents',
 ] as const;
 
 for (const route of SKIP_LINK_ROUTES) {

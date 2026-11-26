@@ -30,6 +30,22 @@ describe('site image performance', () => {
     }
   });
 
+  it('ships a pre-cropped AIS factory photo instead of a CSS scale crop', () => {
+    expect(lossyWebpSize('assets/procurement/factories/ais-factory-exterior-photo.webp')).toBe(
+      '871x478',
+    );
+    for (const path of [
+      'components/procurement/ProcurementEvidence.astro',
+      'components/procurement/ProcurementConsiderations.astro',
+    ]) {
+      const source = read(path);
+      expect(source, path).toContain('ais-factory-exterior-photo.webp');
+      expect(source, path).not.toContain('ais-factory-exterior.webp"');
+      expect(source, path).not.toMatch(/scale-\[/);
+      expect(source, path).not.toContain('embedded-caption');
+    }
+  });
+
   it('opens lightboxes on optimised derivatives, never the original source file', () => {
     const helper = read('lib/lightbox-image.ts');
     const maxWidth = Number(helper.match(/LIGHTBOX_MAX_WIDTH = (\d+)/)?.[1]);
@@ -37,9 +53,14 @@ describe('site image performance', () => {
     expect(maxWidth).toBeLessThanOrEqual(2000);
     expect(helper).toContain("format: 'webp'");
 
-    const evidence = read('components/procurement/ProcurementEvidence.astro');
-    expect(evidence).toContain('lightboxImage(');
-    expect(evidence).not.toMatch(/data-evidence-image-src=\{[^}]*\.image\.src\}/);
+    for (const path of [
+      'components/procurement/ProcurementConsiderations.astro',
+      'components/procurement/FactoryDocumentGrid.astro',
+    ]) {
+      const source = read(path);
+      expect(source, path).toContain('lightboxImage(');
+      expect(source, path).not.toMatch(/data-evidence-image-src=\{[^}]*\.image\.src\}/);
+    }
 
     const guideMedia = read('components/reports/docs/GuideStepMedia.astro');
     expect(guideMedia).toContain('lightboxImage(');

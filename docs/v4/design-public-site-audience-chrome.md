@@ -12,7 +12,7 @@ One Astro site serves two unrelated audiences:
 
 | Section | Routes | Audience | Theme |
 | --- | --- | --- | --- |
-| **Procurement** | `/`, `/procurement/how-to-buy-from-china`, `/procurement/guides`, `/procurement/<slug>` | Architects and interior designers buying in China | `.luxury-site` wrapper with `luxury.css`, a dark walnut masthead, and a porcelain footer |
+| **Procurement** | `/`, `/procurement/how-to-buy-from-china`, `/procurement/guides`, `/procurement/factory-documents`, `/procurement/<slug>` | Architects and interior designers buying in China | `.luxury-site` wrapper with `luxury.css`, a dark walnut masthead, and a porcelain footer |
 | **Site Reporting** | `/reports`, `/reports/docs/**`, `/reports/roadmap`, `/reports/account-deletion`, `/reports/confirm` | Foremen and site supervisors | Light paper and navy theme from `globals.css` |
 | **Shared** | `/privacy`, `404` | Both audiences | Light theme |
 
@@ -59,7 +59,7 @@ This design **supersedes the shared-chrome part** of those docs. It keeps their 
 
 ```
 harpapro.com
-├── [procurement]  /  ·  /procurement/how-to-buy-from-china  ·  /procurement/guides  ·  /procurement/<slug>
+├── [procurement]  /  ·  /procurement/how-to-buy-from-china  ·  /procurement/guides  ·  /procurement/factory-documents  ·  /procurement/<slug>
 ├── [reports]      /reports  ·  /reports/docs/**  ·  /reports/roadmap  ·  /reports/account-deletion  ·  /reports/confirm
 └── [shared]       /privacy  ·  404
 ```
@@ -73,7 +73,7 @@ harpapro.com
 | Cross-link (desktop header) | quiet text link "Site reporting app" → `/reports` | quiet text link "Interior procurement" → `/` | n/a (both are primary) |
 | Mobile menu | Procurement group, then a divider, then "Also from Harpa Pro: Site reporting app" | Site Reporting group, then a divider, then "Also from Harpa Pro: Interior procurement" | Both groups (today's menu) |
 | Footer tagline | "Technical procurement and factory records in China." | "Daily site reports from voice notes, photos, and text." (owner to confirm, Q4) | "Interior procurement in China and the Harpa Pro site-reporting app." |
-| Footer columns | Procurement · Company (Privacy, Contact `/#contact`) · Also from Harpa Pro (1 link) | Site Reporting (App, Guides, Roadmap, Account Deletion) · Company (Privacy, Get the App) · Also from Harpa Pro (1 link) | Procurement · Site Reporting · Company (today's footer) |
+| Footer columns | Procurement (header links plus Factory documents) · Company (Privacy, Contact `/#contact`) · Also from Harpa Pro (1 link) | Site Reporting (App, Guides, Roadmap, Account Deletion) · Company (Privacy, Get the App) · Also from Harpa Pro (1 link) | Procurement · Site Reporting · Company (today's footer) |
 | Breadcrumb root | `Procurement` → `/` | `Site Reporting` → `/reports` | none |
 | Default title | `Interior Procurement in China \| Harpa Pro` | `Site Reports by Voice \| Harpa Pro` | `Harpa Pro` |
 | Default description | current procurement default | "Turn voice notes, photos, and text into daily site report drafts…" | neutral two-offer sentence |
@@ -86,6 +86,7 @@ Page assignment:
 | --- | --- |
 | `pages/index.astro` | procurement |
 | `pages/procurement/guides.astro` | procurement |
+| `pages/procurement/factory-documents.astro` | procurement |
 | `layouts/ProcurementGuide.astro` (used by `how-to-buy-from-china`, `[slug]`) | procurement |
 | `pages/reports/index.astro`, `roadmap.astro`, `account-deletion.astro`, `confirm.astro` | reports |
 | `layouts/reports/DocsLayout.astro` (used by `docs/index`, `docs/guides/[...slug]`) | reports |

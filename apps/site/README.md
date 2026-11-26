@@ -232,7 +232,9 @@ header. Cloudflare supplies `noindex` for dev/preview deployments.
 
 The procurement homepage answers service, product-scope, inspection, and
 project-brief questions in visible HTML. The reporting app's audience,
-workflow, and initial voice demonstration also render before JavaScript.
+workflow, initial voice demonstration, and FAQ answers also render before
+JavaScript. The FAQ is an open definition list, not an accordion, and
+`tests/seo.spec.ts` checks that each `FAQPage` answer matches the visible text.
 
 App documentation is served by this same site at `/reports/docs`. No separate
 documentation hostname or deployment is required.

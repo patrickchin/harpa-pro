@@ -1,16 +1,12 @@
 ---
 import About from "../../components/reports/About.astro";
+import ClosingCta from "../../components/reports/ClosingCta.astro";
 import FAQ from "../../components/reports/FAQ.astro";
 import Features from "../../components/reports/Features.astro";
 import Footer from "../../components/site/Footer.astro";
 import Header from "../../components/site/Header.astro";
 import HowItWorks from "../../components/reports/HowItWorks.astro";
 import SiteReportingHero from "../../components/reports/SiteReportingHero.astro";
-import Icon from "../../components/Icon.astro";
-import Container from "../../components/primitives/Container.astro";
-import Section from "../../components/primitives/Section.astro";
-import Card from "../../components/primitives/Card.astro";
-import SectionHeader from "../../components/primitives/SectionHeader.astro";
 import Layout from "../../layouts/Layout.astro";
 import { getCollection } from "astro:content";
 import { APP_STORE_URL } from "../../lib/reports/links";
@@ -63,47 +59,7 @@ const structuredData = [{
       <Features />
       <About />
       <FAQ />
-
-      <Section tone="paper-2" bordered="top">
-        <Container padding="lg">
-          <div class="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-start">
-            <SectionHeader
-              width="md"
-              title="Guides and Roadmap"
-              lede="Use the guides for app tasks. Use the roadmap to check current and planned work."
-            />
-            <div class="grid gap-4 sm:grid-cols-2">
-              <Card
-                href="/reports/docs"
-                aria-label="View guides"
-                padding="lg"
-                elevated
-                class="group"
-              >
-                <span class="text-lg font-semibold text-ink">View guides</span>
-                <span class="mt-2 block text-sm leading-relaxed text-ink-soft">
-                  Learn how to capture updates, create reports, edit content,
-                  and manage projects.
-                </span>
-                <Icon name="arrow-right" class="mt-5 h-4 w-4 text-primary" />
-              </Card>
-              <Card
-                href="/reports/roadmap"
-                aria-label="View roadmap"
-                padding="lg"
-                elevated
-                class="group"
-              >
-                <span class="text-lg font-semibold text-ink">View roadmap</span>
-                <span class="mt-2 block text-sm leading-relaxed text-ink-soft">
-                  Check the current app capabilities and planned work.
-                </span>
-                <Icon name="arrow-right" class="mt-5 h-4 w-4 text-primary" />
-              </Card>
-            </div>
-          </div>
-        </Container>
-      </Section>
+      <ClosingCta />
     </main>
     <Footer section="reports" />
   </div>

@@ -18,8 +18,8 @@ App components, content, helpers, screenshots, and fixtures live beneath
 
 The reporting page includes a browser demo using
 `apps/site/src/fixtures/reports/demoReport.ts`. It captures no audio and
-calls no API or AI provider. The legacy waitlist form remains in source but
-is not mounted on the public pages. Existing email confirmation links still
+calls no API or AI provider. The legacy waitlist form has been removed from
+the site source. Existing email confirmation links still
 work through permanent redirects, and new emails use `/reports/confirm`.
 Because no page offers signup, failed or expired confirmation links direct
 people to `/reports`, the App Store, or support email.
@@ -41,7 +41,7 @@ is active. Treat provider-console state as `UNKNOWN` until checked.
 | Framework          | **Astro 7**                                      | Mostly-static content; ships zero JS by default; React islands for interactivity. |
 | Build runtime      | Node 22.12+ and Vite 8                           | Supported runtime and bundler line for Astro 7.                                   |
 | Styling            | Tailwind v4                                      | Same as Lovable scaffold; copy classes across.                                    |
-| Interactive bits   | React 19 inside Astro islands (`client:visible`) | Voice demo + waitlist form.                                                       |
+| Interactive bits   | React 19 inside Astro islands (`client:visible`) | Voice demo.                                                                       |
 | UI primitives      | Local Astro and React components                 | The site has no shadcn/ui dependency.                                             |
 | Content (FAQ etc.) | MDX via Astro content collections                | Easy edits without code changes.                                                  |
 | Forms              | React state plus the shared API contract         | The site has no react-hook-form dependency.                                       |
@@ -87,9 +87,10 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
    to a single R2 prefix and a single report. No `user_id`, no
    access to real user tables. UI-only swap if we later pivot to
    email-first or waitlist-only gating.
-3. **Waitlist form posts to**: Directly to `api.harpapro.com` with
-   CORS. Simpler than proxying; rate-limiting and Turnstile live at
-   the API boundary.
+3. **Waitlist form posted to** (form since removed; `/reports/confirm`
+   still calls the API): Directly to `api.harpapro.com` with CORS.
+   Simpler than proxying; rate-limiting and Turnstile live at the API
+   boundary.
 4. **Email provider**: Resend. Generous free tier, React Email
    support, good deliverability.
 5. **Analytics**: PostHog is selected for page visits, clicks, and WhatsApp /

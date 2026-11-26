@@ -133,7 +133,7 @@ test('renders the core workflow with optimized screenshots and pagination', asyn
   });
   await expect(fullScreenshotLinks).toHaveCount(4);
   for (let index = 0; index < (await fullScreenshotLinks.count()); index += 1) {
-    await expect(fullScreenshotLinks.nth(index)).toHaveAttribute('href', /^\/_astro\//);
+    await expect(fullScreenshotLinks.nth(index)).toHaveAttribute('href', /^\/_astro\/.+\.webp$/);
   }
 
   const pagination = page.getByRole('navigation', {
@@ -236,6 +236,51 @@ test('opens a full screenshot in a dismissible dialog', async ({ page }) => {
   await expect(dialog).not.toBeVisible();
 });
 
+test('shows the loaded thumbnail while the full screenshot loads', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/reports/docs/guides/generate-ai-report');
+
+  const trigger = page.getByRole('link', {
+    name: 'View full screenshot for Finalize and review together',
+  });
+  const thumbnail = trigger.getByRole('img');
+  await thumbnail.scrollIntoViewIfNeeded();
+  await thumbnail.evaluate((image) => (image as HTMLImageElement).decode());
+  const previewSource = await thumbnail.evaluate(
+    (image) => (image as HTMLImageElement).currentSrc,
+  );
+  const fullSource = new URL((await trigger.getAttribute('href'))!, page.url()).href;
+  expect(previewSource).not.toBe(fullSource);
+
+  let releaseFullImage!: () => void;
+  const fullImageGate = new Promise<void>((resolve) => {
+    releaseFullImage = resolve;
+  });
+  await page.route(fullSource, async (route) => {
+    await fullImageGate;
+    await route.continue();
+  });
+
+  await trigger.click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Full screenshot for Finalize and review together',
+  });
+  const dialogImage = dialog.getByRole('img');
+  const imageRegion = dialog.locator('[data-docs-screenshot-dialog-region]');
+
+  try {
+    await expect(dialogImage).toHaveJSProperty('currentSrc', previewSource);
+    await expect(dialogImage).toHaveAttribute('data-docs-screenshot-state', 'preview');
+    await expect(imageRegion).toHaveAttribute('aria-busy', 'true');
+  } finally {
+    releaseFullImage();
+  }
+
+  await expect(dialogImage).toHaveJSProperty('currentSrc', fullSource);
+  await expect(dialogImage).toHaveAttribute('data-docs-screenshot-state', 'full');
+  await expect(imageRegion).toHaveAttribute('aria-busy', 'false');
+});
+
 test('keeps modified screenshot clicks as native new-tab links', async ({ browserName, page }) => {
   await page.goto('/reports/docs/guides/generate-ai-report');
 
@@ -333,7 +378,9 @@ test('uses the branded not-found page for an unknown guide', async ({ page }) =>
   await expect(
     page.getByRole('heading', { level: 1, name: 'That Page Is Not Here.' }),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Procurement Overview' })).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Procurement Overview' }),
+  ).toBeVisible();
   await expect(
     page.getByRole('main').getByRole('link', { name: 'Site Reporting Guides' }),
   ).toBeVisible();

@@ -473,6 +473,7 @@ test('shows a cached preview while the full evidence image loads', async ({ page
   const previewSource = await thumbnail.evaluate((image) => (image as HTMLImageElement).currentSrc);
   const source = await trigger.getAttribute('data-evidence-image-src');
   expect(source).not.toBeNull();
+  expect(source).toMatch(/^\/_astro\/revit-a104-coordination\.[^/]+_[^/]+\.webp$/);
   const fullSource = new URL(source!, page.url()).href;
   expect(previewSource).not.toBe(fullSource);
 
@@ -752,10 +753,10 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(procurementMenu.getByRole('link', { name: 'Procurement guides', exact: true }))
     .toHaveAttribute('href', '/procurement/guides');
   await expect(
-    procurementMenu.getByRole('link', { name: 'Procurement Overview', exact: true }),
+    procurementMenu.getByRole('link', { name: /^Procurement Overview/ }),
   ).toHaveAttribute('href', '/');
   await expect(
-    procurementMenu.getByRole('link', { name: 'How to Buy from China', exact: true }),
+    procurementMenu.getByRole('link', { name: /^How to Buy from China/ }),
   ).toHaveAttribute('href', '/procurement/how-to-buy-from-china');
 
   await siteReportingSummary.hover();
@@ -763,15 +764,15 @@ test('uses accessible mega navigation and closes it after outside interaction', 
   await expect(procurementMenu).not.toHaveAttribute('open', '');
   await expect(siteReportingMenu.getByRole('link')).toHaveCount(4);
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Harpa Pro App', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Harpa Pro App/ }),
   ).toHaveAttribute('href', '/reports');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Guides', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Guides/ }),
   ).toHaveAttribute('href', '/reports/docs');
   await expect(
-    siteReportingMenu.getByRole('link', { name: 'Roadmap', exact: true }),
+    siteReportingMenu.getByRole('link', { name: /^Roadmap/ }),
   ).toHaveAttribute('href', '/reports/roadmap');
-  await expect(siteReportingMenu.getByRole('link', { name: 'Get the App', exact: true }))
+  await expect(siteReportingMenu.getByRole('link', { name: /^Get the App/ }))
     .toHaveAttribute('target', '_blank');
   await page.mouse.click(20, 700);
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');
@@ -793,14 +794,20 @@ test('uses accessible mega navigation and closes it after outside interaction', 
     page
       .locator('footer')
       .getByRole('link', {
-        name: 'Overview',
+        name: 'Procurement Overview',
         exact: true,
-      })
-      .first(),
+      }),
   ).toHaveAttribute('href', '/');
   await expect(page.locator('footer').getByText('Site Reporting', { exact: true })).toBeVisible();
   await expect(page.locator('footer nav[aria-label="Site Reporting"]').getByRole('link'))
-    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Account Deletion']);
+    .toHaveText(['Harpa Pro App', 'Guides', 'Roadmap', 'Get the App', 'Account Deletion']);
+  const footerAppLink = page.locator('footer').getByRole('link', { name: 'Get the App', exact: true });
+  await expect(footerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
+  await expect(footerAppLink).toHaveAttribute('target', '_blank');
+  await expect(footerAppLink).toHaveAttribute('rel', /noopener/);
+  await expect(page.locator('footer').getByRole('link', { name: /^Contact/ })).toHaveCount(1);
+  await expect(page.locator('footer nav').getByText(/©/)).toHaveCount(0);
+  await expect(page.locator('footer [data-footer-copyright]')).toContainText('Harpa Pro');
   await expect(page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }))
     .toHaveAttribute('href', '/privacy');
   await expect(

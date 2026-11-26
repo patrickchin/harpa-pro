@@ -3,6 +3,7 @@ import { Image } from "astro:assets";
 
 import type { DocsScreenshotId } from "../../../lib/reports/docs";
 import { docsScreenshot } from "../../../lib/reports/docs-screenshots";
+import { lightboxImage } from "../../../lib/lightbox-image";
 
 interface Props {
   screenshot: DocsScreenshotId;
@@ -12,18 +13,19 @@ interface Props {
 
 const { screenshot, alt, stepTitle } = Astro.props;
 const { image, focus } = docsScreenshot(screenshot);
+const full = await lightboxImage(image);
 ---
 
 <a
   class="docs-step-media"
-  href={image.src}
+  href={full.src}
   aria-label={`View full screenshot for ${stepTitle}`}
   data-docs-screenshot-trigger
-  data-docs-screenshot-src={image.src}
+  data-docs-screenshot-src={full.src}
   data-docs-screenshot-alt={alt}
   data-docs-screenshot-title={stepTitle}
-  data-docs-screenshot-width={image.width}
-  data-docs-screenshot-height={image.height}
+  data-docs-screenshot-width={full.width}
+  data-docs-screenshot-height={full.height}
 >
   <span
     class="docs-step-media-crop"

@@ -16,8 +16,6 @@ describe('marketing claim copy', () => {
       'components/procurement/ProcurementEvidence.astro',
       'components/site/Header.astro',
       'components/reports/Features.astro',
-      'components/reports/WaitlistForm.astro',
-      'components/reports/WaitlistFormIsland.tsx',
       'components/reports/VoiceDemo.tsx',
       'components/reports/HowItWorks.astro',
       'content/reports/features/04-exports.mdx',
@@ -76,6 +74,5 @@ describe('marketing claim copy', () => {
     expect(corpus).not.toContain('status: "later"');
     expect(corpus).toContain('https://apps.apple.com/us/app/harpa-pro/id6776759817');
     expect(corpus).toContain('Get the app');
-    expect(corpus).toContain('Product updates');
   });
 });

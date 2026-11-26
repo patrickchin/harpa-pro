@@ -89,7 +89,6 @@ const CREDENTIALS = [
   'E1 board formaldehyde report',
   'Wanhua Ecoboard production-control certificate',
   'Sofa formaldehyde test',
-  'European representative appointment',
 ] as const;
 
 const INITIAL_CREDENTIALS = CREDENTIALS.slice(0, 3);
@@ -636,7 +635,9 @@ test('shows compact factory examples and progressively discloses document previe
   }
 
   const moreDocuments = page.locator('[data-document-disclosure]');
+  const collapsedLabel = `Show ${CREDENTIALS.length - INITIAL_CREDENTIALS.length} more documents`;
   await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
+  await expect(moreDocuments).toHaveText(collapsedLabel);
   await moreDocuments.click();
   await expect(moreDocuments).toHaveAttribute('aria-expanded', 'true');
   await expect(moreDocuments).toHaveText('Show fewer documents');
@@ -663,9 +664,15 @@ test('shows compact factory examples and progressively discloses document previe
     ),
   ).toHaveCount(0);
 
-  const expiredRecord = page.locator('[data-credential-status="expired"]');
-  await expect(expiredRecord).toHaveCount(1);
-  await expect(expiredRecord).toContainText('Expired 15 July 2026');
+  await expect(suppliedRecords.filter({ hasText: 'European representative appointment' })).toHaveCount(0);
+  await expect(page.locator('#factory-documents')).not.toContainText(/expired/i);
+
+  await moreDocuments.click();
+  await expect(moreDocuments).toHaveAttribute('aria-expanded', 'false');
+  await expect(moreDocuments).toHaveText(collapsedLabel);
+  for (const title of CREDENTIALS.slice(3)) {
+    await expect(suppliedRecords.filter({ hasText: title })).not.toBeVisible();
+  }
 
   await expect(page.getByRole('link', { name: /download procurement pdf/i })).toHaveCount(0);
   await expect(page.locator('a[href*="/catalogues/"]')).toHaveCount(0);

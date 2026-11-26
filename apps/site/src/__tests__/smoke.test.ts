@@ -137,7 +137,11 @@ describe('site smoke', () => {
     expect(evidence).not.toContain('Project evidence');
     expect(evidence).not.toContain('Factory source library');
     expect(evidence).not.toContain('Open original PDF');
-    expect(evidence).toContain('Show 7 more documents');
+    expect(evidence).toContain('credentials.length - initialDocumentCount');
+    expect(evidence).not.toMatch(/Show \d+ more documents/);
+    expect(evidence).not.toContain('European representative appointment');
+    expect(evidence).not.toContain('j2s-eu-representative-appointment');
+    expect(evidence).not.toMatch(/Expired \d/);
     expect(evidence).toContain('Selected Factory Partners');
     expect(evidence).toContain(
       'We match each order with the factory that meets the design specifications',

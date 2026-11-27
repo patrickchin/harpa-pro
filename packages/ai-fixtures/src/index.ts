@@ -37,6 +37,11 @@ export interface ChatRequest {
    * without this flag do not collide with calls that pass it.
    */
   responseFormat?: 'json_object';
+  /**
+   * Maps to OpenAI's `reasoning_effort` for reasoning models (GPT-5+).
+   * Adapters that do not support it ignore it.
+   */
+  reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
 }
 
 export interface ChatResponse {

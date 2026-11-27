@@ -411,6 +411,8 @@ as a product regression.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-11-27** — Users who picked `gpt-4.1-nano` got 502s after OpenAI shut it down on 2026-10-23; the rest of the GPT-4.1 family shuts down 2027-01-14, and the hard-coded `AI_MODELS` list never tracked OpenAI's deprecations. Fix: catalogue → `gpt-6-luna` only, per-model `reasoning_effort`, retired saved picks fall back to the default. [detail](2026-11-27-retired-openai-model-in-picker.md)
+
 - **2026-09-21** _(R22)_ — API integration failed across unrelated PRs because
   Docker Hub stopped serving the floating `minio/minio:latest` alias. Fix:
   use MinIO's official Quay registry with a pinned release tag.

@@ -265,18 +265,18 @@ INSERT INTO app.llm_usage_events
    input_tokens, output_tokens, cached_tokens, input_seconds, latency_ms,
    fixture_mode, status, created_at)
 VALUES
-  ('lue_000000000001', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1-mini', 'generate_report', 18420, 3250, 2200, NULL, 5240, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '30 minutes'),
-  ('lue_000000000002', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 2410, 680, 310, NULL, 1830, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '3 hours'),
+  ('lue_000000000001', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-6-luna', 'generate_report', 18420, 3250, 2200, NULL, 5240, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '30 minutes'),
+  ('lue_000000000002', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-6-luna', 'chat', 2410, 680, 310, NULL, 1830, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '3 hours'),
   ('lue_000000000003', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 720.000, 1280, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes'),
-  ('lue_000000000004', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 1760, 520, 200, NULL, 1160, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '40 minutes'),
-  ('lue_000000000005', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000002', 'openai', 'gpt-4.1', 'generate_report', 16200, 2890, 1800, NULL, 6020, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '13 days' + interval '45 minutes'),
-  ('lue_000000000006', 'usr_strscrn0001', 'prj_centr000001', 'rpt_centr000001', 'openai', 'gpt-4.1-nano', 'generate_report', 14100, 2440, 0, NULL, 7150, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '19 days' + interval '30 minutes'),
-  ('lue_000000000007', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-nano', 'chat', 3320, 980, 440, NULL, 2380, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '22 days'),
-  ('lue_000000000008', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000001', 'openai', 'gpt-4.1-mini', 'generate_report', 12900, 2110, 1250, NULL, 4930, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '36 days'),
-  ('lue_000000000009', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-mini', 'chat', 2200, 510, 0, NULL, 2140, 'replay', 'error', (TIMESTAMPTZ :'screenshot_now') - interval '2 hours'),
+  ('lue_000000000004', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-6-luna', 'chat', 1760, 520, 200, NULL, 1160, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '40 minutes'),
+  ('lue_000000000005', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000002', 'openai', 'gpt-6-luna', 'generate_report', 16200, 2890, 1800, NULL, 6020, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '13 days' + interval '45 minutes'),
+  ('lue_000000000006', 'usr_strscrn0001', 'prj_centr000001', 'rpt_centr000001', 'openai', 'gpt-6-luna', 'generate_report', 14100, 2440, 0, NULL, 7150, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '19 days' + interval '30 minutes'),
+  ('lue_000000000007', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-6-luna', 'chat', 3320, 980, 440, NULL, 2380, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '22 days'),
+  ('lue_000000000008', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000001', 'openai', 'gpt-6-luna', 'generate_report', 12900, 2110, 1250, NULL, 4930, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '36 days'),
+  ('lue_000000000009', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-6-luna', 'chat', 2200, 510, 0, NULL, 2140, 'replay', 'error', (TIMESTAMPTZ :'screenshot_now') - interval '2 hours'),
   ('lue_000000000010', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 840.000, 1510, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '1 hour'),
-  ('lue_000000000011', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1', 'chat', 3890, 1020, 700, NULL, 1940, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
-  ('lue_000000000012', 'usr_strscrn0001', 'prj_wstgt000001', NULL, 'openai', 'gpt-4.1-nano', 'chat', 1180, 340, 0, NULL, 1430, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '45 days');
+  ('lue_000000000011', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-6-luna', 'chat', 3890, 1020, 700, NULL, 1940, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('lue_000000000012', 'usr_strscrn0001', 'prj_wstgt000001', NULL, 'openai', 'gpt-6-luna', 'chat', 1180, 340, 0, NULL, 1430, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '45 days');
 
 SELECT
   (SELECT count(*) FROM app.projects) AS projects,

@@ -41,7 +41,8 @@ describe('createOpenAiProvider — chat', () => {
       model: string;
       messages: Array<{ role: string; content: string }>;
       temperature: number;
-      max_tokens: number;
+      max_completion_tokens: number;
+      reasoning_effort?: string;
     };
     expect(body.model).toBe('gpt-4o-mini');
     expect(body.messages).toEqual([
@@ -49,7 +50,28 @@ describe('createOpenAiProvider — chat', () => {
       { role: 'user', content: 'hi' },
     ]);
     expect(body.temperature).toBe(0.2);
-    expect(body.max_tokens).toBe(32);
+    expect(body.max_completion_tokens).toBe(32);
+    expect(body).not.toHaveProperty('max_tokens');
+    expect(body).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('forwards reasoningEffort as reasoning_effort', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(200, { choices: [{ message: { content: '{}' } }] }),
+    );
+    const p = createOpenAiProvider({ apiKey: 'sk', fetchImpl });
+    await p.chat({
+      model: 'gpt-6-luna',
+      userPrompt: 'u',
+      responseFormat: 'json_object',
+      reasoningEffort: 'none',
+    });
+    const body = JSON.parse(fetchImpl.mock.calls[0]![1]?.body as string) as Record<
+      string,
+      unknown
+    >;
+    expect(body.reasoning_effort).toBe('none');
+    expect(body.response_format).toEqual({ type: 'json_object' });
   });
 
   it('parses cached_tokens from prompt_tokens_details', async () => {

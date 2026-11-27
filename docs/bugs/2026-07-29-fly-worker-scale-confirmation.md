@@ -54,6 +54,14 @@ because `flyctl ssh console --command` treated the leading
 Prefix remote assignments with the real `env` executable so Fly runs the
 arming command with the intended environment.
 
+**Follow-up on 2026-09-21.** A development rollout updated both worker
+Machines but left the intended active worker in Fly's valid `created` state,
+with the stopped current-release standby already watching that exact id. The
+helper omitted `created` and rejected the pair before readiness or journeys.
+The paired recovery now re-proves both ids and their release identity, starts
+only a still-`created` candidate, polls `created`/`starting`, and succeeds only
+after the normal started/standby topology is freshly visible.
+
 **Fix.** Remove broad worker scaling from dev and production. The required
 order is deploy, narrow topology repair, read-only started-worker verification,
 then monotonic arming. Repair is a no-op only for the exact healthy pair: one
@@ -69,7 +77,10 @@ inventories three seconds apart and permits only that same candidate in
 `stopped`, `starting`, or `started` state. The clone is blocked until the exact
 candidate is `started`. A retry from the exact singleton stopped/no-standby
 state starts it; a retry from the exact singleton started/no-standby state
-clones it.
+clones it. An exact two-worker pair may also recover when its service-less
+candidate is `created` or `starting` and its current-release stopped standby
+watches that exact id; the helper starts only `created`, polls the unchanged
+pair, and performs no update or clone.
 
 Every Machine must match the deployed app Machines on nonempty Fly release id,
 release version, and one valid full tagged image. The jq identity helper
@@ -96,7 +107,9 @@ partial retries, verify-before-clone, fresh-inventory verification after
 cloning, both directions of tag-versus-tag-with-digest comparison (including a
 registry port), conflicting digests across app Machines or workers, and
 fail-closed malformed/tag/repository/release-metadata cases with fake Fly
-commands.
+commands. It also covers paired created/starting recovery, natural settling,
+wrong standby targets, identity/topology drift before mutation, and a bounded
+created state that never reaches started.
 `verify-storage-worker-started.test.sh` keeps the final read-only state check.
 
 **Pattern.** A provider confirmation prompt can identify a destructive

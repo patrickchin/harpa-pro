@@ -39,8 +39,20 @@ case "$branch" in
 esac
 
 case "$application" in
+  viewer)
+    output_dir=packages/ifc-viewer/dist
+    pnpm --filter @harpa/ifc-viewer build:viewer
+    test -f "$output_dir/index.html"
+    test -f "$output_dir/assets/web-ifc.wasm"
+    test -f "$output_dir/THIRD_PARTY_NOTICES.txt"
+    ;;
   site)
     : "${PUBLIC_TURNSTILE_SITE_KEY:?PUBLIC_TURNSTILE_SITE_KEY is required}"
+    # Production metrics must exclude dev/PR traffic, even if Pages variables
+    # were accidentally shared between production and preview environments.
+    if [[ "$branch" != main ]]; then
+      export PUBLIC_POSTHOG_KEY='' PUBLIC_POSTHOG_HOST=''
+    fi
     # Preserve the existing public-site preview contract: PR builds submit to
     # production, while the stable dev branch submits to the development API.
     if [[ "$branch" == pr-* ]]; then
@@ -87,7 +99,7 @@ case "$application" in
     fi
     ;;
   *)
-    echo "ERROR: expected application: site, admin, or dashboard" >&2
+    echo "ERROR: expected application: site, admin, dashboard, or viewer" >&2
     exit 1
     ;;
 esac

@@ -1,0 +1,375 @@
+---
+import Icon from "../Icon.astro";
+import Wordmark from "./Wordmark.astro";
+import Button from "../primitives/Button.astro";
+import {
+  ALSO_FROM_LABEL,
+  SECTIONS,
+  SHARED_OFFERS,
+  type SectionMenu,
+  type SiteSection,
+} from "../../lib/site/sections";
+
+interface Props {
+  section: SiteSection;
+}
+
+const { section } = Astro.props;
+const config = SECTIONS[section];
+const { menu, cta, crossLink } = config;
+// Shared pages (privacy, 404) present both offers equally.
+const mobileMenus: SectionMenu[] = menu
+  ? [menu]
+  : [SECTIONS.procurement.menu!, SECTIONS.reports.menu!];
+const mobileGroupAttr = (id: SectionMenu["id"]) =>
+  id === "procurement"
+    ? { "data-mobile-procurement": true }
+    : { "data-mobile-site-reporting": true };
+const switchAttrs = (to: string, location: "header" | "mobile_menu") => ({
+  "data-audience-switch": true,
+  "data-audience-from": section,
+  "data-audience-to": to,
+  "data-audience-location": location,
+});
+const mobileLinkClass =
+  "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink hover:bg-secondary ring-focus";
+---
+
+<header
+  class="sticky top-0 z-40 border-b border-border bg-paper-2 shadow-sm"
+  data-site-header
+>
+  <div
+    class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6"
+  >
+    <Wordmark href={config.home} />
+    <nav aria-label="Primary" class="hidden items-center gap-2 md:flex">
+      {
+        menu && (
+          <details class="group static" data-mega-menu={menu.id}>
+            <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus [&::-webkit-details-marker]:hidden">
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name={menu.icon} class="h-4 w-4" />
+              </span>
+              {menu.summary}
+              <Icon
+                name="chevron-down"
+                class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+              />
+            </summary>
+            <div
+              class="absolute inset-x-0 top-full z-50 border-y border-hairline bg-background shadow-lg"
+              data-mega-panel
+            >
+              <div class="mx-auto grid max-w-6xl gap-8 px-6 py-7 lg:grid-cols-[0.8fr_1.2fr]">
+                <div class="max-w-sm">
+                  <p class="text-lg font-semibold text-ink">{menu.intro.title}</p>
+                  <p class="mt-2 text-sm leading-relaxed text-ink-soft">
+                    {menu.intro.body}
+                  </p>
+                </div>
+                <div
+                  class:list={[
+                    "grid gap-2 sm:grid-cols-2",
+                    { "lg:grid-cols-4": menu.links.length === 4 },
+                  ]}
+                >
+                  {menu.links.map((link) =>
+                    !link.icon ? (
+                      <a
+                        href={link.href}
+                        class="flex min-h-11 items-center rounded-lg p-3 text-sm font-semibold text-ink underline underline-offset-4 hover:bg-secondary ring-focus"
+                      >
+                        {link.label}
+                      </a>
+                    ) : link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-start gap-3 rounded-lg bg-primary p-3 text-sm text-primary-foreground ring-focus"
+                      >
+                        <span class="mt-0.5 shrink-0 text-primary-foreground/80" data-nav-item-icon>
+                          <Icon name={link.icon} class="h-4 w-4" />
+                        </span>
+                        <span class="min-w-0">
+                          <span class="block font-semibold">{link.label}</span>
+                          <span class="mt-1 block leading-relaxed opacity-80">{link.description}</span>
+                        </span>
+                      </a>
+                    ) : (
+                      <a
+                        href={link.href}
+                        class="flex items-start gap-3 rounded-lg p-3 text-sm hover:bg-secondary ring-focus"
+                      >
+                        <span class="mt-0.5 shrink-0 text-accent-ink" data-nav-item-icon>
+                          <Icon name={link.icon} class="h-4 w-4" />
+                        </span>
+                        <span class="min-w-0">
+                          <span class="block font-semibold text-ink">{link.label}</span>
+                          <span class="mt-1 block leading-relaxed text-ink-soft">{link.description}</span>
+                        </span>
+                      </a>
+                    ),
+                  )}
+                </div>
+              </div>
+            </div>
+          </details>
+        )
+      }
+      {
+        !menu &&
+          SHARED_OFFERS.map((offer) => (
+            <a
+              href={offer.href}
+              class="flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition-colors hover:bg-card ring-focus"
+              {...switchAttrs(offer.to, "header")}
+            >
+              <span class="text-accent-ink" data-nav-icon>
+                <Icon name={offer.icon} class="h-4 w-4" />
+              </span>
+              {offer.label}
+            </a>
+          ))
+      }
+      {
+        crossLink && (
+          <a
+            href={crossLink.href}
+            class="inline-flex h-10 items-center rounded-md px-3 text-sm text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline ring-focus"
+            {...switchAttrs(crossLink.to, "header")}
+          >
+            {crossLink.label}
+          </a>
+        )
+      }
+      {
+        cta && (
+          <Button
+            href={cta.href}
+            size="sm"
+            external={cta.external}
+            class="ml-2 transition-[filter]"
+          >
+            <span data-nav-icon>
+              <Icon name={cta.icon} class="h-4 w-4" />
+            </span>
+            {cta.label}
+          </Button>
+        )
+      }
+    </nav>
+
+    <details class="site-menu group md:hidden" data-mobile-menu>
+      <summary
+        aria-label="Toggle menu"
+        class="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-md border border-hairline text-ink ring-focus [&::-webkit-details-marker]:hidden"
+      >
+        <Icon name="menu" class="h-4 w-4 group-open:hidden" />
+        <Icon name="x" class="hidden h-4 w-4 group-open:block" />
+      </summary>
+      <div
+        class="fixed inset-x-0 bottom-0 top-16 bg-foreground/20"
+        aria-hidden="true"
+        data-mobile-backdrop
+      >
+      </div>
+      <div
+        class="absolute inset-x-0 top-16 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-hairline bg-background shadow-lg"
+        data-mobile-panel
+      >
+        <div class="mx-auto grid max-w-6xl gap-4 p-4">
+          {
+            mobileMenus.map((group, index) => (
+              <div
+                class:list={["grid gap-1", { "border-t border-hairline pt-4": index > 0 }]}
+                {...mobileGroupAttr(group.id)}
+              >
+                <p class="flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                  <span class="text-accent-ink" data-nav-icon>
+                    <Icon name={group.icon} class="h-4 w-4" />
+                  </span>
+                  {group.summary}
+                </p>
+                {group.mobileLinks.map((link) =>
+                  link.icon ? (
+                    <a href={link.href} class={mobileLinkClass}>
+                      <span class="shrink-0 text-accent-ink" data-nav-item-icon>
+                        <Icon name={link.icon} class="h-4 w-4" />
+                      </span>
+                      {link.label}
+                    </a>
+                  ) : (
+                    <a href={link.href} class={`min-h-11 ${mobileLinkClass}`}>
+                      {link.label}
+                    </a>
+                  ),
+                )}
+              </div>
+            ))
+          }
+          {
+            cta && (
+              <div class="grid gap-2 border-t border-hairline pt-4" data-mobile-actions>
+                <Button
+                  href={cta.href}
+                  external={cta.external}
+                  externalIcon={false}
+                  size="touch"
+                  icon={cta.icon}
+                  class="justify-center transition-[filter]"
+                >
+                  {cta.label}
+                </Button>
+              </div>
+            )
+          }
+          {
+            crossLink && (
+              <div class="grid gap-1 border-t border-hairline pt-4" data-mobile-also>
+                <p class="px-3 text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                  {ALSO_FROM_LABEL}
+                </p>
+                <a
+                  href={crossLink.href}
+                  class={`min-h-11 ${mobileLinkClass}`}
+                  {...switchAttrs(crossLink.to, "mobile_menu")}
+                >
+                  {crossLink.label}
+                  <Icon name="arrow-right" class="h-4 w-4 shrink-0 text-ink-soft" />
+                </a>
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<script>
+  const siteHeader = document.querySelector<HTMLElement>("[data-site-header]");
+
+  if (siteHeader) {
+    const megaMenus = Array.from(
+      siteHeader.querySelectorAll<HTMLDetailsElement>("[data-mega-menu]"),
+    );
+    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const hoverOpened = new WeakSet<HTMLDetailsElement>();
+    let closeTimer: number | undefined;
+
+    const closeMenus = (except?: HTMLDetailsElement) => {
+      megaMenus.forEach((menu) => {
+        if (menu !== except) menu.open = false;
+      });
+    };
+
+    const cancelClose = () => {
+      if (closeTimer !== undefined) window.clearTimeout(closeTimer);
+      closeTimer = undefined;
+    };
+
+    megaMenus.forEach((menu) => {
+      const summary = menu.querySelector<HTMLElement>("summary");
+
+      summary?.addEventListener("pointerenter", () => {
+        if (!finePointer.matches) return;
+        cancelClose();
+        closeMenus(menu);
+        if (!menu.open) {
+          menu.open = true;
+          hoverOpened.add(menu);
+        }
+      });
+
+      menu.addEventListener("pointerenter", cancelClose);
+      menu.addEventListener("pointerleave", () => {
+        if (!finePointer.matches) return;
+        cancelClose();
+        closeTimer = window.setTimeout(() => {
+          menu.open = false;
+        }, 120);
+      });
+
+      summary?.addEventListener("click", (event) => {
+        closeMenus(menu);
+        // A pointer click right after hover-open would natively toggle the
+        // menu shut. Keyboard activation (detail === 0) still toggles.
+        if (event.detail > 0 && menu.open && hoverOpened.has(menu)) {
+          event.preventDefault();
+          hoverOpened.delete(menu);
+        }
+      });
+      menu.addEventListener("toggle", () => {
+        if (!menu.open) hoverOpened.delete(menu);
+      });
+      menu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          menu.open = false;
+        });
+      });
+    });
+
+    siteHeader.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const openMenu = megaMenus.find((menu) => menu.open);
+      if (!openMenu) return;
+      openMenu.open = false;
+      openMenu.querySelector<HTMLElement>("summary")?.focus();
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (event.target instanceof Node && !siteHeader.contains(event.target)) {
+        closeMenus();
+      }
+    });
+
+    const mobileMenu = siteHeader.querySelector<HTMLDetailsElement>(
+      "[data-mobile-menu]",
+    );
+    if (mobileMenu) {
+      const mobileSummary = mobileMenu.querySelector<HTMLElement>("summary");
+      const desktopViewport = window.matchMedia("(min-width: 768px)");
+
+      const syncScrollLock = () => {
+        document.documentElement.style.overflow =
+          mobileMenu.open && !desktopViewport.matches ? "hidden" : "";
+      };
+
+      mobileMenu.addEventListener("toggle", syncScrollLock);
+      desktopViewport.addEventListener("change", () => {
+        if (desktopViewport.matches) mobileMenu.open = false;
+        syncScrollLock();
+      });
+
+      mobileMenu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+          mobileMenu.open = false;
+        });
+      });
+
+      mobileMenu
+        .querySelector("[data-mobile-backdrop]")
+        ?.addEventListener("click", () => {
+          mobileMenu.open = false;
+        });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (
+          mobileMenu.open &&
+          event.target instanceof Node &&
+          !mobileMenu.contains(event.target)
+        ) {
+          mobileMenu.open = false;
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !mobileMenu.open) return;
+        mobileMenu.open = false;
+        mobileSummary?.focus();
+      });
+    }
+  }
+</script>

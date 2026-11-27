@@ -1,0 +1,53 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+/**
+ * Shared surface card: rounded-xl, hairline border, card fill.
+ *
+ * Renders an interactive `<a>` (hover fill + focus ring) when `href`
+ * is set; otherwise the element named by `as`. Layout classes pass
+ * through via `class`.
+ */
+type CardTag = "div" | "article" | "figure" | "li" | "section";
+
+interface Props extends HTMLAttributes<"div"> {
+  as?: CardTag;
+  href?: string;
+  /** `none` (media cards / lists), `md` p-5, `lg` p-6. */
+  padding?: "none" | "md" | "lg";
+  elevated?: boolean;
+}
+
+const {
+  as: Root = "div",
+  href,
+  padding = "md",
+  elevated = false,
+  class: extra = "",
+  ...rest
+} = Astro.props;
+
+const padCls = { none: "", md: "p-5", lg: "p-6" }[padding];
+
+const cls = [
+  "rounded-xl border border-hairline bg-card",
+  padCls,
+  elevated ? "shadow-sm" : "",
+  href ? "hover:bg-secondary ring-focus" : "",
+  extra,
+]
+  .filter(Boolean)
+  .join(" ");
+---
+
+{
+  href ? (
+    <a href={href} class={cls} {...rest}>
+      <slot />
+    </a>
+  ) : (
+    <Root class={cls} {...rest}>
+      <slot />
+    </Root>
+  )
+}

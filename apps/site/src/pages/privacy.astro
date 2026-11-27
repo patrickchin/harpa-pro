@@ -1,25 +1,27 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Header from "../components/landing/Header.astro";
-import Footer from "../components/landing/Footer.astro";
+import Header from "../components/site/Header.astro";
+import Footer from "../components/site/Footer.astro";
 import Container from "../components/primitives/Container.astro";
+import Icon from "../components/Icon.astro";
 import { PRIVACY_POLICY_URL } from "../lib/legal";
 ---
 
 <Layout
-  title="Privacy Policy | Harpa Pro"
+  section="shared"
+  title="Privacy policy | Harpa Pro"
   description="Harpa Pro privacy policy for the website and mobile application."
 >
-  <div class="min-h-screen bg-background text-ink">
-    <Header />
-    <main>
+  <div class="flex min-h-dvh flex-col bg-background text-ink">
+    <Header section="shared" />
+    <main id="main-content" class="flex-1">
       <Container padding="md" class="space-y-6">
         <div class="space-y-3">
           <p class="text-sm font-medium uppercase text-accent-ink">
             Legal
           </p>
           <h1 class="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
-            Privacy Policy
+            Privacy policy
           </h1>
           <p class="max-w-3xl text-sm leading-6 text-ink-soft">
             The policy below is hosted by Termly and reflects the current
@@ -27,19 +29,33 @@ import { PRIVACY_POLICY_URL } from "../lib/legal";
           </p>
           <a
             href={PRIVACY_POLICY_URL}
-            class="inline-flex text-sm font-medium text-accent-ink hover:text-ink"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-accent-ink hover:text-ink ring-focus"
           >
             Open the hosted policy
+            <Icon name="external-link" class="h-3.5 w-3.5" />
+            <span class="sr-only">(opens in a new tab)</span>
           </a>
+          <p class="max-w-3xl text-sm leading-6 text-ink-soft">
+            When enabled, we use PostHog to measure page visits and clicks,
+            including use of our WhatsApp and email contact buttons. This
+            analytics runs without cookies or browser storage. We do not
+            identify visitors, record sessions, or collect search input or
+            clipboard contents. We collect campaign labels (UTM source, medium,
+            campaign, content and term) to understand which links lead to visits
+            and contact clicks. These labels can follow links within our site.
+            Other URL query parameters and fragments are excluded from analytics.
+          </p>
         </div>
         <iframe
           src={PRIVACY_POLICY_URL}
-          title="Harpa Pro Privacy Policy"
+          title="Harpa Pro privacy policy"
           class="h-[72vh] min-h-[680px] w-full rounded-md border border-hairline bg-white"
           loading="lazy"
         ></iframe>
       </Container>
     </main>
-    <Footer />
+    <Footer section="shared" />
   </div>
 </Layout>

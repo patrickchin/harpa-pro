@@ -44,11 +44,14 @@ The verified project configuration is:
 5. Automatic production deployments: disabled.
 6. Preview branch mode: custom branches.
 7. Preview custom branches: `dev` and `pr-*`.
-8. Build watch include: `*`.
+8. Build watch includes: the `harpa-pro-dashboard` list in
+   [`cloudflare-pages-watch-paths.json`](../../scripts/ci/cloudflare-pages-watch-paths.json),
+   with no exclusions (updated 2026-10-14).
 
 The draft rollout initially allowed only `pr-211`; that temporary restriction
-ended after the application landed on `dev`. Every allowed branch commit must
-produce the exact-SHA marker expected by the verification workflow.
+ended after the application landed on `dev`. Commits matching the dashboard
+include list produce the exact-SHA marker expected by the verification
+workflow. Marketing-only changes do not need a dashboard deployment.
 
 ## Public-site dashboard entry
 

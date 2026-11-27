@@ -16,9 +16,9 @@
  * button.
  *
  * Instead, the caller signals `dirty=true` from the same callback
- * `ReportEditModal` invokes when the user types. The hook fires a
- * debounced PATCH and, on success, calls `onSaved` so the caller can
- * clear its own dirty flag.
+ * `ReportEditModal` invokes when the user types. The hook serializes
+ * debounced PATCHes and acknowledges the captured edit revision. The caller
+ * clears dirtiness only if that revision is still its latest edit.
  *
  * `needsRegeneration` (and the legacy `notesSinceLastGeneration`) is
  * INTENTIONALLY not reset by manual edits (the API service makes the
@@ -26,7 +26,7 @@
  * edits and AI generation loops are independent; only note CRUD flips
  * the dirty flag.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { reports } from '@harpa/api-contract';
 
 import { useUpdateReportMutation } from '@/lib/api/hooks';
@@ -52,11 +52,13 @@ export interface UseReportBodyAutosaveInput {
    * the `onSaved` callback below.
    */
   dirty: boolean;
+  /** Monotonic user-edit revision, scoped to this report editor. */
+  revision?: number;
   /**
    * Called after a successful PATCH so the caller can clear its
    * `dirty` flag.
    */
-  onSaved?: (updatedAt: string) => void;
+  onSaved?: (updatedAt: string, revision: number) => void;
   /** Debounce window in ms. Defaults to 800. */
   debounceMs?: number;
   /**
@@ -76,6 +78,8 @@ export interface UseReportBodyAutosaveResult {
   lastSavedAt: number | null;
   /** Most recent autosave error message, or null. */
   error: string | null;
+  status: 'idle' | 'saving' | 'failed';
+  retry: () => void;
 }
 
 const DEFAULT_DEBOUNCE_MS = 800;
@@ -86,60 +90,128 @@ export function useReportBodyAutosave({
   report,
   expectedUpdatedAt,
   dirty,
+  revision = 0,
   onSaved,
   debounceMs = DEFAULT_DEBOUNCE_MS,
   paused = false,
 }: UseReportBodyAutosaveInput): UseReportBodyAutosaveResult {
   const mutation = useUpdateReportMutation();
+  const owner = useMemo(
+    () => ({
+      active: false,
+      alive: true,
+      version: null as string | null,
+      acknowledged: null as { revision: number; body: reports.ReportBody } | null,
+    }),
+    [slug, number],
+  );
+  const currentOwner = useRef(owner);
+  currentOwner.current = owner;
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
 
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  type SaveState = { owner: typeof owner; lastSavedAt: number | null } & (
+    | { status: 'idle'; error: null }
+    | { status: 'saving'; error: null; revision: number }
+    | { status: 'failed'; error: string; revision: number; conflict: boolean }
+  );
+  const [state, setState] = useState<SaveState>({
+    owner,
+    status: 'idle',
+    error: null,
+    lastSavedAt: null,
+  });
+  const current =
+    state.owner === owner
+      ? state
+      : { owner, status: 'idle' as const, error: null, lastSavedAt: null };
+
+  // The caller also acknowledges body writes made by generation. Accept
+  // that newer version while edits are queued, without rolling back to a
+  // stale query snapshot after this hook's own save has succeeded.
+  if (
+    owner.version === null ||
+    (!owner.active && expectedUpdatedAt !== null && expectedUpdatedAt > owner.version)
+  ) {
+    owner.version = expectedUpdatedAt;
+  }
 
   useEffect(() => {
-    if (paused) return;
-    if (!dirty) return;
-    if (!slug || number === null) return;
-    if (!report) return;
-    if (!expectedUpdatedAt) return;
+    owner.alive = true;
+    return () => {
+      owner.alive = false;
+    };
+  }, [owner]);
+
+  const retry = useCallback(() => {
+    if (owner.active) return;
+    setState((previous) => ({
+      owner,
+      status: 'idle',
+      error: null,
+      lastSavedAt: previous.owner === owner ? previous.lastSavedAt : null,
+    }));
+  }, [owner]);
+
+  useEffect(() => {
+    if (paused || !dirty || !slug || number === null || !report || !owner.version) return;
+    if (owner.active || current.status === 'saving') return;
+    if (current.status === 'failed' && (current.conflict || current.revision === revision)) return;
+    if (owner.acknowledged?.revision === revision && owner.acknowledged.body === report) return;
 
     const handle = setTimeout(() => {
-      setError(null);
+      if (!owner.alive || owner.active || currentOwner.current !== owner) return;
+      owner.active = true;
+      const lastSavedAt = current.lastSavedAt;
+      setState({ owner, status: 'saving', revision, error: null, lastSavedAt });
       mutation.mutate(
         {
           params: { project: slug, number },
-          body: { body: report, expectedUpdatedAt },
+          body: { body: report, expectedUpdatedAt: owner.version! },
         },
         {
           onSuccess: (saved) => {
-            setLastSavedAt(Date.now());
-            onSaved?.(saved.updatedAt);
+            owner.active = false;
+            if (!owner.alive || currentOwner.current !== owner) return;
+            owner.version = saved.updatedAt;
+            owner.acknowledged = { revision, body: report };
+            onSavedRef.current?.(saved.updatedAt, revision);
+            setState({ owner, status: 'idle', error: null, lastSavedAt: Date.now() });
           },
           onError: (err) => {
-            setError(err.message ?? 'Autosave failed.');
+            owner.active = false;
+            if (!owner.alive || currentOwner.current !== owner) return;
+            setState({
+              owner,
+              status: 'failed',
+              revision,
+              conflict: err.status === 409,
+              error: err.message ?? 'Autosave failed.',
+              lastSavedAt,
+            });
           },
         },
       );
     }, debounceMs);
-
     return () => clearTimeout(handle);
-    // mutation is stable across renders (TanStack Query memoizes the
-    // returned object). We omit it from deps to avoid re-creating the
-    // timer on unrelated re-renders. `onSaved` is caller-owned; we
-    // intentionally don't depend on it so a re-bound callback doesn't
-    // restart the debounce.
   }, [
     dirty,
     paused,
     slug,
     number,
     report,
+    revision,
     expectedUpdatedAt,
     debounceMs,
+    owner,
+    current.status,
   ]);
 
   return {
-    isAutoSaving: mutation.isPending,
-    lastSavedAt,
-    error,
+    isAutoSaving: current.status === 'saving',
+    lastSavedAt: current.lastSavedAt,
+    error: current.error,
+    status: current.status,
+    retry,
   };
 }

@@ -82,6 +82,30 @@ write_flow "$GOOD_DIR" "appId: \${MAESTRO_APP_ID}
 assert_pass "allows semantic taps" "$TMP/good.log" \
   run_guard "$GOOD_DIR"
 
+EXCEPTION_DIR="$TMP/exceptions/.maestro"
+mkdir -p "$EXCEPTION_DIR/helpers"
+printf '%s\n' "appId: \${MAESTRO_APP_ID}
+---
+- tapOn:
+    point: '50%,85%'" >"$EXCEPTION_DIR/helpers/tap-dialog-action.yaml"
+printf '%s\n' "appId: \${MAESTRO_APP_ID}
+---
+- tapOn:
+    point: '50%,92%'" >"$EXCEPTION_DIR/helpers/tap-dialog-cancel.yaml"
+assert_pass "allows only the bounded native Modal fallbacks" "$TMP/exceptions.log" \
+  run_guard "$EXCEPTION_DIR"
+
+EXTRA_DIR="$TMP/extra/.maestro"
+mkdir -p "$EXTRA_DIR/helpers"
+printf '%s\n' "appId: \${MAESTRO_APP_ID}
+---
+- tapOn:
+    point: '50%,85%'
+- tapOn:
+    point: '50%,85%'" >"$EXTRA_DIR/helpers/tap-dialog-action.yaml"
+assert_fail "rejects extra taps in an allowlisted helper" "$TMP/extra.log" \
+  run_guard "$EXTRA_DIR"
+
 echo
 echo "passed: $PASS  failed: $FAIL"
 [[ "$FAIL" -eq 0 ]]

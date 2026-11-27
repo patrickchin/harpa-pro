@@ -774,6 +774,10 @@ describe('CameraCapture', () => {
       />,
     );
     expect(tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.disabled).toBe(false);
+    expect(
+      tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.accessibilityState,
+    ).toEqual({ disabled: false });
+    expect(tree.root.findAllByProps({ testID: 'camera-shutter-ready' }).length).toBeGreaterThan(0);
     await act(async () => {
       await tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
     });

@@ -2,18 +2,20 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+import { ROADMAP_STATUSES } from "./lib/reports/roadmap";
+
 const DOCS_TIERS = ["core", "everyday", "setup"] as const;
 
-const faq = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/faq" }),
+const reportsFaq = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/faq" }),
   schema: z.object({
     question: z.string(),
     order: z.number().default(0),
   }),
 });
 
-const features = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/features" }),
+const reportsFeatures = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/features" }),
   schema: z.object({
     title: z.string(),
     icon: z.string(),
@@ -21,18 +23,22 @@ const features = defineCollection({
   }),
 });
 
-const roadmap = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/roadmap" }),
+const reportsRoadmap = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/roadmap" }),
   schema: z.object({
     title: z.string(),
     icon: z.string(),
-    status: z.enum(["available", "planned"]),
+    status: z.enum(ROADMAP_STATUSES),
+    // Coarse timing only. Leave unset unless the owner has confirmed it.
+    timing: z
+      .union([z.enum(["Next", "Later"]), z.string().regex(/^Q[1-4] \d{4}$/)])
+      .optional(),
     order: z.number().default(0),
   }),
 });
 
-const docs = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/docs" }),
+const reportsDocs = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/reports/docs" }),
   schema: z.object({
     title: z.string().min(1),
     description: z.string().min(1),
@@ -44,4 +50,25 @@ const docs = defineCollection({
   }),
 });
 
-export const collections = { faq, features, roadmap, docs };
+const procurementGuides = defineCollection({
+  loader: glob({
+    pattern: "**/*.mdx",
+    base: "./src/content/procurement/guides",
+  }),
+  schema: ({ image }) => {
+    const illustration = z.object({
+      image: image(),
+      alt: z.string().startsWith("Generated illustration of ").min(36),
+      caption: z.string().startsWith("Generated illustration · ").min(28),
+    });
+    return z.object({
+      title: z.string().min(1),
+      description: z.string().min(20),
+      order: z.number().int().positive(),
+      hero: illustration.optional(),
+      thumbnail: illustration.optional(),
+    });
+  },
+});
+
+export const collections = { reportsFaq, reportsFeatures, reportsRoadmap, reportsDocs, procurementGuides };

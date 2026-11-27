@@ -57,18 +57,9 @@ tags:
 # --- Delete the draft via btn-draft-options --------------------------------
 - tapOn:
     id: "btn-draft-options"
-- extendedWaitUntil:
-    visible:
-      id: "dialog-action-confirm-delete-draft"
-    timeout: 8000
-- tapOn:
-    id: "dialog-action-confirm-delete-draft"
+- runFlow: ../helpers/confirm-delete-draft.yaml
 
 # --- Back on the reports list, drafts list should be empty -----------------
-- extendedWaitUntil:
-    visible:
-      id: "btn-new-report"
-    timeout: 15000
 - assertNotVisible:
     id: "report-row-.*"
 

@@ -178,6 +178,46 @@ surface opacity carries contrast or hierarchy.
 
 ## Entries
 
+- **2026-09-22** — The photo Maestro flows claimed fixture mode supplied a
+  synthetic camera image, but the route always mounted native Expo Camera;
+  camera-equipped Android hardware masked the missing wiring until the iOS
+  simulator shutter never became ready. Fix: connect the existing route seams
+  to a unique cache-backed fixture capture and retain a separate native smoke.
+  [detail](2026-09-22-ios-fixture-camera-missing.md)
+
+- **2026-09-22** — The cross-platform photo-note Maestro module required the
+  Android-only Photo library action on iOS, contradicting the accepted iOS
+  camera-only policy. Fix: assert the library action is present on Android and
+  absent on iOS before continuing through shared camera coverage.
+  [detail](2026-09-22-ios-photo-library-maestro-policy-drift.md)
+
+- **2026-09-22** — Under Xcode 27, the full iOS Maestro regression rendered
+  native draft and note deletion sheets but XCTest omitted their entire modal
+  windows from the accessibility snapshot. Fix: centralize both deletion
+  sequences, retain semantic Android paths, and use bounded iOS coordinate
+  fallbacks before asserting each deletion result.
+  [detail](2026-09-22-ios-dialog-accessibility-collapse.md)
+
+- **2026-09-22** — The iOS regression reached the finalized-report review
+  composer but failed to add its comment because `hideKeyboard` reported
+  success while the multiline keyboard still covered the semantic submit
+  target. The flow now blurs through the known `report-review-pane` background
+  on iOS before submitting and verifies the comment survives refinalization.
+  [detail](2026-09-22-ios-report-review-keyboard-overlay.md)
+
+- **2026-09-22** _(R22)_ — Fresh local and Maestro stacks could not start because
+  MinIO's Docker Hub image names no longer resolved, while previously pulled
+  images hid the failure on established machines. Fix: use pinned official
+  Quay images everywhere and enforce the source in release-confidence policy.
+  [detail](2026-09-22-minio-docker-hub-images-removed.md)
+
+- **2026-09-21** — Fly returned the active storage worker in its valid
+  post-update `created` state while the exact current-release standby already
+  watched that id; the fail-closed repair helper omitted that state and stopped
+  the deploy after the API was live. Fix: prove the exact pair, start only the
+  created candidate, and poll the same identities to the healthy topology.
+  [detail](2026-09-21-fly-created-worker-recovery.md)
+
 - **2026-09-21** — Better Auth 1.7.3 reversed the issuer-keyed account schema
   introduced in 1.7.0–1.7.2, so a package-only 1.7.5 update rejected every
   auth request against the previously correct `NOT NULL account.issuer`.
@@ -407,12 +447,55 @@ as a product regression.
 
 ## Bugs
 
+- **2026-11-13** — Website-only main PRs waited for an intentionally skipped
+  API preview. Fix: require the validated exact-SHA site deployment for
+  site-only changes. [detail](2026-11-13-site-only-main-gate.md)
+
+- **2026-11-12** — Exact thumbnail-dimension equality rejected Firefox's
+  fractional DOM measurements. Fix: retain size and square-shape checks at
+  two-decimal precision. [detail](2026-11-12-thumbnail-subpixel-measurements.md)
+
+- **2026-11-11** — Report commands bypassed pending input and quota failures
+  rearmed automatic generation. Fix: shared command admission and latched
+  generation errors. [detail](2026-11-11-report-command-admission.md)
+
+- **2026-11-11** — Save acknowledgements cleared newer mobile edits or
+  mutated the next dashboard report after navigation. Fix: revision-scoped
+  autosave and report-scoped editor ownership.
+  [detail](2026-11-11-report-save-ownership.md)
+
+- **2026-10-14** — Marketing-only PRs queued unrelated admin/dashboard builds
+  because Cloudflare watched `*` independently of GitHub's path filters. Fix:
+  application-specific provider includes, a mobile PR publication guard, and
+  a trigger-coverage regression check.
+  [detail](2026-10-14-unrelated-pages-preview-builds.md)
+
 - **2026-06-06** _(R3)_ — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
-- **2026-11-27** — Users who picked `gpt-4.1-nano` got 502s after OpenAI shut it down on 2026-10-23; the rest of the GPT-4.1 family shuts down 2027-01-14, and the hard-coded `AI_MODELS` list never tracked OpenAI's deprecations. Fix: catalogue → `gpt-6-luna` only, per-model `reasoning_effort`, retired saved picks fall back to the default. [detail](2026-11-27-retired-openai-model-in-picker.md)
-
+- **2026-11-27** — Users who picked `gpt-4.1-nano` got 502s after OpenAI shut
+  it down on 2026-10-23; the rest of the GPT-4.1 family shuts down 2027-01-14,
+  and the hard-coded `AI_MODELS` list never tracked OpenAI's deprecations.
+  Switch the catalogue to `gpt-6-luna` only with per-model `reasoning_effort`;
+  retired saved picks fall back to the default.
+  [detail](2026-11-27-retired-openai-model-in-picker.md)
+- **2026-11-12** — PR #502 repeated the Astro/Vite dependency smoke-test
+  drift: the manifests advanced while site/admin assertions retained the old
+  reviewed versions. Align both suites with the updated dependency graph.
+  [detail](2026-10-16-dependency-smoke-version-drift.md#2026-11-12-recurrence)
+- **2026-10-16** — The Astro/Vite Dependabot patch update failed site and
+  admin smoke tests because their reviewed-version assertions still expected
+  Astro 7.3.3 and Vite 8.3.0. Align assertions with Astro 7.3.6 / Vite 8.3.3
+  and document keeping them in sync during dependency refreshes.
+  [detail](2026-10-16-dependency-smoke-version-drift.md)
+- **2026-10-15** — Procurement WhatsApp URL omitted the displayed number's
+  final digit; align the URL and assert it matches the visible number.
+  [detail](2026-10-15-whatsapp-contact-number.md)
+- **2026-10-10** _(R22)_ — Fresh API tests could no longer pull pinned MinIO
+  Quay images. Build pinned official server/client source for integration
+  tests and local fixtures.
+  [detail](2026-10-10-minio-quay-images-unavailable.md)
 - **2026-09-21** _(R22)_ — API integration failed across unrelated PRs because
   Docker Hub stopped serving the floating `minio/minio:latest` alias. Fix:
   use MinIO's official Quay registry with a pinned release tag.

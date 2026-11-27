@@ -80,7 +80,11 @@ describe('ReportsListPage', () => {
     expect(
       rendered.container.querySelector('section[aria-labelledby="reports-heading"]'),
     ).toHaveClass('space-y-6');
-    expect(rendered.container.querySelector('#reports-heading')).toHaveClass('text-title-sm');
+    expect(rendered.container.querySelector('#reports-heading')).toHaveClass(
+      'font-heading',
+      'text-page-compact',
+      'sm:text-page',
+    );
     expect(rendered.container.querySelector('#reports-heading')).not.toHaveClass('text-title');
     expect(field(rendered.container, 'Status')).toHaveClass(
       'font-normal',

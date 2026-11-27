@@ -58,7 +58,7 @@ export function GenerateReportActionRow() {
           size="default"
           className="w-full"
           onPress={handleRegenerate}
-          disabled={busy || (!hasReport && !hasNotes)}
+          disabled={busy || generation.canGenerate === false || (!hasReport && !hasNotes)}
         >
           <View className="flex-row items-center gap-1.5">
             <Sparkles size={16} color={colors.foreground} />
@@ -79,7 +79,7 @@ export function GenerateReportActionRow() {
         size="default"
         accessibilityLabel="Regenerate report"
         onPress={handleRegenerate}
-        disabled={busy}
+        disabled={busy || generation.canGenerate === false}
       >
         <RotateCcw size={18} color={colors.foreground} />
       </Button>
@@ -90,7 +90,7 @@ export function GenerateReportActionRow() {
           size="default"
           className="w-full"
           onPress={() => draft.setIsFinalizeConfirmVisible(true)}
-          disabled={busy}
+          disabled={busy || draft.canFinalize === false}
         >
           <Text className="text-base font-semibold text-primary-foreground" numberOfLines={1}>
             {draft.isFinalizing ? 'Finalizing…' : saving ? 'Saving…' : 'Finalize report'}

@@ -37,7 +37,7 @@ describe('SourceNotesPanel', () => {
     expect(rendered.container.querySelector('aside')).toHaveClass(
       'rounded-card-ui',
       'bg-card',
-      'shadow-raised-ui',
+      'border-border/40',
     );
     expect(rendered.container.querySelector('#source-notes-heading')).toHaveClass('text-label');
     expect(rendered.container.querySelector('#source-notes-heading')).not.toHaveClass(

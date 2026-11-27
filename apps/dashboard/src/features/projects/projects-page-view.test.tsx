@@ -99,6 +99,35 @@ describe('ProjectsPageView', () => {
     );
   });
 
+  it('searches the loaded projects by name, client, and address and clears no matches', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ProjectsPageView projects={projects} onCreateProject={vi.fn()} />
+      </MemoryRouter>,
+    );
+    const search = screen.getByRole('searchbox', { name: 'Search projects' });
+    for (const query of ['  HARBOR  ', 'northstar', 'Pier Road']) {
+      await user.clear(search);
+      await user.type(search, query);
+      const table = screen.getByRole('table', { name: 'Projects' });
+      expect(within(table).getByRole('link', { name: 'Harbor House' })).toBeVisible();
+      expect(within(table).queryByRole('link', { name: 'Civic Annex' })).not.toBeInTheDocument();
+      expect(
+        within(screen.getByRole('list', { name: 'Projects' })).getAllByRole('listitem'),
+      ).toHaveLength(1);
+    }
+    await user.clear(search);
+    await user.type(search, 'missing');
+    expect(screen.getByText('No matching projects')).toBeVisible();
+    expect(screen.queryByText('No projects yet')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(search).toHaveValue('');
+    expect(
+      within(screen.getByRole('table', { name: 'Projects' })).getAllByRole('link'),
+    ).toHaveLength(2);
+  });
+
   it('creates a project from the primary action', async () => {
     const user = userEvent.setup();
     const onCreateProject = vi.fn().mockResolvedValue(undefined);

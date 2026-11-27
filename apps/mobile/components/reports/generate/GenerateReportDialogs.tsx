@@ -14,10 +14,7 @@
  * delete-error dialog — those depend on `useImagePreviewProps` and
  * `useReportDraftPersistence`, which land in P3.7.
  */
-import {
-  AppDialogSheet,
-  type AppDialogAction,
-} from '@/components/primitives/AppDialogSheet';
+import { AppDialogSheet, type AppDialogAction } from '@/components/primitives/AppDialogSheet';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import {
   getActionErrorDialogCopy,
@@ -94,15 +91,13 @@ export function GenerateReportDialogs() {
         }}
         actions={[
           {
-            label: draft.isFinalizing
-              ? 'Finalizing…'
-              : finalizeConfirmCopy.confirmLabel,
+            label: draft.isFinalizing ? 'Finalizing…' : finalizeConfirmCopy.confirmLabel,
             variant: finalizeConfirmCopy.confirmVariant,
             onPress: () => {
-              if (draft.isFinalizing || !hasReport) return;
+              if (draft.isFinalizing || !hasReport || draft.canFinalize === false) return;
               draft.finalize();
             },
-            disabled: draft.isFinalizing || !hasReport,
+            disabled: draft.isFinalizing || !hasReport || draft.canFinalize === false,
             accessibilityLabel: 'Confirm finalize report',
             testID: 'confirm-finalize',
           },

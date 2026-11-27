@@ -1,0 +1,66 @@
+---
+import About from "../../components/reports/About.astro";
+import ClosingCta from "../../components/reports/ClosingCta.astro";
+import FAQ from "../../components/reports/FAQ.astro";
+import Features from "../../components/reports/Features.astro";
+import Footer from "../../components/site/Footer.astro";
+import Header from "../../components/site/Header.astro";
+import HowItWorks from "../../components/reports/HowItWorks.astro";
+import SiteReportingHero from "../../components/reports/SiteReportingHero.astro";
+import Layout from "../../layouts/Layout.astro";
+import { getCollection } from "astro:content";
+import { APP_STORE_URL } from "../../lib/reports/links";
+import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
+
+const description = "Create AI construction daily report drafts from voice notes, photos, and text with Harpa Pro. Review, edit, finalize, and export reports as PDFs.";
+const homeUrl = new URL("/", Astro.site).href;
+const appUrl = new URL("/reports", Astro.site).href;
+const faqEntries = (await getCollection("reportsFaq")).sort((a, b) => a.data.order - b.data.order);
+const structuredData = [{
+  "@type": "MobileApplication",
+  "@id": `${appUrl}#software`,
+  name: "Harpa Pro",
+  description,
+  url: appUrl,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "iOS",
+  downloadUrl: APP_STORE_URL,
+  installUrl: APP_STORE_URL,
+  image: new URL(REPORTS_SOCIAL_IMAGE.src, Astro.site).href,
+  publisher: { "@id": `${homeUrl}#organization` },
+  mainEntityOfPage: { "@id": `${appUrl}#webpage` },
+}, {
+  "@type": "FAQPage",
+  "@id": `${appUrl}#faq`,
+  isPartOf: { "@id": `${appUrl}#webpage` },
+  mainEntity: faqEntries.map((entry) => ({
+    "@type": "Question",
+    name: entry.data.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      // FAQ answers are plain prose; collapse MDX line wrapping for JSON-LD.
+      text: (entry.body ?? "").replace(/\s+/g, " ").trim(),
+    },
+  })),
+}];
+---
+
+<Layout
+  section="reports"
+  title="AI construction daily report app | Harpa Pro"
+  description={description}
+  structuredData={structuredData}
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header section="reports" />
+    <main id="main-content">
+      <SiteReportingHero />
+      <HowItWorks />
+      <Features />
+      <About />
+      <FAQ />
+      <ClosingCta />
+    </main>
+    <Footer section="reports" />
+  </div>
+</Layout>

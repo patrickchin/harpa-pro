@@ -23,12 +23,10 @@ appId: ${MAESTRO_APP_ID}
     direction: DOWN
 - tapOn:
     id: "btn-delete-project"
-- extendedWaitUntil:
-    visible:
-      id: "confirm-delete-project"
-    timeout: 8000
-- tapOn:
-    id: "confirm-delete-project"
+- runFlow:
+    file: tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-delete-project'
 - extendedWaitUntil:
     visible:
       id: "btn-new-project"

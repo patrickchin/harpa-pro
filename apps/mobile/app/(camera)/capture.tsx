@@ -16,7 +16,7 @@
  * AppDialogSheet (no `Alert.alert`, hard rule).
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 
@@ -25,6 +25,14 @@ import { commitCameraSession, getCameraSession } from '@/lib/camera/camera-sessi
 import { safeBack } from '@/lib/nav/safe-back';
 import { readSaveToRollPref, writeSaveToRollPref } from '@/lib/camera/save-to-roll-pref';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { env } from '@/lib/config/env';
+import { takeFixtureCameraPicture } from '@/lib/camera/fixture-camera';
+
+const FIXTURE_CAMERA_PERMISSION = { granted: true, canAskAgain: true } as const;
+
+function renderFixtureCameraPreview() {
+  return <View className="flex-1 bg-black" testID="camera-fixture-preview" />;
+}
 
 export default function CaptureRoute() {
   const router = useRouter();
@@ -96,6 +104,14 @@ export default function CaptureRoute() {
     returnToCaller();
   }, [returnToCaller]);
 
+  const fixtureCameraProps = env.EXPO_PUBLIC_USE_FIXTURES
+    ? {
+        permissionOverride: FIXTURE_CAMERA_PERMISSION,
+        renderPreview: renderFixtureCameraPreview,
+        takePicture: takeFixtureCameraPicture,
+      }
+    : {};
+
   return (
     <>
       <CameraCapture
@@ -104,6 +120,7 @@ export default function CaptureRoute() {
         saveToCameraRoll={saveToCameraRoll}
         onToggleSaveToCameraRoll={handleToggleSaveToRoll}
         saveCaptureToCameraRoll={handleSaveCapture}
+        {...fixtureCameraProps}
       />
       <AppDialogSheet
         visible={blockedDialogOpen}

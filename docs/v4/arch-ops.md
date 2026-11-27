@@ -49,13 +49,15 @@ does not define this repository's runtime; `nvm use` does.
   (`harpa-pro` / `harpa-pro-dev`). See [arch-storage.md](arch-storage.md).
 - **Public site**: Astro app `apps/site` on Cloudflare Pages project
   `harpa-pro`. One static deployment serves marketing, roadmap, legal, and
-  product guides at `https://harpapro.com/docs`.
+  procurement at `/`, the reporting app at `/reports`, and app guides at
+  `https://harpapro.com/reports/docs`. Legacy URLs redirect permanently; see
+  [product URL organization](design-site-product-url-organization.md).
   - Production branch `main` → `https://harpapro.com` (and
     `harpa-pro.pages.dev`).
   - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
   - The public artifact contains no admin route or admin-auth client.
-  - After cutover, the standalone hostname `docs.harpapro.com` redirects to
-    the canonical `/docs` routes through Cloudflare zone rules. See
+  - App documentation lives at `/reports/docs` in this same deployment; no
+    separate docs hostname is required. See
     [the Cloudflare Pages runbook](../marketing/deploy-cloudflare-pages.md).
 - **Admin site**: Astro app `apps/admin` on the independent Cloudflare Pages
   project `harpa-pro-admin`.
@@ -87,6 +89,9 @@ does not define this repository's runtime; `nvm use` does.
     [Admin AI usage ledger](design-admin-ai-usage.md).
 - **Static web runtime**: `apps/site` and `apps/admin` use Astro 7 with Vite 8
   and retain a Node 22.12.0 compatibility floor in their workspace manifests.
+  The current reviewed patches are Astro 7.3.6 and Vite 8.3.3; dependency
+  refreshes must update the site and admin smoke-test version assertions
+  alongside the manifests and shared lockfile.
   Repository builds use the shared Node 24.19.0 runtime.
 - **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
   Pages project `harpa-pro-dashboard`.
@@ -220,6 +225,9 @@ aligned.
 
 App Store:
 
+- Keep the app marketing URL at `https://harpapro.com/reports` and support
+  URL at `https://harpapro.com/reports/docs`. The checked-in Fastlane metadata
+  uses those product destinations; privacy remains shared at `/privacy`.
 - Answer App Privacy in App Store Connect once with an Apple ID that has
   owner/admin rights. Fastlane's App Store privacy action cannot use an
   App Store Connect API key.
@@ -241,7 +249,7 @@ Play Store:
   console-owned.
 - Keep the Play privacy-policy URL set to `https://harpapro.com/privacy`.
 - Keep the Play Data safety account-deletion URL set to
-  `https://harpapro.com/account-deletion`.
+  `https://harpapro.com/reports/account-deletion`.
 - Enable Play App Signing before the first production release.
 
 ### Screenshot setup

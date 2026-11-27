@@ -256,8 +256,9 @@ When the live lane fails, the next step is almost always:
 
 `pnpm --filter @harpa/mobile ios:mock` sets
 `EXPO_PUBLIC_USE_FIXTURES=true` at bundle time. This swaps the native
-audio recorder for the checked-in `voice-sample.m4a` input and enables
-selected display fallbacks.
+audio recorder for the checked-in `voice-sample.m4a` input, swaps the native
+camera for a unique cache copy of a bundled image, and enables selected
+display fallbacks.
 
 The mobile API client sends no fixture-mode header and does not add a
 fixture name to AI requests. The target API still decides between live

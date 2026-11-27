@@ -44,15 +44,23 @@ jobs:
   changes:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       api: ${{ steps.paths.outputs.api }}
-      admin: ${{ steps.paths.outputs.admin }}
-      dashboard: ${{ steps.paths.outputs.dashboard }}
+      admin: ${{ steps.paths.outputs.admin == 'true' || steps.pages.outputs.admin == 'true' }}
+      dashboard: ${{ steps.paths.outputs.dashboard == 'true' || steps.pages.outputs.dashboard == 'true' }}
       api-migrations: ${{ steps.paths.outputs.api-migrations }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - id: paths
         uses: ./.github/actions/changed-paths
+      - id: pages
+        uses: ./.github/actions/pages-changes
 
   # Migration-filename lint and focused-main trust guard. Run it for preview
   # inputs and trusted gate wiring so a forbidden direct-main change fails

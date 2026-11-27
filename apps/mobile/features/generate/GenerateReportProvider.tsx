@@ -109,6 +109,8 @@ export interface GenerateReportProviderProps {
   isAutoSaving?: boolean;
   /** True while another report-body write is pending or needs recovery. */
   isReportWriteBlocked?: boolean;
+  canGenerateReport?: boolean;
+  canFinalizeReport?: boolean;
   /** True while finalize is in flight. */
   isFinalizing?: boolean;
   /** Latest finalize error, or `null`. */
@@ -265,6 +267,7 @@ interface TimelineSurface {
 }
 
 interface GenerationSurface {
+  canGenerate?: boolean;
   /** Generated report payload. `null` until a report exists. */
   report: reports.ReportBody | null;
   /**
@@ -303,6 +306,7 @@ export interface GenerationDebug {
 }
 
 interface DraftSurface {
+  canFinalize?: boolean;
   /** True while finalize is in flight. */
   isFinalizing: boolean;
   /** Opens the finalize-confirm dialog. */
@@ -455,6 +459,8 @@ export function GenerateReportProvider({
   onSetReport,
   isAutoSaving = false,
   isReportWriteBlocked = false,
+  canGenerateReport = true,
+  canFinalizeReport = true,
   isFinalizing = false,
   finalizeError = null,
   onFinalize,
@@ -815,6 +821,7 @@ export function GenerateReportProvider({
         isLoading: notesLoading,
       },
       generation: {
+        canGenerate: canGenerateReport,
         report,
         setReport,
         isUpdating: isGeneratingReport,
@@ -827,6 +834,7 @@ export function GenerateReportProvider({
         lastGeneration,
       },
       draft: {
+        canFinalize: canFinalizeReport,
         isFinalizing,
         isFinalizeConfirmVisible,
         setIsFinalizeConfirmVisible,
@@ -914,6 +922,8 @@ export function GenerateReportProvider({
       handleFinalize,
       isAutoSaving,
       isReportWriteBlocked,
+      canGenerateReport,
+      canFinalizeReport,
       attachmentSheetVisible,
       fileUploadError,
       inlineRecorder.isRecording,

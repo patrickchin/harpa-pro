@@ -1,0 +1,19 @@
+Cost item,Hypothetical example USD,Your estimate USD,Evidence or calculation note
+100 chairs at USD 60,6000,,Invented example; replace with supplier quotation and quantity
+Samples and sample courier,180,,Invented example; confirm whether refundable or credited
+Inspection,250,,Invented example; obtain inspection quotation
+China inland transport,220,,Invented example; check supplier delivery inclusions
+Export handling and documents,180,,Invented example; check forwarder quotation inclusions
+International freight,900,,Invented example; obtain current shipment-specific quotation
+Cargo insurance,70,,Invented example; confirm scope and deductible
+Destination handling and broker,400,,Invented example; obtain destination estimate
+Import duty allowance,700,,Invented lump-sum allowance; ask broker for actual duty calculation
+Import tax allowance,1100,,Invented lump-sum allowance; ask broker for actual tax calculation
+Delivery to receiving address,200,,Invented example; include unloading where agreed
+Payment and currency costs,90,,Invented example; record rates and transfer charges
+Estimated cash outlay before reserve,10290,,Sum the twelve cost items above; missing estimates remain unconfirmed
+Contingency reserve,500,,Invented allowance; reserve is not an actual cost until spent
+Cash budget including reserve,10790,,Add cash outlay and reserve; avoid duplicate cost inclusions
+Quantity ordered,100,,Enter units ordered; use the same unit across cost comparison
+Cash outlay per ordered unit,102.9,,Divide estimated cash outlay by ordered quantity
+Cash budget per ordered unit,107.9,,Divide cash budget including reserve by ordered quantity

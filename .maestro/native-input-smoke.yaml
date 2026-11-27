@@ -94,12 +94,10 @@ tags:
     timeout: 15000
 - tapOn:
     id: "btn-camera-cancel"
-- extendedWaitUntil:
-    visible:
-      id: "btn-camera-confirm-discard"
-    timeout: 8000
-- tapOn:
-    id: "btn-camera-confirm-discard"
+- runFlow:
+    file: helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'btn-camera-confirm-discard'
 - extendedWaitUntil:
     visible:
       id: "input-note-container"
@@ -108,16 +106,7 @@ tags:
 # --- Delete the draft and project ------------------------------------------
 - tapOn:
     id: "btn-draft-options"
-- extendedWaitUntil:
-    visible:
-      id: "dialog-action-confirm-delete-draft"
-    timeout: 8000
-- tapOn:
-    id: "dialog-action-confirm-delete-draft"
-- extendedWaitUntil:
-    visible:
-      id: "btn-new-report"
-    timeout: 15000
+- runFlow: helpers/confirm-delete-draft.yaml
 - tapOn:
     id: "btn-back"
 

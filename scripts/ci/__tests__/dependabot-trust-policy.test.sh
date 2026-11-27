@@ -127,12 +127,43 @@ require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- 'vitest'" 
   "Vitest moves with its companion packages"
 require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "vitest-stack" "- '@vitest/*'" \
   "Vitest coverage providers move with the test runner"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "dom-testing-stack" "- 'jsdom'" \
+  "jsdom moves with the DOM testing stack"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "dom-testing-stack" \
+  "- '@testing-library/jest-dom'" \
+  "jest-dom moves with its required DOM peer"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "commitlint-stack" "- '@commitlint/*'" \
+  "Commitlint CLI and configuration move together"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "tanstack-query-stack" \
+  "- '@tanstack/react-query-persist-client'" \
+  "TanStack Query persistence packages move with the React adapter"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@babel/core" \
   "version-update:semver-major" \
   "Dependabot leaves Babel-major upgrades to the Expo SDK migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "tailwindcss" \
+  "version-update:semver-major" \
+  "Dependabot leaves Tailwind majors to the NativeWind migration"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "auth" \
   "version-update:semver-major" \
   "Dependabot leaves Better Auth CLI major upgrades to a reviewed stack migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@hono/zod-openapi" \
+  "version-update:semver-major" \
+  "Dependabot leaves the OpenAPI registry major to a reviewed contract migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "@types/node" \
+  "version-update:semver-major" \
+  "Dependabot keeps Node types on the deployed runtime major"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "zod" \
+  "version-update:semver-major" \
+  "Dependabot leaves Zod majors to a reviewed contract migration"
+require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "eslint-plugin-react-hooks" \
+  "version-update:semver-major" \
+  "Dependabot leaves React Hooks lint majors to a reviewed purity migration"
+require_fixed "apps/dashboard/eslint.config.js" "'react-hooks/rules-of-hooks': 'error'" \
+  "dashboard keeps the established Rules of Hooks gate"
+require_fixed "apps/dashboard/eslint.config.js" "'react-hooks/exhaustive-deps': 'warn'" \
+  "dashboard keeps the established exhaustive-deps advisory"
+forbid_fixed "apps/dashboard/eslint.config.js" "reactHooks.configs.recommended.rules" \
+  "React Hooks updates cannot silently enable compiler-era lint rules"
 require_dependabot_ignore_rule_fixed "$DEPENDABOT_CONFIG" "rbs" \
   "versions: ['>= 4.2.0']" \
   "Dependabot leaves Ruby 3.3-only rbs releases to the Expo Ruby migration"
@@ -155,8 +186,11 @@ for group in \
   aws-sdk-stack \
   typescript-eslint-stack \
   vitest-stack \
-  production-patches \
-  development-patches; do
+  dom-testing-stack \
+  commitlint-stack \
+  tanstack-query-stack \
+  production-minor-patch \
+  development-minor-patch; do
   require_fixed "$DEPENDABOT_CONFIG" "${group}:" \
     "Dependabot defines the ${group} update group"
 done
@@ -166,16 +200,42 @@ for dependency in "expo*" "@expo/*" "react-native*" "@react-native/*"; do
     "Dependabot leaves the Expo/native compatibility graph to Expo Doctor"
 done
 
-forbid_fixed "$DEPENDABOT_CONFIG" "production-minor-patch:" \
-  "broad production grouping does not mix unrelated minor updates"
-forbid_fixed "$DEPENDABOT_CONFIG" "development-minor-patch:" \
-  "broad development grouping does not mix unrelated minor updates"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "production-minor-patch" \
+  "- 'minor'" \
+  "broad production grouping consolidates routine minor updates"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "development-minor-patch" \
+  "- 'minor'" \
+  "broad development grouping consolidates routine minor updates"
+require_fixed "$DEPENDABOT_CONFIG" "directory: '/tools/maestro-orchestrator'" \
+  "Dependabot checks the Maestro uv lockfile"
+require_dependabot_group_fixed "$DEPENDABOT_CONFIG" "python-minor-patch" \
+  "- 'minor'" \
+  "Python minor and patch updates are consolidated"
+for override in \
+  '"@esbuild-kit/core-utils>esbuild": "0.25.0"' \
+  '"@xmldom/xmldom@>=0.8.0 <0.8.15": "0.8.15"' \
+  '"body-parser@<1.20.6": "1.20.6"' \
+  '"decode-uri-component@<=0.4.2": "0.5.0"' \
+  '"image-size@<=2.0.2": "2.0.4"' \
+  '"lighthouse>puppeteer-core": "25.11.0"' \
+  '"query-string@<9.3.1": "9.3.1"' \
+  '"tmp@<0.2.7": "0.2.7"' \
+  '"uuid@<11.1.1": "11.1.1"'; do
+  require_fixed "package.json" "$override" \
+    "the transitive security floor is pinned: $override"
+done
+require_fixed "package.json" '"puppeteer-core@25.11.0"' \
+  "the secure Puppeteer major declares its proxy-agent peer"
+require_fixed "package.json" '"metro@0.83.7": "patches/metro@0.83.7.patch"' \
+  "Metro reads image bytes for image-size 2 compatibility"
 require_fixed ".github/actions/changed-paths/action.yml" \
   "- '.github/dependabot.yml'" \
   "Dependabot policy changes activate the CI policy-test job"
 require_fixed ".github/workflows/lint-typecheck.yml" \
   "bash scripts/ci/__tests__/dependabot-trust-policy.test.sh" \
   "the credential-free lint workflow runs this policy test"
+require_fixed "apps/dashboard/package.json" '"@testing-library/dom":' \
+  "dashboard declares the required jest-dom peer explicitly"
 
 PULL_REQUEST_TARGET_FOUND=0
 while IFS= read -r -d '' workflow; do
@@ -204,7 +264,7 @@ for workflow in admin-preview site-preview; do
     "$workflow verification does not depend on repository secrets"
   forbid_job_fixed "$path" verify "pull-requests: write" \
     "$workflow verification cannot comment on pull requests"
-  require_job_fixed "$path" deployment "needs: verify" \
+  require_job_fixed "$path" deployment "needs: [verify, changes]" \
     "$workflow deployment check waits for verification"
   require_job_fixed "$path" deployment "$AUTHOR_GUARD" \
     "$workflow deployment check excludes Dependabot by PR author"
@@ -268,7 +328,7 @@ require_job_fixed "$MAIN_GATE" journeys \
 require_job_fixed "$MAIN_GATE" journeys \
   "Port the dependency update through dev" \
   "main gate explains the safe security-update route"
-require_fixed_count "$MAIN_GATE" "$AUTHOR_GUARD" 5 \
+require_fixed_count "$MAIN_GATE" "$AUTHOR_GUARD" 7 \
   "main gate keeps every exact-SHA journey step away from Dependabot credentials"
 
 for workflow in \

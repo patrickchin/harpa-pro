@@ -32,7 +32,9 @@ export interface ReportsListPageProps {
 
 function ReportStatus({ report }: { report: reports.Report }) {
   const finalized = report.status === 'finalized';
-  return <Badge tone={finalized ? 'success' : 'info'}>{finalized ? 'Finalized' : 'Draft'}</Badge>;
+  return (
+    <Badge tone={finalized ? 'success' : 'neutral'}>{finalized ? 'Finalized' : 'Draft'}</Badge>
+  );
 }
 
 function AttentionStatus({ report }: { report: reports.Report }) {
@@ -64,7 +66,7 @@ function ReportActions({
   stacked = false,
 }: ReportActionsProps) {
   return (
-    <div className={stacked ? 'grid grid-cols-2 gap-2' : 'flex flex-wrap items-center gap-2'}>
+    <div className={stacked ? 'grid grid-cols-2 gap-2' : 'flex items-center gap-1'}>
       <Button
         className={stacked ? 'w-full' : undefined}
         onClick={onOpen}
@@ -78,11 +80,12 @@ function ReportActions({
           aria-label={`Delete Site Visit #${reportNumber}`}
           className={stacked ? 'w-full' : undefined}
           onClick={onDelete}
-          size="small"
-          variant="destructive"
+          size={stacked ? 'small' : 'icon'}
+          title="Delete report"
+          variant="danger-quiet"
         >
           <Trash2 aria-hidden="true" className="size-4" />
-          Delete
+          <span className={stacked ? undefined : 'sr-only'}>Delete</span>
         </Button>
       ) : null}
     </div>
@@ -166,7 +169,7 @@ function ReportTable({
           ) : items.length === 0 ? (
             <tr>
               <td className={`${tableCellClassName} p-6 text-center`} colSpan={7}>
-                <h2 className="text-title-sm">No reports found</h2>
+                <h2 className="font-heading text-title-sm">No reports found</h2>
                 <p className="mt-2 text-muted-foreground">
                   {status === 'all'
                     ? 'This project has no reports yet.'
@@ -181,7 +184,7 @@ function ReportTable({
                 <td className={tableCellClassName}>
                   <Button
                     aria-label={`Open Site Visit #${report.number}: ${displayReportTitle(report.body)}`}
-                    className="min-h-11 max-w-72 justify-start px-0 text-left text-foreground underline decoration-accent decoration-2 underline-offset-4"
+                    className="min-h-11 w-full min-w-0 max-w-72 justify-start px-0 text-left text-foreground no-underline hover:text-accent-ink"
                     onClick={() => onOpen(report.number)}
                     variant="quiet"
                   >
@@ -190,7 +193,7 @@ function ReportTable({
                     </span>
                   </Button>
                 </td>
-                <td className={tableCellClassName}>
+                <td className={`${tableCellClassName} whitespace-nowrap`}>
                   {formatDate(report.body?.meta.visitDate ?? report.visitDate)}
                 </td>
                 <td className={tableCellClassName}>
@@ -199,7 +202,9 @@ function ReportTable({
                 <td className={tableCellClassName}>
                   <AttentionStatus report={report} />
                 </td>
-                <td className={tableCellClassName}>{formatDateTime(report.updatedAt)}</td>
+                <td className={`${tableCellClassName} whitespace-nowrap`}>
+                  {formatDateTime(report.updatedAt)}
+                </td>
                 <td className={tableCellClassName}>
                   <ReportActions
                     canWrite={canWrite}
@@ -222,7 +227,7 @@ function ReportCards({ canWrite, items, onDelete, onOpen }: ReportCollectionProp
     <ul aria-label="Reports" className="grid gap-3 lg:hidden">
       {items.map((report) => (
         <li key={report.id}>
-          <Card className="space-y-3 p-4">
+          <Card className="space-y-4 p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-label text-muted-foreground uppercase">
@@ -230,7 +235,7 @@ function ReportCards({ canWrite, items, onDelete, onOpen }: ReportCollectionProp
                 </p>
                 <Button
                   aria-label={`Open Site Visit #${report.number}: ${displayReportTitle(report.body)}`}
-                  className="mt-1 min-h-11 max-w-full justify-start p-0 text-left text-lg text-foreground underline decoration-accent decoration-2 underline-offset-4"
+                  className="mt-1 min-h-11 max-w-full justify-start p-0 text-left text-lg text-foreground no-underline hover:text-accent-ink"
                   onClick={() => onOpen(report.number)}
                   variant="quiet"
                 >
@@ -242,7 +247,7 @@ function ReportCards({ canWrite, items, onDelete, onOpen }: ReportCollectionProp
               <ReportStatus report={report} />
             </div>
 
-            <dl className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+            <dl className="grid gap-3 border-t border-border/40 pt-4 sm:grid-cols-2">
               <div>
                 <dt className="text-label text-muted-foreground uppercase">Visit date</dt>
                 <dd className="mt-1 text-meta">
@@ -261,7 +266,7 @@ function ReportCards({ canWrite, items, onDelete, onOpen }: ReportCollectionProp
               </div>
             </dl>
 
-            <div className="border-t border-border pt-4">
+            <div className="border-t border-border/40 pt-4">
               <ReportActions
                 canWrite={canWrite}
                 onDelete={() => onDelete(report)}
@@ -333,14 +338,19 @@ export function ReportsListPage({ api, projectSlug, role, onOpenReport }: Report
   };
 
   return (
-    <section className="min-w-0 space-y-6 text-foreground" aria-labelledby="reports-heading">
+    <section
+      className="min-w-0 space-y-6 text-foreground sm:space-y-8"
+      aria-labelledby="reports-heading"
+    >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="mb-1 text-label text-accent-ink uppercase">Project workspace</p>
-          <h1 className="text-title-sm" id="reports-heading">
+          <p className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Project workspace
+          </p>
+          <h1 className="font-heading text-page-compact sm:text-page" id="reports-heading">
             Reports
           </h1>
-          <p className="mt-1 max-w-reading text-muted-foreground">
+          <p className="mt-3 max-w-reading text-meta leading-relaxed text-muted-foreground">
             Open drafts, review finalized reports, and track source updates.
           </p>
         </div>
@@ -356,7 +366,7 @@ export function ReportsListPage({ api, projectSlug, role, onOpenReport }: Report
         ) : null}
       </header>
 
-      <Card className="flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:justify-between sm:p-4">
+      <div className="flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <Field className="w-full sm:w-auto" htmlFor="report-status-filter" label="Status">
           <Select
             className="sm:min-w-40"
@@ -378,7 +388,7 @@ export function ReportsListPage({ api, projectSlug, role, onOpenReport }: Report
           <RefreshCw aria-hidden="true" className="size-4" />
           {reportsQuery.isFetching && !reportsQuery.isLoading ? 'Refreshing…' : 'Refresh'}
         </Button>
-      </Card>
+      </div>
 
       {createMutation.error ? (
         <Card className="border-danger-border bg-danger-soft p-4 text-danger-text" role="alert">
@@ -474,7 +484,7 @@ export function ReportsListPage({ api, projectSlug, role, onOpenReport }: Report
           role="alertdialog"
         >
           <div className="space-y-3">
-            <h2 className="text-title-sm" id="delete-report-title">
+            <h2 className="font-heading text-title-sm" id="delete-report-title">
               Delete Site Visit #{deleteTarget.number}?
             </h2>
             <p className="text-muted-foreground" id="delete-report-description">

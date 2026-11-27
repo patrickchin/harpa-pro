@@ -49,6 +49,7 @@ import { env } from '@/lib/config/env';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportGenerationStateTestId } from '@/lib/reports/generation-sync';
+import { reportCommandAdmission } from '@/lib/reports/command-admission';
 import {
   countNonCancelledUploadFailures,
   getReportPhotoUploadQueueState,
@@ -192,6 +193,8 @@ export default function GenerateReportRoute() {
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
+  const commandInFlight = useRef(false);
+  const admissionRef = useRef<ReturnType<typeof reportCommandAdmission> | null>(null);
 
   const membersQuery = useProjectMembersQuery(
     { params: { project: slug } },
@@ -338,6 +341,7 @@ export default function GenerateReportRoute() {
   // the diff was always non-zero and produced a stuck "Saving…" label
   // + a PATCH-spam loop).
   const [userDirty, setUserDirty] = useState(false);
+  const editRevisionRef = useRef(0);
   // Keep the newest server version returned by this screen's own writes so
   // a fast autosave → finalize sequence cannot conflict with itself while
   // React Query is still refetching. Never advance it from a background
@@ -356,13 +360,19 @@ export default function GenerateReportRoute() {
   const placementWriteError = placePhotoGroupMutation.isError
     ? (placePhotoGroupMutation.error?.message ?? "Couldn't place photo in the report.")
     : null;
-  const placementWriteBlocked = placePhotoGroupMutation.isPending || placementWriteError !== null;
   const handlePlacePhotoGroup = useCallback(
     async (input: {
       noteId: string;
       placement: { kind: 'issue' | 'section'; index: number } | null;
     }) => {
-      if (!reportId || reportNumber === null || !slug) return;
+      if (
+        !reportId ||
+        reportNumber === null ||
+        !slug ||
+        !admissionRef.current?.canGenerate ||
+        commandInFlight.current
+      )
+        return;
       const previousLocalReport = localReport;
       if (previousLocalReport) {
         setLocalReport(applyPhotoPlacement(previousLocalReport, input.noteId, input.placement));
@@ -398,13 +408,14 @@ export default function GenerateReportRoute() {
   const currentReport = localReport ?? serverBody ?? fallbackReport;
 
   const handleEditReport = useCallback((next: reports.ReportBody) => {
+    editRevisionRef.current += 1;
     setLocalReport(next);
     setUserDirty(true);
   }, []);
 
-  const handleAutoSaved = useCallback((updatedAt: string) => {
+  const handleAutoSaved = useCallback((updatedAt: string, revision: number) => {
     expectedUpdatedAtRef.current = updatedAt;
-    setUserDirty(false);
+    if (revision === editRevisionRef.current) setUserDirty(false);
   }, []);
 
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -490,119 +501,10 @@ export default function GenerateReportRoute() {
     report: localReport,
     expectedUpdatedAt: expectedUpdatedAtRef.current ?? reportRow?.updatedAt ?? null,
     dirty: userDirty,
+    revision: editRevisionRef.current,
     onSaved: handleAutoSaved,
     paused: isGenerating || finalizeMutation.isPending,
   });
-
-  const handleRegenerate = useCallback(() => {
-    if (!slug || reportNumber === null || placementWriteBlocked) return;
-    const expectedUpdatedAt = expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
-    if (!expectedUpdatedAt) return;
-    setGenerationError(null);
-    const attempt = generationIdempotency.attempt(currentReport ? 'regenerate' : 'generate');
-    const mutation = attempt.operation === 'regenerate' ? regenerateMutation : generateMutation;
-    mutation.mutate(
-      {
-        ...reportMutationInput(slug, reportNumber, expectedUpdatedAt),
-        headers: { 'Idempotency-Key': attempt.key },
-      },
-      {
-        onSuccess: (data) => {
-          acceptReportGenerationSuccess(generationIdempotency, attempt.key, () => {
-            const payload = data as
-              | {
-                  report?: {
-                    body?: reports.ReportBody | null;
-                    updatedAt?: string;
-                  };
-                  debug?: {
-                    systemPrompt?: string;
-                    userPrompt?: string;
-                    rawText?: string;
-                    model?: string;
-                    vendor?: string;
-                  };
-                }
-              | undefined;
-            const nextBody = payload?.report?.body ?? null;
-            if (nextBody) {
-              setLocalReport(nextBody);
-            }
-            if (payload?.report?.updatedAt) {
-              expectedUpdatedAtRef.current = payload.report.updatedAt;
-            }
-            if (payload?.debug) {
-              setLastGeneration({
-                systemPrompt: payload.debug.systemPrompt ?? '',
-                userPrompt: payload.debug.userPrompt ?? '',
-                rawText: payload.debug.rawText ?? '',
-                model: payload.debug.model ?? '',
-                vendor: payload.debug.vendor ?? '',
-              });
-            }
-          });
-        },
-        onError: (err) => {
-          generationIdempotency.failed(attempt.key, err.status);
-          const limit = usageLimitFromError(err);
-          if (limit) {
-            setUsageLimitHit(limit);
-            return;
-          }
-          setGenerationError(err.message ?? 'Generation failed.');
-        },
-      },
-    );
-  }, [
-    slug,
-    reportNumber,
-    reportRow?.updatedAt,
-    currentReport,
-    generateMutation,
-    regenerateMutation,
-    generationIdempotency,
-    placementWriteBlocked,
-  ]);
-
-  const handleRetryNoteActionError = useCallback(() => {
-    const retry = noteActionError?.retry;
-    if (!retry) return;
-    if (retry.kind === 'delete') {
-      runDeleteNote(retry.noteId);
-      return;
-    }
-    if (retry.kind === 'update') {
-      runUpdateNote(retry.noteId, retry.nextBody);
-      return;
-    }
-    runCreateTextNote(retry.body);
-  }, [noteActionError, runCreateTextNote, runDeleteNote, runUpdateNote]);
-
-  // Auto-regenerate when the server signals notes have changed since the
-  // last generation. The hook fires exactly once per dirty transition and
-  // naturally queues a follow-up if a note arrives mid-flight.
-  useAutoRegenerate({
-    needsRegeneration: reportRow?.needsRegeneration ?? false,
-    status: (reportRow?.status as 'draft' | 'finalized') ?? 'draft',
-    isGenerating: isGenerating || placePhotoGroupMutation.isPending,
-    generationError: generationError ?? placementWriteError,
-    onRegenerate: handleRegenerate,
-  });
-
-  const handleFinalize = useCallback(() => {
-    if (!slug || reportNumber === null || placementWriteBlocked) return;
-    const expectedUpdatedAt = expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
-    if (!expectedUpdatedAt) return;
-    setFinalizeError(null);
-    finalizeMutation.mutate(reportMutationInput(slug, reportNumber, expectedUpdatedAt), {
-      onSuccess: () => {
-        router.replace(`/(app)/projects/${slug}/reports/${reportNumber}` as Href);
-      },
-      onError: (err) => {
-        setFinalizeError(err.message ?? 'Finalize failed.');
-      },
-    });
-  }, [slug, reportNumber, reportRow?.updatedAt, finalizeMutation, router, placementWriteBlocked]);
 
   // Delete-draft handler. Routes back to the reports list on success so
   // the deleted draft isn't in nav history (would 404 on swipe-back).
@@ -902,6 +804,167 @@ export default function GenerateReportRoute() {
     generationError !== null ||
     effectiveUploadError !== null;
 
+  const admission = reportCommandAdmission({
+    ready: Boolean(reportId && (expectedUpdatedAtRef.current ?? reportRow?.updatedAt)),
+    draft: reportRow?.status === 'draft',
+    canWrite,
+    isOwner: projectQuery.data?.myRole === 'owner',
+    inputPending: uploadSyncPending || noteSyncPending,
+    inputFailed:
+      report.error != null ||
+      notesQuery.error != null ||
+      createNote.isError ||
+      deleteNote.isError ||
+      updateNote.isError ||
+      noteActionError !== null ||
+      effectiveUploadError !== null,
+    editsPending: userDirty || autosave.isAutoSaving,
+    saveFailed: autosave.error != null,
+    writePending:
+      isGenerating ||
+      finalizeMutation.isPending ||
+      placePhotoGroupMutation.isPending ||
+      deleteReportMutation.isPending ||
+      commandInFlight.current,
+    placementFailed: placementWriteError !== null,
+    hasBody: currentReport !== null,
+    hasNotes: visibleNotes.length > 0,
+    needsRegeneration: reportRow?.needsRegeneration ?? true,
+    generationFailed: generationError !== null,
+  });
+  admissionRef.current = admission;
+
+  const handleRegenerate = useCallback(() => {
+    if (
+      !slug ||
+      reportNumber === null ||
+      !admissionRef.current?.canGenerate ||
+      commandInFlight.current
+    )
+      return;
+    const expectedUpdatedAt = expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
+    if (!expectedUpdatedAt) return;
+    commandInFlight.current = true;
+    const requestedRevision = editRevisionRef.current;
+    setGenerationError(null);
+    const attempt = generationIdempotency.attempt(currentReport ? 'regenerate' : 'generate');
+    const mutation = attempt.operation === 'regenerate' ? regenerateMutation : generateMutation;
+    mutation.mutate(
+      {
+        ...reportMutationInput(slug, reportNumber, expectedUpdatedAt),
+        headers: { 'Idempotency-Key': attempt.key },
+      },
+      {
+        onSuccess: (data) => {
+          acceptReportGenerationSuccess(generationIdempotency, attempt.key, () => {
+            const payload = data as
+              | {
+                  report?: {
+                    body?: reports.ReportBody | null;
+                    updatedAt?: string;
+                  };
+                  debug?: {
+                    systemPrompt?: string;
+                    userPrompt?: string;
+                    rawText?: string;
+                    model?: string;
+                    vendor?: string;
+                  };
+                }
+              | undefined;
+            const nextBody = payload?.report?.body ?? null;
+            if (nextBody && requestedRevision === editRevisionRef.current) {
+              setLocalReport(nextBody);
+            }
+            if (payload?.report?.updatedAt) {
+              expectedUpdatedAtRef.current = payload.report.updatedAt;
+            }
+            if (payload?.debug) {
+              setLastGeneration({
+                systemPrompt: payload.debug.systemPrompt ?? '',
+                userPrompt: payload.debug.userPrompt ?? '',
+                rawText: payload.debug.rawText ?? '',
+                model: payload.debug.model ?? '',
+                vendor: payload.debug.vendor ?? '',
+              });
+            }
+          });
+        },
+        onError: (err) => {
+          generationIdempotency.failed(attempt.key, err.status);
+          setGenerationError(err.message ?? 'Generation failed.');
+          const limit = usageLimitFromError(err);
+          if (limit) {
+            setUsageLimitHit(limit);
+            return;
+          }
+        },
+        onSettled: () => {
+          commandInFlight.current = false;
+        },
+      },
+    );
+  }, [
+    slug,
+    reportNumber,
+    reportRow?.updatedAt,
+    currentReport,
+    generateMutation,
+    regenerateMutation,
+    generationIdempotency,
+  ]);
+
+  const handleRetryNoteActionError = useCallback(() => {
+    const retry = noteActionError?.retry;
+    if (!retry) return;
+    if (retry.kind === 'delete') {
+      runDeleteNote(retry.noteId);
+      return;
+    }
+    if (retry.kind === 'update') {
+      runUpdateNote(retry.noteId, retry.nextBody);
+      return;
+    }
+    runCreateTextNote(retry.body);
+  }, [noteActionError, runCreateTextNote, runDeleteNote, runUpdateNote]);
+
+  // Auto-regenerate when the server signals notes have changed since the
+  // last generation. The hook fires exactly once per dirty transition and
+  // naturally queues a follow-up if a note arrives mid-flight.
+  useAutoRegenerate({
+    needsRegeneration: reportRow?.needsRegeneration ?? false,
+    status: (reportRow?.status as 'draft' | 'finalized') ?? 'draft',
+    isGenerating: isGenerating || placePhotoGroupMutation.isPending,
+    generationError: generationError ?? placementWriteError,
+    enabled: admission.canAutoGenerate,
+    onRegenerate: handleRegenerate,
+  });
+
+  const handleFinalize = useCallback(() => {
+    if (
+      !slug ||
+      reportNumber === null ||
+      !admissionRef.current?.canFinalize ||
+      commandInFlight.current
+    )
+      return;
+    const expectedUpdatedAt = expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
+    if (!expectedUpdatedAt) return;
+    commandInFlight.current = true;
+    setFinalizeError(null);
+    finalizeMutation.mutate(reportMutationInput(slug, reportNumber, expectedUpdatedAt), {
+      onSuccess: () => {
+        router.replace(`/(app)/projects/${slug}/reports/${reportNumber}` as Href);
+      },
+      onError: (err) => {
+        setFinalizeError(err.message ?? 'Finalize failed.');
+      },
+      onSettled: () => {
+        commandInFlight.current = false;
+      },
+    });
+  }, [slug, reportNumber, reportRow?.updatedAt, finalizeMutation, router]);
+
   // Combine autosave + generation errors into the existing surface so
   // both bubble through `generationError`. Generation errors trump
   // autosave (the user just tried to regenerate; show them that).
@@ -942,14 +1005,22 @@ export default function GenerateReportRoute() {
         isGeneratingReport={isGenerating}
         generationError={combinedError}
         generationErrorActionLabel={canRetryNoteAction ? 'Try again' : undefined}
-        onGenerationErrorAction={canRetryNoteAction ? handleRetryNoteActionError : undefined}
+        onGenerationErrorAction={
+          autosave.error
+            ? autosave.retry
+            : canRetryNoteAction
+              ? handleRetryNoteActionError
+              : undefined
+        }
         lastGeneration={effectiveLastGeneration}
         showDebugTab={showDebugTab}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
         needsRegeneration={reportRow?.needsRegeneration ?? false}
         isAutoSaving={autosave.isAutoSaving || userDirty}
-        isReportWriteBlocked={placementWriteBlocked}
+        isReportWriteBlocked={admission.blockers.length > 0}
+        canGenerateReport={admission.canGenerate}
+        canFinalizeReport={admission.canFinalize}
         isFinalizing={finalizeMutation.isPending}
         finalizeError={finalizeError}
         onFinalize={handleFinalize}
@@ -957,7 +1028,9 @@ export default function GenerateReportRoute() {
         onPickAttachment={handlePickAttachment}
         onRetryPhotoUpload={handleRetryPhotoUpload}
         onCancelPhotoUpload={handleCancelPhotoUpload}
-        onPlacePhotoGroup={canWrite && reportId !== null ? handlePlacePhotoGroup : undefined}
+        onPlacePhotoGroup={
+          admission.canGenerate && reportId !== null ? handlePlacePhotoGroup : undefined
+        }
         onDeleteDraft={reportRow?.status === 'finalized' ? undefined : handleDeleteDraft}
         isDeletingDraft={deleteReportMutation.isPending}
         actions={<AppHeaderActions />}

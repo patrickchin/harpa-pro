@@ -18,7 +18,7 @@ describe('ReportPreview', () => {
     cleanups.push(rendered.cleanup);
 
     const preview = rendered.container.querySelector('[data-testid="report-preview"]');
-    expect(preview).toHaveClass('gap-4', 'rounded-card-ui', 'bg-card', 'shadow-raised-ui');
+    expect(preview).toHaveClass('gap-5', 'rounded-card-ui', 'bg-card', 'border-border/40');
     const sectionHeadings = [...rendered.container.querySelectorAll('section > h3')];
     expect(sectionHeadings.length).toBeGreaterThan(0);
     sectionHeadings.forEach((heading) => {

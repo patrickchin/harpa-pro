@@ -152,7 +152,7 @@ export function SignInForm({
         <AuthBrand eyebrow="Secure sign in" />
         <div className="mt-8">
           <KeyRound aria-hidden="true" className="mb-3 size-6 text-accent" />
-          <h1 className="text-title text-foreground">Enter your password</h1>
+          <h1 className="font-heading text-title text-foreground">Enter your password</h1>
           <p className="mt-2 text-body text-muted-foreground">
             Sign in as <strong className="font-semibold text-foreground">{email}</strong>.
           </p>
@@ -214,7 +214,7 @@ export function SignInForm({
         <AuthBrand eyebrow="Secure sign in" />
         <div className="mt-8">
           <MailCheck aria-hidden="true" className="mb-3 size-6 text-accent" />
-          <h1 className="text-title text-foreground">Check your email</h1>
+          <h1 className="font-heading text-title text-foreground">Check your email</h1>
           <p className="mt-2 text-body text-muted-foreground">
             Enter the six-digit code sent to{' '}
             <strong className="font-semibold text-foreground">{email}</strong>.
@@ -265,7 +265,7 @@ export function SignInForm({
     <section className="w-full max-w-sm">
       <AuthBrand eyebrow="Office dashboard" />
       <div className="mt-8">
-        <h1 className="text-title text-foreground">Welcome to Harpa Pro</h1>
+        <h1 className="font-heading text-title text-foreground">Welcome to Harpa Pro</h1>
         <p className="mt-2 text-body text-muted-foreground">
           Sign in with your work email. Most accounts receive a six-digit code—no password required.
         </p>

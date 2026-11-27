@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -43,11 +43,9 @@ describe('DashboardShell', () => {
     expect(screen.getByRole('link', { name: 'Harpa Pro' })).toHaveAttribute('href', '/projects');
     expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects');
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
-    expect(document.querySelector('#dashboard-content > div')).toHaveClass(
+    expect(document.querySelector('#dashboard-content > div:last-child')).toHaveClass(
       'max-w-app',
-      'px-5',
-      'sm:px-6',
-      'xl:px-8',
+      'p-5',
     );
   });
 
@@ -93,7 +91,7 @@ describe('DashboardShell', () => {
 
     await interaction.click(screen.getByRole('button', { name: 'Open account menu' }));
     expect(screen.getByText('morgan@example.com')).toBeVisible();
-    expect(screen.getByText('Northstar Builders')).toBeVisible();
+    expect(within(screen.getByRole('menu')).getByText('Northstar Builders')).toBeVisible();
     await interaction.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(onSignOut).toHaveBeenCalledOnce();
   });

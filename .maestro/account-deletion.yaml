@@ -76,12 +76,9 @@ tags:
 - inputText: 'test3@harpapro.com'
 - hideKeyboard
 - runFlow:
-    when:
-      visible:
-        id: 'btn-confirm-delete-account'
-    commands:
-      - tapOn:
-          id: 'btn-confirm-delete-account'
+    file: helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'btn-confirm-delete-account'
 - extendedWaitUntil:
     visible:
       id: 'input-email'

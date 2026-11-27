@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/damaged-defective-incomplete-imports",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: photorealistic-natural. Asset type: SQUARE 1:1 article INDEX thumbnail about damaged imported goods. Create a concrete life-size photographic scene viewed almost directly from above: a single open battered brown shipping carton on a cool slate-gray receiving floor, revealing a broken pale ceramic table-lamp body cradled in white protective foam. One unmistakable large break and a few ceramic fragments visible inside the carton, retained foam chunks beside the lamp. The open carton and damaged object fill most of frame so damage is clear at only 80 pixels. Tight documentary-style crop, flat cool daylight from a receiving doorway, realistic cardboard fibre and ceramic fracture edges. Keep it restrained and factual rather than dramatic destruction; no people. Generated editorial illustration of a hypothetical delivery problem, not an actual claim photograph or customer evidence. No labels, text, invoice, logos, brand marks, numbers, barcodes, forms, screenshots, collage, watermarks, miniature setup or ivory studio backdrop. Maximum three contextual cues: carton, foam, broken lamp.",
+  "generatedOriginal": "exec-ae45c5c3-9cdd-4c6b-a539-2266641dd240.png",
+  "originalSha256": "48bf0dc66bf3f8299771f277d3d4bddeefed582ec3c27b44c91a1f193db2ded1",
+  "asset": "damaged-defective-incomplete-imports-thumbnail.webp",
+  "alt": "Generated illustration of an opened shipping carton containing a broken ceramic lamp, protective foam, and fragments.",
+  "caption": "Generated illustration · Inspecting damaged goods"
+}

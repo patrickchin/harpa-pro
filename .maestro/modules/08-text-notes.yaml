@@ -71,20 +71,7 @@ tags:
 # --- Open note options menu and delete the note ----------------------------
 - tapOn:
     id: "btn-note-options-.*"
-- extendedWaitUntil:
-    visible:
-      id: "btn-note-options-delete"
-    timeout: 8000
-- tapOn:
-    id: "btn-note-options-delete"
-# Tapping delete advances the NoteOptionsSheet to its confirm-delete
-# stage. Confirm to actually remove the note from the timeline.
-- extendedWaitUntil:
-    visible:
-      id: "btn-note-options-confirm-delete"
-    timeout: 8000
-- tapOn:
-    id: "btn-note-options-confirm-delete"
+- runFlow: ../helpers/delete-note.yaml
 
 # --- Confirm note is gone from timeline ------------------------------------
 - extendedWaitUntil:
@@ -99,16 +86,7 @@ tags:
 # --- Clean up: delete the draft and return to project home -----------------
 - tapOn:
     id: "btn-draft-options"
-- extendedWaitUntil:
-    visible:
-      id: "dialog-action-confirm-delete-draft"
-    timeout: 8000
-- tapOn:
-    id: "dialog-action-confirm-delete-draft"
-- extendedWaitUntil:
-    visible:
-      id: "btn-new-report"
-    timeout: 15000
+- runFlow: ../helpers/confirm-delete-draft.yaml
 - tapOn:
     id: "btn-back"
 - extendedWaitUntil:

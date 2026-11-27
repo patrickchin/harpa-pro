@@ -125,7 +125,7 @@ export function MembersPageView({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6 sm:gap-8">
       <PageHeader
         eyebrow="Project team"
         title="Members"
@@ -267,11 +267,7 @@ export function MembersPageView({
             </table>
           </TableShell>
 
-          <div
-            className="grid gap-3 lg:hidden"
-            data-testid="members-mobile-list"
-            role="list"
-          >
+          <div className="grid gap-3 lg:hidden" data-testid="members-mobile-list" role="list">
             {members.map((member) => {
               const displayName = memberName(member);
               const isLastOwner = member.role === 'owner' && ownerCount === 1;
@@ -309,17 +305,13 @@ export function MembersPageView({
 
                   <dl className="mt-3 grid grid-cols-2 gap-3 rounded-control-ui bg-surface-muted p-3">
                     <div>
-                      <dt className="text-label text-muted-foreground uppercase">
-                        Role
-                      </dt>
+                      <dt className="text-label text-muted-foreground uppercase">Role</dt>
                       <dd className="mt-1 text-sm font-normal text-foreground">
                         {formatRole(member.role)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-label text-muted-foreground uppercase">
-                        Joined
-                      </dt>
+                      <dt className="text-label text-muted-foreground uppercase">Joined</dt>
                       <dd className="mt-1 text-sm font-normal text-foreground">
                         {formatDate(member.joinedAt)}
                       </dd>
@@ -327,7 +319,7 @@ export function MembersPageView({
                   </dl>
 
                   {canManage ? (
-                    <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <div className="mt-3 grid gap-3 border-t border-border/40 pt-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                       <Field label={`Role for ${displayName}`}>
                         <Select
                           aria-label={`Change role for ${displayName}`}
@@ -378,10 +370,8 @@ export function MembersPageView({
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-label text-muted-foreground uppercase">
-                Project access
-              </p>
-              <h2 className="mt-1 text-title-sm text-foreground" id="add-member-title">
+              <p className="text-label text-muted-foreground uppercase">Project access</p>
+              <h2 className="font-heading mt-1 text-title-sm text-foreground" id="add-member-title">
                 Add member
               </h2>
             </div>
@@ -457,13 +447,8 @@ export function MembersPageView({
           initialFocusRef={removeCancelRef}
           onClose={() => setRemoveTarget(null)}
         >
-          <p className="text-label text-danger-text uppercase">
-            Remove access
-          </p>
-          <h2
-            className="mt-1 text-title-sm text-foreground"
-            id="remove-member-title"
-          >
+          <p className="text-label text-danger-text uppercase">Remove access</p>
+          <h2 className="font-heading mt-1 text-title-sm text-foreground" id="remove-member-title">
             Remove {memberName(removeTarget)}
           </h2>
           <p className="mt-3 text-sm text-muted-foreground" id="remove-member-description">
@@ -475,11 +460,7 @@ export function MembersPageView({
             </p>
           ) : null}
           <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button
-              onClick={() => setRemoveTarget(null)}
-              ref={removeCancelRef}
-              variant="quiet"
-            >
+            <Button onClick={() => setRemoveTarget(null)} ref={removeCancelRef} variant="quiet">
               Cancel
             </Button>
             <Button

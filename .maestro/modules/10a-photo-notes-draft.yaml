@@ -21,8 +21,8 @@ tags:
 #     starts fresh
 #
 # Pre-condition: EXPO_PUBLIC_USE_FIXTURES=true built in (so the camera
-# capture path commits a synthetic image). Camera permission must be
-# granted on the sim (`xcrun simctl privacy booted grant camera <id>`).
+# capture path commits a unique cache copy of a bundled image without native
+# camera hardware or permission).
 #
 # Pre-condition: test on project home; no reports.
 # Post-condition: test on project home; no reports.
@@ -54,8 +54,18 @@ tags:
     visible:
       id: 'btn-attachment-camera'
     timeout: 8000
-- assertVisible:
-    id: 'btn-attachment-photo-library'
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible:
+          id: 'btn-attachment-photo-library'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertNotVisible:
+          id: 'btn-attachment-photo-library'
 - tapOn:
     id: 'btn-attachment-camera'
 
@@ -157,18 +167,7 @@ tags:
     timeout: 10000
 - tapOn:
     id: 'btn-note-options-.*'
-- extendedWaitUntil:
-    visible:
-      id: 'btn-note-options-delete'
-    timeout: 8000
-- tapOn:
-    id: 'btn-note-options-delete'
-- extendedWaitUntil:
-    visible:
-      id: 'btn-note-options-confirm-delete'
-    timeout: 8000
-- tapOn:
-    id: 'btn-note-options-confirm-delete'
+- runFlow: ../helpers/delete-note.yaml
 - extendedWaitUntil:
     notVisible:
       id: 'batch-grid-tile-0'
@@ -177,16 +176,7 @@ tags:
 # --- Clean up: delete the draft and return to project home -----------------
 - tapOn:
     id: 'btn-draft-options'
-- extendedWaitUntil:
-    visible:
-      id: 'dialog-action-confirm-delete-draft'
-    timeout: 8000
-- tapOn:
-    id: 'dialog-action-confirm-delete-draft'
-- extendedWaitUntil:
-    visible:
-      id: 'btn-new-report'
-    timeout: 15000
+- runFlow: ../helpers/confirm-delete-draft.yaml
 # After dismissOrReplaceTo from delete-draft, tapping btn-back on
 # reports-list can collapse the stack all the way to the projects
 # index instead of landing on project-home (router stack quirk —

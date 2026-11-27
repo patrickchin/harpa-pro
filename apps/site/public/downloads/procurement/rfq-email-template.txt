@@ -1,0 +1,28 @@
+Subject: RFQ [reference] for [product] at [quantity], specification [revision]
+
+Hello [name],
+
+Please quote the attached item schedule and specification [revision/date].
+The goods are for an interiors project in [destination country]. The order
+quantities and variants appear against each item code.
+
+Please confirm which items you manufacture and identify any proposed
+deviations from the specification. Quote the specified version separately
+from any alternative you recommend.
+
+For each item, please provide the unit price, currency, minimum quantity,
+sample cost, one-time charges, packing details, and estimated packed volume
+and weight. State the delivery rule and exact named place, quote validity,
+payment milestones, and production lead time with its starting conditions.
+
+Please describe the inspection access and document support available for
+this order. List exclusions and explain your proposed remedy if inspected
+goods fail the agreed specification.
+
+Our required [dispatch/arrival] date is [date]. Please distinguish your
+production commitment from any transport estimate.
+
+Please return your quotation by [date] and reference [RFQ number].
+
+Thank you,
+[name/company/contact]

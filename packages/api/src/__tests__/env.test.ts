@@ -36,6 +36,7 @@ const KEYS = [
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'ADMIN_CORS_ORIGINS',
+  'WAITLIST_CONFIRM_BASE_URL',
   'AI_FIXTURE_MODE',
   'AI_LIVE',
   'OPENAI_API_KEY',
@@ -108,6 +109,21 @@ function setValidProductionEnv(): void {
     RATE_LIMIT_BACKEND: 'postgres',
   });
 }
+
+describe('env: public app confirmation URL', () => {
+  it('defaults new confirmation emails to the reporting namespace', async () => {
+    setValidProductionEnv();
+    const { env } = await freshImportEnv();
+    expect(env.WAITLIST_CONFIRM_BASE_URL).toBe('https://harpapro.com/reports/confirm');
+  });
+
+  it('keeps an explicit deployment confirmation origin', async () => {
+    setValidProductionEnv();
+    process.env.WAITLIST_CONFIRM_BASE_URL = 'https://dev.harpa-pro.pages.dev/reports/confirm';
+    const { env } = await freshImportEnv();
+    expect(env.WAITLIST_CONFIRM_BASE_URL).toBe(process.env.WAITLIST_CONFIRM_BASE_URL);
+  });
+});
 
 describe('env: email OTP transport', () => {
   it('rejects fake OTP transport on real production', async () => {

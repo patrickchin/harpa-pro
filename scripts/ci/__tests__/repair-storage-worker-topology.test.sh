@@ -327,6 +327,118 @@ assert_no_mutation
 echo "  ok   - exact healthy pair is a no-op"
 
 reset_case
+created_pair_output=$(
+  run_repair \
+    "storage-workers-created-pair.json" \
+    "storage-workers-created-pair.json" \
+    "storage-workers-starting-pair.json" \
+    "storage-workers-started-pair.json" \
+    "storage-workers-started-pair.json"
+)
+[[ "$created_pair_output" == *"storage-worker topology repaired"* ]] || {
+  echo "FAIL - created paired worker recovery omitted completion evidence"
+  echo "$created_pair_output"
+  exit 1
+}
+mapfile -t CREATED_PAIR_ACTIONS < "$TMP/flyctl.log"
+[[ "${#CREATED_PAIR_ACTIONS[@]}" -eq 6 ]] || {
+  printf 'FAIL - expected 6 created-pair recovery actions, got %s\n' \
+    "${#CREATED_PAIR_ACTIONS[@]}"
+  printf '  %s\n' "${CREATED_PAIR_ACTIONS[@]}"
+  exit 1
+}
+[[ "${CREATED_PAIR_ACTIONS[0]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+[[ "${CREATED_PAIR_ACTIONS[1]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+[[ "${CREATED_PAIR_ACTIONS[2]}" == \
+  "machine|start|worker-standby|--app|harpa-test" ]]
+[[ "${CREATED_PAIR_ACTIONS[3]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+[[ "${CREATED_PAIR_ACTIONS[4]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+[[ "${CREATED_PAIR_ACTIONS[5]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+echo "  ok   - exact created worker is started beside its existing standby"
+
+reset_case
+starting_pair_output=$(
+  run_repair \
+    "storage-workers-starting-pair.json" \
+    "storage-workers-starting-pair.json" \
+    "storage-workers-started-pair.json" \
+    "storage-workers-started-pair.json"
+)
+[[ "$starting_pair_output" == *"storage-worker topology repaired"* ]] || {
+  echo "FAIL - starting paired worker recovery omitted completion evidence"
+  echo "$starting_pair_output"
+  exit 1
+}
+assert_no_mutation
+echo "  ok   - exact starting worker is polled without a redundant mutation"
+
+reset_case
+settled_pair_output=$(
+  run_repair \
+    "storage-workers-created-pair.json" \
+    "storage-workers-started-pair.json" \
+    "storage-workers-started-pair.json"
+)
+[[ "$settled_pair_output" == *"storage-worker topology repaired"* ]] || {
+  echo "FAIL - naturally settled paired worker omitted completion evidence"
+  echo "$settled_pair_output"
+  exit 1
+}
+assert_no_mutation
+echo "  ok   - a created worker that settles before recovery is not started twice"
+
+expect_failure_without_mutation \
+  "a created worker with the wrong standby target fails closed" \
+  "storage-workers-created-wrong-standby.json" \
+  "were not the exact current-release pair"
+
+reset_case
+set +e
+created_pair_drift_output=$(
+  run_repair \
+    "storage-workers-created-pair.json" \
+    "storage-workers-created-wrong-standby.json"
+)
+created_pair_drift_status=$?
+set -e
+[[ "$created_pair_drift_status" -ne 0 ]] || {
+  echo "FAIL - created paired worker drift unexpectedly passed"
+  echo "$created_pair_drift_output"
+  exit 1
+}
+assert_no_mutation
+echo "  ok   - paired worker drift before start fails without mutation"
+
+reset_case
+set +e
+created_pair_stuck_output=$(
+  run_repair \
+    "storage-workers-created-pair.json" \
+    "storage-workers-created-pair.json" \
+    "storage-workers-created-pair.json" \
+    "storage-workers-created-pair.json"
+)
+created_pair_stuck_status=$?
+set -e
+[[ "$created_pair_stuck_status" -ne 0 ]] || {
+  echo "FAIL - created paired worker passed without reaching started"
+  echo "$created_pair_stuck_output"
+  exit 1
+}
+[[ "$(grep -c '^machine|start|' "$TMP/flyctl.log")" -eq 1 ]] || {
+  echo "FAIL - stuck created paired worker was not started exactly once"
+  cat "$TMP/flyctl.log"
+  exit 1
+}
+assert_no_clone
+echo "  ok   - created paired worker start polling remains bounded"
+
+reset_case
 digest_standby_output=$(run_repair "storage-workers-started-digest-standby.json")
 [[ "$digest_standby_output" == *"storage-worker topology already healthy"* ]] || {
   echo "FAIL - Fly's tag@digest standby representation was not accepted"

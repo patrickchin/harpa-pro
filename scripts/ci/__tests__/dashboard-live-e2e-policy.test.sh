@@ -139,16 +139,10 @@ require_fixed "$PREVIEW" 'DASHBOARD_LIVE_EDITOR_EMAIL: ${{ vars.TEST_ACCOUNT_EMA
   "editor identity follows the seeded test-account allowlist"
 require_fixed "$PREVIEW" "VITE_PASSWORD_ACCOUNT_EMAILS:" \
   "preview build exposes only the public password-account identities"
-require_fixed "$PREVIEW" ".github/workflows/pages-preview-ref.yml" \
-  "preview-ref changes trigger the dashboard gate"
-require_fixed "$PREVIEW" "scripts/ci/build-cloudflare-pages.sh" \
-  "Cloudflare build-wrapper changes trigger the dashboard gate"
-require_fixed "$PREVIEW" "scripts/ci/verify-pages-deployment.sh" \
-  "exact-SHA verifier changes trigger the dashboard gate"
-require_fixed "$PREVIEW" "- '.github/actions/setup-monorepo/**'" \
-  "shared monorepo setup changes trigger the dashboard gate"
-require_fixed "$PREVIEW" "- 'scripts/ci/verify-api-release.sh'" \
-  "API compatibility verifier changes trigger the dashboard gate"
+require_fixed "$PREVIEW" "- '.github/**'" \
+  "workflow and shared setup changes trigger dashboard checks"
+require_fixed "$PREVIEW" "- 'scripts/ci/**'" \
+  "build-wrapper and verifier changes trigger dashboard checks"
 require_fixed "$PREVIEW" "pnpm --filter @harpa/dashboard test:e2e:live" \
   "workflow runs the deployed live journey"
 require_fixed "$PREVIEW" 'DASHBOARD_LIVE_BASE_URL: ${{ env.DASHBOARD_PREVIEW_ORIGIN }}' \

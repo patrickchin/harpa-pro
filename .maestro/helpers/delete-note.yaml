@@ -1,0 +1,13 @@
+appId: ${MAESTRO_APP_ID}
+---
+# Pre-condition: NoteOptionsSheet is open on its options stage.
+# The caller owns the note-type-specific postcondition after this helper.
+
+- runFlow:
+    file: tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'btn-note-options-delete'
+- runFlow:
+    file: tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'btn-note-options-confirm-delete'

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Prove that pr-preview successfully provisioned the Fly app for this PR head.
+# Prove that the selected preview workflow/job succeeded for this PR head.
 # The caller must run this before sending journey credentials to the preview.
 set -euo pipefail
 
 REPOSITORY="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY required}"
 HEAD_SHA="${PR_HEAD_SHA:?PR_HEAD_SHA required}"
 WORKFLOW_FILE="${PREVIEW_WORKFLOW_FILE:-pr-preview.yml}"
+JOB_NAME="${PREVIEW_JOB_NAME:-fly-preview}"
 ATTEMPTS="${PREVIEW_RUN_ATTEMPTS:-90}"
 SLEEP_SECS="${PREVIEW_RUN_SLEEP:-10}"
 : "${GH_TOKEN:?GH_TOKEN required}"
@@ -23,6 +24,11 @@ if [[ ! "$SLEEP_SECS" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
+if [[ ! "$JOB_NAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
+  echo "PREVIEW_JOB_NAME must be a job name containing lowercase letters, digits, or hyphens" >&2
+  exit 1
+fi
+
 query_run() {
   gh api --method GET \
     "repos/$REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs" \
@@ -32,12 +38,12 @@ query_run() {
     --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0] | if . == null then "" else [.id, .status, (.conclusion // "")] | @tsv end'
 }
 
-query_fly_preview_job() {
+query_preview_job() {
   local run_id="$1"
   gh api --method GET \
     "repos/$REPOSITORY/actions/runs/$run_id/jobs" \
     -f per_page=100 \
-    --jq '.jobs[] | select(.name == "fly-preview") | [.status, (.conclusion // "")] | @tsv'
+    --jq ".jobs[] | select(.name == \"$JOB_NAME\") | [.status, (.conclusion // \"\")] | @tsv"
 }
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
@@ -56,13 +62,13 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
 
   if [[ -n "$run_id" ]]; then
     if [[ "$run_status" == "completed" && "$run_conclusion" != "success" ]]; then
-      echo "pr-preview workflow run $run_id concluded ${run_conclusion:-unknown}" >&2
+      echo "$WORKFLOW_FILE workflow run $run_id concluded ${run_conclusion:-unknown}" >&2
       exit 1
     fi
 
     job_record=""
-    if ! job_record="$(query_fly_preview_job "$run_id")"; then
-      echo "fly-preview job lookup failed for workflow run $run_id" >&2
+    if ! job_record="$(query_preview_job "$run_id")"; then
+      echo "$JOB_NAME job lookup failed for workflow run $run_id" >&2
       exit 1
     fi
 
@@ -74,21 +80,21 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
 
     if [[ "$job_status" == "completed" ]]; then
       if [[ "$job_conclusion" == "success" ]]; then
-        echo "pr-preview run $run_id provisioned fly-preview for exact head $HEAD_SHA"
+        echo "$WORKFLOW_FILE run $run_id completed $JOB_NAME for exact head $HEAD_SHA"
         exit 0
       fi
-      echo "fly-preview concluded ${job_conclusion:-unknown} in workflow run $run_id" >&2
+      echo "$JOB_NAME concluded ${job_conclusion:-unknown} in workflow run $run_id" >&2
       exit 1
     fi
 
     if [[ "$run_status" == "completed" && -z "$job_status" ]]; then
-      echo "pr-preview workflow run $run_id completed without a fly-preview job" >&2
+      echo "$WORKFLOW_FILE workflow run $run_id completed without a $JOB_NAME job" >&2
       exit 1
     fi
 
-    echo "pr-preview run $run_id is ${run_status:-unknown}; fly-preview is ${job_status:-pending}"
+    echo "$WORKFLOW_FILE run $run_id is ${run_status:-unknown}; $JOB_NAME is ${job_status:-pending}"
   else
-    echo "waiting for pr-preview workflow for exact head ${HEAD_SHA:0:12}"
+    echo "waiting for $WORKFLOW_FILE workflow for exact head ${HEAD_SHA:0:12}"
   fi
 
   if [[ "$attempt" -lt "$ATTEMPTS" ]]; then
@@ -96,5 +102,5 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   fi
 done
 
-echo "no successful fly-preview job appeared for exact head ${HEAD_SHA:0:12} after $ATTEMPTS attempts" >&2
+echo "no successful $JOB_NAME job appeared for exact head ${HEAD_SHA:0:12} after $ATTEMPTS attempts" >&2
 exit 1

@@ -729,6 +729,9 @@ vi.mock('expo-file-system', () => {
     move() {
       // no-op
     }
+    copy() {
+      // no-op
+    }
   }
   class Directory {
     uri: string;

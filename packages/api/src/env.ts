@@ -327,7 +327,7 @@ const Env = z
     RESEND_LIVE: z.enum(['0', '1']).default('0'),
     RESEND_API_KEY: z.string().optional(),
     WAITLIST_FROM_EMAIL: z.string().default('Harpa Pro <hello@harpapro.com>'),
-    WAITLIST_CONFIRM_BASE_URL: z.string().url().default('https://harpapro.com/confirm'),
+    WAITLIST_CONFIRM_BASE_URL: z.string().url().default('https://harpapro.com/reports/confirm'),
     WAITLIST_IP_HASH_SALT: z.string().min(8).default('dev-only-waitlist-salt-do-not-use-in-prod'),
     /**
      * Comma-separated origins allowed to POST /waitlist (CORS allowlist).

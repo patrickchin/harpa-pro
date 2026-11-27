@@ -1,0 +1,45 @@
+---
+import Icon from "../Icon.astro";
+import SectionHeader from "../primitives/SectionHeader.astro";
+
+const steps = [
+  {
+    title: "Capture updates on site",
+    body: "Record a voice note, take a photo, or type a quick note while you walk the job.",
+    icon: "mic",
+  },
+  {
+    title: "Get a report draft",
+    body: "Harpa Pro sorts your updates into a structured daily report, so you are not starting from a blank page.",
+    icon: "file-text",
+  },
+  {
+    title: "Check it and send it",
+    body: "Correct anything that is off, finalize the report, then save or share the PDF.",
+    icon: "clipboard-check",
+  },
+];
+---
+
+<section id="how" class="mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-16">
+  <SectionHeader title="From site update to daily report" />
+
+  <ol
+    class="mt-10 grid gap-px overflow-hidden rounded-xl border border-hairline bg-border sm:grid-cols-3"
+  >
+    {
+      steps.map((s, i) => (
+        <li class="bg-card p-6">
+          <div class="flex items-center justify-between">
+            <span class="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground">
+              <Icon name={s.icon} class="h-4 w-4" />
+            </span>
+            <span class="font-mono text-xs text-ink-soft">0{i + 1}</span>
+          </div>
+          <h3 class="mt-5 text-lg font-semibold text-ink">{s.title}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-ink-soft">{s.body}</p>
+        </li>
+      ))
+    }
+  </ol>
+</section>

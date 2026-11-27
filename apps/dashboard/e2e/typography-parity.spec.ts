@@ -2,8 +2,11 @@ import { expect, test } from '@playwright/test';
 
 import { MockDashboardApi } from './support/mock-api';
 
-test.describe('mobile typography parity', () => {
-  test('keeps emphasis scoped to the same roles as mobile', async ({ context, page }) => {
+test.describe('dashboard typography', () => {
+  test('loads local fonts and keeps display emphasis separate from form values', async ({
+    context,
+    page,
+  }) => {
     const signedOutApi = new MockDashboardApi({ authenticated: false });
     await signedOutApi.install(context);
 
@@ -26,18 +29,36 @@ test.describe('mobile typography parity', () => {
     await page.goto('/projects');
 
     const projectsHeading = page.getByRole('heading', { level: 1, name: 'Projects' });
-    await expect(projectsHeading).toHaveCSS('font-size', '20px');
-    await expect(projectsHeading).toHaveCSS('line-height', '26px');
+    await expect(projectsHeading).toHaveCSS('font-size', '32px');
+    await expect(projectsHeading).toHaveCSS('line-height', '40px');
     await expect(projectsHeading).toHaveCSS('font-weight', '700');
+    const loadedFonts = await page.evaluate(async () => {
+      await document.fonts.ready;
+      return [...document.fonts]
+        .filter((face) => face.status === 'loaded')
+        .map((face) => face.family.replace(/["']/g, ''));
+    });
+    expect(loadedFonts).toEqual(expect.arrayContaining(['Manrope', 'Plus Jakarta Sans']));
+    await expect(projectsHeading).toHaveCSS('font-family', /^"?Plus Jakarta Sans/);
+    const pageBody = page.locator('#dashboard-content > div:last-child');
+    await expect(pageBody).toHaveCSS('padding', '20px');
+    await expect(
+      page.getByRole('table', { name: 'Projects' }).locator('..').locator('..'),
+    ).toHaveCSS('border-radius', '20px');
     await expect(page.locator('ul[aria-label="Projects"] h2 a').first()).toHaveCSS(
       'font-weight',
-      '700',
+      '600',
     );
     await expect(page.getByRole('table', { name: 'Projects' }).getByRole('link').first()).toHaveCSS(
       'font-weight',
       '700',
     );
     await expect(page.getByRole('button', { name: 'New project' })).toHaveCSS('font-size', '16px');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(projectsHeading).toHaveCSS('font-size', '26px');
+    await expect(projectsHeading).toHaveCSS('line-height', '32px');
+    await expect(pageBody).toHaveCSS('padding', '20px');
+    await page.setViewportSize({ width: 1280, height: 900 });
     const projectsNavigationLink = page
       .getByRole('navigation', { name: 'Primary' })
       .getByRole('link', { name: 'Projects' });

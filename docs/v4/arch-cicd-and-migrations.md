@@ -180,7 +180,7 @@ environment and only surfaces when the deploy fires.
 | `admin-preview.yml`           | ✓ (→dev/main) | (PR-only)             | Credential-free admin checks plus exact-SHA native Pages preview verification                                  |
 | `site-preview.yml`            | ✓ (→dev/main) | (PR-only)             | Credential-free public checks plus exact-SHA native Pages preview verification                                 |
 | `dashboard-preview.yml`       | ✓ (→dev/main) | (PR-only)             | Exact head-SHA Git preview plus fast and deployed live browser checks on the stable alias                      |
-| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target before journeys: shared dev for promotions, isolated preview for focused hotfixes |
+| `main-gate.yml`               |   ✓ (→main)   | (PR-only)             | Verifies an exact-SHA target: website preview for site-only fixes; API journeys for dev promotions and other hotfixes |
 | `api-dev.yml`                 |       ✗       | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev`                        |
 | `api-prod.yml`                |       ✗       | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod`                           |
 | `site-dev.yml`                |       ✗       | dev                   | Verify the exact SHA served by the native Pages `dev` deployment                                               |
@@ -221,6 +221,12 @@ privileged context crosses the trust boundary. Direct Dependabot security PRs
 to `main` fail `main-gate` with instructions to port the coordinated update
 through a human-owned `dev` PR; live journeys never receive the test-account
 password on that bot path.
+
+Website-only focused main PRs use the successful exact-head `site-preview`
+deployment and verify its Pages branch/commit marker and guide redirect.
+The complete PR diff must contain site changes and optional documentation
+only; shared inputs, unknown paths, and all `dev` promotions retain the API
+journey gate. See the [gate design](design-site-only-main-gate.md).
 
 ### Closing post-merge blind spots
 
@@ -356,8 +362,13 @@ to `main` continue through the normal `dev → main` promotion path.
   Repair explicitly starts it if stopped, polls at most ten fresh inventories
   three seconds apart through only safe stopped/starting states, and clones only
   after that exact id is started. An update that already started the candidate
-  skips the redundant start. Both paths list Machines again and succeed only
-  when the exact healthy pair is present.
+  skips the redundant start. A post-deploy pair with one `created` or `starting`
+  candidate and one stopped standby is recoverable only when both are current-
+  release and service-less and the standby watches that exact candidate. The
+  helper re-lists before mutation, starts only a still-`created` candidate, and
+  polls that exact pair through `created`/`starting` until it is healthy. All
+  paths list Machines again and succeed only when the exact healthy pair is
+  present.
 - Every Machine used by repair must match one unambiguous `app` identity on
   nonempty Fly release id, release version, and valid full tagged image. The
   image comparison removes only an optional validated
@@ -365,12 +376,13 @@ to `main` continue through the normal `dev → main` promotion path.
   representation of the same deployment tag; repository, tag, and release
   metadata remain exact. Tag-only Machines may coexist with at most one
   distinct explicit digest; conflicting non-null digests fail closed. Untagged,
-  digest-only, malformed, stale, transitional, or ambiguous initial inventories
-  fail before mutation; no process-count scaling is allowed. Each update/start
-  transition also proves the candidate id, singleton topology, empty services,
-  and empty standbys. If clearing succeeds but later work fails, exact singleton
-  stopped/no-standby and started/no-standby states are retry-safe; all other
-  drift fails closed.
+  digest-only, malformed, stale, or ambiguous initial inventories fail before
+  mutation; non-running or transitional inventories fail too unless they are
+  the exact paired `created`/`starting` recovery above. No process-count scaling
+  is allowed. Each update/start transition proves the candidate id, expected
+  singleton or pair topology, empty services, and exact standby configuration.
+  If clearing succeeds but later work fails, exact singleton stopped/no-standby
+  and started/no-standby states are retry-safe; all other drift fails closed.
 - Run the read-only started-worker verifier again, then stop. Production deploy
   does not arm lifecycle or enable account deletion. CI and manual deploys use
   the same deploy-to-repair-to-verify path. The GitHub deploy step has a

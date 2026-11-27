@@ -151,12 +151,10 @@ tags:
     timeout: 15000
 - tapOn:
     id: 'btn-finalize-report'
-- extendedWaitUntil:
-    visible:
-      id: 'confirm-finalize'
-    timeout: 8000
-- tapOn:
-    id: 'confirm-finalize'
+- runFlow:
+    file: helpers/tap-dialog-action.yaml
+    env:
+      ACTION_ID: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
       id: 'btn-report-actions'

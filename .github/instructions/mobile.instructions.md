@@ -29,8 +29,9 @@ description: 'Mobile-specific rules for the Expo / NativeWind app. Loads automat
 - Run `pnpm --filter @harpa/mobile ios` or
   `pnpm --filter @harpa/mobile ios:mock` from the repository root.
 - `ios:mock` inlines `EXPO_PUBLIC_USE_FIXTURES=true`. This replaces the
-  native audio recorder with a canned `voice-sample.m4a` input. The
-  upload pipeline and API calls still run.
+  native audio recorder with a canned `voice-sample.m4a` input and the
+  native camera with a copied bundled image. The upload pipeline and API
+  calls still run.
 - **This flag does not select API replay mode.** The mobile client sends
   no fixture-mode header and does not add `fixtureName` to AI requests.
 - For cost-free testing, point the app only at an API with `AI_LIVE=0`.

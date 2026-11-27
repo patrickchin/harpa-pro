@@ -1,40 +1,151 @@
 ---
-import { Image } from "astro:assets";
-import ProcurementConsiderations from "../components/agents/ProcurementConsiderations.astro";
-import ProcurementEvidence from "../components/agents/ProcurementEvidence.astro";
+import { getImage, Image } from "astro:assets";
+import ProcurementConsiderations from "../components/procurement/ProcurementConsiderations.astro";
+import ProcurementEvidence from "../components/procurement/ProcurementEvidence.astro";
+import EvidenceImageDialog from "../components/procurement/EvidenceImageDialog.astro";
 import Icon from "../components/Icon.astro";
-import Footer from "../components/landing/Footer.astro";
-import Header from "../components/landing/Header.astro";
+import Footer from "../components/site/Footer.astro";
+import Header from "../components/site/Header.astro";
 import Container from "../components/primitives/Container.astro";
 import Section from "../components/primitives/Section.astro";
+import Button from "../components/primitives/Button.astro";
+import Card from "../components/primitives/Card.astro";
+import SectionHeader from "../components/primitives/SectionHeader.astro";
 import Layout from "../layouts/Layout.astro";
-import procurementInteriorImg from "../assets/agents/procurement-interior.jpg";
+import { getProcurementSocialImage } from "../lib/procurement/social-image";
+import LuxuryEffects from "../components/procurement/LuxuryEffects.astro";
+import "../styles/luxury.css";
+import "../styles/procurement-hero.css";
+import woodInteriorImg from "../assets/procurement/finishes/wood.webp";
+import stoneInteriorImg from "../assets/procurement/finishes/stone.webp";
+import modernInteriorImg from "../assets/procurement/finishes/modern.webp";
 import hashyImg from "../assets/team/hashy.jpg";
 import harunaImg from "../assets/team/haruna.jpg";
+
+const title = "Luxury interior procurement in China | Harpa Pro";
+const description = "Harpa Pro coordinates interior procurement in China: design specifications, factory coordination, quality checks, shipping, and procurement documentation.";
+const homeUrl = new URL("/", Astro.site).href;
+const materialSchemes = await Promise.all([
+  {
+    key: "wood",
+    label: "Wood",
+    source: woodInteriorImg,
+    alt: "Generated interior concept with warm wood finishes in a contemporary living room",
+  },
+  {
+    key: "stone",
+    label: "Stone & marble",
+    source: stoneInteriorImg,
+    alt: "Generated interior concept with stone and marble finishes in the same contemporary living room",
+  },
+  {
+    key: "modern",
+    label: "Glass & modern",
+    source: modernInteriorImg,
+    alt: "Generated interior concept with glass and modern finishes in the same contemporary living room",
+  },
+].map(async (scheme) => ({
+  ...scheme,
+  caption: `Material concept · ${scheme.label}`,
+  image: await getImage({
+    src: scheme.source,
+    widths: [640, 960, 1280, 1600],
+    sizes: "100vw",
+    format: "webp",
+    quality: 84,
+  }),
+})));
+const socialImage = await getProcurementSocialImage(woodInteriorImg);
+const defaultScheme = materialSchemes[0]!;
+const structuredData = [{
+  "@type": "Service",
+  "@id": `${homeUrl}#procurement`,
+  name: "Luxury interior procurement in China",
+  serviceType: "Interior procurement",
+  description,
+  url: homeUrl,
+  areaServed: { "@type": "Country", name: "China" },
+  provider: { "@id": `${homeUrl}#organization` },
+  mainEntityOfPage: { "@id": `${homeUrl}#webpage` },
+}];
+const procurementQuestions = [
+  {
+    topic: "understand",
+    label: "How it works",
+    message: "Hi Harpa Pro, how can you help with interior procurement in China?",
+    prompt: "",
+    placeholder: "",
+    notesLabel: "What would you like to know?",
+    notesPlaceholder: "Ask about our process, fees, factory visits, or anything else.",
+    question: "What does an interior procurement agent in China do?",
+    answer: "Harpa Pro coordinates design specifications, factory selection, technical approvals, production quality checks, packing, and shipping records. We keep drawings, product data, approvals, and procurement documents together for the project.",
+  },
+  {
+    topic: "source",
+    label: "Find products",
+    message: "Hi Harpa Pro, I'd like help sourcing furniture or interior products from China.",
+    prompt: "What are you looking for?",
+    placeholder: "e.g. desks for a hotel",
+    notesLabel: "Anything else?",
+    notesPlaceholder: "Budget, timing, dimensions, a reference link, or a question.",
+    question: "What furniture and interior products can Harpa Pro help source?",
+    answer: "Our selected factory partners cover custom cabinetry and joinery, hospitality furniture, office desks and seating, steel storage, and bathroom cabinets and shower systems. We match each order with the factory that meets its design specifications.",
+  },
+  {
+    topic: "quality",
+    label: "Quality checks",
+    message: "Hi Harpa Pro, I'd like help checking materials or production quality for my order.",
+    prompt: "What needs checking?",
+    placeholder: "e.g. marble tabletops",
+    notesLabel: "What should we check?",
+    notesPlaceholder: "Finish, dimensions, test reports, concerns, or the factory location.",
+    question: "How are materials and production quality checked?",
+    answer: "We compare material declarations and test reports with the project's performance, emission, fire, and maintenance requirements. At agreed points during production, we inspect materials, workmanship, dimensions, finishes, and finished goods. Packing, labels, quantities, and freight documents are checked against the order.",
+  },
+  {
+    topic: "brief",
+    label: "Start a project",
+    message: "Hi Harpa Pro, I'd like to start an interior procurement project. What should I send you?",
+    prompt: "What is the project?",
+    placeholder: "e.g. furnishing a 30-room hotel",
+    notesLabel: "Anything else?",
+    notesPlaceholder: "Scope, timing, budget, approval requirements, or a question.",
+    question: "What should I send to start a procurement project?",
+    answer: "Send the project brief, drawings or product references, dimensions, finishes, quantities, and approval requirements. Our procurement team coordinates technical approvals and keeps the project record complete.",
+  },
+];
 ---
 
 <Layout
-  title="Harpa Pro — Interior Procurement in China"
-  description="We coordinate specifications, factories, quality checks, shipping records, and project approvals in China."
+  section="procurement"
+  title={title}
+  description={description}
+  image={socialImage.src}
+  imageAlt={defaultScheme.alt}
+  structuredData={structuredData}
 >
-  <div class="min-h-screen bg-background text-ink">
-    <Header />
-    <main class="agents-page">
+  <div class="luxury-site min-h-screen bg-background text-ink">
+    <Header section="procurement" />
+    <div class="luxury-reading-progress" aria-hidden="true"></div>
+    <main id="main-content" class="agents-page">
       <section id="top" class="bg-background">
-        <div class="mx-auto max-w-7xl sm:px-6 sm:py-10 lg:py-12">
+        <div class="luxury-hero-shell">
           <figure
             data-hero-visual
-            class="relative isolate min-h-[40rem] overflow-hidden border-y border-primary/15 bg-primary shadow-lg sm:min-h-[40rem] sm:rounded-2xl sm:border md:min-h-[43rem]"
+            data-material-view="wood"
+            class="luxury-hero relative isolate overflow-hidden bg-primary"
           >
             <Image
-              src={procurementInteriorImg}
-              alt="Contemporary living room with stone, timber, and fabric samples arranged for review"
+              src={woodInteriorImg}
+              alt={defaultScheme.alt}
+              data-material-image
+              aria-busy="false"
               widths={[640, 960, 1280, 1600]}
-              sizes="(min-width: 80rem) 80rem, (min-width: 40rem) calc(100vw - 3rem), 100vw"
+              sizes="100vw"
               format="webp"
               quality={84}
               priority
-              class="absolute inset-0 h-full w-full object-cover"
+              class="luxury-hero-image absolute inset-0 h-full w-full object-cover"
             />
             <div
               data-hero-scrim
@@ -43,30 +154,56 @@ import harunaImg from "../assets/team/haruna.jpg";
             ></div>
             <figcaption
               data-hero-copy
-              class="relative z-10 flex min-h-[40rem] items-end p-5 sm:min-h-[40rem] sm:p-8 md:min-h-[43rem] lg:p-12"
+              class="luxury-hero-copy relative z-10"
             >
-              <div class="max-w-6xl">
-                <h1
-                  class="text-[2rem] font-semibold leading-[1.02] tracking-tight text-primary-foreground sm:text-5xl lg:text-[3.75rem] xl:whitespace-nowrap xl:text-[4.25rem]"
-                >
-                  Luxury Interior Procurement in China
+              <div class="luxury-hero-title-group">
+                <h1 class="luxury-hero-title">
+                  <span>Interior</span>{" "}<span>procurement</span>
                 </h1>
-                <p class="mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/85 sm:text-lg">
-                  We manage design specifications, factory coordination, quality
-                  checks, shipment, and complete procurement documentation
-                  (approved health, safety, and quality standards).
+                <p class="luxury-hero-description">
+                  We coordinate interior procurement in China, from design
+                  specifications and factory checks to shipping and project records.
                 </p>
+                <div class="luxury-hero-actions">
+                  <a href="#contact" class="luxury-button ring-focus">
+                    Send your project brief <Icon name="arrow-up-right" class="h-4 w-4" />
+                  </a>
+                  <a href="#considerations" class="luxury-text-link ring-focus">
+                    Explore our approach <Icon name="arrow-down" class="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </figcaption>
+            <div class="luxury-material-controls" data-material-controls hidden>
+              <p>Explore material concepts</p>
+              <div role="group" aria-label="Interior material concepts">
+                {materialSchemes.map((scheme) => (
+                  <button
+                    type="button"
+                    data-material-choice={scheme.key}
+                    data-material-src={scheme.image.src}
+                    data-material-srcset={scheme.image.srcSet.attribute}
+                    data-material-sizes="100vw"
+                    data-material-alt={scheme.alt}
+                    data-material-description={scheme.caption}
+                    data-material-label={scheme.label}
+                    aria-pressed={scheme.key === "wood" ? "true" : "false"}
+                    class="ring-focus"
+                  >
+                    <span class={`luxury-swatch luxury-swatch-${scheme.key}`} aria-hidden="true"></span>
+                    {scheme.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span class="luxury-material-caption" data-material-caption role="status" aria-live="polite">{defaultScheme.caption}</span>
           </figure>
         </div>
       </section>
 
       <Section id="considerations" tone="paper-2" bordered="top" class="scroll-mt-16">
         <Container padding="lg">
-          <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            What We Consider
-          </h2>
+          <SectionHeader title="What we consider" width="none" />
 
           <ProcurementConsiderations />
         </Container>
@@ -80,16 +217,16 @@ import harunaImg from "../assets/team/haruna.jpg";
             data-procurement-profile="haruna"
             class="rounded-2xl border border-hairline bg-card p-5 shadow-sm sm:p-6"
           >
-            <div class="grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-5 xl:min-h-56">
+            <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-4 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-5 xl:min-h-48">
               <figure
                 data-profile-portrait
-                class="h-40 w-40 overflow-hidden rounded-xl bg-primary sm:h-52 sm:w-52"
+                class="h-[5.5rem] w-[5.5rem] overflow-hidden rounded-xl bg-primary sm:h-40 sm:w-40"
               >
                 <Image
                   src={harunaImg}
                   alt="Haruna Bayoh"
-                  widths={[320, 416, 624]}
-                  sizes="(min-width: 40rem) 13rem, 10rem"
+                  widths={[176, 320, 480]}
+                  sizes="(min-width: 40rem) 10rem, 5.5rem"
                   format="webp"
                   quality={90}
                   loading="lazy"
@@ -100,7 +237,7 @@ import harunaImg from "../assets/team/haruna.jpg";
 
               <div data-profile-bio class="min-w-0">
                 <h2 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-                  Procurement Lead
+                  Procurement lead
                 </h2>
                 <p class="mt-2 text-sm leading-relaxed text-ink-soft">
                   Haruna Bayoh is Harpa Pro's procurement lead in China. He receives
@@ -121,7 +258,7 @@ import harunaImg from "../assets/team/haruna.jpg";
 
             <dl
               data-profile-credentials
-              class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm"
+              class="mt-4 grid grid-cols-3 gap-3 border-y border-hairline py-3 text-sm"
             >
               <div>
                 <dt class="text-ink-soft">Discipline</dt>
@@ -137,21 +274,21 @@ import harunaImg from "../assets/team/haruna.jpg";
               </div>
             </dl>
 
-            <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
+            <dl class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3">
               <div>
-                <dt class="text-sm font-semibold text-ink">Technical Coordination</dt>
+                <dt class="text-sm font-semibold text-ink">Technical coordination</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Drawings, dimensions, finishes, and approval records.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Order Control</dt>
+                <dt class="text-sm font-semibold text-ink">Order control</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Quantities, approvals, inspections, and order checks.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Document Record</dt>
+                <dt class="text-sm font-semibold text-ink">Document record</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Product data, certificates, approvals, and project files.
                 </dd>
@@ -163,16 +300,16 @@ import harunaImg from "../assets/team/haruna.jpg";
             data-procurement-profile="hashy"
             class="rounded-2xl border border-hairline bg-card p-5 shadow-sm sm:p-6"
           >
-            <div class="grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-5 xl:min-h-56">
+            <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-4 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-5 xl:min-h-48">
               <figure
                 data-profile-portrait
-                class="h-40 w-40 overflow-hidden rounded-xl bg-primary sm:h-52 sm:w-52"
+                class="h-[5.5rem] w-[5.5rem] overflow-hidden rounded-xl bg-primary sm:h-40 sm:w-40"
               >
                 <Image
                   src={hashyImg}
                   alt="Hashy"
-                  widths={[320, 416, 624]}
-                  sizes="(min-width: 40rem) 13rem, 10rem"
+                  widths={[176, 320, 480]}
+                  sizes="(min-width: 40rem) 10rem, 5.5rem"
                   format="webp"
                   quality={90}
                   loading="lazy"
@@ -183,7 +320,7 @@ import harunaImg from "../assets/team/haruna.jpg";
 
               <div data-profile-bio class="min-w-0">
                 <h2 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-                  Procurement Specialist
+                  Procurement specialist
                 </h2>
                 <p class="mt-2 text-sm leading-relaxed text-ink-soft">
                   Hashy is Harpa Pro's procurement specialist for factory coordination
@@ -194,11 +331,11 @@ import harunaImg from "../assets/team/haruna.jpg";
 
             <dl
               data-profile-credentials
-              class="mt-5 grid grid-cols-3 gap-3 border-y border-hairline py-4 text-sm"
+              class="mt-4 grid grid-cols-3 gap-3 border-y border-hairline py-3 text-sm"
             >
               <div>
                 <dt class="text-ink-soft">Discipline</dt>
-                <dd class="mt-1 font-medium text-ink">Procurement &amp; Logistics</dd>
+                <dd class="mt-1 font-medium text-ink">Procurement &amp; logistics</dd>
               </div>
               <div>
                 <dt class="text-ink-soft">Education</dt>
@@ -210,15 +347,15 @@ import harunaImg from "../assets/team/haruna.jpg";
               </div>
             </dl>
 
-            <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4">
+            <dl class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3">
               <div>
-                <dt class="text-sm font-semibold text-ink">Factory Coordination</dt>
+                <dt class="text-sm font-semibold text-ink">Factory coordination</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Capability, samples, quotations, and production questions.
                 </dd>
               </div>
               <div>
-                <dt class="text-sm font-semibold text-ink">Shipping Logistics</dt>
+                <dt class="text-sm font-semibold text-ink">Shipping logistics</dt>
                 <dd class="mt-1 text-sm leading-relaxed text-ink-soft">
                   Packing, freight documents, shipment coordination, and delivery
                   records.
@@ -229,21 +366,119 @@ import harunaImg from "../assets/team/haruna.jpg";
         </Container>
       </Section>
 
-      <Section id="contact" bordered="top" class="scroll-mt-16 bg-background">
+      <Section id="procurement-questions" bordered="top">
+        <Container padding="lg">
+          <SectionHeader title="Procurement questions" width="none" />
+          <div class="mt-8 grid gap-x-10 gap-y-6 md:grid-cols-2">
+            {procurementQuestions.map(({ question, answer, topic }) => (
+              <article class="max-w-xl">
+                <h3 class="text-lg font-semibold leading-snug text-ink">{question}</h3>
+                <p class="mt-3 text-base leading-relaxed text-ink-soft">{answer}</p>
+                <a href="#whatsapp-message" data-whatsapp-topic={topic} aria-label={`Ask us: ${question}`} class="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink underline underline-offset-4 ring-focus">
+                  Ask us <Icon name="arrow-up-right" class="h-4 w-4" />
+                </a>
+              </article>
+            ))}
+          </div>
+        </Container>
+      </Section>
+
+      <Section id="contact" tone="paper-2" bordered="top" class="scroll-mt-16">
         <Container padding="lg">
           <div class="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(32rem,1.22fr)] lg:gap-16">
-            <div class="max-w-xl">
-              <h2 class="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-                Contact Us
-              </h2>
-              <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-                Email or message us about an interior procurement project in
-                China.
-              </p>
-            </div>
+            <SectionHeader
+              width="xl"
+              title="Contact us"
+              lede="Email or message us about an interior procurement project in China."
+            />
 
-            <dl class="grid gap-5 sm:grid-cols-2">
-              <div class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
+            <dl class="grid min-w-0 gap-5 sm:grid-cols-2">
+              <Card id="whatsapp-message" padding="lg" elevated class="scroll-mt-24 ph-no-autocapture">
+                <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Icon name="message-circle" class="h-4 w-4 text-accent-ink" />
+                  WhatsApp
+                </dt>
+                <dd class="mt-4">
+                  <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
+                  <div class="mt-5 grid gap-2" data-contact-whatsapp-actions>
+                    <Button
+                      href="https://wa.me/8619372837269"
+                      data-contact-event="contact_whatsapp_clicked"
+                      external
+                      size="touch"
+                      class="justify-center"
+                    >
+                      Message on WhatsApp
+                    </Button>
+                    <button type="button" data-whatsapp-open hidden class="min-h-11 items-center justify-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus">
+                      <Icon name="message-circle" class="h-4 w-4 shrink-0" />
+                      Help me write a message
+                    </button>
+                  </div>
+                  <dialog class="whatsapp-dialog ph-no-autocapture" aria-labelledby="whatsapp-title" aria-describedby="whatsapp-hint" data-whatsapp-dialog>
+                    <header class="whatsapp-header">
+                      <div>
+                        <p class="whatsapp-eyebrow"><Icon name="message-circle" class="h-4 w-4" /> WhatsApp enquiry</p>
+                        <h3 id="whatsapp-title">Tell us what you need</h3>
+                      </div>
+                      <button type="button" data-whatsapp-close aria-label="Close message helper" class="whatsapp-close">
+                        <Icon name="x" class="h-5 w-5" />
+                      </button>
+                    </header>
+                    <div class="whatsapp-scroll" data-whatsapp-scroll>
+                      <div class="whatsapp-form" data-whatsapp-brief>
+                        <p id="whatsapp-hint" class="whatsapp-intro">A few details are enough. Skip anything you’re unsure about.</p>
+                        <div class="whatsapp-group">
+                          <label for="whatsapp-topic">I need help with</label>
+                          <select id="whatsapp-topic" name="enquiry-topic" autofocus class="whatsapp-field">
+                            {procurementQuestions.map(({ topic, label, message, prompt, placeholder, notesLabel, notesPlaceholder }) => (
+                              <option value={topic} data-message={message} data-prompt={prompt} data-placeholder={placeholder} data-notes-label={notesLabel} data-notes-placeholder={notesPlaceholder}>{label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div class="whatsapp-context-grid" data-whatsapp-context-fields hidden>
+                          <div data-whatsapp-subject-field class="whatsapp-group" hidden>
+                            <label for="whatsapp-products" data-whatsapp-subject-label>What are you looking for?</label>
+                            <input id="whatsapp-products" name="products" autocomplete="off" type="text" maxlength="300" placeholder="e.g. desks for a hotel" class="whatsapp-field" />
+                          </div>
+                          <div class="whatsapp-group">
+                            <label for="whatsapp-quantity">Quantity</label>
+                            <input id="whatsapp-quantity" name="quantity" autocomplete="off" type="text" maxlength="100" placeholder="e.g. 30 pieces" class="whatsapp-field" />
+                          </div>
+                          <div data-whatsapp-destination-field class="whatsapp-group" hidden>
+                            <label for="whatsapp-destination">Where should it be delivered?</label>
+                            <input id="whatsapp-destination" name="destination" autocomplete="off" type="text" maxlength="150" placeholder="City or country" class="whatsapp-field" />
+                          </div>
+                        </div>
+                        <div class="whatsapp-group">
+                          <label for="whatsapp-notes" data-whatsapp-notes-label>What would you like to know?</label>
+                          <textarea id="whatsapp-notes" name="notes" autocomplete="off" rows="2" maxlength="1500" class="whatsapp-field"></textarea>
+                        </div>
+                      </div>
+                      <div class="whatsapp-review" data-whatsapp-review hidden>
+                        <h4 tabindex="-1" data-whatsapp-review-heading>Review your message</h4>
+                        <p>You can edit it again in WhatsApp before sending.</p>
+                        <div class="whatsapp-message" data-whatsapp-message></div>
+                      </div>
+                    </div>
+                    <footer class="whatsapp-footer">
+                      <button type="button" class="whatsapp-primary" data-whatsapp-review-button>
+                        Review message <Icon name="arrow-right" class="h-4 w-4" />
+                      </button>
+                      <div class="whatsapp-review-actions" data-whatsapp-review-actions hidden>
+                        <button type="button" class="whatsapp-back" data-whatsapp-edit>
+                          <Icon name="arrow-left" class="h-4 w-4" /> Edit details
+                        </button>
+                        <a href="https://wa.me/8619372837269" data-whatsapp-link data-contact-event="contact_whatsapp_clicked" target="_blank" rel="noopener noreferrer" class="whatsapp-primary">
+                          Continue in WhatsApp <Icon name="external-link" class="h-4 w-4" />
+                        </a>
+                      </div>
+                      <p>Review and send in WhatsApp.</p>
+                    </footer>
+                  </dialog>
+                </dd>
+              </Card>
+              <Card padding="lg" elevated>
                 <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
                   <Icon name="mail" class="h-4 w-4 text-accent-ink" />
                   Email
@@ -253,61 +488,126 @@ import harunaImg from "../assets/team/haruna.jpg";
                     haruna@harpapro.com
                   </p>
                   <div
-                    class="mt-5 flex flex-wrap gap-3"
+                    class="mt-5 grid gap-2"
                     data-contact-email-actions
                   >
-                    <button
-                      type="button"
-                      class="inline-flex h-10 items-center gap-2 rounded-md bg-accent-ink px-4 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
-                      data-copy-email
-                      data-email="haruna@harpapro.com"
-                    >
-                      <Icon name="copy" class="h-4 w-4" />
-                      Copy email
-                    </button>
-                    <a
+                    <Button
                       href="mailto:haruna@harpapro.com"
-                      class="inline-flex h-10 items-center gap-2 rounded-md border border-hairline px-4 text-sm font-medium text-ink hover:bg-secondary ring-focus"
+                      data-contact-event="contact_email_opened"
+                      icon="mail"
+                      size="touch"
+                      class="justify-center"
                     >
                       Open email app
-                    </a>
+                    </Button>
+                    <Button
+                      icon="copy"
+                      variant="outline"
+                      size="touch"
+                      class="justify-center"
+                      data-copy-email=""
+                      data-email="haruna@harpapro.com"
+                    >
+                      Copy email
+                    </Button>
                   </div>
                   <p
-                    class="mt-3 min-h-5 text-xs text-ink-soft"
+                    class="mt-2 text-xs text-ink-soft empty:mt-0"
                     role="status"
                     aria-live="polite"
                     data-copy-email-status
                   ></p>
                 </dd>
-              </div>
+              </Card>
 
-              <div class="rounded-xl border border-hairline bg-card p-6 shadow-sm">
-                <dt class="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <Icon name="message-circle" class="h-4 w-4 text-accent-ink" />
-                  WhatsApp
-                </dt>
-                <dd class="mt-4">
-                  <p class="font-mono text-sm text-ink">+86 193 7283 7269</p>
-                  <a
-                    href="https://wa.me/861937283726"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="mt-5 inline-flex h-10 items-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-medium text-primary hover:bg-card ring-focus"
-                  >
-                    Message on WhatsApp
-                    <Icon name="external-link" class="h-4 w-4" />
-                  </a>
-                </dd>
-              </div>
             </dl>
           </div>
         </Container>
       </Section>
     </main>
-    <Footer />
+    <Footer section="procurement" />
+    <LuxuryEffects />
+    <EvidenceImageDialog />
   </div>
 
   <script>
+    import { captureContact } from "../lib/analytics";
+
+    const dialog = document.querySelector<HTMLDialogElement>("[data-whatsapp-dialog]");
+    const topic = document.querySelector<HTMLSelectElement>("#whatsapp-topic");
+    const products = document.querySelector<HTMLInputElement>("#whatsapp-products");
+    const destination = document.querySelector<HTMLInputElement>("#whatsapp-destination");
+    const quantity = document.querySelector<HTMLInputElement>("#whatsapp-quantity");
+    const notes = document.querySelector<HTMLTextAreaElement>("#whatsapp-notes");
+    const whatsappLink = document.querySelector<HTMLAnchorElement>("[data-whatsapp-link]");
+
+    if (dialog?.showModal && topic && products && destination && quantity && notes && whatsappLink) {
+      let trigger: HTMLElement | null = null;
+      let activeTopic = topic.value;
+      const topicNotes = new Map<string, string>();
+      const reviewButton = dialog.querySelector<HTMLButtonElement>("[data-whatsapp-review-button]")!;
+      const showReview = (review: boolean) => {
+        dialog.querySelector<HTMLElement>("[data-whatsapp-brief]")!.hidden = review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-review]")!.hidden = !review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-review-actions]")!.hidden = !review;
+        reviewButton.hidden = review;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-scroll]")!.scrollTop = 0;
+        (review ? dialog.querySelector<HTMLElement>("[data-whatsapp-review-heading]")! : topic).focus({ preventScroll: true });
+      };
+      reviewButton.addEventListener("click", () => showReview(true));
+      dialog.querySelector("[data-whatsapp-edit]")?.addEventListener("click", () => showReview(false));
+      const updateLink = () => {
+        if (topic.value !== activeTopic) {
+          topicNotes.set(activeTopic, notes.value);
+          notes.value = topicNotes.get(topic.value) ?? "";
+          activeTopic = topic.value;
+        }
+        const selected = topic.selectedOptions[0]!;
+        const isQuestion = topic.value === "understand";
+        const isQuality = topic.value === "quality";
+        dialog.querySelector<HTMLElement>("[data-whatsapp-context-fields]")!.hidden = isQuestion;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-subject-field]")!.hidden = isQuestion;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-destination-field]")!.hidden = isQuestion || isQuality;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-subject-label]")!.textContent = selected.dataset.prompt!;
+        products.placeholder = selected.dataset.placeholder!;
+        dialog.querySelector<HTMLElement>("[data-whatsapp-notes-label]")!.textContent = selected.dataset.notesLabel!;
+        notes.placeholder = selected.dataset.notesPlaceholder!;
+        const message = [
+          selected.dataset.message!,
+          !isQuestion && products.value.trim() && `${topic.value === "brief" ? "Project" : isQuality ? "Goods to check" : "Products"}: ${products.value.trim()}`,
+          !isQuestion && quantity.value.trim() && `Quantity: ${quantity.value.trim()}`,
+          !isQuestion && !isQuality && destination.value.trim() && `Delivery: ${destination.value.trim()}`,
+          notes.value.trim() && `${isQuestion ? "Question" : isQuality ? "Checks requested" : "Notes"}: ${notes.value.trim()}`,
+        ].filter(Boolean).join("\n\n");
+        dialog.querySelector<HTMLElement>("[data-whatsapp-message]")!.textContent = message;
+        const url = new URL(whatsappLink.href);
+        url.searchParams.set("text", message);
+        whatsappLink.href = url.href;
+      };
+      dialog.addEventListener("input", updateLink);
+      dialog.addEventListener("change", updateLink);
+      document.querySelectorAll<HTMLElement>("[data-whatsapp-open], [data-whatsapp-topic]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          trigger = link;
+          if (link.dataset.whatsappTopic) topic.value = link.dataset.whatsappTopic;
+          updateLink();
+          dialog.showModal();
+          showReview(false);
+        });
+      });
+      dialog.querySelector("[data-whatsapp-close]")?.addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+      dialog.addEventListener("close", () => trigger?.focus());
+      const helperButton = document.querySelector<HTMLButtonElement>("[data-whatsapp-open]");
+      if (helperButton) {
+        helperButton.hidden = false;
+        helperButton.classList.add("inline-flex");
+      }
+      updateLink();
+    }
+
     const copyEmailButton = document.querySelector<HTMLButtonElement>("[data-copy-email]");
     const copyEmailStatus = document.querySelector<HTMLElement>("[data-copy-email-status]");
 
@@ -319,6 +619,7 @@ import harunaImg from "../assets/team/haruna.jpg";
         if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
         await navigator.clipboard.writeText(email);
         copyEmailStatus.textContent = "Email copied";
+        captureContact('contact_email_copied');
       } catch {
         copyEmailStatus.textContent = "Select and copy the email address above";
       }

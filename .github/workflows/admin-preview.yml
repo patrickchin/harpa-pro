@@ -10,28 +10,38 @@ on:
     paths:
       - 'apps/admin/**'
       - 'packages/api-contract/**'
-      # The browser flow crosses the whole API process (routing, global
-      # middleware, app data, and dedicated admin auth), so do not try to
-      # maintain a brittle list of admin-looking filenames here.
       - 'packages/api/**'
-      - '.github/actions/changed-paths/**'
-      - '.github/actions/setup-monorepo/**'
-      - '.github/workflows/admin-preview.yml'
-      - '.github/workflows/pages-preview-ref.yml'
-      - '.github/workflows/pr-preview.yml'
-      - 'infra/fly/fly.preview.toml'
+      - 'packages/ai-fixtures/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
-      - 'scripts/ci/build-cloudflare-pages.sh'
-      - 'scripts/ci/verify-pages-deployment.sh'
-      - 'tsconfig.base.json'
+      - 'tsconfig*'
+      - 'turbo.json'
+      - '.npmrc'
+      - '.nvmrc'
+      - 'patches/**'
+      - 'scripts/ci/**'
+      - '.github/**'
 
 concurrency:
   group: admin-preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      deploy: ${{ steps.paths.outputs.admin }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - id: paths
+        uses: ./.github/actions/pages-changes
+
   verify:
     runs-on: ubuntu-latest
     permissions:
@@ -84,8 +94,9 @@ jobs:
           fi
 
   deployment:
-    needs: verify
+    needs: [verify, changes]
     if: >-
+      needs.changes.outputs.deploy == 'true' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest

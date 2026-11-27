@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/pay-chinese-suppliers-and-reduce-payment-risk",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: photorealistic-natural. Asset type: square photographic article-index thumbnail, 1:1 square frame. Create a believable real-world editorial photograph, not a model, miniature, studio still life, icon, rendering, collage, split screen or abstract illustration. Make the dominant subject recognizable at only 80 pixels; tight purposeful composition with at most two or three contextual cues, realistic scale, natural materials and restrained authentic colours. No logos, watermark, certificates, crowds, readable text, letters, numbers, account details or identifiable real project claims. Scene and subject: a real person reviewing one paper supplier invoice beside an open laptop, their right hand on the laptop trackpad. Tight over-the-shoulder photograph framed around hands, invoice and laptop on a lived-in architect’s desk; the person’s face remains outside the frame. Invoice held next to the laptop for comparison, non-readable marks only. Laptop displays a generic bank-transfer-style form so softly out of focus that no text, logo, account data, currency values, or personal information is readable. No screenshot styling or reproduced real bank interface. Cooler morning office light, muted graphite laptop and a dark blue sleeve, realistic paper and keyboard textures. Focus on comparison action and the large device silhouette. Only these context cues; no payment card, gold-chip icon, lock symbol, money stacks or beige studio backdrop.",
+  "generatedOriginal": "exec-640b39b0-07f4-4b72-9188-271a96dda785.png",
+  "originalSha256": "80247330dddb9173cd0f3e61fad6a37ce3a718c85aa8a7a32e74d4040562931d",
+  "asset": "pay-chinese-suppliers-and-reduce-payment-risk-thumbnail.webp",
+  "alt": "Generated illustration of a person comparing a supplier invoice with an out-of-focus transfer form on a laptop.",
+  "caption": "Generated illustration · Reviewing payment instructions"
+}

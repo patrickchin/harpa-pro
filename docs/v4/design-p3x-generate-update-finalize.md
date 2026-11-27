@@ -51,13 +51,13 @@ User-visible contract:
 
 ### Action-row state machine (target)
 
-| Condition | Button |
-|---|---|
-| No report, no notes | "Generate report" *(disabled)* |
-| No report, has notes | "Generate report" *(primary)* |
-| Has report, `notesSinceLastGeneration > 0` | "Update report (N)" |
-| Has report, no new notes, **autosave dirty/inflight** | "Saving…" *(disabled finalize)* |
-| Has report, no new notes, clean | Regenerate icon + **"Finalize report"** |
+| Condition                                             | Button                                  |
+| ----------------------------------------------------- | --------------------------------------- |
+| No report, no notes                                   | "Generate report" _(disabled)_          |
+| No report, has notes                                  | "Generate report" _(primary)_           |
+| Has report, `notesSinceLastGeneration > 0`            | "Update report (N)"                     |
+| Has report, no new notes, **autosave dirty/inflight** | "Saving…" _(disabled finalize)_         |
+| Has report, no new notes, clean                       | Regenerate icon + **"Finalize report"** |
 
 ### AI input contract
 
@@ -126,38 +126,42 @@ server-side body is non-null.
 
 ### 3.6 `apps/mobile` — Edit-tab autosave
 
-New small hook `useReportBodyAutosave(slug, number, localReport)`:
+The per-card editor uses `useReportBodyAutosave` with the canonical local
+body, caller-owned dirty flag, edit revision and server version precondition.
+User edits advance the revision; hydration and generation do not create edits.
+The hook debounces for 800 ms and permits one active PATCH. Edits arriving
+while it saves remain dirty. Success acknowledges only the captured revision
+and advances the known server version for the next write.
 
-- Debounce 800 ms after `localReport` changes (matches keystrokes
-  → settle pattern used elsewhere).
-- Skips when `localReport === lastSavedReport` (deep-compare via
-  stable JSON or shallow ref check on slices).
-- Calls `useUpdateReportMutation` with `{ body: toReportBody(localReport) }`.
-- Exposes `{ isAutoSaving, lastSavedAt, error }`.
-- On mount, seeds `lastSavedReport` from the server payload so the
-  first dirty diff is the user's first edit, not the initial load.
+A failed save retains the draft. Automatic retry stops for that revision;
+explicit retry or a new edit can reattempt a transport failure. A conflict
+stays blocked across later edits until explicit retry; retry still uses the
+version precondition and cannot silently overwrite a concurrent change.
+Generation acknowledges its server version even when newer local edits keep
+its returned body from replacing the editor. Identity changes and unmount
+invalidate old acknowledgements. See
+[workflow ownership](design-state-machine-remediation.md) for the state owners
+and command admission rules.
 
-Wire it inside `GenerateReportRoute`:
-
-```ts
-const autosave = useReportBodyAutosave(slug, reportNumber, localReport);
-…
-<GenerateNotes
-  …
-  isAutoSaving={autosave.isAutoSaving}
-  lastSavedAt={autosave.lastSavedAt}
-/>
-```
+The dashboard retains its existing save reducer and mounts an inner editor
+per project/report identity. Departing drafts are preserved; an old report's
+save response cannot mutate the next editor.
 
 ### 3.7 `apps/mobile` — Action-row + Finalize guard
 
-- `GenerateReportActionRow`: read `draft.isAutoSaving` and disable
-  Finalize while autosave is dirty/inflight. Show a small "Saving…"
-  pill in the row.
-- `handleFinalize` in the route: if autosave is inflight, await it
-  (or no-op + show inline notice). Simplest implementation: disable
-  the button; rely on the autosave debounce + invalidation to flip
-  it back to enabled.
+The route derives one command-admission policy for the action row, finalize
+confirmation, direct handlers, and automatic generation. Pending or failed
+input synchronization, dirty edits, failed autosave, active writes, and
+failed photo placement block body commands. The policy requires a draft and
+write permission; finalization also requires the owner role, a saved body,
+and no pending regeneration or generation failure.
+
+The route checks admission again when a confirmation submits and acquires a
+synchronous command guard before generation or finalization starts. A quota
+failure remains latched after its dialog closes, so mutation settlement does
+not automatically retry it. The user can explicitly retry generation after
+the other blockers clear. A newer edit made during generation stays visible
+and dirty for autosave rather than being replaced by the older response.
 
 ### 3.8 Update-vs-regenerate UI
 

@@ -65,7 +65,7 @@ describe('dashboard UI primitives', () => {
     expect(screen.getByText('Owner')).toHaveClass('bg-warning-soft');
     expect(screen.getByText('Owner').closest('div')).toHaveClass(
       'rounded-card-ui',
-      'shadow-raised-ui',
+      'border-border/40',
     );
   });
 

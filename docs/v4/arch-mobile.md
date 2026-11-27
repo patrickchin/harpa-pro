@@ -88,10 +88,12 @@ Application code imports the parsed `env` object instead of reading
 `process.env` directly. Native adapter tests can use a documented seam
 when they must change a flag after module load.
 
-`EXPO_PUBLIC_USE_FIXTURES` affects the mobile application only. For
-example, it selects the canned voice recorder. It does not send a
-fixture-mode header and does not select the API's AI mode. The API uses
-its own `AI_LIVE` setting.
+`EXPO_PUBLIC_USE_FIXTURES` affects the mobile application only. It selects
+the canned voice recorder and a deterministic camera adapter that copies a
+bundled image to a unique cache file per shutter press. It does not send a
+fixture-mode header and does not select the API's AI mode. The API uses its
+own `AI_LIVE` setting. The real recorder and camera remain covered by the
+non-fixture native-input smoke.
 
 ## Application variants
 

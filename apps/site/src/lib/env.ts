@@ -41,3 +41,17 @@ export function getPublicEnv(): {
     turnstileSiteKey: required('PUBLIC_TURNSTILE_SITE_KEY'),
   };
 }
+
+/** Optional as a pair: unconfigured builds must not send analytics. */
+export function getAnalyticsEnv(): { key: string; host: string } | undefined {
+  const key = import.meta.env.PUBLIC_POSTHOG_KEY?.trim();
+  const host = import.meta.env.PUBLIC_POSTHOG_HOST?.trim();
+  if (!key && !host) return undefined;
+  if (!key || !/^phc_[A-Za-z0-9]+$/.test(key)) {
+    throw new Error('[site/env] PUBLIC_POSTHOG_KEY must be a public phc_ project token.');
+  }
+  if (host !== 'https://us.i.posthog.com' && host !== 'https://eu.i.posthog.com') {
+    throw new Error('[site/env] PUBLIC_POSTHOG_HOST must be the US or EU PostHog ingestion origin.');
+  }
+  return { key, host };
+}

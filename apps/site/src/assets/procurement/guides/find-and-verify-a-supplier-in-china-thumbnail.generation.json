@@ -1,0 +1,12 @@
+{
+  "article": "/procurement/find-and-verify-a-supplier-in-china",
+  "purpose": "Compact guide index thumbnail; article hero unchanged",
+  "generatedOn": "2026-11-10",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: photorealistic-natural. Generate a NEW square 1:1 photographic editorial thumbnail for a procurement article index. This must look like a real full-size working scene, with recognizable context and one dominant action that remains clear at only80px. A real furniture-factory bench, tightly cropped around a technician's ordinary workwear sleeve and hands checking a concealed steel hinge inside an open walnut cabinet. One hand steadies the door and the other uses an ordinary screwdriver, anatomically plausible grip and credible hinge geometry. Slightly elevated three-quarter close view; an out-of-focus steel workshop shelf and timber offcuts are the only background cues. Warm practical factory light, real walnut grain, charcoal workwear and steel. Frame one clear subject/action tightly with at most2–3 supporting context cues and crop-safe edges. Credible physical scale, material imperfections and natural light. NO studio ivory object-study background, miniature models, abstract symbols, collage, logos, legible text, certificates, test documents, shipping labels, pass/fail marks, watermark or text overlay. This is a fictional generated scene and must not imply evidence of a real Harpa project, client, supplier or inspection. Preserve photographic realism and a distinct scene composition.",
+  "generatedOriginal": "exec-65037c24-1f84-4270-98d5-9f45d19bf97a.png",
+  "originalSha256": "85f183491303ca87c2f73c49880338b06b7f035fc25561d465640845294431ca",
+  "asset": "find-and-verify-a-supplier-in-china-thumbnail.webp",
+  "alt": "Generated illustration of a technician checking a cabinet hinge with a screwdriver at a factory bench",
+  "caption": "Generated illustration · Supplier checks"
+}

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="__VIEWER_CSP__" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./assets/style.css" />
+    <title>Local IFC viewer — Harpa Pro</title>
+  </head>
+  <body>
+    <header>
+      <a class="wordmark" href="https://harpapro.com">
+        <img src="./assets/brand-icon.svg" width="36" height="36" alt="" />
+        <span>Harpa Pro</span>
+      </a>
+      <span class="privacy"><span aria-hidden="true">●</span> Files stay on your device</span>
+    </header>
+    <main>
+      <aside>
+        <span class="eyebrow">LOCAL IFC VIEWER</span>
+        <h1>Explore your model.<br />Keep it local.</h1>
+        <p class="intro">
+          Choose an IFC file to explore your building in 3D. The file is read directly by your
+          browser.
+        </p>
+        <label class="file-label" for="model-file"
+          >Choose IFC file <span aria-hidden="true">↗</span></label
+        >
+        <input id="model-file" type="file" accept=".ifc" />
+        <p class="hint">.ifc · up to 150 MB</p>
+        <div class="file-info" hidden>
+          <h2 id="file-name"></h2>
+          <p id="file-size"></p>
+        </div>
+        <div class="status-box">
+          <div id="status" role="status" aria-live="polite">Ready to open a local file.</div>
+          <progress id="progress" max="1" value="0" hidden></progress>
+          <button id="cancel" class="text-button" hidden>Cancel reading</button>
+        </div>
+        <dl id="stats" hidden></dl>
+        <details id="warning-panel" hidden>
+          <summary>Conversion notes <span id="warning-count"></span></summary>
+          <ul id="warnings"></ul>
+        </details>
+        <div class="notice">
+          <strong>Have a Revit file?</strong>
+          <p>
+            Ask your designer for an IFC export of the model. This viewer opens .ifc files; RVT
+            files and drawing sheets need a separate export.
+          </p>
+        </div>
+        <p class="footnote">
+          No account, upload or cloud conversion.<br />
+          <a href="./THIRD_PARTY_NOTICES.txt">Open-source licences</a>
+        </p>
+      </aside>
+      <section class="viewer" aria-label="3D model viewer" data-state="empty">
+        <div class="toolbar" aria-label="View controls">
+          <button id="fit" disabled>Fit model</button>
+          <button id="top" disabled>Top view</button>
+          <button id="clear" disabled>Clear file</button>
+        </div>
+        <canvas
+          id="canvas"
+          aria-label="Interactive 3D model; drag to rotate, right-drag to pan, scroll to zoom"
+          tabindex="0"
+        ></canvas>
+        <div class="empty-state" id="empty-state">
+          <div class="cube" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m12 3 9 5v8l-9 5-9-5V8Z" />
+              <path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5" />
+            </svg>
+          </div>
+          <h2>Your model, in your browser.</h2>
+          <p>Choose an IFC file to begin.</p>
+        </div>
+        <div class="view-caption">
+          <span id="fidelity">No model loaded</span
+          ><span>Drag to orbit · Right-drag to pan · Scroll to zoom</span>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./assets/viewer.js"></script>
+  </body>
+</html>

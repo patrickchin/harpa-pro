@@ -1,0 +1,35 @@
+---
+import type { DocsSearchEntry } from "../../../lib/reports/docs-search";
+
+interface Props {
+  entries: readonly DocsSearchEntry[];
+}
+
+const { entries } = Astro.props;
+---
+
+<div
+  class="docs-search"
+  data-docs-search
+  data-docs-search-entries={JSON.stringify(entries)}
+>
+  <div class="docs-search-field">
+    <label for="docs-search">Search guides</label>
+    <input
+      id="docs-search"
+      type="search"
+      placeholder="Try voice notes, PDF, or members"
+      autocomplete="off"
+    />
+  </div>
+  <div data-docs-search-status aria-live="polite"></div>
+  <div data-docs-search-results></div>
+</div>
+
+<script>
+  import { initDocsSearch } from "../../../lib/reports/docs-search-ui";
+
+  document
+    .querySelectorAll<HTMLElement>("[data-docs-search]")
+    .forEach((root) => initDocsSearch(root));
+</script>

@@ -1,0 +1,319 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/site/Header.astro";
+import Footer from "../../components/site/Footer.astro";
+import Section from "../../components/primitives/Section.astro";
+import Container from "../../components/primitives/Container.astro";
+import Icon from "../../components/Icon.astro";
+import Button from "../../components/primitives/Button.astro";
+import Card from "../../components/primitives/Card.astro";
+import SectionHeader from "../../components/primitives/SectionHeader.astro";
+import { APP_STORE_URL } from "../../lib/reports/links";
+import {
+  FEATURE_SUGGESTION_MAILTO,
+  ROADMAP_STAGES,
+  type RoadmapStatus,
+} from "../../lib/reports/roadmap";
+
+const roadmapEntries = (await getCollection("reportsRoadmap")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const featureEntries = (await getCollection("reportsFeatures")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+const items = await Promise.all(
+  roadmapEntries.map(async (entry) => {
+    const { Content } = await render(entry);
+    return { id: entry.id, ...entry.data, Content };
+  }),
+);
+const features = await Promise.all(
+  featureEntries.map(async (entry) => {
+    const { Content } = await render(entry);
+    return { id: entry.id, title: entry.data.title, icon: entry.data.icon, Content };
+  }),
+);
+
+const byStatus = (status: RoadmapStatus) =>
+  items.filter((item) => item.status === status);
+
+const stages = ROADMAP_STAGES.map((stage) => ({
+  ...stage,
+  items: byStatus(stage.id),
+})).filter((stage) => stage.items.length > 0);
+
+const available = stages.find((s) => s.id === "available");
+const upcoming = stages.filter((s) => s.id !== "available");
+
+// Pill styles per stage. Each stage also carries a distinct icon and text label.
+const pillCls: Record<RoadmapStatus, string> = {
+  available: "border-primary bg-primary text-primary-foreground",
+  "in-progress": "border-accent-ink bg-accent-ink text-accent-foreground",
+  planned: "border-primary/40 bg-card text-primary",
+  exploring: "border-dashed border-muted-foreground/70 bg-transparent text-ink-soft",
+};
+// Extras layered on Card's hairline border and card fill.
+const cardCls: Record<RoadmapStatus, string> = {
+  available: "",
+  "in-progress": "border-l-4 border-l-accent! shadow-sm",
+  planned: "",
+  exploring: "border-dashed border-muted-foreground/50! bg-transparent!",
+};
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const stageCount = (id: RoadmapStatus, n: number) =>
+  id === "available" ? plural(features.length, "feature") : plural(n, "item");
+const stageCols: Record<number, string> = {
+  1: "",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+};
+---
+
+<Layout
+  section="reports"
+  title="Site reporting roadmap | Harpa Pro"
+  description="See what Harpa Pro does today, what is in progress, and the reporting capabilities planned for future releases."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header section="reports" />
+    <main id="main-content">
+      <Section bordered="top">
+        <Container padding="lg">
+          <SectionHeader
+            as="h1"
+            eyebrow="Site reporting roadmap"
+            title="What ships today and what comes next"
+            ledeSize="base"
+            lede="Harpa Pro turns site updates into daily reports. Planned work will use the same captures for materials, equipment, people, costs, and cross-project insights. Priorities may change as we learn from project teams."
+          />
+
+          <nav aria-label="Roadmap stages" class="mt-8">
+            <ol
+              class={`grid gap-3 ${stageCols[stages.length]}`}
+              data-roadmap-stages
+            >
+              {
+                stages.map((stage, index) => (
+                  <li>
+                    <Card
+                      href={`#${stage.id}`}
+                      padding="none"
+                      class="flex h-full items-start gap-3 p-4 transition-colors"
+                    >
+                      <span
+                        class={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${pillCls[stage.id]}`}
+                      >
+                        <Icon name={stage.icon} class="h-4 w-4" />
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block text-sm font-semibold text-ink">
+                          <span class="sr-only">Stage {index + 1}: </span>
+                          {stage.label}
+                        </span>
+                        <span class="mt-0.5 block text-xs text-ink-soft">
+                          {stageCount(stage.id, stage.items.length)} · {stage.summary}
+                        </span>
+                      </span>
+                    </Card>
+                  </li>
+                ))
+              }
+            </ol>
+          </nav>
+        </Container>
+      </Section>
+
+      {
+        available && (
+          <Section
+            id="available"
+            tone="paper-2"
+            bordered="top"
+            class="scroll-mt-20"
+            aria-labelledby="available-heading"
+            data-roadmap-stage="available"
+          >
+            <Container padding="lg">
+              <div class="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                <div>
+                  <span
+                    class={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${pillCls.available}`}
+                  >
+                    <Icon name="circle-check" class="h-3.5 w-3.5" />
+                    Available
+                  </span>
+                  <SectionHeader
+                    size="md"
+                    width="xl"
+                    titleId="available-heading"
+                    title="Available now"
+                    class="mt-3"
+                  />
+                  {available.items.map(({ title, Content }) => (
+                    <div class="mt-3">
+                      <h3 class="text-base font-semibold text-ink">{title}</h3>
+                      <div class="mt-1.5 text-sm leading-relaxed text-ink-soft sm:text-base">
+                        <Content />
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    href={APP_STORE_URL}
+                    external
+                    externalIcon={false}
+                    variant="primary"
+                    class="mt-6 transition-opacity hover:opacity-90"
+                  >
+                    Get the app
+                  </Button>
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold text-ink">
+                    Included in the app today
+                  </h3>
+                  <ul
+                    class="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2"
+                    data-roadmap-available-list
+                  >
+                    {features.map(({ title, icon, Content }) => (
+                      <li class="flex gap-3">
+                        <span class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md border border-hairline bg-card text-ink">
+                          <Icon name={icon} class="h-4 w-4" />
+                        </span>
+                        <div class="min-w-0">
+                          <p class="text-sm font-semibold text-ink">{title}</p>
+                          <div class="mt-0.5 text-sm leading-relaxed text-ink-soft">
+                            <Content />
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </Container>
+          </Section>
+        )
+      }
+
+      {
+        upcoming.map((stage) => (
+          <Section
+            id={stage.id}
+            bordered="top"
+            class="scroll-mt-20"
+            aria-labelledby={`${stage.id}-heading`}
+            data-roadmap-stage={stage.id}
+          >
+            <Container padding="lg">
+              <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
+                <div>
+                  <span
+                    class={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${pillCls[stage.id]}`}
+                  >
+                    <Icon name={stage.icon} class="h-3.5 w-3.5" />
+                    {stage.label}
+                  </span>
+                  <SectionHeader
+                    size="md"
+                    width="xl"
+                    titleId={`${stage.id}-heading`}
+                    title={stage.label}
+                    lede={stage.summary}
+                    class="mt-3"
+                  />
+                </div>
+                <ul class="grid gap-4 sm:grid-cols-2">
+                  {stage.items.map(({ title, icon, timing, Content }) => (
+                    <Card
+                      as="li"
+                      class={`flex flex-col ${cardCls[stage.id]}`}
+                      data-roadmap-item
+                    >
+                      <div class="flex items-start gap-3">
+                        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-hairline bg-paper-2 text-ink">
+                          <Icon name={icon} class="h-4 w-4" />
+                        </span>
+                        <h3 class="min-w-0 flex-1 pt-1.5 text-base font-semibold text-ink">
+                          {title}
+                        </h3>
+                      </div>
+                      <div class="mt-3 text-sm leading-relaxed text-ink-soft">
+                        <Content />
+                      </div>
+                      <p class="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                        <span
+                          class={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold ${pillCls[stage.id]}`}
+                        >
+                          <Icon name={stage.icon} class="h-3 w-3" />
+                          <span class="sr-only">Status: </span>
+                          {stage.label}
+                        </span>
+                        {timing && (
+                          <span class="inline-flex items-center gap-1 rounded-full border border-hairline bg-paper-2 px-2 py-0.5 font-medium text-ink-soft">
+                            <Icon name="calendar" class="h-3 w-3" />
+                            <span class="sr-only">Timing: </span>
+                            {timing}
+                          </span>
+                        )}
+                      </p>
+                    </Card>
+                  ))}
+                </ul>
+              </div>
+            </Container>
+          </Section>
+        ))
+      }
+
+      <Section tone="paper-2" bordered="top" aria-labelledby="roadmap-cta-heading">
+        <Container padding="lg">
+          <div
+            class="flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between"
+          >
+            <div class="max-w-xl">
+              <SectionHeader
+                size="md"
+                width="none"
+                titleId="roadmap-cta-heading"
+                title="Help shape the roadmap"
+                lede="Harpa Pro is available on the App Store. The guides explain the current site reporting workflow. Tell us what your crews need next."
+              />
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <Button
+                href={APP_STORE_URL}
+                external
+                externalIcon={false}
+                variant="primary"
+                class="transition-opacity hover:opacity-90"
+              >
+                Get the app
+              </Button>
+              <Button
+                href="/reports/docs"
+                variant="secondary"
+                elevated={false}
+                class="transition-colors"
+              >
+                View guides
+              </Button>
+              <Button
+                href={FEATURE_SUGGESTION_MAILTO}
+                variant="outline-tinted"
+                icon="mail"
+                class="transition-colors"
+              >
+                Suggest a feature
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </Section>
+    </main>
+    <Footer section="reports" />
+  </div>
+</Layout>

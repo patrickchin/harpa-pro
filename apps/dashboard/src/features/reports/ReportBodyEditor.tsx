@@ -6,12 +6,12 @@ import { Button, Field as FormField, Input, Textarea } from '@/components/ui';
 import { dateInputValue, isoDateFromInput, updateReportBody } from './report-body';
 
 const editorSectionClassName =
-  'grid scroll-mt-4 gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui';
+  'grid scroll-mt-4 gap-5 rounded-card-ui border border-border/40 bg-card p-5 sm:p-6';
 const sectionHeadingClassName = 'flex flex-wrap items-start justify-between gap-3';
-const sectionTitleClassName = 'text-label text-foreground';
-const fieldGridClassName = 'grid gap-3 sm:grid-cols-2';
+const sectionTitleClassName = 'font-heading text-section text-foreground';
+const fieldGridClassName = 'grid gap-4 sm:grid-cols-2';
 const repeatableCardClassName =
-  'grid gap-3 rounded-card-ui border border-border bg-surface-emphasis p-3';
+  'grid gap-3 rounded-card-ui border border-border/40 bg-surface-emphasis p-3';
 const mutedCopyClassName = 'text-muted-foreground';
 
 export interface ReportBodyEditorProps {
@@ -83,7 +83,7 @@ function RowHeader({
       <Button
         type="button"
         size="small"
-        variant="destructive"
+        variant="danger-quiet"
         aria-label={removeLabel}
         onClick={onRemove}
         disabled={disabled}
@@ -106,7 +106,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
       aria-label="Structured report editor"
     >
       <nav
-        className="flex min-w-0 gap-1 overflow-x-auto rounded-card-ui border border-border bg-surface-muted p-2 lg:sticky lg:top-4 lg:grid"
+        className="flex min-w-0 gap-1 overflow-x-auto rounded-card-ui border border-border/40 bg-surface-muted p-2 lg:sticky lg:top-4 lg:grid"
         aria-label="Report sections"
       >
         {[
@@ -187,7 +187,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               <Button
                 type="button"
                 size="small"
-                variant="destructive"
+                variant="danger-quiet"
                 onClick={() =>
                   change((draft) => {
                     draft.weather = null;
@@ -540,7 +540,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               <Button
                 type="button"
                 size="small"
-                variant="destructive"
+                variant="danger-quiet"
                 aria-label={`Remove next step ${index + 1}`}
                 onClick={() =>
                   change((draft) => {

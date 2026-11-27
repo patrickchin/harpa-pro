@@ -266,6 +266,46 @@ describe('GenerateNotes', () => {
     expect(() => tree.root.findByProps({ testID: 'btn-generate-report' })).not.toThrow();
   });
 
+  it('updates command controls and an open finalize confirmation when admission changes', () => {
+    const onFinalize = vi.fn();
+    const props: GenerateNotesProps = {
+      ...baseProps,
+      report: {
+        meta: { title: 'Manual report', summary: '', visitDate: '' },
+        weather: null,
+        workers: [],
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        summarySections: [],
+      },
+      needsRegeneration: false,
+      canGenerateReport: true,
+      canFinalizeReport: true,
+      onFinalize,
+    };
+    const tree = render(<GenerateNotes {...props} />);
+    try {
+      expect(tree.root.findByProps({ testID: 'btn-finalize-report' }).props.disabled).toBe(false);
+      act(() => tree.root.findByProps({ testID: 'btn-finalize-report' }).props.onPress());
+      act(() =>
+        tree.update(
+          <GenerateNotes {...props} canGenerateReport={false} canFinalizeReport={false} />,
+        ),
+      );
+      expect(tree.root.findByProps({ testID: 'btn-finalize-report' }).props.disabled).toBe(true);
+      expect(tree.root.findByProps({ testID: 'btn-generate-update-report' }).props.disabled).toBe(
+        true,
+      );
+      const confirm = tree.root.findByProps({ testID: 'confirm-finalize' });
+      expect(confirm.props.disabled).toBe(true);
+      act(() => confirm.props.onPress());
+      expect(onFinalize).not.toHaveBeenCalled();
+    } finally {
+      act(() => tree.unmount());
+    }
+  });
+
   it('expands text and voice working modes while keeping the selector compact', () => {
     const props = { ...baseProps, reportId: 'rep_1' };
     const tree = render(<GenerateNotes {...props} />);
@@ -527,12 +567,13 @@ describe('GenerateNotes', () => {
 
   it('enables keyboard avoidance only while the keyboard is visible', () => {
     const listeners = new Map<string, () => void>();
-    const addListenerSpy = vi.spyOn(Keyboard, 'addListener').mockImplementation(
-      ((event: string, listener: () => void) => {
-        listeners.set(event, listener);
-        return { remove: vi.fn() };
-      }) as unknown as typeof Keyboard.addListener,
-    );
+    const addListenerSpy = vi.spyOn(Keyboard, 'addListener').mockImplementation(((
+      event: string,
+      listener: () => void,
+    ) => {
+      listeners.set(event, listener);
+      return { remove: vi.fn() };
+    }) as unknown as typeof Keyboard.addListener);
     const tree = render(<GenerateNotes {...baseProps} />);
     const keyboardAvoider = () =>
       tree.root

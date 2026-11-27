@@ -1,5 +1,10 @@
 # Dashboard mobile alignment and Tailwind migration
 
+> **Typography update (2026-10-16):** The user-requested
+> [workspace refresh](design-dashboard-workspace-refresh.md) supersedes this
+> document’s dashboard font, route-heading, label-tracking, surface-radius, and density rules.
+> The shared mobile palette and accessibility requirements still apply.
+
 **Status:** approved for implementation on 2026-08-04
 
 **Applies to:** `apps/dashboard` only

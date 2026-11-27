@@ -9,20 +9,20 @@ import { renderWaitlistConfirmationEmail } from '../../emails/waitlist-confirmat
 describe('renderWaitlistConfirmationEmail', () => {
   it('renders deterministic HTML + text for a known confirmUrl', () => {
     const { html, text } = renderWaitlistConfirmationEmail({
-      confirmUrl: 'https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN',
+      confirmUrl: 'https://harpapro.com/reports/confirm?token=DETERMINISTIC_FIXTURE_TOKEN',
     });
     expect(text).toMatchInlineSnapshot(`
       "You're nearly signed up for Harpa Pro product updates.
 
       Confirm your email (link expires in 7 days):
-      https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN
+      https://harpapro.com/reports/confirm?token=DETERMINISTIC_FIXTURE_TOKEN
 
       If you didn't sign up, ignore this email.
 
       — Patrick from Harpa Pro
       "
     `);
-    expect(html).toContain('https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN');
+    expect(html).toContain('https://harpapro.com/reports/confirm?token=DETERMINISTIC_FIXTURE_TOKEN');
     expect(html).toContain('Confirm my email');
     expect(html).toContain('product updates');
     expect(html).not.toContain('waitlist');
@@ -32,7 +32,7 @@ describe('renderWaitlistConfirmationEmail', () => {
   });
 
   it('injects the confirmUrl exactly three times: button href, fallback href, fallback visible copy', () => {
-    const url = 'https://harpapro.com/confirm?token=ABC';
+    const url = 'https://harpapro.com/reports/confirm?token=ABC';
     const { html } = renderWaitlistConfirmationEmail({ confirmUrl: url });
     // Three occurrences:
     //   1. Primary CTA button <a href>

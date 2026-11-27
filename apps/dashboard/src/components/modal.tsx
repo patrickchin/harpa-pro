@@ -19,7 +19,8 @@ function findDialogLabel(node: ReactNode, labelledBy: string): ReactNode | undef
   let label: ReactNode | undefined;
 
   Children.forEach(node, (child) => {
-    if (label !== undefined || !isValidElement<{ children?: ReactNode; id?: string }>(child)) return;
+    if (label !== undefined || !isValidElement<{ children?: ReactNode; id?: string }>(child))
+      return;
     if (child.props.id === labelledBy) {
       label = child.props.children;
       return;
@@ -62,7 +63,7 @@ export function Modal({
         <div className="grid min-h-full place-items-center">
           <DialogPanel
             className={cn(
-              'w-full max-w-lg rounded-panel-ui border border-border bg-card p-5 shadow-floating-ui',
+              'w-full max-w-lg rounded-panel-ui border border-border/40 bg-card p-5 shadow-floating-ui',
               dialogClassName,
             )}
           >

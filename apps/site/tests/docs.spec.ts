@@ -1,32 +1,35 @@
 import { expect, test } from '@playwright/test';
 
 const CANONICAL_GUIDES = [
-  '/docs/guides/generate-ai-report',
-  '/docs/guides/export-share-pdf',
-  '/docs/guides/manage-projects',
-  '/docs/guides/capture-notes-voice',
-  '/docs/guides/collaborate-members',
-  '/docs/guides/edit-report-manually',
-  '/docs/guides/browse-saved-reports',
-  '/docs/guides/getting-started',
-  '/docs/guides/your-account',
+  '/reports/docs/guides/generate-ai-report',
+  '/reports/docs/guides/export-share-pdf',
+  '/reports/docs/guides/manage-projects',
+  '/reports/docs/guides/capture-notes-voice',
+  '/reports/docs/guides/collaborate-members',
+  '/reports/docs/guides/edit-report-manually',
+  '/reports/docs/guides/browse-saved-reports',
+  '/reports/docs/guides/getting-started',
+  '/reports/docs/guides/your-account',
 ] as const;
 
 test('presents two core workflows and concise supporting tasks', async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
 
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Guides and Workflows',
+      name: 'Guides and workflows',
     }),
   ).toBeVisible();
   await expect(
     page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link', {
-      name: 'Site Reporting',
+      name: 'Site reporting',
       exact: true,
     }),
-  ).toHaveAttribute('href', '/app');
+  ).toHaveAttribute('href', '/reports');
+  // App guides stay inside site reporting instead of the procurement home.
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('a[href="/"]'))
+    .toHaveCount(0);
   await expect(page.locator('#core-workflows-heading')).toBeVisible();
   await expect(page.locator('.docs-core-grid > *')).toHaveCount(2);
   await expect(page.locator('.docs-everyday-grid > *')).toHaveCount(5);
@@ -35,9 +38,9 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
   const montageCards = page.locator('.docs-montage-card');
   await expect(montageCards).toHaveCount(3);
   const montageDestinations = [
-    '/docs/guides/capture-notes-voice',
-    '/docs/guides/generate-ai-report',
-    '/docs/guides/export-share-pdf',
+    '/reports/docs/guides/capture-notes-voice',
+    '/reports/docs/guides/generate-ai-report',
+    '/reports/docs/guides/export-share-pdf',
   ];
   for (const [index, destination] of montageDestinations.entries()) {
     await expect(montageCards.nth(index)).toHaveAttribute('href', destination);
@@ -45,9 +48,16 @@ test('presents two core workflows and concise supporting tasks', async ({ page }
   await expect(page.locator('.docs-phone-frame')).toHaveCount(0);
 });
 test('searches guides locally and stays quiet before a query', async ({ page }) => {
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
 
-  const search = page.getByLabel('Search guides');
+  const searchRoot = page.locator('[data-docs-search]');
+  // Wait for the vanilla script so input events are never dropped under load.
+  await expect(searchRoot).toHaveAttribute('data-docs-search-ready', 'true');
+  const status = searchRoot.locator('[data-docs-search-status]');
+  await expect(status).toHaveAttribute('aria-live', 'polite');
+  await expect(status).toBeEmpty();
+
+  const search = page.getByRole('searchbox', { name: 'Search guides' });
   await search.fill('voice');
   const results = page.locator('.docs-guide-grid');
   await expect(
@@ -56,19 +66,62 @@ test('searches guides locally and stays quiet before a query', async ({ page }) 
     }),
   ).toBeVisible();
   await expect(results.getByRole('link', { name: 'Add members to a project' })).toHaveCount(0);
+  await expect(status).toHaveText(/^\d+ guides?$/);
 
   await search.fill('fax machine');
+  await expect(status).toHaveText('0 guides');
   await expect(page.getByRole('heading', { name: 'No matching guides' })).toBeVisible();
   await page.getByRole('button', { name: 'Clear search' }).click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
   await expect(page.locator('.docs-guide-grid')).toHaveCount(0);
+  await expect(status).toBeEmpty();
+});
+
+test('makes every core and everyday card a clearly labelled link', async ({ page }) => {
+  await page.goto('/reports/docs');
+
+  for (const selector of ['.docs-core-card', '.docs-everyday-card']) {
+    const cards = page.locator(selector);
+    for (let index = 0; index < (await cards.count()); index += 1) {
+      await expect(cards.nth(index).locator('.docs-card-cta')).toBeVisible();
+    }
+  }
+
+  const card = page.locator('.docs-everyday-card').first();
+  const href = await card.getByRole('link').getAttribute('href');
+  await card.scrollIntoViewIfNeeded();
+  const box = await card.boundingBox();
+  expect(box).not.toBeNull();
+  // Click the card's bottom-right corner, away from the heading link text.
+  await page.mouse.click((box?.x ?? 0) + (box?.width ?? 0) - 8, (box?.y ?? 0) + (box?.height ?? 0) - 8);
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+});
+
+test('exposes one distinctly labelled guide navigation at a time', async ({ page }) => {
+  for (const [width, visible, hidden] of [
+    [1280, 'Guide sections', 'Guide menu'],
+    [390, 'Guide menu', 'Guide sections'],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/reports/docs/guides/generate-ai-report');
+    if (width === 390) {
+      await page.locator('.docs-mobile-nav > summary').click();
+    }
+    await expect(page.getByRole('navigation', { name: visible, exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: hidden, exact: true })).toBeHidden();
+  }
 });
 
 test('renders the core workflow with optimized screenshots and pagination', async ({ page }) => {
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Generate an AI report' }),
   ).toBeVisible();
   await expect(page.locator('.docs-step')).toHaveCount(5);
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Step 1: Start a report' }),
+  ).toBeVisible();
   await expect(page.locator('.docs-guide-heading img')).toHaveCount(0);
 
   const screenshots = page.locator('.docs-step-media img');
@@ -83,7 +136,7 @@ test('renders the core workflow with optimized screenshots and pagination', asyn
   });
   await expect(fullScreenshotLinks).toHaveCount(4);
   for (let index = 0; index < (await fullScreenshotLinks.count()); index += 1) {
-    await expect(fullScreenshotLinks.nth(index)).toHaveAttribute('href', /^\/_astro\//);
+    await expect(fullScreenshotLinks.nth(index)).toHaveAttribute('href', /^\/_astro\/.+\.webp$/);
   }
 
   const pagination = page.getByRole('navigation', {
@@ -95,7 +148,7 @@ test('renders the core workflow with optimized screenshots and pagination', asyn
 
 test('opens a full screenshot in a dismissible dialog', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
 
   const trigger = page.getByRole('link', {
     name: 'View full screenshot for Finalize and review together',
@@ -186,8 +239,53 @@ test('opens a full screenshot in a dismissible dialog', async ({ page }) => {
   await expect(dialog).not.toBeVisible();
 });
 
+test('shows the loaded thumbnail while the full screenshot loads', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/reports/docs/guides/generate-ai-report');
+
+  const trigger = page.getByRole('link', {
+    name: 'View full screenshot for Finalize and review together',
+  });
+  const thumbnail = trigger.getByRole('img');
+  await thumbnail.scrollIntoViewIfNeeded();
+  await thumbnail.evaluate((image) => (image as HTMLImageElement).decode());
+  const previewSource = await thumbnail.evaluate(
+    (image) => (image as HTMLImageElement).currentSrc,
+  );
+  const fullSource = new URL((await trigger.getAttribute('href'))!, page.url()).href;
+  expect(previewSource).not.toBe(fullSource);
+
+  let releaseFullImage!: () => void;
+  const fullImageGate = new Promise<void>((resolve) => {
+    releaseFullImage = resolve;
+  });
+  await page.route(fullSource, async (route) => {
+    await fullImageGate;
+    await route.continue();
+  });
+
+  await trigger.click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Full screenshot for Finalize and review together',
+  });
+  const dialogImage = dialog.getByRole('img');
+  const imageRegion = dialog.locator('[data-docs-screenshot-dialog-region]');
+
+  try {
+    await expect(dialogImage).toHaveJSProperty('currentSrc', previewSource);
+    await expect(dialogImage).toHaveAttribute('data-docs-screenshot-state', 'preview');
+    await expect(imageRegion).toHaveAttribute('aria-busy', 'true');
+  } finally {
+    releaseFullImage();
+  }
+
+  await expect(dialogImage).toHaveJSProperty('currentSrc', fullSource);
+  await expect(dialogImage).toHaveAttribute('data-docs-screenshot-state', 'full');
+  await expect(imageRegion).toHaveAttribute('aria-busy', 'false');
+});
+
 test('keeps modified screenshot clicks as native new-tab links', async ({ browserName, page }) => {
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
 
   const trigger = page.getByRole('link', {
     name: 'View full screenshot for Start a report',
@@ -228,10 +326,10 @@ test('keeps modified screenshot clicks as native new-tab links', async ({ browse
 
 test('keeps tier navigation usable on a phone viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/docs/guides/generate-ai-report');
+  await page.goto('/reports/docs/guides/generate-ai-report');
 
   const mobileNav = page.locator('.docs-mobile-nav');
-  await mobileNav.getByText('Browse Site Reporting Guides', { exact: true }).click();
+  await mobileNav.getByText('Browse site reporting guides', { exact: true }).click();
   await expect(mobileNav.getByRole('link', { name: 'Export and share a PDF' })).toBeVisible();
   await expect(mobileNav.getByRole('link', { name: 'Your account' })).toBeVisible();
 
@@ -242,7 +340,7 @@ test('keeps tier navigation usable on a phone viewport', async ({ page }) => {
 });
 
 test('serves canonical docs links and generated images', async ({ page, request }) => {
-  await page.goto('/docs');
+  await page.goto('/reports/docs');
 
   const duplicateIds = await page.locator('[id]').evaluateAll((elements) => {
     const counts = new Map<string, number>();
@@ -278,13 +376,38 @@ test('serves canonical docs links and generated images', async ({ page, request 
 });
 
 test('uses the branded not-found page for an unknown guide', async ({ page }) => {
-  const response = await page.goto('/docs/guides/not-a-real-guide');
+  const response = await page.goto('/reports/docs/guides/not-a-real-guide');
   expect(response?.status()).toBe(404);
   await expect(
-    page.getByRole('heading', { level: 1, name: 'That Page Is Not Here.' }),
+    page.getByRole('heading', { level: 1, name: 'That page is not here.' }),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Procurement Overview' })).toBeVisible();
   await expect(
-    page.getByRole('main').getByRole('link', { name: 'Site Reporting Guides' }),
+    page.getByRole('main').getByRole('link', { name: 'Procurement overview' }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Site reporting guides' }),
+  ).toBeVisible();
+  const offers = page.locator('[data-not-found-offers] > [data-offer]');
+  await expect(offers).toHaveCount(2);
+  await expect(page.getByRole('heading', { level: 2, name: 'Interior procurement' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Site reporting app' })).toBeVisible();
+  // A missed app URL suggests the app card first.
+  await expect(offers.first()).toHaveAttribute('data-offer', 'reports');
+  await expect(offers.first()).toHaveAttribute('data-suggested', '');
+  await expect(offers.first().getByText('Looking for this?')).toBeVisible();
+  await expect(page.locator('[data-offer="procurement"]')).not.toHaveAttribute('data-suggested', /.*/);
+});
+
+test('keeps both not-found offers neutral for an unknown shared path', async ({ page }) => {
+  const response = await page.goto('/not-a-real-page');
+  expect(response?.status()).toBe(404);
+  await expect(page.locator('body')).toHaveAttribute('data-site-section', 'shared');
+  const offers = page.locator('[data-not-found-offers] > [data-offer]');
+  await expect(offers.nth(0)).toHaveAttribute('data-offer', 'procurement');
+  await expect(offers.nth(1)).toHaveAttribute('data-offer', 'reports');
+  await expect(page.locator('[data-offer][data-suggested]')).toHaveCount(0);
+  for (const label of await page.getByText('Looking for this?').all()) await expect(label).toBeHidden();
+  for (const link of await page.locator('[data-not-found-offers] a').all()) {
+    await expect(link).toHaveAttribute('data-audience-location', 'not_found');
+  }
 });

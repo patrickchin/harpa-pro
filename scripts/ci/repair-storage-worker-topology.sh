@@ -233,9 +233,27 @@ load_topology() {
       ]
     ' <<< "$inventory_json"
   )
+  PENDING_ACTIVE_WORKERS_JSON=$(
+    jq -c '
+      [
+        .[]
+        | select(.config.metadata.fly_process_group == "storage-worker")
+        | select(.state == "created" or .state == "starting")
+        | select(
+            ((.config.services // []) | type) == "array"
+            and ((.config.services // []) | length) == 0
+            and ((.config.standbys // []) | type) == "array"
+            and ((.config.standbys // []) | length) == 0
+            and ((.id // "") | type) == "string"
+            and ((.id // "") | length) > 0
+        )
+      ]
+    ' <<< "$inventory_json"
+  )
   STARTED_COUNT=$(jq -r 'length' <<< "$STARTED_WORKERS_JSON")
   STANDBY_COUNT=$(jq -r 'length' <<< "$STANDBY_WORKERS_JSON")
   STOPPED_RECOVERY_COUNT=$(jq -r 'length' <<< "$STOPPED_RECOVERY_WORKERS_JSON")
+  PENDING_ACTIVE_COUNT=$(jq -r 'length' <<< "$PENDING_ACTIVE_WORKERS_JSON")
 }
 
 topology_is_healthy() {
@@ -311,6 +329,80 @@ load_exact_candidate_transition() {
   fi
 }
 
+load_exact_paired_candidate_transition() {
+  local candidate_id="$1"
+  local standby_id="$2"
+  local transition="$3"
+
+  load_inventory
+  validate_deployed_identity "$INVENTORY_JSON"
+  if ! CANDIDATE_STATE=$(
+    jq -er \
+      --arg candidate_id "$candidate_id" \
+      --arg standby_id "$standby_id" '
+      [
+        .[]
+        | select(.config.metadata.fly_process_group == "storage-worker")
+      ] as $workers
+      | [
+          $workers[]
+          | select(.id == $candidate_id)
+        ] as $candidates
+      | [
+          $workers[]
+          | select(.id == $standby_id)
+        ] as $standbys
+      | if
+          $candidate_id != $standby_id
+          and ($workers | length) == 2
+          and ($candidates | length) == 1
+          and ($standbys | length) == 1
+          and (
+            ["created", "starting", "started"]
+            | index($candidates[0].state)
+          ) != null
+          and (($candidates[0].config.services // []) | type) == "array"
+          and (($candidates[0].config.services // []) | length) == 0
+          and (($candidates[0].config.standbys // []) | type) == "array"
+          and (($candidates[0].config.standbys // []) | length) == 0
+          and $standbys[0].state == "stopped"
+          and (($standbys[0].config.services // []) | type) == "array"
+          and (($standbys[0].config.services // []) | length) == 0
+          and $standbys[0].config.standbys == [$candidate_id]
+        then
+          $candidates[0].state
+        else
+          empty
+        end
+    ' <<< "$INVENTORY_JSON"
+  ); then
+    echo "::error::storage-worker candidate $candidate_id and standby $standby_id were not the exact current-release pair $transition for $APP_NAME; observed=$(topology_summary)" >&2
+    return 1
+  fi
+}
+
+wait_for_paired_candidate_started() {
+  local candidate_id="$1"
+  local standby_id="$2"
+  local attempt
+
+  for ((attempt = 1; attempt <= START_MAX_ATTEMPTS; attempt++)); do
+    load_exact_paired_candidate_transition \
+      "$candidate_id" \
+      "$standby_id" \
+      "while waiting for explicit start"
+    if [[ "$CANDIDATE_STATE" == "started" ]]; then
+      return 0
+    fi
+    if [[ "$attempt" -lt "$START_MAX_ATTEMPTS" ]]; then
+      sleep "$START_POLL_SECONDS"
+    fi
+  done
+
+  echo "::error::paired storage-worker candidate $candidate_id did not reach started after $START_MAX_ATTEMPTS fresh inventory checks for $APP_NAME; last_state=$CANDIDATE_STATE" >&2
+  return 1
+}
+
 wait_for_candidate_started() {
   local candidate_id="$1"
   local attempt
@@ -358,6 +450,34 @@ load_topology "$INVENTORY_JSON"
 
 if topology_is_healthy; then
   echo "storage-worker topology already healthy: one active worker and one standby ($APP_NAME)"
+  exit 0
+fi
+
+if [[ "$WORKER_COUNT" -eq 2 &&
+  "$PENDING_ACTIVE_COUNT" -eq 1 &&
+  "$STANDBY_COUNT" -eq 1 ]]; then
+  CANDIDATE_ID=$(jq -er '.[0].id' <<< "$PENDING_ACTIVE_WORKERS_JSON")
+  STANDBY_ID=$(jq -er '.[0].id' <<< "$STANDBY_WORKERS_JSON")
+  load_exact_paired_candidate_transition \
+    "$CANDIDATE_ID" \
+    "$STANDBY_ID" \
+    "immediately before recovery"
+
+  case "$CANDIDATE_STATE" in
+    created)
+      echo "starting created current-release storage-worker $CANDIDATE_ID ($APP_NAME)"
+      flyctl machine start "$CANDIDATE_ID" --app "$APP_NAME"
+      wait_for_paired_candidate_started "$CANDIDATE_ID" "$STANDBY_ID"
+      ;;
+    starting)
+      wait_for_paired_candidate_started "$CANDIDATE_ID" "$STANDBY_ID"
+      ;;
+    started)
+      ;;
+  esac
+
+  verify_healthy_inventory
+  echo "storage-worker topology repaired: $CANDIDATE_ID is active with its verified standby $STANDBY_ID ($APP_NAME)"
   exit 0
 fi
 

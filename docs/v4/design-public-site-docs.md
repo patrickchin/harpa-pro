@@ -1,12 +1,18 @@
 # Public site and documentation design
 
+Current URL and source ownership is defined by
+[product URL organization](design-site-product-url-organization.md). That
+later decision supersedes the route and source paths below; the content and
+interaction requirements still apply.
+
+
 Status: implemented. Guide content and all nine release screenshots were
 reverified on 2026-08-04.
 
 ## Context
 
-The public documentation at `docs.harpapro.com` was a manually deployed
-Next.js build from an older codebase. At the time of this decision, the
+Earlier public documentation used a manually deployed Next.js build from
+an older codebase. At the time of this decision, the
 current repository contained only a placeholder under `apps/docs`, so the
 live site had drifted from the v4 product. Its instructions still described
 SMS authentication, Admin roles, a dedicated report Edit tab, manual-only
@@ -28,10 +34,9 @@ at `https://harpapro.com/docs`. Remove the obsolete `apps/docs` Next.js
 placeholder. Continue deploying one static output to the existing Cloudflare
 Pages project `harpa-pro`.
 
-After production verification, redirect `docs.harpapro.com` to
-`harpapro.com/docs` at the Cloudflare zone. Preserve the legacy path where a
-known equivalent exists. Retire the old Vercel project only after the redirect
-and canonical site have been verified.
+Current app guides live at `/reports/docs` within the same site deployment,
+as defined by [product URL organization](design-site-product-url-organization.md).
+A separate documentation hostname is not required.
 
 ## Alternatives considered
 
@@ -109,17 +114,23 @@ conventions. The index restores the original task-first presentation:
   sharing;
 - two large core-workflow cards;
 - smaller everyday-task cards;
+- core and everyday cards that are fully clickable through a stretched heading
+  link, each with a visible "Read the steps →" or "Read the guide →" cue;
 - de-emphasized setup and account links;
 - local search as a supporting control rather than the primary hierarchy.
 
 The documentation layout adds:
 
-- tiered navigation on desktop;
-- accessible mobile navigation;
+- tiered navigation on desktop, labelled **Guide sections**;
+- a collapsible mobile menu with a chevron, labelled **Guide menu**. CSS shows
+  only one of the two navigation copies at each breakpoint, so assistive
+  technology encounters one landmark at a time;
 - breadcrumbs;
 - previous and next guide links;
 - related guides;
-- numbered step cards and contextual screenshot crops.
+- numbered step cards and contextual screenshot crops. The visible number is
+  decorative; each step heading includes visually hidden "Step N:" text so
+  screen readers announce the order.
 
 Guide headings are text-only at every breakpoint. They do not reserve a
 second column for a full-height phone screenshot, so the first task starts
@@ -140,7 +151,9 @@ the complete capture opens in the accessible dialog defined by
 reader keeps their place in the guide. The docs do not add a carousel.
 
 The core content and navigation work without JavaScript. Search is a small
-client-side enhancement over a static build-time index. Search terms stay in
+client-side enhancement over a static build-time index. It is a plain Astro
+component with a vanilla script, not a hydrated React island. A persistent
+polite live region announces the result count. Search terms stay in
 the browser and are not sent to analytics. No-results states suggest browsing
 categories or contacting support.
 
@@ -148,7 +161,10 @@ Only reviewed screenshots from the current v4 app may ship. The initial
 revision reuses the checked-in App Store screenshots and copies them into the
 site's asset graph so the public-site build does not depend on another
 workspace at deploy time. A central screenshot registry owns the focal point
-used for each crop so MDX guides do not carry layout coordinates. New
+used for each crop so MDX guides do not carry layout coordinates. Every crop
+uses the same 16:10 frame, including the compact montage cards on narrow
+screens. Each focal point is chosen so the crop starts at a clean boundary,
+such as a gap between cards, and does not slice through app headers. New
 task-specific captures are deferred until an important screen or crop is
 missing. Old H3/v3 screenshots and generated mockups are excluded.
 
@@ -183,9 +199,9 @@ Canonical guide slugs mirror the original task names where possible, including
 `browse-saved-reports`. Known old documentation paths receive permanent
 redirects to the matching `/docs/guides/...` route. The temporary slugs from
 the first pull-request revision also redirect so review links remain valid.
-The Cloudflare hostname rule redirects other
-`docs.harpapro.com/<path>` requests to the canonical `/docs` destination. The
-cutover runbook records the exact redirect map and a rollback procedure.
+Current compatibility redirects live in `apps/site/public/_redirects` and
+point directly to `/reports/docs`. The deployment runbook verifies these
+paths as part of the same public-site deployment.
 
 ## Deployment
 

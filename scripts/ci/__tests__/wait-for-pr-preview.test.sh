@@ -136,6 +136,28 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+run_site_waiter() {
+  PREVIEW_WORKFLOW_FILE=site-preview.yml PREVIEW_JOB_NAME=deployment run_waiter "$@"
+}
+
+assert_pass "accepts exact-head site deployment after validation" "$TMP/t7.log" \
+  run_site_waiter '101\tcompleted\tsuccess' 'completed\tsuccess' t7
+
+assert_fail "rejects skipped site deployment" "$TMP/t8.log" \
+  run_site_waiter '101\tcompleted\tsuccess' 'completed\tskipped' t8
+assert_fail "rejects failed site validation workflow" "$TMP/t9.log" \
+  run_site_waiter '101\tcompleted\tfailure' '' t9
+assert_fail "rejects missing site deployment job" "$TMP/t10.log" \
+  run_site_waiter '101\tcompleted\tsuccess' '' t10
+if grep -q '/actions/workflows/site-preview.yml/runs' "$TMP/t7-args" && \
+  grep -Fq 'select(.name == "deployment")' "$TMP/t7-args"; then
+  echo "  ok   - site provenance selects the validation workflow and deployment job"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL - site provenance selects the wrong workflow or job"
+  FAIL=$((FAIL + 1))
+fi
+
 echo
 echo "failed: $FAIL"
 [[ "$FAIL" -eq 0 ]]

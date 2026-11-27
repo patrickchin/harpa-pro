@@ -506,3 +506,16 @@ live API can therefore still call live storage.
 Ordinary integration tests select replay mode and make no Cloudflare calls.
 Dedicated MinIO tests select `R2_FIXTURE_MODE=live` to exercise the real S3
 client and route wiring.
+
+MinIO's community container images are no longer available from Quay.
+[`infra/minio/Dockerfile`](../../infra/minio/Dockerfile) builds the server
+and `mc` client from pinned official source commits. Compose uses the same
+image for local storage and bucket initialization; fixture scripts execute
+the bundled client in the running server container.
+
+`pnpm --filter @harpa/api test:integration` and `test:coverage` build the
+image before integration hooks start. The first build downloads Go modules
+and compiles both binaries; subsequent builds reuse Docker layers. When
+running Vitest directly, first run
+`pnpm --filter @harpa/api test:storage:build`. This fixture is local/test
+infrastructure only; production storage remains Cloudflare R2.

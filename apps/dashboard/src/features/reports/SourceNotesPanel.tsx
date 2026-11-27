@@ -41,7 +41,7 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
           : [];
 
   return (
-    <article className="grid gap-3 rounded-card-ui border border-border bg-surface-emphasis p-3">
+    <article className="grid gap-3 rounded-card-ui border border-border/40 bg-surface-emphasis p-3">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Badge tone="info">{note.kind}</Badge>
@@ -56,7 +56,7 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
       </header>
       <p className="whitespace-pre-wrap">{noteText}</p>
       {note.summary && note.transcript ? (
-        <details className="rounded-control-ui border border-border bg-card p-3">
+        <details className="rounded-control-ui border border-border/40 bg-card p-3">
           <summary className="cursor-pointer font-semibold">Transcript</summary>
           <p className="mt-3 whitespace-pre-wrap text-muted-foreground">{note.transcript}</p>
         </details>
@@ -97,7 +97,7 @@ export function SourceNotesPanel({
 }: SourceNotesPanelProps) {
   return (
     <aside
-      className="grid min-w-0 gap-3 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
+      className="grid min-w-0 gap-3 rounded-card-ui border border-border/40 bg-card p-4"
       aria-labelledby="source-notes-heading"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

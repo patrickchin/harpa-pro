@@ -3,39 +3,42 @@ import { z } from 'zod';
 /**
  * AI model whitelist — single source of truth for both API validation
  * and mobile picker rendering. Each entry carries display metadata
- * (tagline, latency, cost) so the picker doesn't need a parallel
- * table.
+ * (tagline, cost, optional latency) so the picker doesn't need a
+ * parallel table.
  *
- * Latency is p50 from Fly Frankfurt (our prod region). Cost is USD
- * per report at ~1.2K input + 0.5K output tokens. See
+ * Hard-coded: retiring a model means editing this list. Saved user
+ * selections that fall off the list resolve to the server default
+ * (see packages/api/src/services/settings.ts `getAiSettings`).
+ *
+ * `reasoningEffort` is sent as `reasoning_effort` on live calls.
+ * `latencyMs` is p50 from Fly Frankfurt (our prod region) and is
+ * omitted until measured. `costPerReport` is USD per report at ~1.2K
+ * input + 0.5K output tokens at OpenAI list price. See
  * docs/superpowers/specs/2026-05-29-user-model-selection-design.md.
  */
 export const AI_MODELS = {
   openai: [
     {
-      id: 'gpt-4.1-nano',
-      label: 'GPT-4.1 nano',
-      tagline: 'Fastest and cheapest',
-      latencyMs: 2100,
-      costPerReport: 0.0003,
-    },
-    {
-      id: 'gpt-4.1-mini',
-      label: 'GPT-4.1 mini',
-      tagline: 'Default — balanced',
-      latencyMs: 4700,
-      costPerReport: 0.001,
+      id: 'gpt-6-luna',
+      label: 'GPT-6 Luna',
+      tagline: 'Fast and low cost',
+      costPerReport: 0.0004,
+      reasoningEffort: 'none',
       isDefault: true,
-    },
-    {
-      id: 'gpt-4.1',
-      label: 'GPT-4.1',
-      tagline: 'Highest quality',
-      latencyMs: 2600,
-      costPerReport: 0.006,
     },
   ],
 } as const;
+
+export type AiReasoningEffort = 'none' | 'low' | 'medium' | 'high';
+
+/** Reasoning effort for a catalogued model, or undefined if unknown. */
+export function reasoningEffortFor(model: string): AiReasoningEffort | undefined {
+  for (const list of Object.values(AI_MODELS)) {
+    const hit = list.find((m) => m.id === model);
+    if (hit) return hit.reasoningEffort;
+  }
+  return undefined;
+}
 
 export type AiVendor = keyof typeof AI_MODELS;
 export type AiModelId = (typeof AI_MODELS)[AiVendor][number]['id'];

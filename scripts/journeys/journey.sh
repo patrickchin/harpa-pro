@@ -88,7 +88,7 @@ echo "→ GET /me/usage";      req GET /me/usage '' >/dev/null
 
 echo "→ GET /settings/ai";   req GET /settings/ai '' >/dev/null
 echo "→ PATCH /settings/ai"
-req PATCH /settings/ai '{"vendor":"openai","model":"gpt-4.1-mini"}' >/dev/null
+req PATCH /settings/ai '{"vendor":"openai","model":"gpt-6-luna"}' >/dev/null
 
 echo "→ GET /projects";      req GET /projects '' >/dev/null
 echo "→ POST /projects"

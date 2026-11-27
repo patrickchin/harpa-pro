@@ -4,24 +4,28 @@ import {
   aiSettings,
   updateAiSettingsRequest,
   isValidAiSelection,
+  reasoningEffortFor,
 } from './settings.js';
 
 describe('AI_MODELS', () => {
-  it('lists only openai with the GPT-4.1 family', () => {
+  it('lists only openai with GPT-6 Luna', () => {
     expect(Object.keys(AI_MODELS)).toEqual(['openai']);
-    expect(AI_MODELS.openai.map((m) => m.id)).toEqual([
-      'gpt-4.1-nano',
-      'gpt-4.1-mini',
-      'gpt-4.1',
-    ]);
+    expect(AI_MODELS.openai.map((m) => m.id)).toEqual(['gpt-6-luna']);
   });
 
-  it('every entry has tagline + latencyMs + costPerReport', () => {
+  it('every entry has label + tagline + costPerReport + reasoningEffort', () => {
     for (const m of AI_MODELS.openai) {
       expect(typeof m.label).toBe('string');
       expect(typeof m.tagline).toBe('string');
-      expect(typeof m.latencyMs).toBe('number');
       expect(typeof m.costPerReport).toBe('number');
+      expect(['none', 'low', 'medium', 'high']).toContain(m.reasoningEffort);
+    }
+  });
+
+  it('rejects retired and held-back OpenAI models', () => {
+    const ids = ['gpt-6.1-terra', 'gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-4o', 'gpt-4o-mini'];
+    for (const id of ids) {
+      expect(isValidAiSelection({ vendor: 'openai', model: id })).toBe(false);
     }
   });
 
@@ -30,7 +34,7 @@ describe('AI_MODELS', () => {
       (m): m is typeof m & { isDefault: true } => 'isDefault' in m && m.isDefault === true,
     );
     expect(defaults).toHaveLength(1);
-    expect(defaults[0]!.id).toBe('gpt-4.1-mini');
+    expect(defaults[0]!.id).toBe('gpt-6-luna');
   });
 });
 
@@ -43,9 +47,9 @@ describe('aiSettings', () => {
   });
 
   it('accepts a valid pair', () => {
-    expect(aiSettings.parse({ vendor: 'openai', model: 'gpt-4.1-nano' })).toEqual({
+    expect(aiSettings.parse({ vendor: 'openai', model: 'gpt-6-luna' })).toEqual({
       vendor: 'openai',
-      model: 'gpt-4.1-nano',
+      model: 'gpt-6-luna',
     });
   });
 
@@ -54,7 +58,7 @@ describe('aiSettings', () => {
   });
 
   it('rejects model without vendor', () => {
-    expect(() => aiSettings.parse({ vendor: null, model: 'gpt-4.1-nano' })).toThrow();
+    expect(() => aiSettings.parse({ vendor: null, model: 'gpt-6-luna' })).toThrow();
   });
 });
 
@@ -64,7 +68,7 @@ describe('isValidAiSelection', () => {
   });
 
   it('returns true for any whitelisted pair', () => {
-    expect(isValidAiSelection({ vendor: 'openai', model: 'gpt-4.1-mini' })).toBe(true);
+    expect(isValidAiSelection({ vendor: 'openai', model: 'gpt-6-luna' })).toBe(true);
   });
 
   it('returns false for a model not in the whitelist', () => {
@@ -79,14 +83,25 @@ describe('isValidAiSelection', () => {
 
   it('returns false for mixed null/non-null', () => {
     expect(isValidAiSelection({ vendor: 'openai', model: null })).toBe(false);
-    expect(isValidAiSelection({ vendor: null, model: 'gpt-4.1-mini' })).toBe(false);
+    expect(isValidAiSelection({ vendor: null, model: 'gpt-6-luna' })).toBe(false);
+  });
+});
+
+describe('reasoningEffortFor', () => {
+  it('returns the catalogued effort', () => {
+    expect(reasoningEffortFor('gpt-6-luna')).toBe('none');
+  });
+
+  it('returns undefined for uncatalogued models', () => {
+    expect(reasoningEffortFor('gpt-4o')).toBeUndefined();
+    expect(reasoningEffortFor('gpt-6.1-terra')).toBeUndefined();
   });
 });
 
 describe('updateAiSettingsRequest', () => {
   it('accepts {vendor, model} pair', () => {
     expect(
-      updateAiSettingsRequest.parse({ vendor: 'openai', model: 'gpt-4.1-mini' }),
+      updateAiSettingsRequest.parse({ vendor: 'openai', model: 'gpt-6-luna' }),
     ).toBeTruthy();
   });
 

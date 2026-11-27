@@ -73,7 +73,7 @@ step "3a. settings ai get"
 HARPA_TOKEN="$TOKEN_A" $CLI settings ai get
 
 step "3b. settings ai set"
-HARPA_TOKEN="$TOKEN_A" $CLI settings ai set --vendor openai --model gpt-4.1-mini
+HARPA_TOKEN="$TOKEN_A" $CLI settings ai set --vendor openai --model gpt-6-luna
 
 step "3c. settings ai clear"
 HARPA_TOKEN="$TOKEN_A" $CLI settings ai set --clear

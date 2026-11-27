@@ -142,11 +142,11 @@ describeOrSkip('generateReport — live OpenAI', () => {
       expect(result.fixtureMode).toBe('live');
       expect(result.vendor).toBe('openai');
       // Default wiring: no userVendor/userModel passed → must hit
-      // LIVE_DEFAULT_MODELS.report.model (gpt-4.1-mini). If this
+      // LIVE_DEFAULT_MODELS.report.model (gpt-6-luna). If this
       // assertion ever drifts to `gpt-4o*` or another model, the
       // default has silently changed; update LIVE_DEFAULT_MODELS or
       // the spec, not this assertion.
-      expect(result.model).toBe('gpt-4.1-mini');
+      expect(result.model).toBe('gpt-6-luna');
       const parsed = reportSchemas.reportBody.safeParse(result.body);
       if (!parsed.success) {
         const issues = parsed.error.issues
@@ -172,16 +172,16 @@ describeOrSkip('generateReport — live OpenAI', () => {
   );
 
   it(
-    'honours userModel override (gpt-4.1-nano) when caller passes it',
+    'honours userModel override (gpt-6-luna) when caller passes it',
     async () => {
       const result = await generateReport({
         notes: notesPayload(SCENARIOS[2]!.notes),
         userVendor: 'openai',
-        userModel: 'gpt-4.1-nano',
+        userModel: 'gpt-6-luna',
       });
       expect(result.fixtureMode).toBe('live');
       expect(result.vendor).toBe('openai');
-      expect(result.model).toBe('gpt-4.1-nano');
+      expect(result.model).toBe('gpt-6-luna');
       const parsed = reportSchemas.reportBody.safeParse(result.body);
       if (!parsed.success) {
         const issues = parsed.error.issues
@@ -202,7 +202,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
       });
       expect(result.fixtureMode).toBe('live');
       expect(result.vendor).toBe('openai');
-      expect(result.model).toBe('gpt-4.1-mini');
+      expect(result.model).toBe('gpt-6-luna');
     },
   );
 });

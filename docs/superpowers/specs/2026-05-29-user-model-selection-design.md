@@ -3,6 +3,20 @@
 > **Status:** ✅ Shipped. Per-user AI provider/model selection is wired
 > end-to-end (mobile picker → `/settings/ai` → AI service). Kept as
 > the original design rationale.
+>
+> **Update 2026-11-27 — GPT-6 catalogue.** OpenAI shut down
+> `gpt-4.1-nano` on 2026-10-23 (users who had picked it got 502s) and
+> shuts down `gpt-4.1`, `gpt-4.1-mini`, `gpt-4o` and `gpt-4o-mini` on
+> 2027-01-14. `AI_MODELS` now offers only `gpt-6-luna`
+> (`reasoning_effort: none`), and `LIVE_DEFAULT_MODELS` points at it.
+> `gpt-6.1-terra` was considered as a "highest quality" option but is
+> held back for now. Each entry carries a `reasoningEffort` that the live
+> path sends as `reasoning_effort`. `latencyMs` is omitted until we
+> re-bench from Fly Frankfurt. Saved selections that are no longer in
+> the catalogue read back as `{null, null}` (server default), so no
+> data migration is needed. Replay fixtures still pin `gpt-4o*`;
+> they never reach OpenAI. The GPT-4.1 references below are
+> historical.
 
 ## Problem
 

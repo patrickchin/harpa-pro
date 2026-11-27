@@ -8,7 +8,7 @@
  * file only owns the I/O.
  *
  * `selection === null` means the user has not picked — server falls
- * back to LIVE_DEFAULT_MODELS (currently gpt-4.1-mini for both
+ * back to LIVE_DEFAULT_MODELS (currently gpt-6-luna for both
  * report generation and voice summarization).
  *
  * The previous version persisted the picked vendor + model to

@@ -47,13 +47,13 @@ describe('/settings/ai', () => {
     const patch = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
-      body: JSON.stringify({ vendor: 'openai', model: 'gpt-4.1-nano' }),
+      body: JSON.stringify({ vendor: 'openai', model: 'gpt-6-luna' }),
     });
     expect(patch.status).toBe(200);
-    expect(await patch.json()).toEqual({ vendor: 'openai', model: 'gpt-4.1-nano' });
+    expect(await patch.json()).toEqual({ vendor: 'openai', model: 'gpt-6-luna' });
 
     const get = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
-    expect(await get.json()).toEqual({ vendor: 'openai', model: 'gpt-4.1-nano' });
+    expect(await get.json()).toEqual({ vendor: 'openai', model: 'gpt-6-luna' });
   });
 
   it('PATCH {vendor: null, model: null} clears the row back to default', async () => {
@@ -63,7 +63,7 @@ describe('/settings/ai', () => {
     const set = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
-      body: JSON.stringify({ vendor: 'openai', model: 'gpt-4.1' }),
+      body: JSON.stringify({ vendor: 'openai', model: 'gpt-6-luna' }),
     });
     expect(set.status).toBe(200);
 
@@ -89,6 +89,19 @@ describe('/settings/ai', () => {
       body: JSON.stringify({ vendor: 'openai', model: 'gpt-4o' }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it('GET reports a retired model (gpt-4.1-nano) as the server default', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    await getPool().query(
+      `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model)
+       VALUES ($1, 'openai', 'gpt-4.1-nano')
+       ON CONFLICT (user_id) DO UPDATE SET ai_vendor = EXCLUDED.ai_vendor, ai_model = EXCLUDED.ai_model`,
+      [alice],
+    );
+    const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
+    expect(await res.json()).toEqual({ vendor: null, model: null });
   });
 
   it('PATCH 400 on dropped vendor (kimi)', async () => {

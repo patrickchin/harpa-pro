@@ -92,7 +92,7 @@ describe('settings ai', () => {
     const exit = await settingsAiSet({
       client: makeClient(token),
       vendor: 'openai',
-      model: 'gpt-4.1-mini',
+      model: 'gpt-6-luna',
       json: true,
       stdout,
       stderr,
@@ -100,7 +100,7 @@ describe('settings ai', () => {
     expect(exit).toBe(EXIT.OK);
     const body = JSON.parse(stdout.text);
     expect(body.vendor).toBe('openai');
-    expect(body.model).toBe('gpt-4.1-mini');
+    expect(body.model).toBe('gpt-6-luna');
 
     // Verify it persists across the next GET.
     const verifyOut = new MemoryStream();
@@ -112,7 +112,7 @@ describe('settings ai', () => {
     });
     const persisted = JSON.parse(verifyOut.text);
     expect(persisted.vendor).toBe('openai');
-    expect(persisted.model).toBe('gpt-4.1-mini');
+    expect(persisted.model).toBe('gpt-6-luna');
 
     // Clear it back to {null, null}.
     const clearOut = new MemoryStream();

@@ -26,7 +26,7 @@ import {
   type FixtureMode,
   type Vendor,
 } from '@harpa/ai-fixtures';
-import { reports as reportSchemas } from '@harpa/api-contract';
+import { reports as reportSchemas, settings as settingsSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
 import type { ScopedDb } from '../db/scope.js';
 import { env } from '../env.js';
@@ -167,13 +167,14 @@ export const FIXTURE_CANONICALS = {
  *     real provider when nothing else is specified. Bumping it does
  *     not require re-recording fixtures.
  *
- * Both default to the same model today (gpt-4.1-mini) — chosen for the
- * 4o-class quality at ~10× lower cost. The indirection lets us roll
+ * Both default to the same model today (gpt-6-luna) — OpenAI's named
+ * replacement for the GPT-4.1 / 4o family (shut down 2027-01-14), at
+ * ~3× lower cost than gpt-4.1-mini. The indirection lets us roll
  * one forward without a fixture refresh.
  */
 export const LIVE_DEFAULT_MODELS = {
-  report: { vendor: 'openai' as Vendor, model: 'gpt-4.1-mini' },
-  summarize: { vendor: 'openai' as Vendor, model: 'gpt-4.1-mini' },
+  report: { vendor: 'openai' as Vendor, model: 'gpt-6-luna' },
+  summarize: { vendor: 'openai' as Vendor, model: 'gpt-6-luna' },
 } as const;
 
 /**
@@ -424,6 +425,7 @@ export async function summarize(input: SummarizeInput): Promise<SummarizeOutput>
           userPrompt: input.userPrompt,
           temperature: input.temperature,
           maxTokens: input.maxTokens,
+          reasoningEffort: settingsSchemas.reasoningEffortFor(liveModel),
         };
   const provider = buildProviderWithMode(vendor, fixtureName, mode);
   const out = await withUsageAccounting(
@@ -571,6 +573,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
           systemPrompt: liveSystemPrompt,
           userPrompt: liveUserPrompt,
           responseFormat: 'json_object' as const,
+          reasoningEffort: settingsSchemas.reasoningEffortFor(liveModel),
         };
 
   const provider = buildProviderWithMode(providerVendor, fixtureName, mode);

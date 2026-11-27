@@ -169,7 +169,7 @@ test.describe('dashboard live preview journey', () => {
       const reportDebug = await getReportDebug(request, ownerToken, projectId, liveReportNumber);
       expect(reportDebug.lastGeneration?.fixtureMode).toBe('live');
       expect(reportDebug.lastGeneration).toMatchObject({
-        model: 'gpt-4.1-mini',
+        model: 'gpt-6-luna',
         vendor: 'openai',
       });
       expect(reportDebug.lastGeneration?.response.trim().length).toBeGreaterThan(0);
@@ -419,7 +419,7 @@ async function getAiSettings(request: APIRequestContext, token: string): Promise
 async function setAiSettings(
   request: APIRequestContext,
   token: string,
-  settings: AiSettings = { vendor: 'openai', model: 'gpt-4.1-mini' },
+  settings: AiSettings = { vendor: 'openai', model: 'gpt-6-luna' },
 ): Promise<void> {
   const response = await request.patch(`${apiUrl}/settings/ai`, {
     headers: authHeaders(token),

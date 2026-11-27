@@ -143,7 +143,7 @@ harpa voice transcribe --file-id <fileId>
 harpa voice summarize --transcript "Crew poured concrete at 08:00."
 
 harpa settings ai get
-harpa settings ai set --vendor openai --model gpt-4.1-mini
+harpa settings ai set --vendor openai --model gpt-6-luna
 harpa settings ai set --clear
 ```
 

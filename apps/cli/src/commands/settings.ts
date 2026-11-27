@@ -2,7 +2,7 @@
  * `harpa settings` — user AI provider settings.
  *
  *   harpa settings ai get
- *   harpa settings ai set --vendor openai --model gpt-4.1-mini
+ *   harpa settings ai set --vendor openai --model gpt-6-luna
  *   harpa settings ai set --clear      # clear any user override; use server default
  *
  * Catalogue lives in `@harpa/api-contract`'s `AI_MODELS`. The

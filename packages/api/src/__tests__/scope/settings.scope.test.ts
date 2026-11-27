@@ -34,13 +34,13 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   // Seed both alice and bob with rows so the scope tests can prove
-  // self-only visibility. Use whitelisted (vendor, model) pairs from
-  // `AI_MODELS` — the service layer maps any non-whitelisted legacy
-  // value to {null, null}, which would mask scope leaks.
+  // self-only visibility. Alice uses the whitelisted pair from
+  // `AI_MODELS`; bob has an explicit cleared row. `AI_MODELS` has a
+  // single entry, so the two rows differ by null vs set.
   await admin.query(
     `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model) VALUES
-      ($1, 'openai', 'gpt-4.1-nano'),
-      ($2, 'openai', 'gpt-4.1-mini')`,
+      ($1, 'openai', 'gpt-6-luna'),
+      ($2, NULL, NULL)`,
     [alice, bob],
   );
   await admin.end();
@@ -57,7 +57,7 @@ describe('scope: /settings/ai', () => {
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     const body = (await res.json()) as { vendor: string | null; model: string | null };
     expect(body.vendor).toBe('openai');
-    expect(body.model).toBe('gpt-4.1-nano');
+    expect(body.model).toBe('gpt-6-luna');
   });
 
   it('bob GET sees his own row', async () => {
@@ -65,8 +65,8 @@ describe('scope: /settings/ai', () => {
     const tok = await signTestToken(bob, bobSid);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     const body = (await res.json()) as { vendor: string | null; model: string | null };
-    expect(body.vendor).toBe('openai');
-    expect(body.model).toBe('gpt-4.1-mini');
+    expect(body.vendor).toBeNull();
+    expect(body.model).toBeNull();
   });
 
   it('paired — alice PATCH does not mutate bob row', async () => {
@@ -75,16 +75,16 @@ describe('scope: /settings/ai', () => {
     await app.request('/settings/ai', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ vendor: 'openai', model: 'gpt-4.1' }),
+      body: JSON.stringify({ vendor: 'openai', model: 'gpt-6-luna' }),
     });
     const conn = await getPool().connect();
     try {
-      const r = await conn.query<{ ai_vendor: string; ai_model: string }>(
+      const r = await conn.query<{ ai_vendor: string | null; ai_model: string | null }>(
         `SELECT ai_vendor, ai_model FROM app.user_settings WHERE user_id = $1`,
         [bob],
       );
-      expect(r.rows[0]?.ai_vendor).toBe('openai');
-      expect(r.rows[0]?.ai_model).toBe('gpt-4.1-mini');
+      expect(r.rows[0]?.ai_vendor).toBeNull();
+      expect(r.rows[0]?.ai_model).toBeNull();
     } finally {
       conn.release();
     }

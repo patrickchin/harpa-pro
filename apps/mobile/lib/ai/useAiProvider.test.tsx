@@ -84,7 +84,7 @@ describe('useAiProvider', () => {
 
   it('resolves selection from /settings/ai', async () => {
     mockFetch.mockResolvedValueOnce(
-      jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1-nano' }),
+      jsonResponse(200, { vendor: 'openai', model: 'gpt-6-luna' }),
     );
     const qc = makeClient();
     const ref = renderHook(() => useAiProvider(), qc);
@@ -93,7 +93,7 @@ describe('useAiProvider', () => {
     expect(ref.current.isLoading).toBe(false);
     expect(ref.current.selection).toEqual({
       vendor: 'openai',
-      model: 'gpt-4.1-nano',
+      model: 'gpt-6-luna',
     });
   });
 
@@ -111,10 +111,10 @@ describe('useAiProvider', () => {
     mockFetch
       .mockResolvedValueOnce(jsonResponse(200, { vendor: null, model: null }))
       .mockResolvedValueOnce(
-        jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1' }),
+        jsonResponse(200, { vendor: 'openai', model: 'gpt-6-luna' }),
       )
       .mockResolvedValueOnce(
-        jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1' }),
+        jsonResponse(200, { vendor: 'openai', model: 'gpt-6-luna' }),
       );
     const qc = makeClient();
     const ref = renderHook(() => useAiProvider(), qc);
@@ -123,7 +123,7 @@ describe('useAiProvider', () => {
     await act(async () => {
       await (ref.current as UseAiProviderApi).setSelection({
         vendor: 'openai',
-        model: 'gpt-4.1',
+        model: 'gpt-6-luna',
       });
     });
     await flush();
@@ -134,15 +134,15 @@ describe('useAiProvider', () => {
     expect(patchCall).toBeTruthy();
     expect(JSON.parse(patchCall![1].body as string)).toEqual({
       vendor: 'openai',
-      model: 'gpt-4.1',
+      model: 'gpt-6-luna',
     });
-    expect(ref.current.selection).toEqual({ vendor: 'openai', model: 'gpt-4.1' });
+    expect(ref.current.selection).toEqual({ vendor: 'openai', model: 'gpt-6-luna' });
   });
 
   it('setSelection(null) clears the row to {null, null}', async () => {
     mockFetch
       .mockResolvedValueOnce(
-        jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1' }),
+        jsonResponse(200, { vendor: 'openai', model: 'gpt-6-luna' }),
       )
       .mockResolvedValueOnce(jsonResponse(200, { vendor: null, model: null }))
       .mockResolvedValueOnce(jsonResponse(200, { vendor: null, model: null }));

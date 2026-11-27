@@ -56,10 +56,11 @@ export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
         model: req.model,
         messages,
         ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
-        ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
+        ...(req.maxTokens !== undefined ? { max_completion_tokens: req.maxTokens } : {}),
         ...(req.responseFormat === 'json_object'
           ? { response_format: { type: 'json_object' as const } }
           : {}),
+        ...(req.reasoningEffort !== undefined ? { reasoning_effort: req.reasoningEffort } : {}),
       };
 
       const json = (await requestChatCompletion(body)) as ChatCompletionResponse;

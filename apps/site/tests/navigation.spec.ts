@@ -5,6 +5,7 @@ import { sectionForPath } from '../src/lib/site/sections';
 const REQUIRED_ROUTES = [
   '/',
   '/reports',
+  '/reports/download',
   '/reports/docs',
   '/reports/roadmap',
   '/privacy',
@@ -12,6 +13,24 @@ const REQUIRED_ROUTES = [
   '/procurement/how-to-buy-from-china',
   '/procurement/guides',
 ] as const;
+
+test('links to the iPhone app, closed Play test, and signed APK', async ({ page }) => {
+  await page.goto('/reports');
+  await page.locator('nav[aria-label="Primary"]').getByRole('link', { name: 'Get the app', exact: true }).click();
+  await expect(page).toHaveURL(/\/reports\/download$/);
+  const main = page.locator('main');
+  await expect(main.getByRole('heading', { level: 1, name: 'Download Harpa Pro' })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute('href', APP_STORE_URL);
+  await expect(main.getByRole('link', { name: 'Join Google Play test' }))
+    .toHaveAttribute('href', 'https://play.google.com/apps/testing/com.harpa.pro');
+  await expect(main.getByRole('link', { name: 'Download APK' })).toHaveAttribute('href',
+    /^https:\/\/github\.com\/patrickchin\/harpa-pro\/releases\/download\/android-apk-v([\d.]+)\/Harpa-Pro-\1\.apk$/);
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(main.getByRole('link', { name: 'Download APK' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
+});
 
 test('separates procurement from site reporting', async ({ page }) => {
   await page.goto('/reports');

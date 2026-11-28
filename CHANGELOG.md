@@ -10,6 +10,18 @@ in the repository's Git history and tags.
 
 ## [Unreleased]
 
+## [0.1.67] - 2026-11-28
+
+### Added
+
+- Added a capture control for voice, photo, and text notes on reports.
+
+### Fixed
+
+- Preserve report edits made while a draft is generating or when a save
+  needs to be retried.
+- Improve report generation and retry handling.
+
 ## [0.1.66] - 2026-09-03
 
 ### Added

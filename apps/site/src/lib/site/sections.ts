@@ -1,4 +1,4 @@
-import { APP_STORE_URL } from "../reports/links";
+import { APP_DOWNLOAD_PATH } from "../reports/links";
 import { REPORTS_SOCIAL_IMAGE } from "../social-images";
 
 /**
@@ -78,10 +78,9 @@ const REPORTS_LINKS: NavLink[] = [
 
 const GET_THE_APP = {
   label: "Get the app",
-  href: APP_STORE_URL,
-  description: "Open the App Store",
+  href: APP_DOWNLOAD_PATH,
+  description: "Download for iPhone or Android",
   icon: "download",
-  external: true,
 } as const satisfies NavLink;
 
 const CONTACT = { label: "Contact us", href: "/#contact", icon: "message-circle" } as const satisfies NavLink;

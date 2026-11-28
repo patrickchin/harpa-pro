@@ -183,7 +183,7 @@ describe('site smoke', () => {
     expect(chrome).toContain('href: "/reports"');
     expect(chrome).toContain('Site reporting');
     expect(chrome).toContain('href: "/#contact"');
-    expect(chrome).toContain('APP_STORE_URL');
+    expect(chrome).toContain('APP_DOWNLOAD_PATH');
     expect(header + chrome).not.toContain('View evidence');
     expect(footer).toContain('rel="noopener noreferrer"');
     expect(chrome.match(/href: "\/#contact"/g)).toHaveLength(1);

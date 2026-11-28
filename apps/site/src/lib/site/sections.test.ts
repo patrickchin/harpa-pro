@@ -62,9 +62,9 @@ describe('breadcrumbs', () => {
 });
 
 describe('section config', () => {
-  it('uses root-relative internal links and external App Store links', () => {
+  it('uses root-relative internal links and HTTPS external links', () => {
     for (const link of allLinks()) {
-      if (link.external) expect(link.href, link.label).toMatch(/^https:\/\/apps\.apple\.com\//);
+      if (link.external) expect(link.href, link.label).toMatch(/^https:\/\//);
       else expect(link.href, link.label).toMatch(/^\/(?!\/)/);
     }
   });
@@ -89,7 +89,7 @@ describe('section config', () => {
     ]);
     expect(reports.menu?.mobileLinks).toHaveLength(3);
     expect(procurement.cta).toMatchObject({ label: 'Contact us', href: '/#contact' });
-    expect(reports.cta).toMatchObject({ label: 'Get the app', external: true });
+    expect(reports.cta).toMatchObject({ label: 'Get the app', href: '/reports/download' });
     expect([procurement.home, reports.home, shared.home]).toEqual(['/', '/reports', '/']);
   });
 

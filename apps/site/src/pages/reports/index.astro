@@ -9,7 +9,7 @@ import HowItWorks from "../../components/reports/HowItWorks.astro";
 import SiteReportingHero from "../../components/reports/SiteReportingHero.astro";
 import Layout from "../../layouts/Layout.astro";
 import { getCollection } from "astro:content";
-import { APP_STORE_URL } from "../../lib/reports/links";
+import { ANDROID_APK_URL, APP_STORE_URL } from "../../lib/reports/links";
 import { REPORTS_SOCIAL_IMAGE } from "../../lib/social-images";
 
 const description = "Create AI construction daily report drafts from voice notes, photos, and text with Harpa Pro. Review, edit, finalize, and export reports as PDFs.";
@@ -23,9 +23,8 @@ const structuredData = [{
   description,
   url: appUrl,
   applicationCategory: "BusinessApplication",
-  operatingSystem: "iOS",
-  downloadUrl: APP_STORE_URL,
-  installUrl: APP_STORE_URL,
+  operatingSystem: "iOS, Android",
+  downloadUrl: [APP_STORE_URL, ANDROID_APK_URL],
   image: new URL(REPORTS_SOCIAL_IMAGE.src, Astro.site).href,
   publisher: { "@id": `${homeUrl}#organization` },
   mainEntityOfPage: { "@id": `${appUrl}#webpage` },

@@ -44,7 +44,7 @@ keep country requirements in the main buying guide. See the
 | Scope | Canonical routes | Source ownership beneath `src/` |
 | --- | --- | --- |
 | Procurement | `/`, `/procurement/how-to-buy-from-china`, `/procurement/factory-documents` | `components/procurement`, `content/procurement`, `assets/procurement`, `lib/procurement` |
-| Site reporting app | `/reports`, `/reports/docs`, `/reports/roadmap`, `/reports/account-deletion` | `pages/reports`, `components/reports`, `content/reports`, `lib/reports`, `layouts/reports`, `assets/reports` |
+| Site reporting app | `/reports`, `/reports/download`, `/reports/docs`, `/reports/roadmap`, `/reports/account-deletion` | `pages/reports`, `components/reports`, `content/reports`, `lib/reports`, `layouts/reports`, `assets/reports` |
 | Shared website | `/privacy`, branded 404 | `components/site`, `lib/site`, base layout, primitives, analytics, legal helpers |
 
 The procurement homepage remains `/`; `/procurement` is its permanent alias.
@@ -59,6 +59,8 @@ Privacy covers both the website and app. The app updates confirmation page
 lives at `/reports/confirm` and is excluded from search. Its result is
 announced through a `role="status"` region. Failed or expired links point to
 `/reports`, the App Store, and support email because no page has a signup form.
+The [download page](../../docs/v4/design-reports-download.md) links to the
+App Store, Google Play's closed test, and a signed universal Android APK.
 App content
 collections are `reportsDocs`, `reportsFeatures`, `reportsFaq`, and
 `reportsRoadmap`. Mobile, API, and dashboard workspace names are unchanged.

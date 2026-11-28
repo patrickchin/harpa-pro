@@ -1,0 +1,96 @@
+---
+import AppStoreBadge from "../../components/reports/AppStoreBadge.astro";
+import Button from "../../components/primitives/Button.astro";
+import Container from "../../components/primitives/Container.astro";
+import Footer from "../../components/site/Footer.astro";
+import Header from "../../components/site/Header.astro";
+import Layout from "../../layouts/Layout.astro";
+import {
+  ANDROID_APK_URL,
+  ANDROID_APK_VERSION,
+  PLAY_CLOSED_TEST_URL,
+} from "../../lib/reports/links";
+---
+
+<Layout
+  section="reports"
+  title="Download Harpa Pro"
+  description="Get Harpa Pro for iPhone or Android. Download from the App Store, join the Google Play test, or install the signed Android APK."
+>
+  <div class="download-page flex min-h-dvh flex-col bg-background text-ink">
+    <Header section="reports" />
+    <main id="main-content" class="flex-1">
+      <Container
+        padding="none"
+        class="grid items-start gap-8 py-12 sm:px-6 md:grid-cols-[5fr_7fr] md:gap-12 md:py-20"
+      >
+        <div class="space-y-4">
+          <h1 class="text-5xl leading-none font-semibold tracking-tight lg:text-7xl">
+            <span class="block">Download</span> Harpa Pro
+          </h1>
+          <p class="max-w-sm text-lg leading-relaxed">
+            Turn voice notes, photos, and text into daily site reports from your phone.
+          </p>
+        </div>
+
+        <div class="space-y-8 bg-card px-5 py-7 sm:px-8 sm:py-8">
+          <section aria-labelledby="download-iphone" class="space-y-3">
+            <h2 id="download-iphone" class="text-2xl font-semibold">iPhone</h2>
+            <AppStoreBadge eager />
+          </section>
+
+          <section aria-labelledby="download-android" class="space-y-4">
+            <h2 id="download-android" class="text-2xl font-semibold">Android</h2>
+            <p class="max-w-prose leading-relaxed">
+              Install the signed APK directly. If you’ve joined the closed
+              test, use Google Play to install or update the app.
+            </p>
+            <div class="flex flex-wrap items-start gap-x-5 gap-y-2">
+              <div class="space-y-2">
+                <Button
+                  href={ANDROID_APK_URL}
+                  size="touch"
+                  variant="accent"
+                  elevated={false}
+                  icon="download"
+                  aria-describedby="apk-version"
+                >
+                  Download APK
+                </Button>
+                <p id="apk-version">APK version {ANDROID_APK_VERSION}</p>
+              </div>
+              <a
+                href={PLAY_CLOSED_TEST_URL}
+                class="ring-focus inline-flex min-h-11 items-center font-medium text-ink underline underline-offset-4 hover:text-accent-ink"
+              >
+                Join Google Play test
+              </a>
+            </div>
+          </section>
+        </div>
+      </Container>
+    </main>
+    <Footer section="reports" />
+  </div>
+</Layout>
+
+<style>
+  @media (prefers-reduced-motion: no-preference) {
+    .download-page h1,
+    .download-page main p,
+    .download-page main h2,
+    .download-page main :global(a) {
+      animation: download-enter 400ms ease-out both;
+    }
+
+    .download-page main p,
+    .download-page main :global(a) {
+      animation-delay: 70ms;
+    }
+
+    @keyframes download-enter {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+</style>

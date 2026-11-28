@@ -94,9 +94,12 @@ test('every sitemap page has unique metadata and an accurate production identity
     if (url.pathname === '/reports') {
       expect(graph.find((node) => node['@type'] === 'MobileApplication')).toMatchObject({
         name: 'Harpa Pro',
-        operatingSystem: 'iOS',
+        operatingSystem: 'iOS, Android',
         applicationCategory: 'BusinessApplication',
-        downloadUrl: 'https://apps.apple.com/us/app/harpa-pro/id6776759817',
+        downloadUrl: expect.arrayContaining([
+          'https://apps.apple.com/us/app/harpa-pro/id6776759817',
+          expect.stringMatching(/\.apk$/),
+        ]),
       });
       const faq = graph.find((node) => node['@type'] === 'FAQPage');
       const questions = faq?.mainEntity as { name: string; acceptedAnswer: { text: string } }[];
@@ -108,7 +111,7 @@ test('every sitemap page has unique metadata and an accurate production identity
         const answer = (await page.locator('#faq dd').nth(index).textContent())!;
         expect(question.acceptedAnswer.text).toBe(answer.replace(/\s+/g, ' ').trim());
       }
-      await expect(page.locator('main')).toContainText('An Android version is planned');
+      await expect(page.locator('#faq')).toContainText('closed Google Play test');
       await expect(page.locator('main')).toContainText('check, edit, and share');
       await expect(page.locator('main')).toContainText('for foremen and site supervisors');
       await expect(page.locator('#faq details')).toHaveCount(0);

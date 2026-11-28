@@ -875,7 +875,7 @@ test('uses accessible site-reporting navigation without procurement chrome', asy
     siteReportingMenu.getByRole('link', { name: /^Roadmap/ }),
   ).toHaveAttribute('href', '/reports/roadmap');
   await expect(siteReportingMenu.getByRole('link', { name: /^Get the app/ }))
-    .toHaveAttribute('target', '_blank');
+    .toHaveAttribute('href', '/reports/download');
   await page.mouse.click(20, 700);
   await expect(siteReportingMenu).not.toHaveAttribute('open', '');
 
@@ -890,16 +890,13 @@ test('uses accessible site-reporting navigation without procurement chrome', asy
     .toHaveAttribute('href', '/');
   await expect(desktopNav.getByRole('link', { name: 'Contact us', exact: true })).toHaveCount(0);
   const headerAppLink = desktopNav.locator(':scope > a', { hasText: 'Get the app' });
-  await expect(headerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
-  await expect(headerAppLink).toHaveAttribute('target', '_blank');
+  await expect(headerAppLink).toHaveAttribute('href', '/reports/download');
 
   const footer = page.locator('footer');
   await expect(footer.locator('nav[aria-label="Site reporting"]').getByRole('link'))
     .toHaveText(['Harpa Pro app', 'Guides', 'Roadmap', 'Get the app', 'Account deletion']);
   const footerAppLink = footer.getByRole('link', { name: 'Get the app', exact: true });
-  await expect(footerAppLink).toHaveAttribute('href', /^https:\/\/apps\.apple\.com\//);
-  await expect(footerAppLink).toHaveAttribute('target', '_blank');
-  await expect(footerAppLink).toHaveAttribute('rel', /noopener/);
+  await expect(footerAppLink).toHaveAttribute('href', '/reports/download');
   await expect(footer.locator('nav[aria-label="Procurement"]')).toHaveCount(0);
   await expect(footer.locator('a[href="/#contact"]')).toHaveCount(0);
   await expect(footer.locator('nav[aria-label="Also from Harpa Pro"]').getByRole('link'))

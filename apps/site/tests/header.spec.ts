@@ -157,5 +157,5 @@ test("offers the app download as the mobile action on site-reporting pages", asy
   const actions = page.locator("[data-mobile-menu] [data-mobile-actions]");
   await expect(actions.getByRole("link")).toHaveCount(1);
   await expect(actions.getByRole("link", { name: "Get the app", exact: true }))
-    .toHaveAttribute("target", "_blank");
+    .toHaveAttribute("href", "/reports/download");
 });

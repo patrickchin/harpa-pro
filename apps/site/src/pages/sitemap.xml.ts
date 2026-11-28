@@ -2,6 +2,7 @@ import { getCollection } from "astro:content";
 import type { APIRoute } from "astro";
 
 import { guideHref, sortGuides } from "../lib/reports/docs";
+import { APP_DOWNLOAD_PATH } from "../lib/reports/links";
 
 import { sortProcurementGuides } from "../lib/procurement/guides";
 
@@ -11,6 +12,7 @@ const STATIC_PATHS = [
   "/",
   "/reports",
   "/reports/roadmap",
+  APP_DOWNLOAD_PATH,
   "/privacy",
   "/reports/account-deletion",
   "/reports/docs",

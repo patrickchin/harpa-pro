@@ -123,11 +123,16 @@ does not define this repository's runtime; `nvm use` does.
   submission, and OTA updates. Internal QA uses the preview/dev
   bundle/package (`com.harpa.pro.dev`) against the dev backend. The
   production bundle/package (`com.harpa.pro`) points at production and is
-  reserved for App Review, final smoke checks, and public rollout. Three
-  build profiles live in
-  `apps/mobile/eas.json`:
+  reserved for App Review, final smoke checks, and public rollout. The
+  build profiles are defined in `apps/mobile/eas.json`:
   - `production` — App Store / Play. `com.harpa.pro` →
     `https://api.harpapro.com`.
+  - `production-apk` — signed Android APK for direct installation, using the
+    production package, backend, and update channel. From `apps/mobile`, run
+    `pnpm exec eas build --platform android --profile production-apk`. Use
+    this profile to produce the website download. Play builds and the direct
+    download use different signing keys, so users update through the same
+    channel they installed from.
   - `preview` — internal dev QA. `com.harpa.pro.dev` →
     `https://harpa-pro-api-dev.fly.dev`. Installable side-by-side
     with prod so QA can carry both apps.
@@ -416,6 +421,17 @@ finishes, operators complete the final App Store review submission and
 Play production rollout in the store consoles. Use a phased rollout for
 GA (1% -> 10% -> 50% -> 100%) and watch Sentry crash-free sessions,
 API 5xx rate, auth success, and AI provider errors before each step.
+
+For the existing Android closed Alpha test, use the production Android
+bundle and the `production-alpha` submit profile. Run from `apps/mobile`.
+
+```sh
+APP_VARIANT=production pnpm exec eas submit --platform android \
+  --profile production-alpha --id <build-id>
+```
+
+With manual submission, select **Closed testing – Alpha** in Play Console.
+Confirm which build the track is serving using the test's opt-in link.
 
 ## Secrets
 

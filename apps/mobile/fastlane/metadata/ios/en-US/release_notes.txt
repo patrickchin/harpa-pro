@@ -1,4 +1,5 @@
 Add voice notes, photos, or text from one capture control on your report.
+Use the Review tab on finalized reports to leave comments for your team.
 
 This update also improves report generation and keeps edits you make while a
 draft is being generated or when a save needs to be retried.

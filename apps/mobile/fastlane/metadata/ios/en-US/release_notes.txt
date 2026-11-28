@@ -1,5 +1,4 @@
-Diagnostic build information is now easier to read: API commit IDs use a
-short form in the app while the full ID remains available to copy.
+Add voice notes, photos, or text from one capture control on your report.
 
-Persisted mobile data is now isolated by signed-in account. This release also
-includes reliability and dependency improvements.
+This update also improves report generation and keeps edits you make while a
+draft is being generated or when a save needs to be retried.
